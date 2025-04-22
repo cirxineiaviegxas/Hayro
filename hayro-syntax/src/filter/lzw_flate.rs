@@ -213,35 +213,30 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
         1 => Some(data),
         12 => {
-            let num_cols = params.row_length_in_bytes();
+            let row_len = params.row_length_in_bytes();
             // + 1 Because each row must start with the predictor that is used.
-            let num_rows = data.len() / (num_cols + 1);
+            let total_row_len = row_len + 1;
+            let num_rows = data.len() / total_row_len;
 
             // Sanity check.
-            if num_rows * (num_cols + 1) != data.len() {
+            if num_rows * total_row_len != data.len() {
                 return None;
             }
 
-            let mut out = vec![0; num_rows * num_cols];
-            let mut r = Reader::new(&data);
+            let mut prev_row = None;
 
-            for i in 0..num_rows {
-                let _predictor_byte = r.read_byte()?;
+            let mut out = vec![0; num_rows * row_len];
+            
+            for (in_row, out_row) in data
+                .chunks_exact(total_row_len)
+                .zip(out.chunks_exact_mut(row_len))
+            {
+                // Skip the predictor byte.
+                let in_data = &in_row[1..];
 
-                let row_start = num_cols * i;
-                let row_end = num_cols * (i + 1);
+                apply_up(prev_row, in_data, out_row, params)?;
 
-                let in_data = r.read_bytes(num_cols)?;
-                let (last_row, out_data) = if i == 0 {
-                    (None, &mut out[row_start..row_end])
-                } else {
-                    let prev_row_start = num_cols * (i - 1);
-                    let range = &mut out[prev_row_start..row_end];
-                    let (last_row, out_data) = range.split_at_mut(num_cols);
-                    (Some(&*last_row), out_data)
-                };
-
-                apply_up(last_row, in_data, out_data, params)?;
+                prev_row = Some(out_row);
             }
 
             Some(out)
