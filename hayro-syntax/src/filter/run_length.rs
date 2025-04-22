@@ -23,7 +23,7 @@ mod tests {
     use crate::filter::run_length::decode;
 
     #[test]
-    fn decode_simple() {
+    fn run_length() {
         let input = vec![4, 10, 11, 12, 13, 14, 253, 3, 128];
         assert_eq!(
             decode(&input).unwrap(),

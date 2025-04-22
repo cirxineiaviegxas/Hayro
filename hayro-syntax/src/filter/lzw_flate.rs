@@ -255,7 +255,7 @@ mod tests {
     use crate::filter::lzw_flate::{flate, lzw};
 
     #[test]
-    fn simple_lzw() {
+    fn decode_lzw() {
         let input = [0x80, 0x0B, 0x60, 0x50, 0x22, 0x0C, 0x0C, 0x85, 0x01];
         let decoded = lzw::decode(&input, None).unwrap();
 
@@ -263,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn flate_zlib() {
+    fn decode_flate_zlib() {
         let input = [
             0x78, 0x9c, 0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0, 0x5, 0x8c, 0x1, 0xf5,
         ];
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn flate() {
+    fn decode_flate() {
         let input = [0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0];
 
         let decoded = flate::decode(&input, None).unwrap();
