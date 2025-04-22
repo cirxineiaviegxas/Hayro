@@ -199,14 +199,17 @@ fn apply_up(
     prev_row: Option<&[u8]>,
     cur_row: &[u8],
     out: &mut [u8],
-    params: &PredictorParams,
-) -> Option<()> {
-    for i in 0..params.row_length_in_bytes() {
-        let prev = prev_row.map(|p| p[i]).unwrap_or(0);
-        out[i] = cur_row[i].wrapping_add(prev);
+) {
+    match prev_row {
+        None => {
+            out.copy_from_slice(cur_row);
+        }
+        Some(p) => {
+            for (p, (c, o)) in p.iter().zip(cur_row.iter().zip(out.iter_mut())) {
+                *o = c.wrapping_add(*p);
+            }
+        }
     }
-
-    Some(())
 }
 
 fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
@@ -234,7 +237,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 // Skip the predictor byte.
                 let in_data = &in_row[1..];
 
-                apply_up(prev_row, in_data, out_row, params)?;
+                apply_up(prev_row, in_data, out_row);
 
                 prev_row = Some(out_row);
             }
@@ -246,6 +249,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor, flate, lzw};
 
@@ -285,7 +289,6 @@ mod tests {
     }
 
     fn predictor_expected() -> Vec<u8> {
-        #[rustfmt::skip]
         vec![
             // Row 1
             127, 127, 127, 125, 129, 127, 123, 130, 128, 
@@ -306,7 +309,6 @@ mod tests {
             early_change: false,
         };
 
-        #[rustfmt::skip]
         let input = vec![
             // Row 1
             2, 127, 127, 127, 125, 129, 127, 123, 130, 128, 
@@ -322,4 +324,6 @@ mod tests {
 
         assert_eq!(expected, out);
     }
+    
+    
 }
