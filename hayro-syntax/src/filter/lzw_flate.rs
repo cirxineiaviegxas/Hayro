@@ -201,7 +201,7 @@ fn apply_up(
     out: &mut [u8],
     params: &PredictorParams,
 ) -> Option<()> {
-    for i in 0..params.columns {
+    for i in 0..params.row_length_in_bytes() {
         let prev = prev_row.map(|p| p[i]).unwrap_or(0);
         out[i] = cur_row[i].wrapping_add(prev);
     }
@@ -252,7 +252,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::filter::lzw_flate::{flate, lzw};
+    use crate::filter::lzw_flate::{PredictorParams, apply_predictor, flate, lzw};
 
     #[test]
     fn decode_lzw() {
@@ -278,5 +278,47 @@ mod tests {
 
         let decoded = flate::decode(&input, None).unwrap();
         assert_eq!(decoded, b"Hello");
+    }
+
+    #[test]
+    fn predictor_none() {
+        let params = PredictorParams::default();
+        let input = vec![0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0];
+        let out = apply_predictor(input.clone(), &params).unwrap();
+
+        assert_eq!(input, out);
+    }
+
+    fn predictor_expected() -> Vec<u8> {
+        vec![
+            // Row 1
+            127, 127, 127, 125, 129, 127, 123, 130, 128, // Row 2
+            128, 129, 126, 126, 132, 124, 121, 127, 126, // Row 3
+            131, 130, 122, 133, 129, 128, 127, 100, 126,
+        ]
+    }
+
+    #[test]
+    fn predictor_up() {
+        let params = PredictorParams {
+            predictor: 12,
+            colors: 3,
+            bits_per_component: 8,
+            columns: 3,
+            early_change: false,
+        };
+
+        let input = vec![
+            // Row 1
+            2, 127, 127, 127, 125, 129, 127, 123, 130, 128, // Row 2
+            2, 1, 2, 255, 1, 3, 253, 254, 253, 254, // Row 3
+            2, 3, 1, 252, 7, 253, 4, 6, 229, 0,
+        ];
+
+        let expected = predictor_expected();
+
+        let out = apply_predictor(input, &params).unwrap();
+
+        assert_eq!(expected, out);
     }
 }
