@@ -1,6 +1,3 @@
-// Adapted the pdf-rs crate.
-// TODO: Add NOTICE
-
 #[inline]
 fn sym_85(byte: u8) -> Option<u8> {
     match byte {
