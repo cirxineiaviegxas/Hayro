@@ -252,7 +252,7 @@ pub mod lzw {
 
 #[cfg(test)]
 mod tests {
-    use crate::filter::lzw_flate::lzw;
+    use crate::filter::lzw_flate::{flate, lzw};
 
     #[test]
     fn simple_lzw() {
@@ -260,5 +260,23 @@ mod tests {
         let decoded = lzw::decode(&input, None).unwrap();
 
         assert_eq!(decoded, vec![45, 45, 45, 45, 45, 65, 45, 45, 45, 66]);
+    }
+
+    #[test]
+    fn flate_zlib() {
+        let input = [
+            0x78, 0x9c, 0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0, 0x5, 0x8c, 0x1, 0xf5,
+        ];
+
+        let decoded = flate::decode(&input, None).unwrap();
+        assert_eq!(decoded, b"Hello");
+    }
+
+    #[test]
+    fn flate() {
+        let input = [0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0];
+
+        let decoded = flate::decode(&input, None).unwrap();
+        assert_eq!(decoded, b"Hello");
     }
 }
