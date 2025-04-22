@@ -226,7 +226,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             let mut prev_row = None;
 
             let mut out = vec![0; num_rows * row_len];
-            
+
             for (in_row, out_row) in data
                 .chunks_exact(total_row_len)
                 .zip(out.chunks_exact_mut(row_len))
@@ -285,10 +285,13 @@ mod tests {
     }
 
     fn predictor_expected() -> Vec<u8> {
+        #[rustfmt::skip]
         vec![
             // Row 1
-            127, 127, 127, 125, 129, 127, 123, 130, 128, // Row 2
-            128, 129, 126, 126, 132, 124, 121, 127, 126, // Row 3
+            127, 127, 127, 125, 129, 127, 123, 130, 128, 
+            // Row 2
+            128, 129, 126, 126, 132, 124, 121, 127, 126, 
+            // Row 3
             131, 130, 122, 133, 129, 128, 127, 100, 126,
         ]
     }
@@ -303,10 +306,13 @@ mod tests {
             early_change: false,
         };
 
+        #[rustfmt::skip]
         let input = vec![
             // Row 1
-            2, 127, 127, 127, 125, 129, 127, 123, 130, 128, // Row 2
-            2, 1, 2, 255, 1, 3, 253, 254, 253, 254, // Row 3
+            2, 127, 127, 127, 125, 129, 127, 123, 130, 128, 
+            // Row 2
+            2, 1, 2, 255, 1, 3, 253, 254, 253, 254, 
+            // Row 3
             2, 3, 1, 252, 7, 253, 4, 6, 229, 0,
         ];
 
