@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["hayro-syntax"]
+
+[workspace.dependencies]
+bitreader = { version = "0.3.11" }
+hex = { version = "0.4.3" }
+log = { version = "0.4.22" }
+pdf-writer = { version = "0.13.0" }
+rustc-hash = { version = "2.1.0" }
+smallvec = { version = "1.13.2" }
+zune-jpeg = { version = "0.4.14" }
+miniz_oxide = {version = "0.8.2"}
+snafu = { version = "0.8.5"}

@@ -1,0 +1,15 @@
+[package]
+name = "hayro-syntax"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitreader = { workspace = true }
+hex = { workspace = true }
+log = { workspace = true }
+pdf-writer = { workspace = true }
+rustc-hash = { workspace = true }
+smallvec = { workspace = true }
+zune-jpeg = { workspace = true }
+miniz_oxide = { workspace = true }
+snafu = { workspace = true }
