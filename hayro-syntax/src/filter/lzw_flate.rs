@@ -51,61 +51,6 @@ impl PredictorParams {
     }
 }
 
-fn apply_up(
-    prev_row: Option<&[u8]>,
-    cur_row: &[u8],
-    out: &mut [u8],
-    params: &PredictorParams,
-) -> Option<()> {
-    for i in 0..params.columns {
-        let prev = prev_row.map(|p| p[i]).unwrap_or(0);
-        out[i] = cur_row[i].wrapping_add(prev);
-    }
-
-    Some(())
-}
-
-fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
-    match params.predictor {
-        1 => Some(data),
-        12 => {
-            let num_cols = params.row_length_in_bytes();
-            // +1 Because each row must start with the predictor that is used.
-            let num_rows = data.len() / (num_cols + 1);
-
-            // Sanity check.
-            if num_rows * (num_cols + 1) != data.len() {
-                return None;
-            }
-
-            let mut out = vec![0; num_rows * num_cols];
-            let mut r = Reader::new(&data);
-
-            for i in 0..num_rows {
-                let _predictor_byte = r.read_byte()?;
-
-                let row_start = num_cols * i;
-                let row_end = num_cols * (i + 1);
-
-                let in_data = r.read_bytes(num_cols)?;
-                let (last_row, out_data) = if i == 0 {
-                    (None, &mut out[row_start..row_end])
-                } else {
-                    let prev_row_start = num_cols * (i - 1);
-                    let range = &mut out[prev_row_start..row_end];
-                    let (last_row, out_data) = range.split_at_mut(num_cols);
-                    (Some(&*last_row), out_data)
-                };
-
-                apply_up(last_row, in_data, out_data, params)?;
-            }
-
-            Some(out)
-        }
-        _ => unimplemented!(),
-    }
-}
-
 pub mod flate {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
     use crate::object::dict::Dict;
@@ -247,6 +192,61 @@ pub mod lzw {
                 9
             }
         }
+    }
+}
+
+fn apply_up(
+    prev_row: Option<&[u8]>,
+    cur_row: &[u8],
+    out: &mut [u8],
+    params: &PredictorParams,
+) -> Option<()> {
+    for i in 0..params.columns {
+        let prev = prev_row.map(|p| p[i]).unwrap_or(0);
+        out[i] = cur_row[i].wrapping_add(prev);
+    }
+
+    Some(())
+}
+
+fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
+    match params.predictor {
+        1 => Some(data),
+        12 => {
+            let num_cols = params.row_length_in_bytes();
+            // + 1 Because each row must start with the predictor that is used.
+            let num_rows = data.len() / (num_cols + 1);
+
+            // Sanity check.
+            if num_rows * (num_cols + 1) != data.len() {
+                return None;
+            }
+
+            let mut out = vec![0; num_rows * num_cols];
+            let mut r = Reader::new(&data);
+
+            for i in 0..num_rows {
+                let _predictor_byte = r.read_byte()?;
+
+                let row_start = num_cols * i;
+                let row_end = num_cols * (i + 1);
+
+                let in_data = r.read_bytes(num_cols)?;
+                let (last_row, out_data) = if i == 0 {
+                    (None, &mut out[row_start..row_end])
+                } else {
+                    let prev_row_start = num_cols * (i - 1);
+                    let range = &mut out[prev_row_start..row_end];
+                    let (last_row, out_data) = range.split_at_mut(num_cols);
+                    (Some(&*last_row), out_data)
+                };
+
+                apply_up(last_row, in_data, out_data, params)?;
+            }
+
+            Some(out)
+        }
+        _ => unimplemented!(),
     }
 }
 
