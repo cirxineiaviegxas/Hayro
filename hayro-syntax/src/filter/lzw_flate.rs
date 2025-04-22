@@ -1,6 +1,7 @@
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
 use crate::reader::Reader;
+use pdf_writer::types::StructRole::P;
 
 struct PredictorParams {
     predictor: u8,
@@ -195,11 +196,7 @@ pub mod lzw {
     }
 }
 
-fn apply_up(
-    prev_row: Option<&[u8]>,
-    cur_row: &[u8],
-    out: &mut [u8],
-) {
+fn apply_up(prev_row: Option<&[u8]>, cur_row: &[u8], out: &mut [u8]) {
     match prev_row {
         None => {
             out.copy_from_slice(cur_row);
@@ -212,10 +209,30 @@ fn apply_up(
     }
 }
 
+fn apply_sub(cur_row: &[u8], out: &mut [u8], params: &PredictorParams) {
+    let mut prev: Option<&[u8]> = None;
+
+    for (_in, out) in cur_row
+        .chunks_exact(params.colors as usize)
+        .zip(out.chunks_exact_mut(params.colors as usize))
+    {
+        match prev {
+            None => out.copy_from_slice(_in),
+            Some(p) => {
+                for (p, (c, o)) in p.iter().zip(_in.iter().zip(out.iter_mut())) {
+                    *o = c.wrapping_add(*p);
+                }
+            }
+        }
+
+        prev = Some(out);
+    }
+}
+
 fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
         1 => Some(data),
-        12 => {
+        11 | 12 => {
             let row_len = params.row_length_in_bytes();
             // + 1 Because each row must start with the predictor that is used.
             let total_row_len = row_len + 1;
@@ -237,7 +254,11 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 // Skip the predictor byte.
                 let in_data = &in_row[1..];
 
-                apply_up(prev_row, in_data, out_row);
+                match params.predictor {
+                    11 => apply_sub(in_data, out_row, params),
+                    12 => apply_up(prev_row, in_data, out_row),
+                    _ => unreachable!(),
+                }
 
                 prev_row = Some(out_row);
             }
@@ -298,6 +319,31 @@ mod tests {
             131, 130, 122, 133, 129, 128, 127, 100, 126,
         ]
     }
+    
+    #[test]
+    fn predictor_sub() {
+        let params = PredictorParams {
+            predictor: 11,
+            colors: 3,
+            bits_per_component: 8,
+            columns: 3,
+            early_change: false,
+        };
+
+        let input = vec![
+            // Row 1
+            1, 127, 127, 127, 254, 2, 0, 254, 1, 1, 
+            // Row 2
+            1, 128, 129, 126, 254, 3, 254, 251, 251, 2,
+            // Row 3
+            1, 131, 130, 122, 2, 255, 6, 250, 227, 254
+        ];
+
+        let expected = predictor_expected();
+        let out = apply_predictor(input, &params).unwrap();
+
+        assert_eq!(expected, out);
+    }
 
     #[test]
     fn predictor_up() {
@@ -324,6 +370,4 @@ mod tests {
 
         assert_eq!(expected, out);
     }
-    
-    
 }
