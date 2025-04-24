@@ -252,11 +252,13 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 .zip(out.chunks_exact_mut(row_len))
             {
                 // Skip the predictor byte.
+                let predictor = in_row[0];
                 let in_data = &in_row[1..];
 
-                match params.predictor {
-                    11 => apply_sub(in_data, out_row, params),
-                    12 => apply_up(prev_row, in_data, out_row),
+                match predictor {
+                    0 => out_row.copy_from_slice(in_data),
+                    1 => apply_sub(in_data, out_row, params),
+                    2 => apply_up(prev_row, in_data, out_row),
                     _ => unreachable!(),
                 }
 
