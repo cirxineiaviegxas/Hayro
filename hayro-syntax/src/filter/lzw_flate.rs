@@ -238,6 +238,45 @@ fn apply_avg<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
     }
 }
 
+fn apply_paeth<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
+    fn paeth(a: u8, b: u8, c: u8) -> u8 {
+        let a = a as i16;
+        let b = b as i16;
+        let c = c as i16;
+
+        let p = a + b - c;
+        let pa = (p - a).abs();
+        let pb = (p - b).abs();
+        let pc = (p - c).abs();
+
+        if pa <= pb && pa <= pc {
+            a as u8
+        } else if pb <= pc {
+            b as u8
+        } else {
+            c as u8
+        }
+    }
+
+    let mut top_left: &[u8; C] = &[0; C];
+    let mut prev_col: &[u8; C] = &[0; C];
+
+    let cur_row = cur_row.array_chunks::<C>();
+    let prev_row = prev_row.array_chunks::<C>();
+    let out_row = out.array_chunks_mut::<C>();
+
+    for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
+        for (cur_row, prev_row, out_row, prev_col, top_left) in
+            izip!(cur_row, prev_row, out_row.iter_mut(), prev_col, top_left)
+        {
+            *out_row = cur_row.wrapping_add(paeth(*prev_col, *prev_row, *top_left));
+        }
+
+        prev_col = out_row;
+        top_left = prev_row;
+    }
+}
+
 fn apply_predictor_inner<const C: usize>(
     data: Vec<u8>,
     params: &PredictorParams,
@@ -273,6 +312,7 @@ fn apply_predictor_inner<const C: usize>(
                     1 => apply_sub::<C>(in_data, out_row),
                     2 => apply_up::<C>(prev_row, in_data, out_row),
                     3 => apply_avg::<C>(prev_row, in_data, out_row),
+                    4 => apply_paeth::<C>(prev_row, in_data, out_row),
                     _ => unreachable!(),
                 }
 
@@ -404,21 +444,12 @@ mod tests {
     #[test]
     fn predictor_avg() {
         let params = PredictorParams {
-            predictor: 12,
+            predictor: 13,
             colors: 3,
             bits_per_component: 8,
             columns: 3,
             early_change: false,
         };
-    
-        vec![
-            // Row 1
-            127, 127, 127, 125, 129, 127, 123, 130, 128, 
-            // Row 2
-            128, 129, 126, 126, 132, 124, 121, 127, 126, 
-            // Row 3
-            131, 130, 122, 133, 129, 128, 127, 100, 126,
-        ];
     
         let input = vec![
             // Row 1
@@ -428,6 +459,32 @@ mod tests {
             // Row 3
             3, 67, 66, 59, 5, 254, 5, 0, 228, 255
         ];
+    
+        let expected = predictor_expected();
+    
+        let out = apply_predictor(input, &params).unwrap();
+    
+        assert_eq!(expected, out);
+    }
+    
+    #[test]
+    fn predictor_paeth() {
+        let params = PredictorParams {
+            predictor: 14,
+            colors: 3,
+            bits_per_component: 8,
+            columns: 3,
+            early_change: false,
+        };
+    
+        let input = vec![
+           // Row 1
+           4, 127, 127, 127, 254, 2, 0, 254, 1, 1,
+           // Row 2
+           4, 1, 2, 255, 1, 3, 254, 254, 251, 2,
+           // Row 3
+           4, 3, 1, 252, 5, 253, 6, 1, 229, 254
+       ];
     
         let expected = predictor_expected();
     
