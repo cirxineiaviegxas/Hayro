@@ -1,3 +1,5 @@
+#![feature(array_chunks)]
+
 use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
 use crate::object::Object;

@@ -13,3 +13,4 @@ smallvec = { workspace = true }
 zune-jpeg = { workspace = true }
 miniz_oxide = { workspace = true }
 snafu = { workspace = true }
+itertools = { workspace = true }

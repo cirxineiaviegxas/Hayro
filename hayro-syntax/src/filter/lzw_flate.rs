@@ -1,7 +1,10 @@
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
 use crate::reader::Reader;
+use itertools::izip;
+use log::debug;
 use pdf_writer::types::StructRole::P;
+use std::iter;
 
 struct PredictorParams {
     predictor: u8,
@@ -196,43 +199,52 @@ pub mod lzw {
     }
 }
 
-fn apply_up(prev_row: Option<&[u8]>, cur_row: &[u8], out: &mut [u8]) {
-    match prev_row {
-        None => {
-            out.copy_from_slice(cur_row);
-        }
-        Some(p) => {
-            for (p, (c, o)) in p.iter().zip(cur_row.iter().zip(out.iter_mut())) {
-                *o = c.wrapping_add(*p);
-            }
-        }
+fn apply_up<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
+    for (up, cur, out) in izip!(prev_row, cur_row, out.iter_mut()) {
+        *out = cur.wrapping_add(*up);
     }
 }
 
-fn apply_sub(cur_row: &[u8], out: &mut [u8], params: &PredictorParams) {
-    let mut prev: Option<&[u8]> = None;
+fn apply_sub<const C: usize>(cur_row: &[u8], out: &mut [u8]) {
+    let mut prev_col: &[u8; C] = &[0; C];
 
-    for (_in, out) in cur_row
-        .chunks_exact(params.colors as usize)
-        .zip(out.chunks_exact_mut(params.colors as usize))
-    {
-        match prev {
-            None => out.copy_from_slice(_in),
-            Some(p) => {
-                for (p, (c, o)) in p.iter().zip(_in.iter().zip(out.iter_mut())) {
-                    *o = c.wrapping_add(*p);
-                }
-            }
+    let cur = cur_row.array_chunks::<C>();
+    let out = out.array_chunks_mut::<C>();
+
+    for (cur, out) in cur.zip(out) {
+        for (prev, cur, out) in izip!(prev_col, cur, out.iter_mut()) {
+            *out = cur.wrapping_add(*prev);
         }
 
-        prev = Some(out);
+        prev_col = out;
     }
 }
 
-fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
+fn apply_avg<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
+    let mut prev_col: &[u8; C] = &[0; C];
+
+    let cur_row = cur_row.array_chunks::<C>();
+    let prev_row = prev_row.array_chunks::<C>();
+    let out_row = out.array_chunks_mut::<C>();
+
+    for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
+        for (cur_row, prev_row, out_row, prev_col) in
+            izip!(cur_row, prev_row, out_row.iter_mut(), prev_col)
+        {
+            *out_row = cur_row.wrapping_add(((*prev_col as u16 + *prev_row as u16) / 2) as u8);
+        }
+
+        prev_col = out_row;
+    }
+}
+
+fn apply_predictor_inner<const C: usize>(
+    data: Vec<u8>,
+    params: &PredictorParams,
+) -> Option<Vec<u8>> {
     match params.predictor {
         1 => Some(data),
-        11 | 12 => {
+        i if i >= 10 => {
             let row_len = params.row_length_in_bytes();
             // + 1 Because each row must start with the predictor that is used.
             let total_row_len = row_len + 1;
@@ -243,7 +255,9 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 return None;
             }
 
-            let mut prev_row = None;
+            let inital_row = vec![0; row_len];
+
+            let mut prev_row: &[u8] = inital_row.as_ref();
 
             let mut out = vec![0; num_rows * row_len];
 
@@ -251,23 +265,37 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 .chunks_exact(total_row_len)
                 .zip(out.chunks_exact_mut(row_len))
             {
-                // Skip the predictor byte.
                 let predictor = in_row[0];
                 let in_data = &in_row[1..];
 
                 match predictor {
                     0 => out_row.copy_from_slice(in_data),
-                    1 => apply_sub(in_data, out_row, params),
-                    2 => apply_up(prev_row, in_data, out_row),
+                    1 => apply_sub::<C>(in_data, out_row),
+                    2 => apply_up::<C>(prev_row, in_data, out_row),
+                    3 => apply_avg::<C>(prev_row, in_data, out_row),
                     _ => unreachable!(),
                 }
 
-                prev_row = Some(out_row);
+                prev_row = out_row;
             }
 
             Some(out)
         }
         _ => unimplemented!(),
+    }
+}
+
+fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
+    match params.colors {
+        1 => apply_predictor_inner::<1>(data, params),
+        2 => apply_predictor_inner::<2>(data, params),
+        3 => apply_predictor_inner::<3>(data, params),
+        4 => apply_predictor_inner::<4>(data, params),
+        _ => {
+            debug!("encountered {} colors in predictor", params.colors);
+
+            None
+        }
     }
 }
 
@@ -370,6 +398,41 @@ mod tests {
 
         let out = apply_predictor(input, &params).unwrap();
 
+        assert_eq!(expected, out);
+    }
+    
+    #[test]
+    fn predictor_avg() {
+        let params = PredictorParams {
+            predictor: 12,
+            colors: 3,
+            bits_per_component: 8,
+            columns: 3,
+            early_change: false,
+        };
+    
+        vec![
+            // Row 1
+            127, 127, 127, 125, 129, 127, 123, 130, 128, 
+            // Row 2
+            128, 129, 126, 126, 132, 124, 121, 127, 126, 
+            // Row 3
+            131, 130, 122, 133, 129, 128, 127, 100, 126,
+        ];
+    
+        let input = vec![
+            // Row 1
+            3, 127, 127, 127, 62, 66, 64, 61, 66, 65,
+            // Row 2
+            3, 65, 66, 63, 0, 3, 254, 253, 252, 0,
+            // Row 3
+            3, 67, 66, 59, 5, 254, 5, 0, 228, 255
+        ];
+    
+        let expected = predictor_expected();
+    
+        let out = apply_predictor(input, &params).unwrap();
+    
         assert_eq!(expected, out);
     }
 }

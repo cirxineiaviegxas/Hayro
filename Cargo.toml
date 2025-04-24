@@ -12,3 +12,4 @@ smallvec = { version = "1.13.2" }
 zune-jpeg = { version = "0.4.14" }
 miniz_oxide = {version = "0.8.2"}
 snafu = { version = "0.8.5"}
+itertools = "0.14.0"
