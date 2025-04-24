@@ -64,7 +64,7 @@ pub mod flate {
         let params = params
             .map(|p| PredictorParams::from_params(p))
             .unwrap_or_default();
-        apply_predictor(decoded, &params)
+        apply_predictor(&decoded, &params)
     }
 
     fn zlib(data: &[u8]) -> Option<Vec<u8>> {
@@ -89,7 +89,7 @@ pub mod lzw {
 
         let decoded = decode_impl(data, params.early_change)?;
 
-        apply_predictor(decoded, &params)
+        apply_predictor(&decoded, &params)
     }
 
     const CLEAR_TABLE: usize = 256;
@@ -277,12 +277,9 @@ fn apply_paeth<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) 
     }
 }
 
-fn apply_predictor_inner<const C: usize>(
-    data: Vec<u8>,
-    params: &PredictorParams,
-) -> Option<Vec<u8>> {
+fn apply_predictor_inner<const C: usize>(data: &[u8], params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
-        1 => Some(data),
+        1 | 10 => Some(data.to_vec()),
         i if i >= 10 => {
             let row_len = params.row_length_in_bytes();
             // + 1 Because each row must start with the predictor that is used.
@@ -325,7 +322,7 @@ fn apply_predictor_inner<const C: usize>(
     }
 }
 
-fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
+fn apply_predictor(data: &[u8], params: &PredictorParams) -> Option<Vec<u8>> {
     match params.colors {
         1 => apply_predictor_inner::<1>(data, params),
         2 => apply_predictor_inner::<2>(data, params),
@@ -369,16 +366,7 @@ mod tests {
         let decoded = flate::decode(&input, None).unwrap();
         assert_eq!(decoded, b"Hello");
     }
-
-    #[test]
-    fn predictor_none() {
-        let params = PredictorParams::default();
-        let input = vec![0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0];
-        let out = apply_predictor(input.clone(), &params).unwrap();
-
-        assert_eq!(input, out);
-    }
-
+    
     fn predictor_expected() -> Vec<u8> {
         vec![
             // Row 1
@@ -389,107 +377,84 @@ mod tests {
             131, 130, 122, 133, 129, 128, 127, 100, 126,
         ]
     }
-    
-    #[test]
-    fn predictor_sub() {
+
+    fn predictor_test(predictor: u8, input: &[u8]) {
         let params = PredictorParams {
-            predictor: 11,
+            predictor,
             colors: 3,
             bits_per_component: 8,
             columns: 3,
             early_change: false,
         };
 
-        let input = vec![
-            // Row 1
-            1, 127, 127, 127, 254, 2, 0, 254, 1, 1, 
-            // Row 2
-            1, 128, 129, 126, 254, 3, 254, 251, 251, 2,
-            // Row 3
-            1, 131, 130, 122, 2, 255, 6, 250, 227, 254
-        ];
-
         let expected = predictor_expected();
         let out = apply_predictor(input, &params).unwrap();
 
         assert_eq!(expected, out);
+    }
+
+    #[test]
+    fn predictor_none() {
+        predictor_test(10, &predictor_expected());
+    }
+
+    #[test]
+    fn predictor_sub() {
+        predictor_test(
+            11,
+            &[
+                // Row 1
+                1, 127, 127, 127, 254, 2, 0, 254, 1, 1, 
+                // Row 2
+                1, 128, 129, 126, 254, 3, 254, 251, 251, 2, 
+                // Row 3
+                1, 131, 130, 122, 2, 255, 6, 250, 227, 254,
+            ],
+        );
     }
 
     #[test]
     fn predictor_up() {
-        let params = PredictorParams {
-            predictor: 12,
-            colors: 3,
-            bits_per_component: 8,
-            columns: 3,
-            early_change: false,
-        };
-
-        let input = vec![
-            // Row 1
-            2, 127, 127, 127, 125, 129, 127, 123, 130, 128, 
-            // Row 2
-            2, 1, 2, 255, 1, 3, 253, 254, 253, 254, 
-            // Row 3
-            2, 3, 1, 252, 7, 253, 4, 6, 229, 0,
-        ];
-
-        let expected = predictor_expected();
-
-        let out = apply_predictor(input, &params).unwrap();
-
-        assert_eq!(expected, out);
+        predictor_test(
+            12,
+            &[
+                // Row 1
+                2, 127, 127, 127, 125, 129, 127, 123, 130, 128, 
+                // Row 2
+                2, 1, 2, 255, 1, 3, 253, 254, 253, 254, 
+                // Row 3
+                2, 3, 1, 252, 7, 253, 4, 6, 229, 0,
+            ],
+        );
     }
-    
+
     #[test]
     fn predictor_avg() {
-        let params = PredictorParams {
-            predictor: 13,
-            colors: 3,
-            bits_per_component: 8,
-            columns: 3,
-            early_change: false,
-        };
-    
-        let input = vec![
-            // Row 1
-            3, 127, 127, 127, 62, 66, 64, 61, 66, 65,
-            // Row 2
-            3, 65, 66, 63, 0, 3, 254, 253, 252, 0,
-            // Row 3
-            3, 67, 66, 59, 5, 254, 5, 0, 228, 255
-        ];
-    
-        let expected = predictor_expected();
-    
-        let out = apply_predictor(input, &params).unwrap();
-    
-        assert_eq!(expected, out);
+        predictor_test(
+            13,
+            &[
+                // Row 1
+                3, 127, 127, 127, 62, 66, 64, 61, 66, 65, 
+                // Row 2
+                3, 65, 66, 63, 0, 3, 254, 253, 252, 0, 
+                // Row 3
+                3, 67, 66, 59, 5, 254, 5, 0, 228, 255,
+            ],
+        );
     }
-    
+
     #[test]
     fn predictor_paeth() {
-        let params = PredictorParams {
-            predictor: 14,
-            colors: 3,
-            bits_per_component: 8,
-            columns: 3,
-            early_change: false,
-        };
-    
-        let input = vec![
-           // Row 1
-           4, 127, 127, 127, 254, 2, 0, 254, 1, 1,
-           // Row 2
-           4, 1, 2, 255, 1, 3, 254, 254, 251, 2,
-           // Row 3
-           4, 3, 1, 252, 5, 253, 6, 1, 229, 254
-       ];
-    
-        let expected = predictor_expected();
-    
-        let out = apply_predictor(input, &params).unwrap();
-    
-        assert_eq!(expected, out);
+        predictor_test(
+            14,
+            &[
+                // Row 1
+                4, 127, 127, 127, 254, 2, 0, 254, 1, 1, 
+                // Row 2
+                4, 1, 2, 255, 1, 3, 254, 254, 251, 2, 
+                // Row 3
+                4, 3, 1, 252, 5, 253, 6, 1, 229, 254,
+            ],
+        );
     }
 }
