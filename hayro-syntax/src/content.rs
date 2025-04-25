@@ -410,6 +410,47 @@ op0!(ClosePath, "h");
 pub struct RectPath(pub Number, pub Number, pub Number, pub Number);
 op4!(RectPath, "re");
 
+// Path-painting operators
+#[derive(Debug)]
+pub struct StrokePath;
+op0!(StrokePath, "S");
+
+#[derive(Debug)]
+pub struct CloseAndStrokePath;
+op0!(CloseAndStrokePath, "s");
+
+#[derive(Debug)]
+pub struct FillPathNonZero;
+op0!(FillPathNonZero, "f");
+
+#[derive(Debug)]
+pub struct FillPathNonZeroCompatibility;
+op0!(FillPathNonZeroCompatibility, "F");
+
+#[derive(Debug)]
+pub struct FillPathEvenOdd;
+op0!(FillPathEvenOdd, "f*");
+
+#[derive(Debug)]
+pub struct FillAndStrokeNonZero;
+op0!(FillAndStrokeNonZero, "B");
+
+#[derive(Debug)]
+pub struct FillAndStrokeEvenOdd;
+op0!(FillAndStrokeEvenOdd, "B*");
+
+#[derive(Debug)]
+pub struct CloseFillAndStrokeNonZero;
+op0!(CloseFillAndStrokeNonZero, "b");
+
+#[derive(Debug)]
+pub struct CloseFillAndStrokeEvenOdd;
+op0!(CloseFillAndStrokeEvenOdd, "b*");
+
+#[derive(Debug)]
+pub struct EndPath;
+op0!(EndPath, "n");
+
 // Text-showing operators
 
 #[derive(Debug)]
@@ -456,6 +497,18 @@ pub enum TypedOperation<'a> {
     CubicEndTo(CubicEndTo),
     ClosePath(ClosePath),
     RectPath(RectPath),
+
+    // Path-painting operators
+    StrokePath(StrokePath),
+    CloseAndStrokePath(CloseAndStrokePath),
+    FillPathNonZero(FillPathNonZero),
+    FillPathNonZeroCompatibility(FillPathNonZeroCompatibility),
+    FillPathEvenOdd(FillPathEvenOdd),
+    FillAndStrokeNonZero(FillAndStrokeNonZero),
+    FillAndStrokeEvenOdd(FillAndStrokeEvenOdd),
+    CloseFillAndStrokeNonZero(CloseFillAndStrokeNonZero),
+    CloseFillAndStrokeEvenOdd(CloseFillAndStrokeEvenOdd),
+    EndPath(EndPath),
 
     // Text-showing operators
     ShowText(ShowText<'a>),
