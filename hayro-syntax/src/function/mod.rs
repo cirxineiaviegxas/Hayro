@@ -1,4 +1,5 @@
 mod type2;
+mod type4;
 
 use crate::object::Object;
 use crate::object::array::Array;
