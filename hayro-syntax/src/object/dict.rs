@@ -296,6 +296,7 @@ pub mod keys {
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
     key!(LENGTH, b"Length");
+    key!(MEDIA_BOX, b"MediaBox");
     key!(N, b"N");
     key!(PARENT, b"Parent");
     key!(PAGES, b"Pages");

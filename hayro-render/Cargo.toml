@@ -1,0 +1,12 @@
+[package]
+name = "hayro-render"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hayro-syntax = { workspace = true }
+image = "0.25.6"
+vello_cpu = { path = "../../vello/sparse_strips/vello_cpu" }
+vello_common = { path = "../../vello/sparse_strips/vello_common" }
+vello_api = { path = "../../vello/sparse_strips/vello_api" }
+

@@ -36,16 +36,18 @@ impl Number {
     }
 
     /// Returns the number as an i32, if possible.
-    pub fn as_i32(&self) -> Option<i32> {
+    pub fn as_i32(&self) -> i32 {
         match self.0 {
             InternalNumber::Real(r) => {
-                if r.trunc() == r {
-                    Some(r as i32)
-                } else {
-                    None
+                let res = r as i32;
+                
+                if !(r.trunc() == r) {
+                    debug!("float {} was truncated to {}", r, res);
                 }
+                
+                res
             }
-            InternalNumber::Integer(i) => Some(i),
+            InternalNumber::Integer(i) => i,
         }
     }
 
@@ -205,7 +207,7 @@ macro_rules! int_num {
         impl<'a> Readable<'a> for $i {
             fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<$i> {
                 r.read::<PLAIN, Number>(xref)
-                    .and_then(|n| n.as_i32())
+                    .map(|n| n.as_i32())
                     .and_then(|n| n.try_into().ok())
             }
         }
@@ -215,7 +217,7 @@ macro_rules! int_num {
 
             fn try_from(value: Object<'_>) -> std::result::Result<Self, Self::Error> {
                 match value {
-                    Object::Number(n) => n.as_i32().and_then(|f| f.try_into().ok()).ok_or(()),
+                    Object::Number(n) => n.as_i32().try_into().ok().ok_or(()),
                     _ => Err(()),
                 }
             }
@@ -253,6 +255,10 @@ impl TryFrom<Object<'_>> for f32 {
             _ => Err(()),
         }
     }
+}
+
+impl ObjectLike<'_> for f32 {
+    const STATIC_NAME: &'static str = "f32";
 }
 
 pub(crate) fn is_digit(byte: u8) -> bool {

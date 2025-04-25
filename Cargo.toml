@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["hayro-syntax"]
+members = [ "hayro-render","hayro-syntax"]
 
 [workspace.dependencies]
 bitreader = { version = "0.3.11" }
+hayro-syntax = { path = "hayro-syntax" }
+hayro-render = { path = "hayro-render" }
 hex = { version = "0.4.3" }
 log = { version = "0.4.22" }
 pdf-writer = { version = "0.13.0" }

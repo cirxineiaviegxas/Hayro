@@ -2,7 +2,7 @@ use crate::content::{Stack, TypedIter, UntypedIter};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{CONTENTS, KIDS, TYPE};
+use crate::object::dict::keys::{CONTENTS, KIDS, MEDIA_BOX, TYPE};
 use crate::object::name::Name;
 use crate::object::stream::Stream;
 use log::warn;
@@ -88,6 +88,10 @@ impl<'a> Page<'a> {
         let iter = UntypedIter::new(&stream);
 
         Some(iter)
+    }
+    
+    pub fn media_box(&self) -> Vec<f32> {
+        self.inner.get::<Array>(MEDIA_BOX).unwrap().iter::<f32>().collect()
     }
 
     pub fn operations(&self) -> UntypedIter {
