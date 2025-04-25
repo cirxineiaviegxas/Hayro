@@ -61,27 +61,69 @@ def rust_type(t: Type) -> str:
         Type.Name: "Name<'a>",
     }[t]
 
+def lifetime_if_needed(types):
+    return "<'a>" if any(t in [Type.String, Type.Array, Type.Name] for t in types) else ""
+
 def gen_struct(name, code, types):
-    if code == "\"":
-        code = "\\\""
-    lifetime = "'a" if any(t in [Type.String, Type.Array, Type.Name] for t in types) else ""
+    lifetime = lifetime_if_needed(types)
     count = len(types)
     struct = [f"#[derive(Debug)]"]
     if count == 0:
         struct.append(f"pub struct {name};")
     elif count == 1:
-        struct.append(f"pub struct {name}{f'<{lifetime}>' if lifetime else ''}(pub {rust_type(types[0])});")
+        struct.append(f"pub struct {name}{lifetime}(pub {rust_type(types[0])});")
     else:
-        struct.append(f"pub struct {name}{f'<{lifetime}>' if lifetime else ''}(")
+        struct.append(f"pub struct {name}{lifetime}(")
         struct += [f"    pub {rust_type(t)}," for t in types]
         struct.append(");")
-    struct.append(f"op{count}!({name}{f'<{lifetime}>' if lifetime else ''}, \"{code}\");")
+    # Escape the Rust string literal properly
+    escaped_code = code.replace('"', '\\"')
+    struct.append(f'op{count}!({name}{lifetime}, "{escaped_code}");')
     return "\n".join(struct)
 
-rust_structs = "\n\n".join(
-    gen_struct(name, code, types)
-    for category in ops.values()
-    for code, name, types in category
+def gen_enum_variant(name, types):
+    has_lifetime = any(t in [Type.String, Type.Array, Type.Name] for t in types)
+    inner_type = f"{name}<'a>" if has_lifetime else name
+    return f"{name}({inner_type})"
+
+def gen_dispatch_match(code, name, types):
+    escaped_code = code.replace('"', '\\"')
+    return f'b"{escaped_code}" => {name}::from_stack(&operation.operands)?.into(),'
+
+# Generate all code pieces
+structs = []
+enum_variants = []
+dispatch_arms = []
+
+for category in ops.values():
+    for code, name, types in category:
+        structs.append(gen_struct(name, code, types))
+        enum_variants.append(gen_enum_variant(name, types))
+        dispatch_arms.append(gen_dispatch_match(code, name, types))
+
+# Build the final Rust code blocks
+struct_block = "\n\n".join(structs)
+
+enum_block = (
+        "#[derive(Debug)]\n"
+        "pub enum TypedOperation<'a> {\n"
+        + "    " + ",\n    ".join(enum_variants) + ",\n"
+                                                   "    Fallback,\n}"
 )
 
-print(rust_structs)
+dispatch_block = (
+        "impl<'a> TypedOperation<'a> {\n"
+        "    pub(crate) fn dispatch(operation: &Operation<'a>) -> Option<TypedOperation<'a>> {\n"
+        "        let op_name = operation.operator.get();\n"
+        "        Some(match op_name.as_ref() {\n"
+        + "            " + "\n            ".join(dispatch_arms) + "\n"
+                                                                  "            _ => return Self::Fallback.into(),\n"
+                                                                  "        })\n"
+                                                                  "    }\n"
+                                                                  "}"
+)
+
+joined = "\n\n".join([struct_block, enum_block, dispatch_block])
+
+with open("ops_generated.rs", 'w') as f:
+    f.write(joined)
