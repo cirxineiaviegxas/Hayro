@@ -191,6 +191,18 @@ impl<'a> Stack<'a> {
     {
         self.0.get(index).and_then(|e| e.clone().cast::<T>().ok())
     }
+    
+    fn get_all<T>(&self) -> Option<SmallVec<[T; OPERANDS_THRESHOLD]>>
+    where T: ObjectLike<'a> {
+        let mut operands = SmallVec::new();
+        
+        for op in &self.0 {
+            let converted = op.clone().cast::<T>().ok()?;
+            operands.push(converted);
+        }
+        
+        Some(operands)
+    }
 }
 
 pub struct OperandIterator<'a> {
@@ -281,6 +293,14 @@ macro_rules! op1 {
     ($t:ident $(<$l:lifetime>),*, $e:expr) => {
         crate::op_impl!($t$(<$l>),*, $e, 1, |stack: &Stack<'a>|
         Some(Self(stack.get(0)?)));
+    }
+}
+
+#[macro_export]
+macro_rules! op_all {
+    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+        crate::op_impl!($t$(<$l>),*, $e, 1, |stack: &Stack<'a>|
+        Some(Self(stack.get_all()?)));
     }
 }
 

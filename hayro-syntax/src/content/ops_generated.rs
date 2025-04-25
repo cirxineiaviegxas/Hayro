@@ -157,6 +157,80 @@ pub struct EndPath;
 op0!(EndPath, "n");
 
 #[derive(Debug)]
+pub struct ClipNonZero;
+op0!(ClipNonZero, "W");
+
+#[derive(Debug)]
+pub struct ClipEvenOdd;
+op0!(ClipEvenOdd, "W*");
+
+#[derive(Debug)]
+pub struct ColorSpaceStroke<'a>(pub Name<'a>);
+op1!(ColorSpaceStroke<'a>, "CS");
+
+#[derive(Debug)]
+pub struct ColorSpaceNonStroke<'a>(pub Name<'a>);
+op1!(ColorSpaceNonStroke<'a>, "cs");
+
+#[derive(Debug)]
+pub struct StrokeColor(pub SmallVec<[Number; OPERANDS_THRESHOLD]>);
+op_all!(StrokeColor, "SC");
+
+#[derive(Debug)]
+pub struct StrokeColorNamed<'a>(pub Object<'a>);
+op1!(StrokeColorNamed<'a>, "SCN");
+
+#[derive(Debug)]
+pub struct NonStrokeColor(pub SmallVec<[Number; OPERANDS_THRESHOLD]>);
+op_all!(NonStrokeColor, "sc");
+
+#[derive(Debug)]
+pub struct NonStrokeColorNamed<'a>(pub Object<'a>);
+op1!(NonStrokeColorNamed<'a>, "SCN");
+
+#[derive(Debug)]
+pub struct StrokeColorDeviceGray(pub Number);
+op1!(StrokeColorDeviceGray, "G");
+
+#[derive(Debug)]
+pub struct NonStrokeColorDeviceGray(pub Number);
+op1!(NonStrokeColorDeviceGray, "g");
+
+#[derive(Debug)]
+pub struct StrokeColorDeviceRgb(
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op3!(StrokeColorDeviceRgb, "RG");
+
+#[derive(Debug)]
+pub struct NonStrokeColorDeviceRgb(
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op3!(NonStrokeColorDeviceRgb, "rg");
+
+#[derive(Debug)]
+pub struct StrokeColorCmyk(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op4!(StrokeColorCmyk, "K");
+
+#[derive(Debug)]
+pub struct NonStrokeColorCmyk(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op4!(NonStrokeColorCmyk, "k");
+
+#[derive(Debug)]
 pub struct ShowText<'a>(pub string::String<'a>);
 op1!(ShowText<'a>, "Tj");
 
@@ -208,6 +282,20 @@ pub enum TypedOperation<'a> {
     CloseFillAndStrokeNonZero(CloseFillAndStrokeNonZero),
     CloseFillAndStrokeEvenOdd(CloseFillAndStrokeEvenOdd),
     EndPath(EndPath),
+    ClipNonZero(ClipNonZero),
+    ClipEvenOdd(ClipEvenOdd),
+    ColorSpaceStroke(ColorSpaceStroke<'a>),
+    ColorSpaceNonStroke(ColorSpaceNonStroke<'a>),
+    StrokeColor(StrokeColor),
+    StrokeColorNamed(StrokeColorNamed<'a>),
+    NonStrokeColor(NonStrokeColor),
+    NonStrokeColorNamed(NonStrokeColorNamed<'a>),
+    StrokeColorDeviceGray(StrokeColorDeviceGray),
+    NonStrokeColorDeviceGray(NonStrokeColorDeviceGray),
+    StrokeColorDeviceRgb(StrokeColorDeviceRgb),
+    NonStrokeColorDeviceRgb(NonStrokeColorDeviceRgb),
+    StrokeColorCmyk(StrokeColorCmyk),
+    NonStrokeColorCmyk(NonStrokeColorCmyk),
     ShowText(ShowText<'a>),
     NextLineAndShowText(NextLineAndShowText<'a>),
     ShowTextWithParameters(ShowTextWithParameters<'a>),
@@ -249,6 +337,20 @@ impl<'a> TypedOperation<'a> {
             b"b" => CloseFillAndStrokeNonZero::from_stack(&operation.operands)?.into(),
             b"b*" => CloseFillAndStrokeEvenOdd::from_stack(&operation.operands)?.into(),
             b"n" => EndPath::from_stack(&operation.operands)?.into(),
+            b"W" => ClipNonZero::from_stack(&operation.operands)?.into(),
+            b"W*" => ClipEvenOdd::from_stack(&operation.operands)?.into(),
+            b"CS" => ColorSpaceStroke::from_stack(&operation.operands)?.into(),
+            b"cs" => ColorSpaceNonStroke::from_stack(&operation.operands)?.into(),
+            b"SC" => StrokeColor::from_stack(&operation.operands)?.into(),
+            b"SCN" => StrokeColorNamed::from_stack(&operation.operands)?.into(),
+            b"sc" => NonStrokeColor::from_stack(&operation.operands)?.into(),
+            b"SCN" => NonStrokeColorNamed::from_stack(&operation.operands)?.into(),
+            b"G" => StrokeColorDeviceGray::from_stack(&operation.operands)?.into(),
+            b"g" => NonStrokeColorDeviceGray::from_stack(&operation.operands)?.into(),
+            b"RG" => StrokeColorDeviceRgb::from_stack(&operation.operands)?.into(),
+            b"rg" => NonStrokeColorDeviceRgb::from_stack(&operation.operands)?.into(),
+            b"K" => StrokeColorCmyk::from_stack(&operation.operands)?.into(),
+            b"k" => NonStrokeColorCmyk::from_stack(&operation.operands)?.into(),
             b"Tj" => ShowText::from_stack(&operation.operands)?.into(),
             b"'" => NextLineAndShowText::from_stack(&operation.operands)?.into(),
             b"\"" => ShowTextWithParameters::from_stack(&operation.operands)?.into(),

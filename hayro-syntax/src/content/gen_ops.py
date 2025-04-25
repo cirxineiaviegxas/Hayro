@@ -4,6 +4,8 @@ class Type(Enum):
     Number = "Number"
     String = "String"
     Array = "Array"
+    Object = "Object"
+    VecNum = "SmallVec<[Number; OPERANDS_THRESHOLD]>"
     Name = "Name"
 
 ops = {
@@ -45,6 +47,26 @@ ops = {
         ("b*", "CloseFillAndStrokeEvenOdd", []),
         ("n", "EndPath", []),
     ],
+    "Clipping path operators": [
+        ("W", "ClipNonZero", []),
+        ("W*", "ClipEvenOdd", []),
+    ],
+    "Colour operators": [
+        ("CS", "ColorSpaceStroke", [Type.Name]),
+        ("cs", "ColorSpaceNonStroke", [Type.Name]),
+        ("SC", "StrokeColor", [Type.VecNum]),
+        # TODO: More type safety for this?
+        ("SCN", "StrokeColorNamed", [Type.Object]),
+        ("sc", "NonStrokeColor", [Type.VecNum]),
+        # TODO: More type safety for this?
+        ("SCN", "NonStrokeColorNamed", [Type.Object]),
+        ("G", "StrokeColorDeviceGray", [Type.Number]),
+        ("g", "NonStrokeColorDeviceGray", [Type.Number]),
+        ("RG", "StrokeColorDeviceRgb", [Type.Number] * 3),
+        ("rg", "NonStrokeColorDeviceRgb", [Type.Number] * 3),
+        ("K", "StrokeColorCmyk", [Type.Number] * 4),
+        ("k", "NonStrokeColorCmyk", [Type.Number] * 4),
+    ],
     "Text-showing operators": [
         ("Tj", "ShowText", [Type.String]),
         ("'", "NextLineAndShowText", [Type.String]),
@@ -58,31 +80,36 @@ def rust_type(t: Type) -> str:
         Type.Number: "Number",
         Type.String: "string::String<'a>",
         Type.Array: "Array<'a>",
+        Type.Object: "Object<'a>",
         Type.Name: "Name<'a>",
+        Type.VecNum: "SmallVec<[Number; OPERANDS_THRESHOLD]>",
     }[t]
 
 def lifetime_if_needed(types):
-    return "<'a>" if any(t in [Type.String, Type.Array, Type.Name] for t in types) else ""
+    return "<'a>" if any(t in [Type.String, Type.Array, Type.Object, Type.Name] for t in types) else ""
 
 def gen_struct(name, code, types):
     lifetime = lifetime_if_needed(types)
     count = len(types)
+    macro_suffix = count
     struct = [f"#[derive(Debug)]"]
     if count == 0:
         struct.append(f"pub struct {name};")
     elif count == 1:
         struct.append(f"pub struct {name}{lifetime}(pub {rust_type(types[0])});")
+        if types[0] == Type.VecNum:
+            macro_suffix = "_all"
     else:
         struct.append(f"pub struct {name}{lifetime}(")
         struct += [f"    pub {rust_type(t)}," for t in types]
         struct.append(");")
     # Escape the Rust string literal properly
     escaped_code = code.replace('"', '\\"')
-    struct.append(f'op{count}!({name}{lifetime}, "{escaped_code}");')
+    struct.append(f'op{macro_suffix}!({name}{lifetime}, "{escaped_code}");')
     return "\n".join(struct)
 
 def gen_enum_variant(name, types):
-    has_lifetime = any(t in [Type.String, Type.Array, Type.Name] for t in types)
+    has_lifetime = any(t in [Type.String, Type.Array, Type.Object, Type.Name] for t in types)
     inner_type = f"{name}<'a>" if has_lifetime else name
     return f"{name}({inner_type})"
 
