@@ -13,6 +13,13 @@ pub struct Array<'a> {
     xref: XRef<'a>,
 }
 
+// TODO: Is this alright to do?
+impl PartialEq for Array<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
 impl<'a> Array<'a> {
     /// Returns an iterator over the objects of the array.
     pub(crate) fn raw_iter(&self) -> ArrayIter<'a> {

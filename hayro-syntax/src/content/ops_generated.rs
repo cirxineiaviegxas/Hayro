@@ -1,22 +1,22 @@
 // THIS FILE IS AUTO-GENERATED, DO NOT EDIT MANUALLY
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BeginCompatibility;
 op0!(BeginCompatibility, "BX");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EndCompatibility;
 op0!(EndCompatibility, "EX");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SaveState;
 op0!(SaveState, "q");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RestoreState;
 op0!(RestoreState, "Q");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Transform(
     pub Number,
     pub Number,
@@ -27,56 +27,56 @@ pub struct Transform(
 );
 op6!(Transform, "cm");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LineWidth(pub Number);
 op1!(LineWidth, "w");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LineCap(pub Number);
 op1!(LineCap, "J");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LineJoin(pub Number);
 op1!(LineJoin, "j");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MiterLimit(pub Number);
 op1!(MiterLimit, "M");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DashPattern<'a>(
     pub Array<'a>,
     pub Number,
 );
 op2!(DashPattern<'a>, "d");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RenderingIntent<'a>(pub Name<'a>);
 op1!(RenderingIntent<'a>, "ri");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FlatnessTolerance(pub Number);
 op1!(FlatnessTolerance, "i");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SetGraphicsState<'a>(pub Name<'a>);
 op1!(SetGraphicsState<'a>, "gs");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MoveTo(
     pub Number,
     pub Number,
 );
 op2!(MoveTo, "m");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LineTo(
     pub Number,
     pub Number,
 );
 op2!(LineTo, "l");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CubicTo(
     pub Number,
     pub Number,
@@ -87,7 +87,7 @@ pub struct CubicTo(
 );
 op6!(CubicTo, "c");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CubicStartTo(
     pub Number,
     pub Number,
@@ -96,7 +96,7 @@ pub struct CubicStartTo(
 );
 op4!(CubicStartTo, "v");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CubicEndTo(
     pub Number,
     pub Number,
@@ -105,11 +105,11 @@ pub struct CubicEndTo(
 );
 op4!(CubicEndTo, "y");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClosePath;
 op0!(ClosePath, "h");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RectPath(
     pub Number,
     pub Number,
@@ -118,87 +118,87 @@ pub struct RectPath(
 );
 op4!(RectPath, "re");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StrokePath;
 op0!(StrokePath, "S");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CloseAndStrokePath;
 op0!(CloseAndStrokePath, "s");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FillPathNonZero;
 op0!(FillPathNonZero, "f");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FillPathNonZeroCompatibility;
 op0!(FillPathNonZeroCompatibility, "F");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FillPathEvenOdd;
 op0!(FillPathEvenOdd, "f*");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FillAndStrokeNonZero;
 op0!(FillAndStrokeNonZero, "B");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FillAndStrokeEvenOdd;
 op0!(FillAndStrokeEvenOdd, "B*");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CloseFillAndStrokeNonZero;
 op0!(CloseFillAndStrokeNonZero, "b");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CloseFillAndStrokeEvenOdd;
 op0!(CloseFillAndStrokeEvenOdd, "b*");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EndPath;
 op0!(EndPath, "n");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClipNonZero;
 op0!(ClipNonZero, "W");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ClipEvenOdd;
 op0!(ClipEvenOdd, "W*");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ColorSpaceStroke<'a>(pub Name<'a>);
 op1!(ColorSpaceStroke<'a>, "CS");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ColorSpaceNonStroke<'a>(pub Name<'a>);
 op1!(ColorSpaceNonStroke<'a>, "cs");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColor(pub SmallVec<[Number; OPERANDS_THRESHOLD]>);
 op_all!(StrokeColor, "SC");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColorNamed<'a>(pub Object<'a>);
 op1!(StrokeColorNamed<'a>, "SCN");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColor(pub SmallVec<[Number; OPERANDS_THRESHOLD]>);
 op_all!(NonStrokeColor, "sc");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColorNamed<'a>(pub Object<'a>);
 op1!(NonStrokeColorNamed<'a>, "SCN");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColorDeviceGray(pub Number);
 op1!(StrokeColorDeviceGray, "G");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColorDeviceGray(pub Number);
 op1!(NonStrokeColorDeviceGray, "g");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColorDeviceRgb(
     pub Number,
     pub Number,
@@ -206,7 +206,7 @@ pub struct StrokeColorDeviceRgb(
 );
 op3!(StrokeColorDeviceRgb, "RG");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColorDeviceRgb(
     pub Number,
     pub Number,
@@ -214,7 +214,7 @@ pub struct NonStrokeColorDeviceRgb(
 );
 op3!(NonStrokeColorDeviceRgb, "rg");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColorCmyk(
     pub Number,
     pub Number,
@@ -223,7 +223,7 @@ pub struct StrokeColorCmyk(
 );
 op4!(StrokeColorCmyk, "K");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColorCmyk(
     pub Number,
     pub Number,
@@ -232,80 +232,80 @@ pub struct NonStrokeColorCmyk(
 );
 op4!(NonStrokeColorCmyk, "k");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Shading<'a>(pub Name<'a>);
 op1!(Shading<'a>, "sh");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct XObject<'a>(pub Name<'a>);
 op1!(XObject<'a>, "Do");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BeginInlineImage;
 op0!(BeginInlineImage, "BI");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BeginInlineImageData;
 op0!(BeginInlineImageData, "ID");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EndInlineImage;
 op0!(EndInlineImage, "EI");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CharacterSpacing(pub Number);
 op1!(CharacterSpacing, "Tc");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct WordSpacing(pub Number);
 op1!(WordSpacing, "Tw");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct HorizontalScaling(pub Number);
 op1!(HorizontalScaling, "Tz");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TextLeading(pub Number);
 op1!(TextLeading, "TL");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TextFont<'a>(
     pub Name<'a>,
     pub Number,
 );
 op2!(TextFont<'a>, "Tf");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TextRenderingMode(pub Number);
 op1!(TextRenderingMode, "Tr");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TextRise(pub Number);
 op1!(TextRise, "Ts");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BeginText;
 op0!(BeginText, "BT");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EndText;
 op0!(EndText, "ET");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NextLine(
     pub Number,
     pub Number,
 );
 op2!(NextLine, "Td");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NextLineAndSetLeading(
     pub Number,
     pub Number,
 );
 op2!(NextLineAndSetLeading, "TD");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SetTextMatrix(
     pub Number,
     pub Number,
@@ -316,19 +316,19 @@ pub struct SetTextMatrix(
 );
 op6!(SetTextMatrix, "Tm");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NextLineUsingLeading;
 op0!(NextLineUsingLeading, "T*");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ShowText<'a>(pub string::String<'a>);
 op1!(ShowText<'a>, "Tj");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NextLineAndShowText<'a>(pub string::String<'a>);
 op1!(NextLineAndShowText<'a>, "'");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ShowTextWithParameters<'a>(
     pub Number,
     pub Number,
@@ -336,18 +336,18 @@ pub struct ShowTextWithParameters<'a>(
 );
 op3!(ShowTextWithParameters<'a>, "\"");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ShowTexts<'a>(pub Array<'a>);
 op1!(ShowTexts<'a>, "TJ");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ColorGlyph(
     pub Number,
     pub Number,
 );
 op2!(ColorGlyph, "d0");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ShapeGlyph(
     pub Number,
     pub Number,
@@ -358,27 +358,27 @@ pub struct ShapeGlyph(
 );
 op6!(ShapeGlyph, "d1");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MarkedContentPoint<'a>(pub Name<'a>);
 op1!(MarkedContentPoint<'a>, "MP");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MarkedContentPointWithProperties<'a>(pub Object<'a>);
 op1!(MarkedContentPointWithProperties<'a>, "DP");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BeginMarkedContent<'a>(pub Name<'a>);
 op1!(BeginMarkedContent<'a>, "DP");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BeginMarkedContentWithProperties<'a>(pub Object<'a>);
 op1!(BeginMarkedContentWithProperties<'a>, "d1");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EndMarkedContent;
 op0!(EndMarkedContent, "DP");
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TypedOperation<'a> {
     BeginCompatibility(BeginCompatibility),
     EndCompatibility(EndCompatibility),

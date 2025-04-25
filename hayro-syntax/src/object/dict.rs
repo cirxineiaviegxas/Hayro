@@ -14,6 +14,13 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Dict<'a>(Arc<Repr<'a>>);
 
+// TODO: Is this alright to do?
+impl PartialEq for Dict<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.data == other.0.data
+    }
+}
+
 impl<'a> Dict<'a> {
     /// Returns the number of entries in the dictionary.
     pub fn len(&self) -> usize {

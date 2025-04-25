@@ -1,9 +1,9 @@
 use hayro_syntax::Data;
 use hayro_syntax::content::Stack;
+use hayro_syntax::content::ops::TypedOperation;
 use hayro_syntax::pdf::Pdf;
 use hayro_syntax::pdf::PdfError::EncryptionError;
 use walkdir::WalkDir;
-use hayro_syntax::content::ops::TypedOperation;
 
 #[allow(dead_code)]
 fn main() {
@@ -29,7 +29,6 @@ fn main() {
 
     entries.sort();
 
-
     for path in &entries[0..500] {
         let file = std::fs::read(path.as_path()).unwrap();
         let data = Data::new(&file);
@@ -46,7 +45,6 @@ fn main() {
                     }
                 }
             }
-
         }
     }
 }

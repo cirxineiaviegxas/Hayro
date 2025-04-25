@@ -250,10 +250,12 @@ macro_rules! op_impl {
             const OPERATOR: &'static str = $e;
 
             fn from_stack(stack: &Stack<'a>) -> Option<Self> {
-                if stack.len() != $n {
-                    warn!("wrong stack length {} for operator {}, expected {}", stack.len(), Self::OPERATOR, $n);
+                if $n != u8::MAX as usize {
+                    if stack.len() != $n {
+                        warn!("wrong stack length {} for operator {}, expected {}", stack.len(), Self::OPERATOR, $n);
 
-                    return None;
+                        return None;
+                    }
                 }
 
                 $body(stack).or_else(|| {
@@ -301,7 +303,7 @@ macro_rules! op1 {
 #[macro_export]
 macro_rules! op_all {
     ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 1, |stack: &Stack<'a>|
+        crate::op_impl!($t$(<$l>),*, $e, u8::MAX as usize, |stack: &Stack<'a>|
         Some(Self(stack.get_all()?)));
     }
 }
@@ -340,10 +342,4 @@ macro_rules! op6 {
         stack.get(2)?, stack.get(3)?,
         stack.get(4)?, stack.get(5)?)));
     }
-}
-
-#[cfg(test)]
-mod tests {
-
-    // TODO: Add maaaany tests!
 }

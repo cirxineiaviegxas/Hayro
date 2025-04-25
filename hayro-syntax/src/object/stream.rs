@@ -11,7 +11,7 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 
 /// A stream of arbitrary data.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Stream<'a> {
     pub(crate) dict: Dict<'a>,
     data: &'a [u8],

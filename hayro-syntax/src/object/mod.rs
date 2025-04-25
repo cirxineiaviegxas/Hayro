@@ -60,7 +60,7 @@ macro_rules! object {
 }
 
 /// A primitive PDF object.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Object<'a> {
     /// A null object.
     Null(Null),

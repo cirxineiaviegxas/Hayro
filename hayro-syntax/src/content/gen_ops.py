@@ -133,7 +133,7 @@ def gen_struct(name, code, types):
     lifetime = lifetime_if_needed(types)
     count = len(types)
     macro_suffix = count
-    struct = [f"#[derive(Debug)]"]
+    struct = [f"#[derive(Debug, PartialEq, Clone)]"]
     if count == 0:
         struct.append(f"pub struct {name};")
     elif count == 1:
@@ -173,7 +173,7 @@ for category in ops.values():
 struct_block = "\n\n".join(structs)
 
 enum_block = (
-        "#[derive(Debug)]\n"
+        "#[derive(Debug, PartialEq, Clone)]\n"
         "pub enum TypedOperation<'a> {\n"
         + "    " + ",\n    ".join(enum_variants) + ",\n"
                                                    "    Fallback,\n}"
