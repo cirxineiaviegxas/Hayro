@@ -15,7 +15,7 @@ impl From<Array<'_>> for Values {
     fn from(value: Array) -> Self {
         value
             .iter::<Number>()
-            .map(|n| n.as_f32().unwrap())
+            .map(|n| n.as_f32())
             .collect::<Values>()
     }
 }

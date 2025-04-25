@@ -2,6 +2,7 @@ use crate::file::xref::XRef;
 use crate::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
+use log::debug;
 use std::fmt::Debug;
 
 /// A PDF number.
@@ -17,19 +18,19 @@ impl Number {
         }
     }
 
-    /// Returns the number as a f32, if possible.
-    pub fn as_f32(&self) -> Option<f32> {
+    /// Returns the number as a f32.
+    pub fn as_f32(&self) -> f32 {
         match self.0 {
-            InternalNumber::Real(r) => Some(r),
+            InternalNumber::Real(r) => r,
             InternalNumber::Integer(i) => {
                 let converted = i as f32;
 
                 // Double check whether conversion didn't overflow.
                 if converted as i32 != i {
-                    None
-                } else {
-                    Some(converted)
+                    debug!("integer {} was truncated to {}", i, converted);
                 }
+
+                converted
             }
         }
     }
@@ -239,7 +240,7 @@ impl Skippable for f32 {
 
 impl Readable<'_> for f32 {
     fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef<'_>) -> Option<Self> {
-        r.read_plain::<Number>().and_then(|n| n.as_f32())
+        r.read_plain::<Number>().map(|n| n.as_f32())
     }
 }
 
@@ -248,7 +249,7 @@ impl TryFrom<Object<'_>> for f32 {
 
     fn try_from(value: Object<'_>) -> Result<Self, Self::Error> {
         match value {
-            Object::Number(n) => n.as_f32().ok_or(()),
+            Object::Number(n) => Ok(n.as_f32()),
             _ => Err(()),
         }
     }

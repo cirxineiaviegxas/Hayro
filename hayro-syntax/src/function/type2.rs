@@ -39,7 +39,7 @@ impl TryFrom<Dict<'_>> for Type2 {
         let common = CommonProperties::try_from(value.clone())?;
         let c0 = value.get::<Array>(C0).ok_or(())?.into();
         let c1 = value.get::<Array>(C1).ok_or(())?.into();
-        let n = value.get::<Number>(N).ok_or(())?.as_f32().unwrap();
+        let n = value.get::<Number>(N).ok_or(())?.as_f32();
 
         Ok(Self { common, c0, c1, n })
     }

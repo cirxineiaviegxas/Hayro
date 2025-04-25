@@ -109,7 +109,7 @@ impl PostScriptOp {
                 b"pop" => Self::Pop,
                 b"roll" => Self::Roll,
                 _ => {
-                    error!("encountered unknown postscript operator {}", data);
+                    error!("encountered unknown postscript operator {:?}", data);
 
                     return None;
                 }
