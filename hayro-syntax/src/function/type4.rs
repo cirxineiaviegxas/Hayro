@@ -47,7 +47,7 @@ struct Type4 {
 
 impl Type4 {
     fn eval(&self, mut input: Values) -> Option<Values> {
-        self.common.clamp_domain(&mut input);
+        self.common.clamp_domain(&mut input)?;
 
         let mut arg_stack = ArgumentStack::new();
 
@@ -63,7 +63,7 @@ impl Type4 {
             out.push(num.as_f32());
         }
 
-        self.common.clamp_range(&mut out);
+        self.common.clamp_range(&mut out)?;
 
         Some(out)
     }
@@ -464,6 +464,7 @@ mod tests {
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
     use crate::function::{Clamper, CommonProperties, Values};
     use crate::object::number::Number;
+    use log::__private_api::Value;
     use smallvec::smallvec;
 
     #[test]
@@ -787,6 +788,27 @@ mod tests {
             &[1.0, 2.0, 6.0, 7.0, 3.0, 4.0, 5.0],
         );
     }
-    
-    // TODO: Add test cases for bounds
+
+    #[test]
+    fn domain() {
+        let procedure = parse_procedure(b"{  }").unwrap();
+
+        let type4 = Type4 {
+            // Note that a range is in theory required, but we leave it out for testing.
+            common: CommonProperties {
+                domain: Clamper(smallvec![-5.0, 5.0, -5.0, 5.0, -5.0, 5.0]),
+                // TODO: Enforce range
+                range: None,
+            },
+            program: procedure,
+        };
+
+        let input = smallvec![-10.0, -2.0, 6.0];
+        let res = type4.eval(input).unwrap();
+
+        assert_eq!(res.as_slice(), &[-5.0, -2.0, 5.0]);
+    }
+
+    // TODO: Refactor clamp for functions
+    // TODO Add test case for range
 }

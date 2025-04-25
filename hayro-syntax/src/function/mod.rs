@@ -6,7 +6,7 @@ use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DOMAIN, RANGE};
 use crate::object::number::Number;
-use log::warn;
+use log::{error, warn};
 use smallvec::SmallVec;
 
 type Values = SmallVec<[f32; 6]>;
@@ -45,22 +45,40 @@ struct CommonProperties {
 }
 
 impl CommonProperties {
-    fn clamp_domain(&self, input: &mut Values) {
+    #[must_use]
+    fn clamp_domain(&self, input: &mut Values) -> Option<()> {
+        if input.len() != self.domain.dimension() {
+            error!("mismatch while clamping domain of postscript function");
+
+            return None;
+        }
+
         for (idx, val) in input.iter_mut().enumerate() {
             self.clamp_domain_single(val, idx);
         }
+
+        Some(())
     }
 
     fn clamp_domain_single(&self, val: &mut f32, idx: usize) {
         *val = self.domain.clamp(*val, idx);
     }
 
-    fn clamp_range(&self, input: &mut Values) {
+    #[must_use]
+    fn clamp_range(&self, input: &mut Values) -> Option<()> {
         if let Some(range) = &self.range {
+            if input.len() != range.dimension() {
+                error!("mismatch while clamping range of postscript function");
+
+                return None;
+            }
+
             for (idx, val) in input.iter_mut().enumerate() {
                 *val = range.clamp(*val, idx);
             }
         }
+
+        Some(())
     }
 }
 
