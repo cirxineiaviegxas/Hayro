@@ -8,7 +8,7 @@ use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
-use crate::{Data, OptionLog, Result};
+use crate::{Data, Result};
 use log::{error, warn};
 use rustc_hash::FxHashMap;
 use snafu::{OptionExt, ResultExt};
@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn basic_xref() {
-        let mut data = Data::new(
+        let data = Data::new(
             b"
 otherstuff
 xref
@@ -544,7 +544,7 @@ startxref
 
     #[test]
     fn xref_with_free_objects() {
-        let mut data = Data::new(
+        let data = Data::new(
             b"xref
 0 6
 0000000003 65535 f 
@@ -587,7 +587,7 @@ startxref
 
     #[test]
     fn split_xref() {
-        let mut data = Data::new(
+        let data = Data::new(
             b"xref
 0 1
 0000000000 65535 f 
@@ -628,7 +628,7 @@ startxref
 
     #[test]
     fn split_xref_with_updates() {
-        let mut data = Data::new(
+        let data = Data::new(
             b"xref
 0 1
 0000000000 65535 f 
@@ -669,7 +669,7 @@ startxref
 
     #[test]
     fn updated_xref_table() {
-        let mut data = Data::new(
+        let data = Data::new(
             b"xref
 0 4
 0000000000 65535 f 

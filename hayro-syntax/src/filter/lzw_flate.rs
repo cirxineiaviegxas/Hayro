@@ -1,10 +1,6 @@
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
-use crate::reader::Reader;
 use itertools::izip;
-use log::debug;
-use pdf_writer::types::StructRole::P;
-use std::iter;
 
 struct PredictorParams {
     predictor: u8,

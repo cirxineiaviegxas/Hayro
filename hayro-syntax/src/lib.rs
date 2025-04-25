@@ -1,13 +1,11 @@
 use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
-use crate::object::Object;
 use crate::object::stream::Stream;
-use crate::reader::Reader;
-use log::{error, trace, warn};
+use log::warn;
 use snafu::Whatever;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
 mod cache;
 pub mod content;

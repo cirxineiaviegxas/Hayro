@@ -2,7 +2,7 @@ use crate::file::xref::XRef;
 use crate::object;
 use crate::object::name::Name;
 use crate::object::null::Null;
-use crate::object::r#ref::{MaybeRef, ObjRef};
+use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use std::collections::HashMap;

@@ -1,6 +1,6 @@
 use crate::file::xref::XRef;
 use crate::object;
-use crate::object::{Object, ObjectLike};
+use crate::object::Object;
 use crate::reader::{Readable, Reader, Skippable};
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]

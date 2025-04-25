@@ -7,12 +7,11 @@ use crate::object::null::Null;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::object::string::{HexString, LiteralString, String};
-use crate::object::{Object, ObjectIdentifier, ObjectLike, string};
+use crate::object::{Object, ObjectIdentifier, ObjectLike};
 use log::warn;
-use std::any::{Any, TypeId};
+use std::any::Any;
 use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 pub(crate) trait Static: Sized {
     type STATIC: Sized + Clone + 'static;
