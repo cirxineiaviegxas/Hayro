@@ -1,0 +1,271 @@
+// Compatibility operators
+
+use crate::content::{Operation, OperatorTrait, Stack};
+use crate::object::array::Array;
+use crate::object::name::Name;
+use crate::object::number::Number;
+use crate::object::string;
+
+use crate::content::ops::TypedOperation::Fallback;
+use log::warn;
+
+#[derive(Debug)]
+pub struct BeginCompatibility;
+crate::op0!(BeginCompatibility, "BX");
+
+#[derive(Debug)]
+pub struct EndCompatibility;
+crate::op0!(EndCompatibility, "EX");
+
+// Graphics state operators
+
+#[derive(Debug)]
+pub struct SaveState;
+crate::op0!(SaveState, "q");
+
+#[derive(Debug)]
+pub struct RestoreState;
+crate::op0!(RestoreState, "Q");
+
+#[derive(Debug)]
+pub struct Transform(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+crate::op6!(Transform, "cm");
+
+#[derive(Debug)]
+pub struct LineWidth(pub Number);
+crate::op1!(LineWidth, "w");
+
+#[derive(Debug)]
+pub struct LineCap(pub Number);
+crate::op1!(LineCap, "J");
+
+#[derive(Debug)]
+pub struct LineJoin(pub Number);
+crate::op1!(LineJoin, "j");
+
+#[derive(Debug)]
+pub struct MiterLimit(pub Number);
+crate::op1!(MiterLimit, "M");
+
+#[derive(Debug)]
+pub struct DashPattern<'a>(pub Array<'a>, pub Number);
+crate::op2!(DashPattern<'a>, "d");
+
+#[derive(Debug)]
+pub struct RenderingIntent<'a>(pub Name<'a>);
+crate::op1!(RenderingIntent<'a>, "d");
+
+#[derive(Debug)]
+pub struct FlatnessTolerance(pub Number);
+crate::op1!(FlatnessTolerance, "i");
+
+#[derive(Debug)]
+pub struct SetGraphicsState<'a>(pub Name<'a>);
+crate::op1!(SetGraphicsState<'a>, "gs");
+
+// Path-construction operators
+
+#[derive(Debug)]
+pub struct MoveTo(pub Number, pub Number);
+crate::op2!(MoveTo, "m");
+
+#[derive(Debug)]
+pub struct LineTo(pub Number, pub Number);
+crate::op2!(LineTo, "l");
+
+#[derive(Debug)]
+pub struct CubicTo(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+crate::op6!(CubicTo, "c");
+
+#[derive(Debug)]
+pub struct CubicStartTo(pub Number, pub Number, pub Number, pub Number);
+crate::op4!(CubicStartTo, "v");
+
+#[derive(Debug)]
+pub struct CubicEndTo(pub Number, pub Number, pub Number, pub Number);
+crate::op4!(CubicEndTo, "y");
+
+#[derive(Debug)]
+pub struct ClosePath;
+crate::op0!(ClosePath, "h");
+
+#[derive(Debug)]
+pub struct RectPath(pub Number, pub Number, pub Number, pub Number);
+crate::op4!(RectPath, "re");
+
+// Path-painting operators
+#[derive(Debug)]
+pub struct StrokePath;
+crate::op0!(StrokePath, "S");
+
+#[derive(Debug)]
+pub struct CloseAndStrokePath;
+crate::op0!(CloseAndStrokePath, "s");
+
+#[derive(Debug)]
+pub struct FillPathNonZero;
+crate::op0!(FillPathNonZero, "f");
+
+#[derive(Debug)]
+pub struct FillPathNonZeroCompatibility;
+crate::op0!(FillPathNonZeroCompatibility, "F");
+
+#[derive(Debug)]
+pub struct FillPathEvenOdd;
+crate::op0!(FillPathEvenOdd, "f*");
+
+#[derive(Debug)]
+pub struct FillAndStrokeNonZero;
+crate::op0!(FillAndStrokeNonZero, "B");
+
+#[derive(Debug)]
+pub struct FillAndStrokeEvenOdd;
+crate::op0!(FillAndStrokeEvenOdd, "B*");
+
+#[derive(Debug)]
+pub struct CloseFillAndStrokeNonZero;
+crate::op0!(CloseFillAndStrokeNonZero, "b");
+
+#[derive(Debug)]
+pub struct CloseFillAndStrokeEvenOdd;
+crate::op0!(CloseFillAndStrokeEvenOdd, "b*");
+
+#[derive(Debug)]
+pub struct EndPath;
+crate::op0!(EndPath, "n");
+
+// Text-showing operators
+
+#[derive(Debug)]
+pub struct ShowText<'a>(pub string::String<'a>);
+crate::op1!(ShowText<'a>, "Tj");
+
+#[derive(Debug)]
+pub struct NextLineAndShowText<'a>(pub string::String<'a>);
+crate::op1!(NextLineAndShowText<'a>, "'");
+
+#[derive(Debug)]
+pub struct ShowTextWithParameters<'a>(pub Number, pub Number, pub string::String<'a>);
+crate::op3!(ShowTextWithParameters<'a>, "\"");
+
+#[derive(Debug)]
+pub struct ShowTexts<'a>(pub Array<'a>);
+crate::op1!(ShowTexts<'a>, "TJ");
+
+// TODO: Add remark to not collect into vector
+#[derive(Debug)]
+pub enum TypedOperation<'a> {
+    // Compatibility operators
+    BeginCompatibility(BeginCompatibility),
+    EndCompatibility(EndCompatibility),
+
+    // Graphics state operators
+    SaveState(SaveState),
+    RestoreState(RestoreState),
+    Transform(Transform),
+    LineWidth(LineWidth),
+    LineCap(LineCap),
+    LineJoin(LineJoin),
+    MiterLimit(MiterLimit),
+    DashPattern(DashPattern<'a>),
+    RenderingIntent(RenderingIntent<'a>),
+    FlatnessTolerance(FlatnessTolerance),
+    SetGraphicsState(SetGraphicsState<'a>),
+
+    // Path-construction operators
+    MoveTo(MoveTo),
+    LineTo(LineTo),
+    CubicTo(CubicTo),
+    CubicStartTo(CubicStartTo),
+    CubicEndTo(CubicEndTo),
+    ClosePath(ClosePath),
+    RectPath(RectPath),
+
+    // Path-painting operators
+    StrokePath(StrokePath),
+    CloseAndStrokePath(CloseAndStrokePath),
+    FillPathNonZero(FillPathNonZero),
+    FillPathNonZeroCompatibility(FillPathNonZeroCompatibility),
+    FillPathEvenOdd(FillPathEvenOdd),
+    FillAndStrokeNonZero(FillAndStrokeNonZero),
+    FillAndStrokeEvenOdd(FillAndStrokeEvenOdd),
+    CloseFillAndStrokeNonZero(CloseFillAndStrokeNonZero),
+    CloseFillAndStrokeEvenOdd(CloseFillAndStrokeEvenOdd),
+    EndPath(EndPath),
+
+    // Text-showing operators
+    ShowText(ShowText<'a>),
+    NextLineAndShowText(NextLineAndShowText<'a>),
+    ShowTextWithParameters(ShowTextWithParameters<'a>),
+    ShowTexts(ShowTexts<'a>),
+
+    Fallback,
+}
+
+impl<'a> TypedOperation<'a> {
+    pub(crate) fn dispatch(operation: &Operation<'a>) -> Option<TypedOperation<'a>> {
+        let op_name = operation.operator.get();
+        Some(match op_name.as_ref() {
+            // Compatibility operators
+            b"BX" => BeginCompatibility::from_stack(&operation.operands)?.into(),
+            b"EX" => EndCompatibility::from_stack(&operation.operands)?.into(),
+
+            // Graphics state operators
+            b"q" => SaveState::from_stack(&operation.operands)?.into(),
+            b"cm" => Transform::from_stack(&operation.operands)?.into(),
+            b"w" => LineWidth::from_stack(&operation.operands)?.into(),
+            b"J" => LineCap::from_stack(&operation.operands)?.into(),
+            b"j" => LineJoin::from_stack(&operation.operands)?.into(),
+            b"M" => MiterLimit::from_stack(&operation.operands)?.into(),
+            b"d" => DashPattern::from_stack(&operation.operands)?.into(),
+            b"ri" => RenderingIntent::from_stack(&operation.operands)?.into(),
+            b"i" => FlatnessTolerance::from_stack(&operation.operands)?.into(),
+            b"gs" => SetGraphicsState::from_stack(&operation.operands)?.into(),
+
+            // Path-construction operators
+            b"m" => MoveTo::from_stack(&operation.operands)?.into(),
+            b"l" => LineTo::from_stack(&operation.operands)?.into(),
+            b"c" => CubicTo::from_stack(&operation.operands)?.into(),
+            b"v" => CubicStartTo::from_stack(&operation.operands)?.into(),
+            b"y" => CubicEndTo::from_stack(&operation.operands)?.into(),
+            b"h" => ClosePath::from_stack(&operation.operands)?.into(),
+            b"re" => RectPath::from_stack(&operation.operands)?.into(),
+
+            // Path-painting operators
+            // Clipping operators
+            // Colour operators
+            // Shading operator
+            // XObject operator
+            // Inline image operators
+            // Text state operators
+            // Text object operators
+            // Text-positioning operators
+
+            // Text-showing operators
+            b"Tj" => ShowText::from_stack(&operation.operands)?.into(),
+            b"'" => NextLineAndShowText::from_stack(&operation.operands)?.into(),
+            b"\"" => ShowTextWithParameters::from_stack(&operation.operands)?.into(),
+            b"TJ" => ShowTexts::from_stack(&operation.operands)?.into(),
+
+            // Type 3 font operators
+            // Marked-content operators
+
+            // TODO: Add proper fallback
+            _ => return Fallback.into(),
+        })
+    }
+}
