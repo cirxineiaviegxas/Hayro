@@ -64,7 +64,7 @@ pub mod flate {
         let params = params
             .map(|p| PredictorParams::from_params(p))
             .unwrap_or_default();
-        apply_predictor(&decoded, &params)
+        apply_predictor(decoded, &params)
     }
 
     fn zlib(data: &[u8]) -> Option<Vec<u8>> {
@@ -89,7 +89,7 @@ pub mod lzw {
 
         let decoded = decode_impl(data, params.early_change)?;
 
-        apply_predictor(&decoded, &params)
+        apply_predictor(decoded, &params)
     }
 
     const CLEAR_TABLE: usize = 256;
@@ -283,9 +283,9 @@ fn apply_paeth<'a>(
     }
 }
 
-fn apply_predictor(data: &[u8], params: &PredictorParams) -> Option<Vec<u8>> {
+fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
-        1 | 10 => Some(data.to_vec()),
+        1 | 10 => Some(data),
         i if i >= 10 => {
             let row_len = params.row_length_in_bytes();
             // + 1 Because each row must start with the predictor that is used.
@@ -383,7 +383,7 @@ mod tests {
         };
 
         let expected = predictor_expected();
-        let out = apply_predictor(input, &params).unwrap();
+        let out = apply_predictor(input.to_vec(), &params).unwrap();
 
         assert_eq!(expected, out);
     }
