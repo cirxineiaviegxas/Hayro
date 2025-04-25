@@ -67,11 +67,52 @@ ops = {
         ("K", "StrokeColorCmyk", [Type.Number] * 4),
         ("k", "NonStrokeColorCmyk", [Type.Number] * 4),
     ],
+    "Shading operator": [
+        ("sh", "Shading", [Type.Name])
+    ],
+    "XObject operator": [
+        ("Do", "XObject", [Type.Name])
+    ],
+    "Inline-image operators": [
+        ("BI", "BeginInlineImage", []),
+        ("ID", "BeginInlineImageData", []),
+        ("EI", "EndInlineImage", []),
+    ],
+    "Text-state operators": [
+        ("Tc", "CharacterSpacing", [Type.Number]),
+        ("Tw", "WordSpacing", [Type.Number]),
+        ("Tz", "HorizontalScaling", [Type.Number]),
+        ("TL", "TextLeading", [Type.Number]),
+        ("Tf", "TextFont", [Type.Number]),
+        ("Tr", "TextRenderingMode", [Type.Number]),
+        ("Ts", "TextRise", [Type.Number]),
+    ],
+    "Text-object operators": [
+        ("BT", "BeginText", []),
+        ("ET", "EndText", []),
+    ],
+    "Text-positioning operators": [
+        ("Td", "NextLine", [Type.Number] * 2),
+        ("TD", "NextLineAndSetLeading", [Type.Number] * 2),
+        ("Tm", "SetTextMatrix", [Type.Number] * 6),
+        ("T*", "NextLineUsingLeading", []),
+    ],
     "Text-showing operators": [
         ("Tj", "ShowText", [Type.String]),
         ("'", "NextLineAndShowText", [Type.String]),
         ("\"", "ShowTextWithParameters", [Type.Number, Type.Number, Type.String]),
         ("TJ", "ShowTexts", [Type.Array]),
+    ],
+    "Type 3 font operators": [
+        ("d0", "ColorGlyph", [Type.Number] * 2),
+        ("d1", "ShapeGlyph", [Type.Number] * 6),
+    ],
+    "Marked content operators": [
+        ("MP", "MarkedContentPoint", [Type.Name]),
+        ("DP", "MarkedContentPointWithProperties", [Type.Object]),
+        ("DP", "BeginMarkedContent", [Type.Name]),
+        ("d1", "BeginMarkedContentWithProperties", [Type.Object]),
+        ("DP", "EndMarkedContent", []),
     ],
 }
 
@@ -150,7 +191,9 @@ dispatch_block = (
                                                                   "}"
 )
 
-joined = "\n\n".join([struct_block, enum_block, dispatch_block])
+gen_notice = "// THIS FILE IS AUTO-GENERATED, DO NOT EDIT MANUALLY"
+
+joined = "\n\n".join([gen_notice, struct_block, enum_block, dispatch_block])
 
 with open("ops_generated.rs", 'w') as f:
     f.write(joined)

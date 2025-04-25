@@ -1,3 +1,5 @@
+// THIS FILE IS AUTO-GENERATED, DO NOT EDIT MANUALLY
+
 #[derive(Debug)]
 pub struct BeginCompatibility;
 op0!(BeginCompatibility, "BX");
@@ -231,6 +233,91 @@ pub struct NonStrokeColorCmyk(
 op4!(NonStrokeColorCmyk, "k");
 
 #[derive(Debug)]
+pub struct Shading<'a>(pub Name<'a>);
+op1!(Shading<'a>, "sh");
+
+#[derive(Debug)]
+pub struct XObject<'a>(pub Name<'a>);
+op1!(XObject<'a>, "Do");
+
+#[derive(Debug)]
+pub struct BeginInlineImage;
+op0!(BeginInlineImage, "BI");
+
+#[derive(Debug)]
+pub struct BeginInlineImageData;
+op0!(BeginInlineImageData, "ID");
+
+#[derive(Debug)]
+pub struct EndInlineImage;
+op0!(EndInlineImage, "EI");
+
+#[derive(Debug)]
+pub struct CharacterSpacing(pub Number);
+op1!(CharacterSpacing, "Tc");
+
+#[derive(Debug)]
+pub struct WordSpacing(pub Number);
+op1!(WordSpacing, "Tw");
+
+#[derive(Debug)]
+pub struct HorizontalScaling(pub Number);
+op1!(HorizontalScaling, "Tz");
+
+#[derive(Debug)]
+pub struct TextLeading(pub Number);
+op1!(TextLeading, "TL");
+
+#[derive(Debug)]
+pub struct TextFont(pub Number);
+op1!(TextFont, "Tf");
+
+#[derive(Debug)]
+pub struct TextRenderingMode(pub Number);
+op1!(TextRenderingMode, "Tr");
+
+#[derive(Debug)]
+pub struct TextRise(pub Number);
+op1!(TextRise, "Ts");
+
+#[derive(Debug)]
+pub struct BeginText;
+op0!(BeginText, "BT");
+
+#[derive(Debug)]
+pub struct EndText;
+op0!(EndText, "ET");
+
+#[derive(Debug)]
+pub struct NextLine(
+    pub Number,
+    pub Number,
+);
+op2!(NextLine, "Td");
+
+#[derive(Debug)]
+pub struct NextLineAndSetLeading(
+    pub Number,
+    pub Number,
+);
+op2!(NextLineAndSetLeading, "TD");
+
+#[derive(Debug)]
+pub struct SetTextMatrix(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op6!(SetTextMatrix, "Tm");
+
+#[derive(Debug)]
+pub struct NextLineUsingLeading;
+op0!(NextLineUsingLeading, "T*");
+
+#[derive(Debug)]
 pub struct ShowText<'a>(pub string::String<'a>);
 op1!(ShowText<'a>, "Tj");
 
@@ -249,6 +336,44 @@ op3!(ShowTextWithParameters<'a>, "\"");
 #[derive(Debug)]
 pub struct ShowTexts<'a>(pub Array<'a>);
 op1!(ShowTexts<'a>, "TJ");
+
+#[derive(Debug)]
+pub struct ColorGlyph(
+    pub Number,
+    pub Number,
+);
+op2!(ColorGlyph, "d0");
+
+#[derive(Debug)]
+pub struct ShapeGlyph(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op6!(ShapeGlyph, "d1");
+
+#[derive(Debug)]
+pub struct MarkedContentPoint<'a>(pub Name<'a>);
+op1!(MarkedContentPoint<'a>, "MP");
+
+#[derive(Debug)]
+pub struct MarkedContentPointWithProperties<'a>(pub Object<'a>);
+op1!(MarkedContentPointWithProperties<'a>, "DP");
+
+#[derive(Debug)]
+pub struct BeginMarkedContent<'a>(pub Name<'a>);
+op1!(BeginMarkedContent<'a>, "DP");
+
+#[derive(Debug)]
+pub struct BeginMarkedContentWithProperties<'a>(pub Object<'a>);
+op1!(BeginMarkedContentWithProperties<'a>, "d1");
+
+#[derive(Debug)]
+pub struct EndMarkedContent;
+op0!(EndMarkedContent, "DP");
 
 #[derive(Debug)]
 pub enum TypedOperation<'a> {
@@ -296,10 +421,35 @@ pub enum TypedOperation<'a> {
     NonStrokeColorDeviceRgb(NonStrokeColorDeviceRgb),
     StrokeColorCmyk(StrokeColorCmyk),
     NonStrokeColorCmyk(NonStrokeColorCmyk),
+    Shading(Shading<'a>),
+    XObject(XObject<'a>),
+    BeginInlineImage(BeginInlineImage),
+    BeginInlineImageData(BeginInlineImageData),
+    EndInlineImage(EndInlineImage),
+    CharacterSpacing(CharacterSpacing),
+    WordSpacing(WordSpacing),
+    HorizontalScaling(HorizontalScaling),
+    TextLeading(TextLeading),
+    TextFont(TextFont),
+    TextRenderingMode(TextRenderingMode),
+    TextRise(TextRise),
+    BeginText(BeginText),
+    EndText(EndText),
+    NextLine(NextLine),
+    NextLineAndSetLeading(NextLineAndSetLeading),
+    SetTextMatrix(SetTextMatrix),
+    NextLineUsingLeading(NextLineUsingLeading),
     ShowText(ShowText<'a>),
     NextLineAndShowText(NextLineAndShowText<'a>),
     ShowTextWithParameters(ShowTextWithParameters<'a>),
     ShowTexts(ShowTexts<'a>),
+    ColorGlyph(ColorGlyph),
+    ShapeGlyph(ShapeGlyph),
+    MarkedContentPoint(MarkedContentPoint<'a>),
+    MarkedContentPointWithProperties(MarkedContentPointWithProperties<'a>),
+    BeginMarkedContent(BeginMarkedContent<'a>),
+    BeginMarkedContentWithProperties(BeginMarkedContentWithProperties<'a>),
+    EndMarkedContent(EndMarkedContent),
     Fallback,
 }
 
@@ -351,10 +501,35 @@ impl<'a> TypedOperation<'a> {
             b"rg" => NonStrokeColorDeviceRgb::from_stack(&operation.operands)?.into(),
             b"K" => StrokeColorCmyk::from_stack(&operation.operands)?.into(),
             b"k" => NonStrokeColorCmyk::from_stack(&operation.operands)?.into(),
+            b"sh" => Shading::from_stack(&operation.operands)?.into(),
+            b"Do" => XObject::from_stack(&operation.operands)?.into(),
+            b"BI" => BeginInlineImage::from_stack(&operation.operands)?.into(),
+            b"ID" => BeginInlineImageData::from_stack(&operation.operands)?.into(),
+            b"EI" => EndInlineImage::from_stack(&operation.operands)?.into(),
+            b"Tc" => CharacterSpacing::from_stack(&operation.operands)?.into(),
+            b"Tw" => WordSpacing::from_stack(&operation.operands)?.into(),
+            b"Tz" => HorizontalScaling::from_stack(&operation.operands)?.into(),
+            b"TL" => TextLeading::from_stack(&operation.operands)?.into(),
+            b"Tf" => TextFont::from_stack(&operation.operands)?.into(),
+            b"Tr" => TextRenderingMode::from_stack(&operation.operands)?.into(),
+            b"Ts" => TextRise::from_stack(&operation.operands)?.into(),
+            b"BT" => BeginText::from_stack(&operation.operands)?.into(),
+            b"ET" => EndText::from_stack(&operation.operands)?.into(),
+            b"Td" => NextLine::from_stack(&operation.operands)?.into(),
+            b"TD" => NextLineAndSetLeading::from_stack(&operation.operands)?.into(),
+            b"Tm" => SetTextMatrix::from_stack(&operation.operands)?.into(),
+            b"T*" => NextLineUsingLeading::from_stack(&operation.operands)?.into(),
             b"Tj" => ShowText::from_stack(&operation.operands)?.into(),
             b"'" => NextLineAndShowText::from_stack(&operation.operands)?.into(),
             b"\"" => ShowTextWithParameters::from_stack(&operation.operands)?.into(),
             b"TJ" => ShowTexts::from_stack(&operation.operands)?.into(),
+            b"d0" => ColorGlyph::from_stack(&operation.operands)?.into(),
+            b"d1" => ShapeGlyph::from_stack(&operation.operands)?.into(),
+            b"MP" => MarkedContentPoint::from_stack(&operation.operands)?.into(),
+            b"DP" => MarkedContentPointWithProperties::from_stack(&operation.operands)?.into(),
+            b"DP" => BeginMarkedContent::from_stack(&operation.operands)?.into(),
+            b"d1" => BeginMarkedContentWithProperties::from_stack(&operation.operands)?.into(),
+            b"DP" => EndMarkedContent::from_stack(&operation.operands)?.into(),
             _ => return Self::Fallback.into(),
         })
     }
