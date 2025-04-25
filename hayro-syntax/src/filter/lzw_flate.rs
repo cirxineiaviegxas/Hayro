@@ -199,90 +199,6 @@ pub mod lzw {
     }
 }
 
-fn apply_up(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
-    for (up, cur, out) in izip!(prev_row, cur_row, out.iter_mut()) {
-        *out = cur.wrapping_add(*up);
-    }
-}
-
-fn apply_sub<'a>(cur_row: &'a [u8], mut prev_col: &'a [u8], out: &'a mut [u8], colors: usize) {
-    let cur = cur_row.chunks_exact(colors);
-    let out = out.chunks_exact_mut(colors);
-
-    for (cur, out) in cur.zip(out) {
-        for (prev, cur, out) in izip!(prev_col, cur, out.iter_mut()) {
-            *out = cur.wrapping_add(*prev);
-        }
-
-        prev_col = out;
-    }
-}
-
-fn apply_avg<'a>(
-    prev_row: &'a [u8],
-    mut prev_col: &'a [u8],
-    cur_row: &'a [u8],
-    out: &'a mut [u8],
-    colors: usize,
-) {
-    let cur_row = cur_row.chunks_exact(colors);
-    let prev_row = prev_row.chunks_exact(colors);
-    let out_row = out.chunks_exact_mut(colors);
-
-    for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
-        for (cur_row, prev_row, out_row, prev_col) in
-            izip!(cur_row, prev_row, out_row.iter_mut(), prev_col)
-        {
-            *out_row = cur_row.wrapping_add(((*prev_col as u16 + *prev_row as u16) / 2) as u8);
-        }
-
-        prev_col = out_row;
-    }
-}
-
-fn apply_paeth<'a>(
-    prev_row: &'a [u8],
-    mut prev_col: &'a [u8],
-    mut top_left: &'a [u8],
-    cur_row: &'a [u8],
-    out: &'a mut [u8],
-    colors: usize,
-) {
-    fn paeth(a: u8, b: u8, c: u8) -> u8 {
-        let a = a as i16;
-        let b = b as i16;
-        let c = c as i16;
-
-        let p = a + b - c;
-        let pa = (p - a).abs();
-        let pb = (p - b).abs();
-        let pc = (p - c).abs();
-
-        if pa <= pb && pa <= pc {
-            a as u8
-        } else if pb <= pc {
-            b as u8
-        } else {
-            c as u8
-        }
-    }
-
-    let cur_row = cur_row.chunks_exact(colors);
-    let prev_row = prev_row.chunks_exact(colors);
-    let out_row = out.chunks_exact_mut(colors);
-
-    for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
-        for (cur_row, prev_row, out_row, prev_col, top_left) in
-            izip!(cur_row, prev_row, out_row.iter_mut(), prev_col, top_left)
-        {
-            *out_row = cur_row.wrapping_add(paeth(*prev_col, *prev_row, *top_left));
-        }
-
-        prev_col = out_row;
-        top_left = prev_row;
-    }
-}
-
 fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
         1 | 10 => Some(data),
@@ -315,10 +231,10 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
                 match predictor {
                     0 => out_row.copy_from_slice(in_data),
-                    1 => apply_sub(in_data, &zero_col, out_row, colors),
-                    2 => apply_up(&prev_row, in_data, out_row),
-                    3 => apply_avg(&prev_row, &zero_col, in_data, out_row, colors),
-                    4 => apply_paeth(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
+                    1 => apply::<Sub>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
+                    2 => apply::<Up>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
+                    3 => apply::<Avg>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
+                    4 => apply::<Paeth>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
                     _ => unreachable!(),
                 }
 
@@ -328,6 +244,81 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             Some(out)
         }
         _ => unimplemented!(),
+    }
+}
+
+fn apply<'a, T: Predictor>(
+    prev_row: &'a [u8],
+    mut prev_col: &'a [u8],
+    mut top_left: &'a [u8],
+    cur_row: &'a [u8],
+    out: &'a mut [u8],
+    colors: usize,
+) {
+    let cur_row = cur_row.chunks_exact(colors);
+    let prev_row = prev_row.chunks_exact(colors);
+    let out_row = out.chunks_exact_mut(colors);
+
+    for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
+        for (cur_row, prev_row, out_row, prev_col, top_left) in
+            izip!(cur_row, prev_row, out_row.iter_mut(), prev_col, top_left)
+        {
+            *out_row = T::predict(*cur_row, *prev_row, *prev_col, *top_left);
+        }
+
+        prev_col = out_row;
+        top_left = prev_row;
+    }
+}
+
+trait Predictor {
+    fn predict(cur_row: u8, prev_row: u8, prev_col: u8, top_left: u8) -> u8;
+}
+
+struct Sub;
+impl Predictor for Sub {
+    fn predict(cur_row: u8, _: u8, prev_col: u8, _: u8) -> u8 {
+        cur_row.wrapping_add(prev_col)
+    }
+}
+
+struct Up;
+impl Predictor for Up {
+    fn predict(cur_row: u8, prev_row: u8, _: u8, _: u8) -> u8 {
+        cur_row.wrapping_add(prev_row)
+    }
+}
+
+struct Avg;
+impl Predictor for Avg {
+    fn predict(cur_row: u8, prev_row: u8, prev_col: u8, _: u8) -> u8 {
+        cur_row.wrapping_add(((prev_col as u16 + prev_row as u16) / 2) as u8)
+    }
+}
+
+struct Paeth;
+impl Predictor for Paeth {
+    fn predict(cur_row: u8, prev_row: u8, prev_col: u8, top_left: u8) -> u8 {
+        fn paeth(a: u8, b: u8, c: u8) -> u8 {
+            let a = a as i16;
+            let b = b as i16;
+            let c = c as i16;
+
+            let p = a + b - c;
+            let pa = (p - a).abs();
+            let pb = (p - b).abs();
+            let pc = (p - c).abs();
+
+            if pa <= pb && pa <= pc {
+                a as u8
+            } else if pb <= pc {
+                b as u8
+            } else {
+                c as u8
+            }
+        }
+
+        cur_row.wrapping_add(paeth(prev_col, prev_row, top_left))
     }
 }
 
