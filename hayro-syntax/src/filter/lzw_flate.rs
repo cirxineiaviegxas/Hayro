@@ -199,17 +199,15 @@ pub mod lzw {
     }
 }
 
-fn apply_up<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
+fn apply_up(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
     for (up, cur, out) in izip!(prev_row, cur_row, out.iter_mut()) {
         *out = cur.wrapping_add(*up);
     }
 }
 
-fn apply_sub<const C: usize>(cur_row: &[u8], out: &mut [u8]) {
-    let mut prev_col: &[u8; C] = &[0; C];
-
-    let cur = cur_row.array_chunks::<C>();
-    let out = out.array_chunks_mut::<C>();
+fn apply_sub<'a>(cur_row: &'a [u8], mut prev_col: &'a [u8], out: &'a mut [u8], colors: usize) {
+    let cur = cur_row.chunks_exact(colors);
+    let out = out.chunks_exact_mut(colors);
 
     for (cur, out) in cur.zip(out) {
         for (prev, cur, out) in izip!(prev_col, cur, out.iter_mut()) {
@@ -220,12 +218,16 @@ fn apply_sub<const C: usize>(cur_row: &[u8], out: &mut [u8]) {
     }
 }
 
-fn apply_avg<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
-    let mut prev_col: &[u8; C] = &[0; C];
-
-    let cur_row = cur_row.array_chunks::<C>();
-    let prev_row = prev_row.array_chunks::<C>();
-    let out_row = out.array_chunks_mut::<C>();
+fn apply_avg<'a>(
+    prev_row: &'a [u8],
+    mut prev_col: &'a [u8],
+    cur_row: &'a [u8],
+    out: &'a mut [u8],
+    colors: usize,
+) {
+    let cur_row = cur_row.chunks_exact(colors);
+    let prev_row = prev_row.chunks_exact(colors);
+    let out_row = out.chunks_exact_mut(colors);
 
     for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
         for (cur_row, prev_row, out_row, prev_col) in
@@ -238,7 +240,14 @@ fn apply_avg<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
     }
 }
 
-fn apply_paeth<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) {
+fn apply_paeth<'a>(
+    prev_row: &'a [u8],
+    mut prev_col: &'a [u8],
+    mut top_left: &'a [u8],
+    cur_row: &'a [u8],
+    out: &'a mut [u8],
+    colors: usize,
+) {
     fn paeth(a: u8, b: u8, c: u8) -> u8 {
         let a = a as i16;
         let b = b as i16;
@@ -258,12 +267,9 @@ fn apply_paeth<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) 
         }
     }
 
-    let mut top_left: &[u8; C] = &[0; C];
-    let mut prev_col: &[u8; C] = &[0; C];
-
-    let cur_row = cur_row.array_chunks::<C>();
-    let prev_row = prev_row.array_chunks::<C>();
-    let out_row = out.array_chunks_mut::<C>();
+    let cur_row = cur_row.chunks_exact(colors);
+    let prev_row = prev_row.chunks_exact(colors);
+    let out_row = out.chunks_exact_mut(colors);
 
     for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
         for (cur_row, prev_row, out_row, prev_col, top_left) in
@@ -277,7 +283,7 @@ fn apply_paeth<const C: usize>(prev_row: &[u8], cur_row: &[u8], out: &mut [u8]) 
     }
 }
 
-fn apply_predictor_inner<const C: usize>(data: &[u8], params: &PredictorParams) -> Option<Vec<u8>> {
+fn apply_predictor(data: &[u8], params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
         1 | 10 => Some(data.to_vec()),
         i if i >= 10 => {
@@ -291,9 +297,12 @@ fn apply_predictor_inner<const C: usize>(data: &[u8], params: &PredictorParams) 
                 return None;
             }
 
-            let inital_row = vec![0; row_len];
+            let colors = params.colors as usize;
 
-            let mut prev_row: &[u8] = inital_row.as_ref();
+            let zero_row = vec![0; row_len];
+            let zero_col = vec![0; colors];
+
+            let mut prev_row: &[u8] = &zero_row;
 
             let mut out = vec![0; num_rows * row_len];
 
@@ -306,10 +315,10 @@ fn apply_predictor_inner<const C: usize>(data: &[u8], params: &PredictorParams) 
 
                 match predictor {
                     0 => out_row.copy_from_slice(in_data),
-                    1 => apply_sub::<C>(in_data, out_row),
-                    2 => apply_up::<C>(prev_row, in_data, out_row),
-                    3 => apply_avg::<C>(prev_row, in_data, out_row),
-                    4 => apply_paeth::<C>(prev_row, in_data, out_row),
+                    1 => apply_sub(in_data, &zero_col, out_row, colors),
+                    2 => apply_up(&prev_row, in_data, out_row),
+                    3 => apply_avg(&prev_row, &zero_col, in_data, out_row, colors),
+                    4 => apply_paeth(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
                     _ => unreachable!(),
                 }
 
@@ -319,20 +328,6 @@ fn apply_predictor_inner<const C: usize>(data: &[u8], params: &PredictorParams) 
             Some(out)
         }
         _ => unimplemented!(),
-    }
-}
-
-fn apply_predictor(data: &[u8], params: &PredictorParams) -> Option<Vec<u8>> {
-    match params.colors {
-        1 => apply_predictor_inner::<1>(data, params),
-        2 => apply_predictor_inner::<2>(data, params),
-        3 => apply_predictor_inner::<3>(data, params),
-        4 => apply_predictor_inner::<4>(data, params),
-        _ => {
-            debug!("encountered {} colors in predictor", params.colors);
-
-            None
-        }
     }
 }
 
