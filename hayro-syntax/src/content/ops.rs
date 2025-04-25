@@ -8,24 +8,23 @@ use crate::object::string;
 
 use crate::content::ops::TypedOperation::Fallback;
 use log::warn;
+use crate::{op0, op1, op2, op3, op4, op6};
 
 #[derive(Debug)]
 pub struct BeginCompatibility;
-crate::op0!(BeginCompatibility, "BX");
+op0!(BeginCompatibility, "BX");
 
 #[derive(Debug)]
 pub struct EndCompatibility;
-crate::op0!(EndCompatibility, "EX");
-
-// Graphics state operators
+op0!(EndCompatibility, "EX");
 
 #[derive(Debug)]
 pub struct SaveState;
-crate::op0!(SaveState, "q");
+op0!(SaveState, "q");
 
 #[derive(Debug)]
 pub struct RestoreState;
-crate::op0!(RestoreState, "Q");
+op0!(RestoreState, "Q");
 
 #[derive(Debug)]
 pub struct Transform(
@@ -36,49 +35,56 @@ pub struct Transform(
     pub Number,
     pub Number,
 );
-crate::op6!(Transform, "cm");
+op6!(Transform, "cm");
 
 #[derive(Debug)]
 pub struct LineWidth(pub Number);
-crate::op1!(LineWidth, "w");
+op1!(LineWidth, "w");
 
 #[derive(Debug)]
 pub struct LineCap(pub Number);
-crate::op1!(LineCap, "J");
+op1!(LineCap, "J");
 
 #[derive(Debug)]
 pub struct LineJoin(pub Number);
-crate::op1!(LineJoin, "j");
+op1!(LineJoin, "j");
 
 #[derive(Debug)]
 pub struct MiterLimit(pub Number);
-crate::op1!(MiterLimit, "M");
+op1!(MiterLimit, "M");
 
 #[derive(Debug)]
-pub struct DashPattern<'a>(pub Array<'a>, pub Number);
-crate::op2!(DashPattern<'a>, "d");
+pub struct DashPattern<'a>(
+    pub Array<'a>,
+    pub Number,
+);
+op2!(DashPattern<'a>, "d");
 
 #[derive(Debug)]
 pub struct RenderingIntent<'a>(pub Name<'a>);
-crate::op1!(RenderingIntent<'a>, "d");
+op1!(RenderingIntent<'a>, "ri");
 
 #[derive(Debug)]
 pub struct FlatnessTolerance(pub Number);
-crate::op1!(FlatnessTolerance, "i");
+op1!(FlatnessTolerance, "i");
 
 #[derive(Debug)]
 pub struct SetGraphicsState<'a>(pub Name<'a>);
-crate::op1!(SetGraphicsState<'a>, "gs");
-
-// Path-construction operators
+op1!(SetGraphicsState<'a>, "gs");
 
 #[derive(Debug)]
-pub struct MoveTo(pub Number, pub Number);
-crate::op2!(MoveTo, "m");
+pub struct MoveTo(
+    pub Number,
+    pub Number,
+);
+op2!(MoveTo, "m");
 
 #[derive(Debug)]
-pub struct LineTo(pub Number, pub Number);
-crate::op2!(LineTo, "l");
+pub struct LineTo(
+    pub Number,
+    pub Number,
+);
+op2!(LineTo, "l");
 
 #[derive(Debug)]
 pub struct CubicTo(
@@ -89,84 +95,99 @@ pub struct CubicTo(
     pub Number,
     pub Number,
 );
-crate::op6!(CubicTo, "c");
+op6!(CubicTo, "c");
 
 #[derive(Debug)]
-pub struct CubicStartTo(pub Number, pub Number, pub Number, pub Number);
-crate::op4!(CubicStartTo, "v");
+pub struct CubicStartTo(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op4!(CubicStartTo, "v");
 
 #[derive(Debug)]
-pub struct CubicEndTo(pub Number, pub Number, pub Number, pub Number);
-crate::op4!(CubicEndTo, "y");
+pub struct CubicEndTo(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op4!(CubicEndTo, "y");
 
 #[derive(Debug)]
 pub struct ClosePath;
-crate::op0!(ClosePath, "h");
+op0!(ClosePath, "h");
 
 #[derive(Debug)]
-pub struct RectPath(pub Number, pub Number, pub Number, pub Number);
-crate::op4!(RectPath, "re");
+pub struct RectPath(
+    pub Number,
+    pub Number,
+    pub Number,
+    pub Number,
+);
+op4!(RectPath, "re");
 
-// Path-painting operators
 #[derive(Debug)]
 pub struct StrokePath;
-crate::op0!(StrokePath, "S");
+op0!(StrokePath, "S");
 
 #[derive(Debug)]
 pub struct CloseAndStrokePath;
-crate::op0!(CloseAndStrokePath, "s");
+op0!(CloseAndStrokePath, "s");
 
 #[derive(Debug)]
 pub struct FillPathNonZero;
-crate::op0!(FillPathNonZero, "f");
+op0!(FillPathNonZero, "f");
 
 #[derive(Debug)]
 pub struct FillPathNonZeroCompatibility;
-crate::op0!(FillPathNonZeroCompatibility, "F");
+op0!(FillPathNonZeroCompatibility, "F");
 
 #[derive(Debug)]
 pub struct FillPathEvenOdd;
-crate::op0!(FillPathEvenOdd, "f*");
+op0!(FillPathEvenOdd, "f*");
 
 #[derive(Debug)]
 pub struct FillAndStrokeNonZero;
-crate::op0!(FillAndStrokeNonZero, "B");
+op0!(FillAndStrokeNonZero, "B");
 
 #[derive(Debug)]
 pub struct FillAndStrokeEvenOdd;
-crate::op0!(FillAndStrokeEvenOdd, "B*");
+op0!(FillAndStrokeEvenOdd, "B*");
 
 #[derive(Debug)]
 pub struct CloseFillAndStrokeNonZero;
-crate::op0!(CloseFillAndStrokeNonZero, "b");
+op0!(CloseFillAndStrokeNonZero, "b");
 
 #[derive(Debug)]
 pub struct CloseFillAndStrokeEvenOdd;
-crate::op0!(CloseFillAndStrokeEvenOdd, "b*");
+op0!(CloseFillAndStrokeEvenOdd, "b*");
 
 #[derive(Debug)]
 pub struct EndPath;
-crate::op0!(EndPath, "n");
-
-// Text-showing operators
+op0!(EndPath, "n");
 
 #[derive(Debug)]
 pub struct ShowText<'a>(pub string::String<'a>);
-crate::op1!(ShowText<'a>, "Tj");
+op1!(ShowText<'a>, "Tj");
 
 #[derive(Debug)]
 pub struct NextLineAndShowText<'a>(pub string::String<'a>);
-crate::op1!(NextLineAndShowText<'a>, "'");
+op1!(NextLineAndShowText<'a>, "'");
 
 #[derive(Debug)]
-pub struct ShowTextWithParameters<'a>(pub Number, pub Number, pub string::String<'a>);
-crate::op3!(ShowTextWithParameters<'a>, "\"");
+pub struct ShowTextWithParameters<'a>(
+    pub Number,
+    pub Number,
+    pub string::String<'a>,
+);
+op3!(ShowTextWithParameters<'a>, "\"");
 
 #[derive(Debug)]
 pub struct ShowTexts<'a>(pub Array<'a>);
-crate::op1!(ShowTexts<'a>, "TJ");
+op1!(ShowTexts<'a>, "TJ");
 
-// TODO: Add remark to not collect into vector
 #[derive(Debug)]
 pub enum TypedOperation<'a> {
     // Compatibility operators
