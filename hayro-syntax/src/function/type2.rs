@@ -24,8 +24,6 @@ impl Type2 {
             *out = *c0 + input.powf(self.n) * (*c1 - *c0);
         }
 
-        eprintln!("{:?}", out);
-
         self.common.clamp_range(&mut out);
 
         out
@@ -50,7 +48,6 @@ mod tests {
     use crate::function::type2::Type2;
     use crate::object::dict::Dict;
     use crate::reader::Readable;
-    use smallvec::smallvec;
 
     #[test]
     fn simple() {
