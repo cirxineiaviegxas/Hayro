@@ -1,4 +1,4 @@
-mod ops;
+pub mod ops;
 
 use crate::content::TypedOperation::Fallback;
 use crate::content::ops::TypedOperation;

@@ -269,8 +269,11 @@ pub struct TextLeading(pub Number);
 op1!(TextLeading, "TL");
 
 #[derive(Debug)]
-pub struct TextFont(pub Number);
-op1!(TextFont, "Tf");
+pub struct TextFont<'a>(
+    pub Name<'a>,
+    pub Number,
+);
+op2!(TextFont<'a>, "Tf");
 
 #[derive(Debug)]
 pub struct TextRenderingMode(pub Number);
@@ -430,7 +433,7 @@ pub enum TypedOperation<'a> {
     WordSpacing(WordSpacing),
     HorizontalScaling(HorizontalScaling),
     TextLeading(TextLeading),
-    TextFont(TextFont),
+    TextFont(TextFont<'a>),
     TextRenderingMode(TextRenderingMode),
     TextRise(TextRise),
     BeginText(BeginText),

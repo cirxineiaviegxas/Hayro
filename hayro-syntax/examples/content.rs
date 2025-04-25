@@ -3,6 +3,7 @@ use hayro_syntax::content::Stack;
 use hayro_syntax::pdf::Pdf;
 use hayro_syntax::pdf::PdfError::EncryptionError;
 use walkdir::WalkDir;
+use hayro_syntax::content::ops::TypedOperation;
 
 #[allow(dead_code)]
 fn main() {
@@ -28,13 +29,8 @@ fn main() {
 
     entries.sort();
 
-    let test_entries = &entries[0..20];
 
-    println!("{:?}", test_entries);
-
-    println!("Reading {:?} entries", entries.len());
-
-    for path in &entries[0..20] {
+    for path in &entries[0..500] {
         let file = std::fs::read(path.as_path()).unwrap();
         let data = Data::new(&file);
         let pdf = Pdf::new(&data);
@@ -42,13 +38,15 @@ fn main() {
         if let Ok(pdf) = pdf {
             let pages = pdf.pages().unwrap();
 
+            println!("{:?}", path);
             for page in &pages.pages {
                 for op in page.typed_operations() {
-                    println!("{:?}", op);
+                    if matches!(op, TypedOperation::Fallback) {
+                        println!("{:?}", op);
+                    }
                 }
             }
 
-            println!("{:?}", path);
         }
     }
 }

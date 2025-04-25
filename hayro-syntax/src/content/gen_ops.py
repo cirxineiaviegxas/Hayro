@@ -83,7 +83,7 @@ ops = {
         ("Tw", "WordSpacing", [Type.Number]),
         ("Tz", "HorizontalScaling", [Type.Number]),
         ("TL", "TextLeading", [Type.Number]),
-        ("Tf", "TextFont", [Type.Number]),
+        ("Tf", "TextFont", [Type.Name, Type.Number]),
         ("Tr", "TextRenderingMode", [Type.Number]),
         ("Ts", "TextRise", [Type.Number]),
     ],
