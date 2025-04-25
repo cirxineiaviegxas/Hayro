@@ -285,6 +285,7 @@ pub mod keys {
     key!(COUNT, b"Count");
     key!(CONTENTS, b"Contents");
     key!(DECODE_PARMS, b"DecodeParms");
+    key!(DOMAIN, b"Domain");
     key!(ENCRYPT, b"Encrypt");
     key!(EARLY_CHANGE, b"EarlyChange");
     key!(F, b"F");
@@ -298,6 +299,7 @@ pub mod keys {
     key!(PAGES, b"Pages");
     key!(PREDICTOR, b"Predictor");
     key!(PREV, b"Prev");
+    key!(RANGE, b"Range");
     key!(ROOT, b"Root");
     key!(TYPE, b"Type");
     key!(SIZE, b"Size");

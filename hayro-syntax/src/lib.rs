@@ -17,6 +17,7 @@ pub mod pdf;
 pub(crate) mod reader;
 pub mod trivia;
 pub mod write;
+mod function;
 
 pub type Result<T> = std::result::Result<T, Whatever>;
 
