@@ -1,5 +1,6 @@
 mod convert;
 
+use crate::convert::{convert_line_cap, convert_line_join, convert_transform};
 use hayro_syntax::content::ops::{LineCap, Transform, TypedOperation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
@@ -7,14 +8,14 @@ use image::{ExtendedColorType, ImageEncoder};
 use std::io::Cursor;
 use vello_api::color::AlphaColor;
 use vello_api::color::palette::css::WHITE;
-use vello_api::kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Stroke};
+use vello_api::kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
+use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
-use crate::convert::{convert_line_cap, convert_line_join, convert_transform};
 
 #[derive(Clone)]
 enum Cs {
     DeviceRgb,
-    DeviceGray
+    DeviceGray,
 }
 
 #[derive(Clone)]
@@ -91,7 +92,7 @@ pub fn render(pdf: &Pdf) -> Pixmap {
     let (pix_width, pix_height) = (width.ceil() as u16, height.ceil() as u16);
     let mut state = GraphicsState::new(height);
     let mut render_ctx = RenderContext::new(pix_width, pix_height);
-    
+
     render_ctx.set_paint(WHITE);
     render_ctx.fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
 
@@ -117,8 +118,41 @@ pub fn render(pdf: &Pdf) -> Pixmap {
             TypedOperation::Transform(t) => {
                 state.ctm(t);
             }
+            TypedOperation::RectPath(r) => {
+                let rect = Rect::new(
+                    r.0.as_f64(),
+                    r.1.as_f64(),
+                    r.0.as_f64() + r.2.as_f64(),
+                    r.1.as_f64() + r.3.as_f64(),
+                )
+                .to_path(0.1);
+                state.path.extend(rect);
+            }
             TypedOperation::MoveTo(m) => {
                 state.path.move_to(Point::new(m.0.as_f64(), m.1.as_f64()));
+            }
+            TypedOperation::FillPathEvenOdd(_) => {
+                render_ctx.set_fill_rule(Fill::EvenOdd);
+                let color = {
+                    let c = &state.cur().fill_color;
+
+                    match state.cur().fill_cs {
+                        Cs::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], 1.0]),
+                        Cs::DeviceGray => AlphaColor::new([c[0], c[0], c[0], 1.0]),
+                    }
+                };
+
+                println!("{:?}", state.path);
+
+                render_ctx.set_paint(color);
+                render_ctx.set_transform(state.cur().affine);
+                render_ctx.fill_path(&state.path);
+
+                state.path.truncate(0);
+            }
+            TypedOperation::NonStrokeColorDeviceGray(d) => {
+                state.cur_mut().fill_cs = Cs::DeviceGray;
+                state.cur_mut().fill_color = vec![d.0.as_f32()];
             }
             TypedOperation::LineTo(m) => {
                 state.path.line_to(Point::new(m.0.as_f64(), m.1.as_f64()));
@@ -127,10 +161,6 @@ pub fn render(pdf: &Pdf) -> Pixmap {
                 state.path.close_path();
             }
             TypedOperation::StrokePath(_) => {
-                let aff = state.cur().affine;
-                let path = std::mem::replace(&mut state.path, BezPath::new());
-                let transformed_path = aff * path;
-                
                 let stroke = Stroke {
                     width: state.cur().line_width as f64,
                     join: state.cur().line_join,
@@ -140,21 +170,22 @@ pub fn render(pdf: &Pdf) -> Pixmap {
                     dash_pattern: Default::default(),
                     dash_offset: 0.0,
                 };
-                
+
                 render_ctx.set_stroke(stroke);
                 let color = {
                     let c = &state.cur().stroke_color;
-                    
+
                     match state.cur().stroke_cs {
                         Cs::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], 1.0]),
                         Cs::DeviceGray => AlphaColor::new([c[0], c[0], c[0], 1.0]),
                     }
                 };
-                
-                println!("Stroking {:?}", transformed_path);
-                
+
                 render_ctx.set_paint(color);
-                render_ctx.stroke_path(&transformed_path);
+                render_ctx.set_transform(state.cur().affine);
+                render_ctx.stroke_path(&state.path);
+
+                state.path.truncate(0);
             }
             TypedOperation::RestoreState(_) => state.restore_state(),
             _ => {

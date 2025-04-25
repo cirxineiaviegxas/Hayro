@@ -29,4 +29,3 @@ pub fn convert_line_join(lc: LineJoin) -> kurbo::Join {
         _ => kurbo::Join::Miter,
     }
 }
-
