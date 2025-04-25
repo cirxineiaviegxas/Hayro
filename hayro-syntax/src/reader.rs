@@ -1,6 +1,7 @@
 use crate::file::xref::XRef;
 use crate::trivia::{Comment, is_eol_character, is_white_space_character};
 use std::ops::Range;
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct Reader<'a> {
@@ -232,6 +233,12 @@ impl<'a> Reader<'a> {
 
 pub trait Readable<'a>: Sized {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self>;
+    fn from_bytes(b: &'a [u8]) -> Option<Self> {
+        let mut r = Reader::new(b);
+        let xref = XRef::dummy();
+
+        Self::read::<false>(&mut r, &xref)
+    }
 }
 
 pub trait Skippable {

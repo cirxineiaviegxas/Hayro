@@ -12,12 +12,12 @@ pub mod content;
 mod document;
 pub mod file;
 pub mod filter;
+mod function;
 pub mod object;
 pub mod pdf;
 pub(crate) mod reader;
 pub mod trivia;
 pub mod write;
-mod function;
 
 pub type Result<T> = std::result::Result<T, Whatever>;
 

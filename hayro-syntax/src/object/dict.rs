@@ -280,6 +280,8 @@ pub mod keys {
     }
 
     key!(BITS_PER_COMPONENT, b"BitsPerComponent");
+    key!(C0, b"C0");
+    key!(C1, b"C1");
     key!(COLORS, b"Colors");
     key!(COLUMNS, b"Columns");
     key!(COUNT, b"Count");
