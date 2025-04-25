@@ -52,7 +52,7 @@ impl<'a> Page<'a> {
         }
     }
 
-    fn operations_impl<'b, 'c>(&'c self, stack: &'b mut Stack<'c>) -> Option<UntypedIter<'c, 'b>> {
+    fn operations_impl(&self) -> Option<UntypedIter> {
         let convert_single = |s: Stream| {
             let data = s.decoded().ok()?;
             Some(data.to_vec())
@@ -85,16 +85,16 @@ impl<'a> Page<'a> {
             })
             .as_ref()?;
 
-        let iter = UntypedIter::new(&stream, stack);
+        let iter = UntypedIter::new(&stream);
 
         Some(iter)
     }
 
-    pub fn operations<'b, 'c>(&'c self, stack: &'b mut Stack<'c>) -> UntypedIter<'c, 'b> {
-        self.operations_impl(stack).unwrap_or(UntypedIter::empty())
+    pub fn operations(&self) -> UntypedIter {
+        self.operations_impl().unwrap_or(UntypedIter::empty())
     }
 
-    pub fn typed_operations<'b, 'c>(&'c self, stack: &'b mut Stack<'c>) -> TypedIter<'c, 'b> {
-        TypedIter::new(self.operations(stack).into_iter())
+    pub fn typed_operations(&self) -> TypedIter {
+        TypedIter::new(self.operations().into_iter())
     }
 }

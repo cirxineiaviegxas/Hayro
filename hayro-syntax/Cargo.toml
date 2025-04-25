@@ -14,3 +14,6 @@ zune-jpeg = { workspace = true }
 miniz_oxide = { workspace = true }
 snafu = { workspace = true }
 itertools = { workspace = true }
+
+[dev-dependencies]
+walkdir = "2.5.0"

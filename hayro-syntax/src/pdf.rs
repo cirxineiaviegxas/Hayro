@@ -13,7 +13,7 @@ pub struct Pdf<'a> {
     catalog: Dict<'a>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PdfError {
     EncryptionError,
     OtherError,

@@ -199,7 +199,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     if params.bits_per_component != 8 {
         unimplemented!();
     }
-    
+
     match params.predictor {
         1 | 10 => Some(data),
         i if i >= 10 => {

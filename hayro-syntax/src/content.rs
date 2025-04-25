@@ -16,6 +16,8 @@ use std::fmt::{Debug, Formatter};
 // DeviceN color spaces)
 const OPERANDS_THRESHOLD: usize = 6;
 
+type OpVec<'a> = SmallVec<[Object<'a>; OPERANDS_THRESHOLD]>;
+
 impl Debug for Operator<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", std::str::from_utf8(&self.get()).unwrap())
@@ -58,33 +60,32 @@ impl<'a> Readable<'a> for Operator<'a> {
     }
 }
 
-pub struct UntypedIter<'a, 'b> {
+pub struct UntypedIter<'a> {
     reader: Reader<'a>,
-    stack: Option<&'b Stack<'a>>,
+    stack: Stack<'a>,
 }
 
-impl<'a, 'b> UntypedIter<'a, 'b> {
-    pub fn new(data: &'a [u8], stack: &'b Stack<'a>) -> UntypedIter<'a, 'b> {
+impl<'a> UntypedIter<'a> {
+    pub fn new(data: &'a [u8]) -> UntypedIter<'a> {
         Self {
             reader: Reader::new(data),
-            stack: Some(stack),
+            stack: Stack::new(),
         }
     }
 
-    pub fn empty() -> UntypedIter<'a, 'b> {
+    pub fn empty() -> UntypedIter<'a> {
         Self {
             reader: Reader::new(&[]),
-            stack: None,
+            stack: Stack::new(),
         }
     }
 }
 
-impl<'a, 'b> Iterator for UntypedIter<'a, 'b> {
-    type Item = Operation<'a, 'b>;
+impl<'a> Iterator for UntypedIter<'a> {
+    type Item = Operation<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let stack = self.stack?;
-        stack.clear();
+        self.stack.clear();
 
         self.reader.skip_white_spaces_and_comments();
 
@@ -94,7 +95,7 @@ impl<'a, 'b> Iterator for UntypedIter<'a, 'b> {
                 self.reader.peek_byte()?,
                 b'/' | b'.' | b'+' | b'-' | b'0'..=b'9' | b'[' | b'<' | b'('
             ) {
-                stack.push(self.reader.read_plain::<Object>()?);
+                self.stack.push(self.reader.read_plain::<Object>()?);
             } else {
                 let operator = match self.reader.read_plain::<Operator>() {
                     Some(o) => o,
@@ -118,7 +119,7 @@ impl<'a, 'b> Iterator for UntypedIter<'a, 'b> {
                 }
 
                 return Some(Operation {
-                    operands: stack,
+                    operands: self.stack.clone(),
                     operator,
                 });
             }
@@ -130,17 +131,17 @@ impl<'a, 'b> Iterator for UntypedIter<'a, 'b> {
     }
 }
 
-pub struct TypedIter<'a, 'b> {
-    untyped: UntypedIter<'a, 'b>,
+pub struct TypedIter<'a> {
+    untyped: UntypedIter<'a>,
 }
 
-impl<'a, 'b> TypedIter<'a, 'b> {
-    pub fn new(untyped: UntypedIter<'a, 'b>) -> TypedIter<'a, 'b> {
+impl<'a> TypedIter<'a> {
+    pub fn new(untyped: UntypedIter<'a>) -> TypedIter<'a> {
         Self { untyped }
     }
 }
 
-impl<'a> Iterator for TypedIter<'a, '_> {
+impl<'a> Iterator for TypedIter<'a> {
     type Item = TypedOperation<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -150,54 +151,52 @@ impl<'a> Iterator for TypedIter<'a, '_> {
     }
 }
 
-pub struct Operation<'a, 'b> {
-    pub operands: &'b Stack<'a>,
+pub struct Operation<'a> {
+    pub operands: Stack<'a>,
     pub operator: Operator<'a>,
 }
 
-impl<'a, 'b> Operation<'a, 'b> {
-    pub fn operands<'c>(&'c self) -> OperandIterator<'a, 'c> {
-        OperandIterator::new(&self.operands)
+impl<'a> Operation<'a> {
+    pub fn operands(self) -> OperandIterator<'a> {
+        OperandIterator::new(self.operands)
     }
 }
 
-pub struct Stack<'a>(RefCell<SmallVec<[Object<'a>; OPERANDS_THRESHOLD]>>);
+#[derive(Debug, Clone)]
+pub struct Stack<'a>(SmallVec<[Object<'a>; OPERANDS_THRESHOLD]>);
 
 impl<'a> Stack<'a> {
     pub fn new() -> Self {
-        Self(RefCell::new(SmallVec::new()))
+        Self(SmallVec::new())
     }
 
-    fn push(&self, operand: Object<'a>) {
-        self.0.borrow_mut().push(operand);
+    fn push(&mut self, operand: Object<'a>) {
+        self.0.push(operand);
     }
 
-    fn clear(&self) {
-        self.0.borrow_mut().clear();
+    fn clear(&mut self) {
+        self.0.clear();
     }
 
     fn len(&self) -> usize {
-        self.0.borrow().len()
+        self.0.len()
     }
 
     fn get<T>(&self, index: usize) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
-        self.0
-            .borrow()
-            .get(index)
-            .and_then(|e| e.clone().cast::<T>().ok())
+        self.0.get(index).and_then(|e| e.clone().cast::<T>().ok())
     }
 }
 
-pub struct OperandIterator<'a, 'b> {
-    stack: &'b Stack<'a>,
+pub struct OperandIterator<'a> {
+    stack: Stack<'a>,
     cur_index: usize,
 }
 
-impl<'a, 'b> OperandIterator<'a, 'b> {
-    fn new(stack: &'b Stack<'a>) -> Self {
+impl<'a> OperandIterator<'a> {
+    fn new(stack: Stack<'a>) -> Self {
         Self {
             stack,
             cur_index: 0,
@@ -205,7 +204,7 @@ impl<'a, 'b> OperandIterator<'a, 'b> {
     }
 }
 
-impl<'a> Iterator for OperandIterator<'a, '_> {
+impl<'a> Iterator for OperandIterator<'a> {
     type Item = Object<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -468,7 +467,7 @@ pub enum TypedOperation<'a> {
 }
 
 impl<'a> TypedOperation<'a> {
-    fn dispatch(operation: &Operation<'a, '_>) -> Option<TypedOperation<'a>> {
+    fn dispatch(operation: &Operation<'a>) -> Option<TypedOperation<'a>> {
         let op_name = operation.operator.get();
         Some(match op_name.as_ref() {
             // Compatibility operators

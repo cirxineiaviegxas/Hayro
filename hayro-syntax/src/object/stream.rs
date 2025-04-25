@@ -79,7 +79,7 @@ impl<'a> Readable<'a> for Stream<'a> {
 
         if dict.contains_key(F) {
             warn!("encountered stream referencing external file, which is unsupported");
-            
+
             return None;
         }
 
