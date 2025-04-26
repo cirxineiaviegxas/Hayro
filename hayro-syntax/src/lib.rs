@@ -9,7 +9,7 @@ use std::sync::RwLock;
 
 mod cache;
 pub mod content;
-mod document;
+pub mod document;
 pub mod file;
 pub mod filter;
 mod function;

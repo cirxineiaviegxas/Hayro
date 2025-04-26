@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 sitro = { path = "../../sitro" }
+hayro-render = { workspace = true }
+hayro-syntax = { workspace = true }
 walkdir = "2.5.0"

@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 use sitro::RenderOptions;
 use walkdir::WalkDir;
+use hayro_syntax::Data;
+use hayro_syntax::pdf::Pdf;
 
 fn main() {
     let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/batch");
@@ -19,7 +21,8 @@ fn main() {
     
     entries.sort();
     
-    render_pdfium(&entries);
+    // render_pdfium(&entries);
+    render_hayro(&entries);
 }
 
 fn render_pdfium(entries: &[PathBuf]) {
@@ -38,4 +41,20 @@ fn render_pdfium(entries: &[PathBuf]) {
     }
 }
 
-fn scale()
+fn render_hayro(entries: &[PathBuf]) {
+    let out_dir = Path::new("/Users/lstampfl/Programming/GitHub/hayro/hayro-compare/hayro");
+
+    for path in entries {
+        let stem = path.file_stem().unwrap().to_str().unwrap();
+        let file = std::fs::read(path).unwrap();
+        let mut data = Data::new(&file);
+        let pdf = Pdf::new(&data).unwrap();
+        let pages = hayro_render::render_png(&pdf);
+
+        for (idx, page) in pages.iter().enumerate() {
+            let suffix = if pages.len() == 1 { "".to_string() } else { format!("_{}", idx) };
+            let out_path = out_dir.join(format!("{}{}.png", stem, suffix));
+            std::fs::write(out_path, page).unwrap();
+        }
+    }
+}
