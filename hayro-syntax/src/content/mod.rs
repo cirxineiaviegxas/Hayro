@@ -98,9 +98,9 @@ impl<'a> Iterator for UntypedIter<'a> {
                 self.reader.peek_byte()?,
                 b'/' | b'.' | b'+' | b'-' | b'0'..=b'9' | b'[' | b'<' | b'('
             ) {
-                self.stack.push(self.reader.read_plain::<Object>()?);
+                self.stack.push(self.reader.read_without_xref::<Object>()?);
             } else {
-                let operator = match self.reader.read_plain::<Operator>() {
+                let operator = match self.reader.read_without_xref::<Operator>() {
                     Some(o) => o,
                     None => {
                         warn!("failed to read operator");

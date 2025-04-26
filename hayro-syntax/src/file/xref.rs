@@ -93,7 +93,7 @@ impl<'a> XRef<'a> {
             EntryType::Normal(offset) => {
                 r.jump(offset);
 
-                let obj = r.read_non_plain::<IndirectObject<T>>(self)?;
+                let obj = r.read_with_xref::<IndirectObject<T>>(self)?;
 
                 if obj.id() != &id {
                     error!("xref table is broken");
@@ -127,7 +127,7 @@ pub(crate) fn find_last_xref_pos(data: &[u8]) -> Option<usize> {
         if finder.forward_tag(needle).is_some() {
             finder.skip_white_spaces_and_comments();
 
-            let offset = finder.read_plain::<i32>()?.try_into().ok()?;
+            let offset = finder.read_without_xref::<i32>()?.try_into().ok()?;
 
             return Some(offset);
         }
@@ -210,7 +210,7 @@ fn populate_xref_impl(data: &[u8], pos: usize, xref_map: &mut XrefMap) -> Option
     reader.jump(pos);
 
     let mut r2 = reader.clone();
-    if reader.clone().read_plain::<ObjectIdentifier>().is_some() {
+    if reader.clone().read_without_xref::<ObjectIdentifier>().is_some() {
         populate_from_xref_stream(data, &mut r2, xref_map)
     } else {
         populate_from_xref_table(data, &mut r2, xref_map)
@@ -225,9 +225,9 @@ pub(super) struct SubsectionHeader {
 impl Readable<'_> for SubsectionHeader {
     fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
         r.skip_white_spaces();
-        let start = r.read_plain::<u32>()?;
+        let start = r.read_without_xref::<u32>()?;
         r.skip_white_spaces();
-        let num_entries = r.read_plain::<u32>()?;
+        let num_entries = r.read_without_xref::<u32>()?;
         r.skip_white_spaces();
 
         Some(Self { start, num_entries })
@@ -261,7 +261,7 @@ fn populate_from_xref_table<'a>(
         populate_xref_impl(data, xref_stm as usize, insert_map)?;
     }
 
-    while let Some(header) = reader.read_plain::<SubsectionHeader>() {
+    while let Some(header) = reader.read_without_xref::<SubsectionHeader>() {
         reader.skip_white_spaces();
 
         let start = header.start;
@@ -292,7 +292,7 @@ fn populate_from_xref_stream<'a>(
     insert_map: &mut XrefMap,
 ) -> Option<()> {
     let stream = reader
-        .read_non_plain::<IndirectObject<Stream>>(&XRef::dummy())?
+        .read_with_xref::<IndirectObject<Stream>>(&XRef::dummy())?
         .get();
 
     if let Some(prev) = stream.dict.get::<i32>(PREV) {
@@ -454,9 +454,9 @@ impl<'a> ObjectStream<'a> {
         for _ in 0..num_objects {
             r.skip_white_spaces_and_comments();
             // Skip object number
-            let _ = r.read_plain::<u32>()?;
+            let _ = r.read_without_xref::<u32>()?;
             r.skip_white_spaces_and_comments();
-            let relative_offset = r.read_plain::<usize>()?;
+            let relative_offset = r.read_without_xref::<usize>()?;
             offsets.push(first_offset + relative_offset);
         }
 
@@ -475,7 +475,7 @@ impl<'a> ObjectStream<'a> {
         let mut r = Reader::new(&self.data);
         r.jump(offset);
 
-        r.read_non_plain::<T>(&self.xref)
+        r.read_with_xref::<T>(&self.xref)
     }
 }
 

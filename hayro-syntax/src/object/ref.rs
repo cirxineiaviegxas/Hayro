@@ -40,9 +40,9 @@ impl Skippable for ObjRef {
 
 impl Readable<'_> for ObjRef {
     fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
-        let obj_ref = r.read_plain::<i32>()?;
+        let obj_ref = r.read_without_xref::<i32>()?;
         r.skip_white_spaces();
-        let gen_num = r.read_plain::<i32>()?;
+        let gen_num = r.read_without_xref::<i32>()?;
         r.skip_white_spaces();
         r.forward_tag(b"R")?;
 
@@ -123,7 +123,7 @@ mod tests {
     fn ref_1() {
         assert_eq!(
             Reader::new("34 1 R".as_bytes())
-                .read_plain::<ObjRef>()
+                .read_without_xref::<ObjRef>()
                 .unwrap(),
             ObjRef::new(34, 1)
         );
@@ -133,7 +133,7 @@ mod tests {
     fn ref_trailing() {
         assert_eq!(
             Reader::new("256 0 R (hi)".as_bytes())
-                .read_plain::<ObjRef>()
+                .read_without_xref::<ObjRef>()
                 .unwrap(),
             ObjRef::new(256, 0)
         );
@@ -143,7 +143,7 @@ mod tests {
     fn ref_invalid_1() {
         assert!(
             Reader::new("256 R".as_bytes())
-                .read_plain::<ObjRef>()
+                .read_without_xref::<ObjRef>()
                 .is_none()
         );
     }
@@ -152,7 +152,7 @@ mod tests {
     fn ref_invalid_2() {
         assert!(
             Reader::new("256 257".as_bytes())
-                .read_plain::<ObjRef>()
+                .read_without_xref::<ObjRef>()
                 .is_none()
         );
     }

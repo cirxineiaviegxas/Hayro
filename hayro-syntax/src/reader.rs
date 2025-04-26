@@ -81,12 +81,12 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
-    pub fn read_non_plain<T: Readable<'a>>(&mut self, xref: &XRef<'a>) -> Option<T> {
+    pub fn read_with_xref<T: Readable<'a>>(&mut self, xref: &XRef<'a>) -> Option<T> {
         self.read::<false, T>(xref)
     }
 
     #[inline]
-    pub fn read_plain<T: Readable<'a>>(&mut self) -> Option<T> {
+    pub fn read_without_xref<T: Readable<'a>>(&mut self) -> Option<T> {
         self.read::<true, T>(&XRef::dummy())
     }
 

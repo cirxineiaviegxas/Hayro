@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn bool_true() {
         assert_eq!(
-            Reader::new("true".as_bytes()).read_plain::<bool>().unwrap(),
+            Reader::new("true".as_bytes()).read_without_xref::<bool>().unwrap(),
             true
         );
     }
@@ -41,7 +41,7 @@ mod tests {
     fn bool_false() {
         assert_eq!(
             Reader::new("false".as_bytes())
-                .read_plain::<bool>()
+                .read_without_xref::<bool>()
                 .unwrap(),
             false
         );
@@ -51,7 +51,7 @@ mod tests {
     fn bool_trailing() {
         assert_eq!(
             Reader::new("trueabdf".as_bytes())
-                .read_plain::<bool>()
+                .read_without_xref::<bool>()
                 .unwrap(),
             true
         );

@@ -75,7 +75,7 @@ impl Skippable for Stream<'_> {
 
 impl<'a> Readable<'a> for Stream<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        let dict = r.read_non_plain::<Dict>(xref)?;
+        let dict = r.read_with_xref::<Dict>(xref)?;
 
         if dict.contains_key(F) {
             warn!("encountered stream referencing external file, which is unsupported");
@@ -121,7 +121,7 @@ mod tests {
     fn stream() {
         let data = b"<< /Length 10 >> stream\nabcdefghij\nendstream";
         let mut r = Reader::new(data);
-        let stream = r.read_non_plain::<Stream>(&XRef::dummy()).unwrap();
+        let stream = r.read_with_xref::<Stream>(&XRef::dummy()).unwrap();
 
         assert_eq!(stream.data, b"abcdefghij");
     }

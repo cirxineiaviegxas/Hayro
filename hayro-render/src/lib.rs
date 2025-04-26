@@ -88,8 +88,12 @@ impl GraphicsState {
 pub fn render(pdf: &Pdf, scale: f32) -> Pixmap {
     let pages = &pdf.pages().unwrap().pages[0];
     let (unscaled_width, unscaled_height) = (pages.media_box()[2], pages.media_box()[3]);
-    let initial_transform = Affine::scale(scale as f64) * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height as f64]);
-    let (scaled_width, scaled_height) = ((unscaled_width *scale) as f64, (unscaled_height *scale) as f64);
+    let initial_transform = Affine::scale(scale as f64)
+        * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height as f64]);
+    let (scaled_width, scaled_height) = (
+        (unscaled_width * scale) as f64,
+        (unscaled_height * scale) as f64,
+    );
     let (pix_width, pix_height) = (scaled_width.ceil() as u16, scaled_height.ceil() as u16);
     let mut state = GraphicsState::new(initial_transform);
     let mut render_ctx = RenderContext::new(pix_width, pix_height);

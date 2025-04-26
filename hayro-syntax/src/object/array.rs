@@ -105,7 +105,7 @@ impl<'a> Iterator for ArrayIter<'a> {
             // Objects are already guaranteed to be valid.
             let item = self
                 .reader
-                .read_non_plain::<MaybeRef<Object>>(&self.xref)
+                .read_with_xref::<MaybeRef<Object>>(&self.xref)
                 .unwrap();
             return Some(item);
         }
@@ -146,7 +146,7 @@ where
         if !self.reader.at_end() {
             return match self
                 .reader
-                .read_non_plain::<MaybeRef<T>>(&self.xref)
+                .read_with_xref::<MaybeRef<T>>(&self.xref)
                 .warn_none(&format!("failed to read {} from array.", T::STATIC_NAME))?
             {
                 MaybeRef::Ref(r) => self.xref.get::<T>(r.into()).warn_none(&format!(
@@ -172,13 +172,13 @@ mod tests {
 
     fn array_impl(data: &[u8]) -> Option<Vec<Object>> {
         Reader::new(data)
-            .read_non_plain::<Array>(&XRef::dummy())
+            .read_with_xref::<Array>(&XRef::dummy())
             .map(|a| a.iter::<Object>().collect::<Vec<_>>())
     }
 
     fn array_ref_impl(data: &[u8]) -> Option<Vec<MaybeRef<Object>>> {
         Reader::new(data)
-            .read_non_plain::<Array>(&XRef::dummy())
+            .read_with_xref::<Array>(&XRef::dummy())
             .map(|a| a.raw_iter().collect::<Vec<_>>())
     }
 

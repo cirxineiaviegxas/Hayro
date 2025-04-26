@@ -179,9 +179,9 @@ impl ObjectIdentifier {
 
 impl Readable<'_> for ObjectIdentifier {
     fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
-        let obj_num = r.read_plain::<i32>()?;
+        let obj_num = r.read_without_xref::<i32>()?;
         r.skip_white_spaces_and_comments();
-        let gen_num = r.read_plain::<i32>()?;
+        let gen_num = r.read_without_xref::<i32>()?;
         r.skip_white_spaces_and_comments();
         r.forward_tag(b"obj")?;
 
@@ -197,7 +197,7 @@ mod tests {
 
     fn object_impl(data: &[u8]) -> Option<Object> {
         let mut r = Reader::new(data);
-        r.read_non_plain::<Object>(&XRef::dummy())
+        r.read_with_xref::<Object>(&XRef::dummy())
     }
 
     #[test]

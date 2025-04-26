@@ -118,7 +118,7 @@ mod tests {
 
         let mut r = Reader::new(input);
         let id = ObjectIdentifier::new(1, 0);
-        let str = r.read_plain::<string::String>().unwrap();
+        let str = r.read_without_xref::<string::String>().unwrap();
 
         cache.insert(id, str);
 

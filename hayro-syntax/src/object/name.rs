@@ -139,7 +139,7 @@ mod tests {
     fn name_1() {
         assert_eq!(
             Reader::new("/".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"".to_vec()
@@ -148,14 +148,14 @@ mod tests {
 
     #[test]
     fn name_2() {
-        assert!(Reader::new("dfg".as_bytes()).read_plain::<Name>().is_none());
+        assert!(Reader::new("dfg".as_bytes()).read_without_xref::<Name>().is_none());
     }
 
     #[test]
     fn name_3() {
         assert!(
             Reader::new("/AB#FG".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .is_none()
         );
     }
@@ -164,7 +164,7 @@ mod tests {
     fn name_4() {
         assert_eq!(
             Reader::new("/Name1".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"Name1".to_vec()
@@ -175,7 +175,7 @@ mod tests {
     fn name_5() {
         assert_eq!(
             Reader::new("/ASomewhatLongerName".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"ASomewhatLongerName".to_vec()
@@ -186,7 +186,7 @@ mod tests {
     fn name_6() {
         assert_eq!(
             Reader::new("/A;Name_With-Various***Characters?".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"A;Name_With-Various***Characters?".to_vec()
@@ -197,7 +197,7 @@ mod tests {
     fn name_7() {
         assert_eq!(
             Reader::new("/1.2".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"1.2".to_vec()
@@ -208,7 +208,7 @@ mod tests {
     fn name_8() {
         assert_eq!(
             Reader::new("/$$".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"$$".to_vec()
@@ -219,7 +219,7 @@ mod tests {
     fn name_9() {
         assert_eq!(
             Reader::new("/@pattern".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"@pattern".to_vec()
@@ -230,7 +230,7 @@ mod tests {
     fn name_10() {
         assert_eq!(
             Reader::new("/.notdef".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b".notdef".to_vec()
@@ -241,7 +241,7 @@ mod tests {
     fn name_11() {
         assert_eq!(
             Reader::new("/lime#20Green".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"lime Green".to_vec()
@@ -252,7 +252,7 @@ mod tests {
     fn name_12() {
         assert_eq!(
             Reader::new("/paired#28#29parentheses".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"paired()parentheses".to_vec()
@@ -263,7 +263,7 @@ mod tests {
     fn name_13() {
         assert_eq!(
             Reader::new("/The_Key_of_F#23_Minor".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"The_Key_of_F#_Minor".to_vec()
@@ -274,7 +274,7 @@ mod tests {
     fn name_14() {
         assert_eq!(
             Reader::new("/A#42".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"AB".to_vec()
@@ -285,7 +285,7 @@ mod tests {
     fn name_15() {
         assert_eq!(
             Reader::new("/A#3b".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"A;".to_vec()
@@ -296,7 +296,7 @@ mod tests {
     fn name_16() {
         assert_eq!(
             Reader::new("/A#3B".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"A;".to_vec()
@@ -307,7 +307,7 @@ mod tests {
     fn name_17() {
         assert_eq!(
             Reader::new("/k1  ".as_bytes())
-                .read_plain::<Name>()
+                .read_without_xref::<Name>()
                 .unwrap()
                 .get(),
             b"k1".to_vec()

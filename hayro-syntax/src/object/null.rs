@@ -30,7 +30,7 @@ mod tests {
     #[test]
     fn null() {
         assert_eq!(
-            Reader::new("null".as_bytes()).read_plain::<Null>().unwrap(),
+            Reader::new("null".as_bytes()).read_without_xref::<Null>().unwrap(),
             Null
         );
     }
@@ -39,7 +39,7 @@ mod tests {
     fn null_trailing() {
         assert_eq!(
             Reader::new("nullabs".as_bytes())
-                .read_plain::<Null>()
+                .read_without_xref::<Null>()
                 .unwrap(),
             Null
         );

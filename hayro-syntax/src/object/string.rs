@@ -267,8 +267,8 @@ impl Skippable for String<'_> {
 impl<'a> Readable<'a> for String<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'a>) -> Option<Self> {
         let inner = match r.peek_byte()? {
-            b'<' => InnerString::Hex(r.read_plain::<HexString>()?),
-            b'(' => InnerString::Literal(r.read_plain::<LiteralString>()?),
+            b'<' => InnerString::Hex(r.read_without_xref::<HexString>()?),
+            b'(' => InnerString::Literal(r.read_without_xref::<LiteralString>()?),
             _ => return None,
         };
 
@@ -289,7 +289,7 @@ mod tests {
     fn hex_string_empty() {
         assert_eq!(
             Reader::new("<>".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .unwrap()
                 .get(),
             vec![]
@@ -300,7 +300,7 @@ mod tests {
     fn hex_string_1() {
         assert_eq!(
             Reader::new("<00010203>".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03]
@@ -311,7 +311,7 @@ mod tests {
     fn hex_string_2() {
         assert_eq!(
             Reader::new("<000102034>".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03, 0x40]
@@ -322,7 +322,7 @@ mod tests {
     fn hex_string_trailing_1() {
         assert_eq!(
             Reader::new("<000102034>dfgfg4".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03, 0x40]
@@ -333,7 +333,7 @@ mod tests {
     fn hex_string_trailing_2() {
         assert_eq!(
             Reader::new("<1  3 4>dfgfg4".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x13, 0x40]
@@ -344,7 +344,7 @@ mod tests {
     fn hex_string_trailing_3() {
         assert_eq!(
             Reader::new("<1>dfgfg4".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x10]
@@ -355,7 +355,7 @@ mod tests {
     fn hex_string_invalid_1() {
         assert_eq!(
             Reader::new("<".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .is_none(),
             true
         );
@@ -365,7 +365,7 @@ mod tests {
     fn hex_string_invalid_2() {
         assert_eq!(
             Reader::new("34AD".as_bytes())
-                .read_plain::<HexString>()
+                .read_without_xref::<HexString>()
                 .is_none(),
             true
         );
@@ -375,7 +375,7 @@ mod tests {
     fn literal_string_empty() {
         assert_eq!(
             Reader::new("()".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -387,7 +387,7 @@ mod tests {
     fn literal_string_1() {
         assert_eq!(
             Reader::new("(Hi there.)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -399,7 +399,7 @@ mod tests {
     fn literal_string_2() {
         assert!(
             Reader::new("(Hi \\777)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .is_some()
         );
     }
@@ -408,7 +408,7 @@ mod tests {
     fn literal_string_3() {
         assert_eq!(
             Reader::new("(Hi ) there.)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -420,7 +420,7 @@ mod tests {
     fn literal_string_4() {
         assert_eq!(
             Reader::new("(Hi (()) there)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -432,7 +432,7 @@ mod tests {
     fn literal_string_5() {
         assert_eq!(
             Reader::new("(Hi \\()".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -444,7 +444,7 @@ mod tests {
     fn literal_string_6() {
         assert_eq!(
             Reader::new("(Hi \\\nthere)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -456,7 +456,7 @@ mod tests {
     fn literal_string_7() {
         assert_eq!(
             Reader::new("(Hi \\05354)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -468,7 +468,7 @@ mod tests {
     fn literal_string_trailing() {
         assert_eq!(
             Reader::new("(Hi there.)abcde".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -480,7 +480,7 @@ mod tests {
     fn literal_string_invalid() {
         assert!(
             Reader::new("(Hi \\778)".as_bytes())
-                .read_plain::<LiteralString>()
+                .read_without_xref::<LiteralString>()
                 .is_none()
         );
     }
@@ -489,7 +489,7 @@ mod tests {
     fn string_1() {
         assert_eq!(
             Reader::new("(Hi there.)".as_bytes())
-                .read_plain::<String>()
+                .read_without_xref::<String>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -501,7 +501,7 @@ mod tests {
     fn string_2() {
         assert_eq!(
             Reader::new("<00010203>".as_bytes())
-                .read_plain::<String>()
+                .read_without_xref::<String>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03]

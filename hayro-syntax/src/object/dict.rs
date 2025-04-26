@@ -51,7 +51,7 @@ impl<'a> Dict<'a> {
     {
         let offset = *self.0.offsets.get(&key)?;
 
-        Reader::new(&self.0.data[offset..]).read_non_plain::<MaybeRef<T>>(&self.0.xref)
+        Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
     }
 }
 
@@ -64,7 +64,7 @@ impl Debug for Dict<'_> {
             r.jump(*val);
             debug_struct.field(
                 &format!("{:?}", key.as_str()),
-                &r.read_non_plain::<MaybeRef<Object>>(&XRef::dummy())
+                &r.read_with_xref::<MaybeRef<Object>>(&XRef::dummy())
                     .unwrap(),
             );
         }
@@ -112,7 +112,7 @@ impl<'a> Readable<'a> for Dict<'a> {
                     let end_offset = r.offset() - start_offset;
                     break &dict_data[0..end_offset];
                 } else {
-                    let name = r.read_plain::<Name>()?;
+                    let name = r.read_without_xref::<Name>()?;
                     r.skip_white_spaces_and_comments();
 
                     // Keys with null-objects should be treated as non-existing.
@@ -120,9 +120,9 @@ impl<'a> Readable<'a> for Dict<'a> {
                         let mut nr = Reader::new(r.tail()?);
 
                         if PLAIN {
-                            nr.read_non_plain::<Null>(xref)
+                            nr.read_with_xref::<Null>(xref)
                         } else {
-                            nr.read_non_plain::<MaybeRef<Null>>(xref)
+                            nr.read_with_xref::<MaybeRef<Null>>(xref)
                                 .and_then(|n| n.resolve(xref))
                         }
                         .is_some()
@@ -168,7 +168,7 @@ mod tests {
     use crate::reader::Reader;
 
     fn dict_impl(data: &[u8]) -> Option<Dict> {
-        Reader::new(data).read_non_plain::<Dict>(&XRef::dummy())
+        Reader::new(data).read_with_xref::<Dict>(&XRef::dummy())
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod tests {
 >>";
 
         let dict = Reader::new(data.as_bytes())
-            .read_non_plain::<Dict>(&XRef::dummy())
+            .read_with_xref::<Dict>(&XRef::dummy())
             .unwrap();
         assert_eq!(dict.len(), 6);
         assert!(dict.get::<Name>(Name::from_unescaped(b"Type")).is_some());

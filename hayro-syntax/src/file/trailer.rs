@@ -9,7 +9,7 @@ pub(super) fn trailer_impl<'a>(data: &'a [u8], pos: usize, xref: &XRef<'a>) -> O
     let mut reader = Reader::new(data);
     reader.jump(pos);
 
-    if reader.clone().read_plain::<ObjectIdentifier>().is_some() {
+    if reader.clone().read_without_xref::<ObjectIdentifier>().is_some() {
         read_xref_stream_trailer(&mut reader, xref)
     } else {
         read_xref_table_trailer(&mut reader, xref)
@@ -24,7 +24,7 @@ pub(super) fn read_xref_table_trailer<'a>(
     reader.forward_tag(b"xref")?;
     reader.skip_white_spaces();
 
-    while let Some(header) = reader.read_plain::<SubsectionHeader>() {
+    while let Some(header) = reader.read_without_xref::<SubsectionHeader>() {
         reader.jump(reader.offset() + XREF_ENTRY_LEN * header.num_entries as usize);
     }
 
@@ -32,14 +32,14 @@ pub(super) fn read_xref_table_trailer<'a>(
     reader.forward_tag(b"trailer")?;
     reader.skip_white_spaces();
 
-    reader.read_non_plain::<Dict>(xref)
+    reader.read_with_xref::<Dict>(xref)
 }
 
 pub(super) fn read_xref_stream_trailer<'a>(
     reader: &mut Reader<'a>,
     xref: &XRef<'a>,
 ) -> Option<Dict<'a>> {
-    let stream = reader.read_non_plain::<IndirectObject<Stream>>(xref)?.get();
+    let stream = reader.read_with_xref::<IndirectObject<Stream>>(xref)?.get();
 
     Some(stream.dict.clone())
 }
