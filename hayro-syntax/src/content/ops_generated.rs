@@ -188,7 +188,7 @@ op_all!(NonStrokeColor, "sc");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColorNamed<'a>(pub Object<'a>);
-op1!(NonStrokeColorNamed<'a>, "SCN");
+op1!(NonStrokeColorNamed<'a>, "scn");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColorDeviceGray(pub Number);
@@ -497,7 +497,7 @@ impl<'a> TypedOperation<'a> {
             b"SC" => StrokeColor::from_stack(&operation.operands)?.into(),
             b"SCN" => StrokeColorNamed::from_stack(&operation.operands)?.into(),
             b"sc" => NonStrokeColor::from_stack(&operation.operands)?.into(),
-            b"SCN" => NonStrokeColorNamed::from_stack(&operation.operands)?.into(),
+            b"scn" => NonStrokeColorNamed::from_stack(&operation.operands)?.into(),
             b"G" => StrokeColorDeviceGray::from_stack(&operation.operands)?.into(),
             b"g" => NonStrokeColorDeviceGray::from_stack(&operation.operands)?.into(),
             b"RG" => StrokeColorDeviceRgb::from_stack(&operation.operands)?.into(),

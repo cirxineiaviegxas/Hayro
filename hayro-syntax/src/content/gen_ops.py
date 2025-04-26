@@ -59,7 +59,7 @@ ops = {
         ("SCN", "StrokeColorNamed", [Type.Object]),
         ("sc", "NonStrokeColor", [Type.VecNum]),
         # TODO: More type safety for this?
-        ("SCN", "NonStrokeColorNamed", [Type.Object]),
+        ("scn", "NonStrokeColorNamed", [Type.Object]),
         ("G", "StrokeColorDeviceGray", [Type.Number]),
         ("g", "NonStrokeColorDeviceGray", [Type.Number]),
         ("RG", "StrokeColorDeviceRgb", [Type.Number] * 3),
