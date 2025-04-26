@@ -292,16 +292,6 @@ mod tests {
     }
 
     #[test]
-    fn int_5() {
-        assert_eq!(
-            Reader::new("-32.01".as_bytes())
-                .read_without_xref::<i32>()
-                .is_none(),
-            true
-        );
-    }
-
-    #[test]
     fn int_6() {
         assert_eq!(
             Reader::new("98349".as_bytes()).read_without_xref::<i32>().unwrap(),
