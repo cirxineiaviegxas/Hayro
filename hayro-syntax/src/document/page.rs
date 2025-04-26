@@ -51,7 +51,7 @@ impl<'a> Page<'a> {
             page_streams: OnceCell::new(),
         }
     }
-    
+
     pub fn resources(&self) -> Dict<'a> {
         self.inner.get::<Dict>(RESOURCES).unwrap_or_default()
     }

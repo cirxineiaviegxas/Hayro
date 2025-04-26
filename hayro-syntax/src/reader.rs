@@ -21,6 +21,11 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
+    pub fn data(&self) -> &'a [u8] {
+        self.data
+    }
+
+    #[inline]
     pub fn jump_to_end(&mut self) {
         self.offset = self.data.len();
     }

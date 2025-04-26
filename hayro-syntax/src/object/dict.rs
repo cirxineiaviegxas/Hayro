@@ -34,10 +34,10 @@ impl<'a> Dict<'a> {
             offsets: Default::default(),
             xref: XRef::dummy(),
         };
-        
+
         Self(Arc::new(repr))
     }
-    
+
     /// Returns the number of entries in the dictionary.
     pub fn len(&self) -> usize {
         self.0.offsets.len()
@@ -113,57 +113,71 @@ impl Skippable for Dict<'_> {
 
 impl<'a> Readable<'a> for Dict<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        let mut offsets = HashMap::new();
+        read_inner::<PLAIN>(r, xref, Some(b"<<"), b">>")
+    }
+}
 
-        let data = {
-            let dict_data = r.tail()?;
-            let start_offset = r.offset();
+fn read_inner<'a, const PLAIN: bool>(
+    r: &mut Reader<'a>,
+    xref: &XRef<'a>,
+    start_tag: Option<&[u8]>,
+    end_tag: &[u8],
+) -> Option<Dict<'a>> {
+    let mut offsets = HashMap::new();
 
-            r.forward_tag(b"<<")?;
+    let data = {
+        // Inline image dictionaries don't start with '<<'
+        if let Some(start_tag) = start_tag {
+            r.forward_tag(start_tag)?;
+        }
 
-            loop {
+        let dict_data = r.tail()?;
+        let start_offset = r.offset();
+
+        loop {
+            r.skip_white_spaces_and_comments();
+
+            // Normal dictionaries end with '>>', inlime image dictionaries end with BD
+            if let Some(()) = r.peek_tag(end_tag) {
+                let end_offset = r.offset() - start_offset;
+                r.forward_tag(end_tag)?;
+                break &dict_data[..end_offset];
+            } else {
+                let name = r.read_without_xref::<Name>()?;
                 r.skip_white_spaces_and_comments();
 
-                if let Some(()) = r.forward_tag(b">>") {
-                    let end_offset = r.offset() - start_offset;
-                    break &dict_data[0..end_offset];
-                } else {
-                    let name = r.read_without_xref::<Name>()?;
-                    r.skip_white_spaces_and_comments();
-
-                    // Keys with null-objects should be treated as non-existing.
-                    let is_null = {
-                        let mut nr = Reader::new(r.tail()?);
-
-                        if PLAIN {
-                            nr.read_with_xref::<Null>(xref)
-                        } else {
-                            nr.read_with_xref::<MaybeRef<Null>>(xref)
-                                .and_then(|n| n.resolve(xref))
-                        }
-                        .is_some()
-                    };
-
-                    if !is_null {
-                        let offset = r.offset() - start_offset;
-                        offsets.insert(name, offset);
-                    }
+                // Keys with null-objects should be treated as non-existing.
+                let is_null = {
+                    let mut nr = Reader::new(r.tail()?);
 
                     if PLAIN {
-                        r.skip::<PLAIN, Object>()?;
+                        nr.read_with_xref::<Null>(xref)
                     } else {
-                        r.skip::<PLAIN, MaybeRef<Object>>()?;
+                        nr.read_with_xref::<MaybeRef<Null>>(xref)
+                            .and_then(|n| n.resolve(xref))
                     }
+                    .is_some()
+                };
+
+                if !is_null {
+                    let offset = r.offset() - start_offset;
+                    offsets.insert(name, offset);
+                }
+
+                if PLAIN {
+                    r.skip::<PLAIN, Object>()?;
+                } else {
+                    r.skip::<PLAIN, MaybeRef<Object>>()?;
                 }
             }
-        };
+        }
+    };
 
-        Some(Dict(Arc::new(Repr {
-            data,
-            offsets,
-            xref: xref.clone(),
-        })))
-    }
+    Some(Dict(Arc::new(Repr {
+        data,
+        offsets,
+        xref: xref.clone(),
+    })))
 }
 
 object!(Dict<'a>, Dict);

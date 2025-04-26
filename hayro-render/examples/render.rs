@@ -7,7 +7,7 @@ fn main() {
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 
-    let pixmaps = render_png(&pdf);
+    let pixmaps = render_png(&pdf, 1.0);
 
     std::fs::write("out.png", &pixmaps[0]).unwrap();
 }

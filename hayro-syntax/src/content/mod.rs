@@ -4,6 +4,7 @@ use crate::content::TypedOperation::Fallback;
 use crate::content::ops::TypedOperation;
 use crate::file::xref::XRef;
 use crate::object::array::Array;
+use crate::object::dict::Dict;
 use crate::object::name::{Name, escape_name_like, skip_name_like};
 use crate::object::number::Number;
 use crate::object::{Object, ObjectLike, string};
@@ -112,11 +113,19 @@ impl<'a> Iterator for UntypedIter<'a> {
 
                 // Hack for now to skip inline images, which form an exception.
                 if operator.get().as_ref() == b"BI" {
-                    while let Some(bytes) = self.reader.read_bytes(2) {
+                    {
+                        let mut new_r = self.reader.clone();
+                        new_r.skip_white_spaces_and_comments();
+                        println!("{:?}", new_r.read_without_xref::<Dict>());
+                    }
+                    while let Some(bytes) = self.reader.peek_bytes(2) {
                         if bytes == b"EI" {
+                            self.reader.read_bytes(2)?;
                             self.reader.skip_white_spaces();
 
                             break;
+                        } else {
+                            self.reader.read_byte()?;
                         }
                     }
                 }

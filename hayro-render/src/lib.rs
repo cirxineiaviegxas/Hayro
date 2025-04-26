@@ -1,6 +1,7 @@
 use hayro_interpret::device::Device;
 use hayro_interpret::{FillProps, GraphicsState, StrokeProps, interpret};
 use hayro_syntax::content::ops::{LineCap, Transform, TypedOperation};
+use hayro_syntax::document::page::Page;
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
@@ -11,7 +12,6 @@ use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
 use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
-use hayro_syntax::document::page::Page;
 
 struct Renderer(RenderContext);
 
@@ -61,8 +61,13 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     device
         .0
         .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
-    
-    interpret(page.typed_operations(), page.resources(), &mut state, &mut device);
+
+    interpret(
+        page.typed_operations(),
+        page.resources(),
+        &mut state,
+        &mut device,
+    );
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
     device.0.render_to_pixmap(&mut pixmap);
@@ -70,21 +75,26 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
 }
 
 pub fn render_png(pdf: &Pdf, scale: f32) -> Vec<Vec<u8>> {
-    pdf.pages().unwrap().pages.iter().map(|page| {
-        let pixmap = render(page, scale);
+    pdf.pages()
+        .unwrap()
+        .pages
+        .iter()
+        .map(|page| {
+            let pixmap = render(page, scale);
 
-        let mut png_data = Vec::new();
-        let cursor = Cursor::new(&mut png_data);
-        let encoder = PngEncoder::new(cursor);
-        encoder
-            .write_image(
-                pixmap.data(),
-                pixmap.width() as u32,
-                pixmap.height() as u32,
-                ExtendedColorType::Rgba8,
-            )
-            .expect("Failed to encode image");
+            let mut png_data = Vec::new();
+            let cursor = Cursor::new(&mut png_data);
+            let encoder = PngEncoder::new(cursor);
+            encoder
+                .write_image(
+                    pixmap.data(),
+                    pixmap.width() as u32,
+                    pixmap.height() as u32,
+                    ExtendedColorType::Rgba8,
+                )
+                .expect("Failed to encode image");
 
-        png_data
-    }).collect()
+            png_data
+        })
+        .collect()
 }

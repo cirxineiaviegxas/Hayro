@@ -1,14 +1,14 @@
-use std::fmt::format;
 use crate::convert::{convert_color, convert_line_cap, convert_line_join};
 use crate::device::Device;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
+use hayro_syntax::object::dict::Dict;
+use hayro_syntax::object::dict::keys::EXT_G_STATE;
+use hayro_syntax::object::name::Name;
+use hayro_syntax::object::number::Number;
 use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
 use peniko::Fill;
 use smallvec::{SmallVec, smallvec};
-use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{EXT_G_STATE};
-use hayro_syntax::object::name::Name;
-use hayro_syntax::object::number::Number;
+use std::fmt::format;
 
 type Color = SmallVec<[f32; 4]>;
 
@@ -17,8 +17,8 @@ pub mod device;
 mod state;
 mod util;
 
-pub use state::GraphicsState;
 use crate::util::OptionLog;
+pub use state::GraphicsState;
 
 pub struct StrokeProps {
     pub line_width: f32,
@@ -38,7 +38,7 @@ pub fn interpret<'a>(
     device: &mut impl Device,
 ) {
     let ext_g_stages = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
-    
+
     for op in ops {
         match op {
             TypedOperation::SaveState(_) => state.save_state(),
@@ -123,19 +123,20 @@ pub fn interpret<'a>(
                     .path_mut()
                     .line_to(Point::new(m.0.as_f64(), m.1.as_f64()));
             }
-            TypedOperation::CubicTo(c) => {
-                state
-                    .path_mut()
-                    .curve_to(Point::new(c.0.as_f64(), c.1.as_f64()), Point::new(c.2.as_f64(), c.3.as_f64()), Point::new(c.4.as_f64(), c.5.as_f64()))
-            }
+            TypedOperation::CubicTo(c) => state.path_mut().curve_to(
+                Point::new(c.0.as_f64(), c.1.as_f64()),
+                Point::new(c.2.as_f64(), c.3.as_f64()),
+                Point::new(c.4.as_f64(), c.5.as_f64()),
+            ),
             TypedOperation::ClosePath(_) => {
                 state.path_mut().close_path();
             }
             TypedOperation::SetGraphicsState(gs) => {
-                let gs = ext_g_stages.get::<Dict>(gs.0)
+                let gs = ext_g_stages
+                    .get::<Dict>(gs.0)
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap_or_default();
-                
+
                 handle_gs(&gs, state);
             }
             TypedOperation::StrokePath(_) => {
@@ -150,14 +151,15 @@ pub fn interpret<'a>(
 }
 
 fn handle_gs(dict: &Dict, state: &mut GraphicsState) {
-    for key in dict.keys() { 
-        handle_gs_single(dict, *key, state)
-            .warn_none(&format!("invalid value in graphics state for {}", key.as_str()));
+    for key in dict.keys() {
+        handle_gs_single(dict, *key, state).warn_none(&format!(
+            "invalid value in graphics state for {}",
+            key.as_str()
+        ));
     }
 }
 
 fn handle_gs_single(dict: &Dict, key: Name, state: &mut GraphicsState) -> Option<()> {
-    
     // TODO Can we use constants here somehow?
     match key.as_str().as_str() {
         "LW" => state.get_mut().line_width = dict.get::<f32>(key)?,
@@ -169,7 +171,7 @@ fn handle_gs_single(dict: &Dict, key: Name, state: &mut GraphicsState) -> Option
         "Type" => {}
         _ => {}
     }
-    
+
     Some(())
 }
 
