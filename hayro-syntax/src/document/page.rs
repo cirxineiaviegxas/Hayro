@@ -27,6 +27,8 @@ impl<'a> Pages<'a> {
 
 fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>) -> Option<()> {
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
+    
+    // TODO: Add inheritance of page attributes
 
     for dict in kids.iter::<Dict>() {
         match dict.get::<Name>(TYPE)?.get().as_ref() {
