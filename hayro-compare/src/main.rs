@@ -20,9 +20,11 @@ fn main() {
         .collect::<Vec<_>>();
 
     entries.sort();
+    
+    let entries = &entries[0..80];
 
-    // render_pdfium(&entries);
-    render_hayro(&entries[0..30]);
+    render_pdfium(&entries);
+    render_hayro(&entries);
 }
 
 fn render_pdfium(entries: &[PathBuf]) {

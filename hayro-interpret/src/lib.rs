@@ -142,6 +142,9 @@ pub fn interpret<'a>(
             TypedOperation::StrokePath(_) => {
                 stroke_path(state, device);
             }
+            TypedOperation::EndPath(_) => {
+                state.path_mut().truncate(0);
+            }
             TypedOperation::RestoreState(_) => state.restore_state(),
             _ => {
                 println!("{:?}", op);
