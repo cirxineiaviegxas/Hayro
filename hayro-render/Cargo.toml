@@ -5,10 +5,11 @@ edition = "2024"
 
 [dependencies]
 hayro-syntax = { workspace = true }
+hayro-interpret = { workspace = true }
 image = "0.25.6"
-vello_cpu = { path = "../../vello/sparse_strips/vello_cpu" }
-vello_common = { path = "../../vello/sparse_strips/vello_common" }
-vello_api = { path = "../../vello/sparse_strips/vello_api" }
+vello_cpu = { workspace = true }
+vello_common = { workspace = true }
+vello_api = { workspace = true }
 
 [dev-dependencies]
 walkdir = "2.5.0"

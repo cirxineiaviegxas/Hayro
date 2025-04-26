@@ -1,87 +1,46 @@
-mod convert;
-
-use crate::convert::{convert_line_cap, convert_line_join, convert_transform};
+use hayro_interpret::device::Device;
+use hayro_interpret::{FillProps, GraphicsState, StrokeProps, interpret};
 use hayro_syntax::content::ops::{LineCap, Transform, TypedOperation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
 use std::io::Cursor;
-use vello_api::color::AlphaColor;
 use vello_api::color::palette::css::WHITE;
+use vello_api::color::{AlphaColor, Srgb};
+use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
 use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
 
-#[derive(Clone)]
-enum Cs {
-    DeviceRgb,
-    DeviceGray,
-}
+struct Renderer(RenderContext);
 
-#[derive(Clone)]
-struct State {
-    pub line_width: f32,
-    pub line_cap: Cap,
-    pub line_join: Join,
-    pub miter_limit: f32,
-    pub affine: Affine,
-    pub stroke_cs: Cs,
-    pub stroke_color: Vec<f32>,
-    pub fill_color: Vec<f32>,
-    pub fill_cs: Cs,
-}
-
-struct GraphicsState {
-    states: Vec<State>,
-    path: BezPath,
-}
-
-impl GraphicsState {
-    pub fn new(initial_transform: Affine) -> Self {
-        let line_width = 1.0;
-        let line_cap = Cap::Butt;
-        let line_join = Join::Miter;
-        let miter_limit = 10.0;
-
-        Self {
-            states: vec![State {
-                line_width,
-                line_cap,
-                line_join,
-                miter_limit,
-                affine: initial_transform,
-                stroke_cs: Cs::DeviceRgb,
-                stroke_color: vec![0.0, 0.0, 0.0],
-                fill_color: vec![0.0, 0.0, 0.0],
-                fill_cs: Cs::DeviceRgb,
-            }],
-            path: BezPath::new(),
-        }
+impl Device for Renderer {
+    fn set_transform(&mut self, affine: Affine) {
+        self.0.set_transform(affine);
     }
 
-    pub fn save_state(&mut self) {
-        let cur = self.states.last().unwrap().clone();
-        self.states.push(cur);
+    fn set_paint(&mut self, color: AlphaColor<Srgb>) {
+        self.0.set_paint(color);
     }
 
-    pub fn set_stroke_color(&mut self, col: Vec<f32>) {
-        self.cur_mut().stroke_color = col;
+    fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
+        let stroke = kurbo::Stroke {
+            width: stroke_props.line_width as f64,
+            join: stroke_props.line_join,
+            miter_limit: stroke_props.miter_limit as f64,
+            start_cap: stroke_props.line_cap,
+            end_cap: stroke_props.line_cap,
+            dash_pattern: Default::default(),
+            dash_offset: 0.0,
+        };
+
+        self.0.set_stroke(stroke);
+        self.0.stroke_path(path);
     }
 
-    pub fn restore_state(&mut self) {
-        self.states.pop();
-    }
-
-    fn cur(&self) -> &State {
-        self.states.last().unwrap()
-    }
-
-    pub fn cur_mut(&mut self) -> &mut State {
-        self.states.last_mut().unwrap()
-    }
-
-    pub fn ctm(&mut self, transform: Transform) {
-        self.cur_mut().affine *= convert_transform(transform);
+    fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps) {
+        self.0.set_fill_rule(fill_props.fill_rule);
+        self.0.fill_path(path);
     }
 }
 
@@ -96,116 +55,22 @@ pub fn render(pdf: &Pdf, scale: f32) -> Pixmap {
     );
     let (pix_width, pix_height) = (scaled_width.ceil() as u16, scaled_height.ceil() as u16);
     let mut state = GraphicsState::new(initial_transform);
-    let mut render_ctx = RenderContext::new(pix_width, pix_height);
+    let mut device = Renderer(RenderContext::new(pix_width, pix_height));
 
-    render_ctx.set_paint(WHITE);
-    render_ctx.fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
+    device.0.set_paint(WHITE);
+    device
+        .0
+        .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
 
-    for op in pages.typed_operations() {
-        match op {
-            TypedOperation::SaveState(_) => state.save_state(),
-            TypedOperation::StrokeColorDeviceRgb(s) => {
-                state.cur_mut().stroke_cs = Cs::DeviceRgb;
-                state.cur_mut().stroke_color = vec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
-            }
-            TypedOperation::LineWidth(w) => {
-                state.cur_mut().line_width = w.0.as_f32();
-            }
-            TypedOperation::LineCap(c) => {
-                state.cur_mut().line_cap = convert_line_cap(c);
-            }
-            TypedOperation::LineJoin(j) => {
-                state.cur_mut().line_join = convert_line_join(j);
-            }
-            TypedOperation::MiterLimit(l) => {
-                state.cur_mut().miter_limit = l.0.as_f32();
-            }
-            TypedOperation::Transform(t) => {
-                state.ctm(t);
-            }
-            TypedOperation::RectPath(r) => {
-                let rect = Rect::new(
-                    r.0.as_f64(),
-                    r.1.as_f64(),
-                    r.0.as_f64() + r.2.as_f64(),
-                    r.1.as_f64() + r.3.as_f64(),
-                )
-                .to_path(0.1);
-                state.path.extend(rect);
-            }
-            TypedOperation::MoveTo(m) => {
-                state.path.move_to(Point::new(m.0.as_f64(), m.1.as_f64()));
-            }
-            TypedOperation::FillPathEvenOdd(_) => {
-                render_ctx.set_fill_rule(Fill::EvenOdd);
-                let color = {
-                    let c = &state.cur().fill_color;
-
-                    match state.cur().fill_cs {
-                        Cs::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], 1.0]),
-                        Cs::DeviceGray => AlphaColor::new([c[0], c[0], c[0], 1.0]),
-                    }
-                };
-
-                println!("{:?}", state.path);
-
-                render_ctx.set_paint(color);
-                render_ctx.set_transform(state.cur().affine);
-                render_ctx.fill_path(&state.path);
-
-                state.path.truncate(0);
-            }
-            TypedOperation::NonStrokeColorDeviceGray(d) => {
-                state.cur_mut().fill_cs = Cs::DeviceGray;
-                state.cur_mut().fill_color = vec![d.0.as_f32()];
-            }
-            TypedOperation::LineTo(m) => {
-                state.path.line_to(Point::new(m.0.as_f64(), m.1.as_f64()));
-            }
-            TypedOperation::ClosePath(_) => {
-                state.path.close_path();
-            }
-            TypedOperation::StrokePath(_) => {
-                let stroke = Stroke {
-                    width: state.cur().line_width as f64,
-                    join: state.cur().line_join,
-                    miter_limit: state.cur().miter_limit as f64,
-                    start_cap: state.cur().line_cap,
-                    end_cap: state.cur().line_cap,
-                    dash_pattern: Default::default(),
-                    dash_offset: 0.0,
-                };
-
-                render_ctx.set_stroke(stroke);
-                let color = {
-                    let c = &state.cur().stroke_color;
-
-                    match state.cur().stroke_cs {
-                        Cs::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], 1.0]),
-                        Cs::DeviceGray => AlphaColor::new([c[0], c[0], c[0], 1.0]),
-                    }
-                };
-
-                render_ctx.set_paint(color);
-                render_ctx.set_transform(state.cur().affine);
-                render_ctx.stroke_path(&state.path);
-
-                state.path.truncate(0);
-            }
-            TypedOperation::RestoreState(_) => state.restore_state(),
-            _ => {
-                println!("{:?}", op);
-            }
-        }
-    }
+    interpret(pages.typed_operations(), &mut state, &mut device);
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
-    render_ctx.render_to_pixmap(&mut pixmap);
+    device.0.render_to_pixmap(&mut pixmap);
     pixmap
 }
 
 pub fn render_png(pdf: &Pdf) -> Vec<u8> {
-    let pixmap = render(pdf, 16.0);
+    let pixmap = render(pdf, 1.0);
 
     let mut png_data = Vec::new();
     let cursor = Cursor::new(&mut png_data);

@@ -1,12 +1,14 @@
 [workspace]
 resolver = "2"
-members = [ "hayro-render","hayro-syntax"]
+members = [ "hayro-interpret", "hayro-render","hayro-syntax"]
 
 [workspace.dependencies]
 bitreader = { version = "0.3.11" }
 hayro-syntax = { path = "hayro-syntax" }
+hayro-interpret = { path = "hayro-interpret" }
 hayro-render = { path = "hayro-render" }
 hex = { version = "0.4.3" }
+kurbo = { version = "0.11.1" }
 log = { version = "0.4.22" }
 pdf-writer = { version = "0.13.0" }
 rustc-hash = { version = "2.1.0" }
@@ -15,3 +17,7 @@ zune-jpeg = { version = "0.4.14" }
 miniz_oxide = {version = "0.8.2"}
 snafu = { version = "0.8.5"}
 itertools = "0.14.0"
+peniko = { version = "0.3.1" }
+vello_cpu = { path = "../vello/sparse_strips/vello_cpu" }
+vello_common = { path = "../vello/sparse_strips/vello_common" }
+vello_api = { path = "../vello/sparse_strips/vello_api" }
