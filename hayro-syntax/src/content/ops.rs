@@ -52,10 +52,8 @@ op_impl!(NonStrokeColorNamed<'a>, "scn", u8::MAX as usize, |stack: &Stack<'a>| {
 
 #[cfg(test)]
 mod tests {
-    use crate::content::ops::{
-        ClosePath, FillPathNonZero, LineTo, MoveTo, NonStrokeColorDeviceRgb, SetGraphicsState,
-        Transform, TypedOperation,
-    };
+    use smallvec::smallvec;
+    use crate::content::ops::{ClosePath, FillPathNonZero, LineTo, MoveTo, NonStrokeColorDeviceRgb, NonStrokeColorNamed, SetGraphicsState, StrokeColorNamed, Transform, TypedOperation};
     use crate::content::{TypedIter, UntypedIter};
     use crate::object::name::Name;
     use crate::object::number::Number;
@@ -112,5 +110,24 @@ f
             .into_iter()
             .collect::<Vec<_>>();
         assert_eq!(elements, expected,)
+    }
+
+    #[test]
+    fn scn() {
+        let input = b"
+0.0 scn
+0.1 0.2 0.3 /DeviceRgb SCN
+";
+
+        let expected = vec![
+            TypedOperation::NonStrokeColorNamed(NonStrokeColorNamed(smallvec![Number::from_i32(0)], None)),
+            TypedOperation::StrokeColorNamed(StrokeColorNamed(smallvec![Number::from_f32(0.1), Number::from_f32(0.2), Number::from_f32(0.3)], Some(Name::from_unescaped(b"DeviceRgb")))),
+        ];
+
+        let elements = TypedIter::new(UntypedIter::new(input))
+            .into_iter()
+            .collect::<Vec<_>>();
+        
+        assert_eq!(elements, expected);
     }
 }
