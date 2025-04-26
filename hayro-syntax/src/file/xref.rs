@@ -15,6 +15,7 @@ use snafu::{OptionExt, ResultExt};
 use std::cmp::max;
 use std::iter;
 use std::sync::Arc;
+use crate::object::null::Null;
 
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
@@ -86,8 +87,6 @@ impl<'a> XRef<'a> {
         match *s.xref_map.get(&id).or_else(|| {
             // An indirect reference to an undefined object shall not be considered an error by a PDF processor; it
             // shall be treated as a reference to the null object.
-            warn!("failed to find object {:?}", id);
-
             None
         })? {
             EntryType::Normal(offset) => {
