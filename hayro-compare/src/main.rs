@@ -20,7 +20,7 @@ fn main() {
         .collect::<Vec<_>>();
 
     entries.sort();
-    
+
     let entries = &entries[0..80];
 
     render_pdfium(&entries);

@@ -9,6 +9,7 @@ use vello_api::color::palette::css::WHITE;
 use vello_api::color::{AlphaColor, Srgb};
 use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Rect};
+use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
 
 struct Renderer(RenderContext);
@@ -40,6 +41,15 @@ impl Device for Renderer {
     fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps) {
         self.0.set_fill_rule(fill_props.fill_rule);
         self.0.fill_path(path);
+    }
+
+    fn push_clip(&mut self, clip: &BezPath, fill: Fill) {
+        self.0.set_fill_rule(fill);
+        self.0.push_clip_layer(clip);
+    }
+
+    fn pop_clip(&mut self) {
+        self.0.pop_layer();
     }
 }
 

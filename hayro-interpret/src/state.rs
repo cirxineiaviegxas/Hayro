@@ -19,11 +19,13 @@ pub(crate) struct State {
     // Strictly speaking not part of the graphics state, but we keep it there for
     // consistency.
     pub(crate) fill: Fill,
+    pub(crate) n_clips: u32,
 }
 
 pub struct GraphicsState {
     states: Vec<State>,
     path: BezPath,
+    clip: Option<Fill>,
 }
 
 impl GraphicsState {
@@ -45,7 +47,9 @@ impl GraphicsState {
                 fill_color: smallvec![0.0, 0.0, 0.0],
                 stroke_alpha: 1.0,
                 fill: Fill::NonZero,
+                n_clips: 0,
             }],
+            clip: None,
             path: BezPath::new(),
         }
     }
@@ -69,6 +73,14 @@ impl GraphicsState {
 
     pub(crate) fn path_mut(&mut self) -> &mut BezPath {
         &mut self.path
+    }
+
+    pub(crate) fn clip(&self) -> &Option<Fill> {
+        &self.clip
+    }
+
+    pub(crate) fn clip_mut(&mut self) -> &mut Option<Fill> {
+        &mut self.clip
     }
 
     pub(crate) fn get(&self) -> &State {

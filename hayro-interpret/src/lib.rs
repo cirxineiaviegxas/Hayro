@@ -142,6 +142,13 @@ pub fn interpret<'a>(
                 stroke_path(state, device);
             }
             TypedOperation::EndPath(_) => {
+                if let Some(clip) = *state.clip() {
+                    device.set_transform(state.get().affine);
+                    device.push_clip(state.path(), clip);
+                    
+                    *(state.clip_mut()) = None;
+                    state.get_mut().n_clips += 1;
+                }
                 state.path_mut().truncate(0);
             }
             TypedOperation::NonStrokeColor(c) => {
@@ -160,11 +167,30 @@ pub fn interpret<'a>(
                     stroke_c.push(e.as_f32());
                 }
             }
-            TypedOperation::RestoreState(_) => state.restore_state(),
+            TypedOperation::ClipNonZero(_) => {
+                *(state.clip_mut()) = Some(Fill::NonZero);
+            }
+            TypedOperation::ClipEvenOdd(_) => {
+                *(state.clip_mut()) = Some(Fill::EvenOdd);
+            }
+            TypedOperation::RestoreState(_) => {
+                let mut num_clips = state.get().n_clips;
+                state.restore_state();
+                let target_clips = state.get().n_clips;
+                
+                while num_clips > target_clips {
+                    device.pop_clip();
+                    num_clips -= 1;
+                }
+            },
             _ => {
                 println!("{:?}", op);
             }
         }
+    }
+    
+    for _ in 0..state.get().n_clips {
+        device.pop_clip();
     }
 }
 
