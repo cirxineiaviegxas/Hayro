@@ -92,13 +92,11 @@ pub fn interpret<'a>(
             }
             TypedOperation::FillAndStrokeEvenOdd(_) => {
                 state.get_mut().fill = Fill::EvenOdd;
-                fill_path(state, device);
-                stroke_path(state, device);
+                fill_stroke_path(state, device);
             }
             TypedOperation::FillAndStrokeNonZero(_) => {
                 state.get_mut().fill = Fill::NonZero;
-                fill_path(state, device);
-                stroke_path(state, device);
+                fill_stroke_path(state, device);
             }
             TypedOperation::CloseAndStrokePath(_) => {
                 state.path_mut().close_path();
@@ -107,14 +105,12 @@ pub fn interpret<'a>(
             TypedOperation::CloseFillAndStrokeEvenOdd(_) => {
                 state.path_mut().close_path();
                 state.get_mut().fill = Fill::EvenOdd;
-                fill_path(state, device);
-                stroke_path(state, device);
+                fill_stroke_path(state, device);
             }
             TypedOperation::CloseFillAndStrokeNonZero(_) => {
                 state.path_mut().close_path();
                 state.get_mut().fill = Fill::NonZero;
-                fill_path(state, device);
-                stroke_path(state, device);
+                fill_stroke_path(state, device);
             }
             TypedOperation::NonStrokeColorDeviceGray(d) => {
                 state.get_mut().fill_color = smallvec![d.0.as_f32()];
@@ -178,20 +174,32 @@ fn handle_gs_single(dict: &Dict, key: Name, state: &mut GraphicsState) -> Option
 }
 
 fn fill_path(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = convert_color(&state.get().fill_color, state.get().fill_alpha);
-    device.set_paint(color);
-    device.set_transform(state.get().affine);
-    device.fill_path(state.path(), &state.fill_props());
-
+    fill_path_impl(state, device);
     // TODO: Where in spec?
     state.path_mut().truncate(0);
 }
 
 fn stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
+    stroke_path_impl(state, device);
+    state.path_mut().truncate(0);
+}
+
+fn fill_stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
+    fill_path_impl(state, device);
+    stroke_path_impl(state, device);
+    state.path_mut().truncate(0);
+}
+
+fn fill_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
+    let color = convert_color(&state.get().fill_color, state.get().fill_alpha);
+    device.set_paint(color);
+    device.set_transform(state.get().affine);
+    device.fill_path(state.path(), &state.fill_props());
+}
+
+fn stroke_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
     let color = convert_color(&state.get().stroke_color, state.get().stroke_alpha);
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.stroke_path(state.path(), &state.stroke_props());
-
-    state.path_mut().truncate(0);
 }
