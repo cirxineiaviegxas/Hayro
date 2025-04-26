@@ -1,7 +1,6 @@
 mod type2;
 mod type4;
 
-use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DOMAIN, RANGE};

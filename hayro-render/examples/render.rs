@@ -1,4 +1,4 @@
-use hayro_render::{render, render_png};
+use hayro_render::render_png;
 use hayro_syntax::Data;
 use hayro_syntax::pdf::Pdf;
 

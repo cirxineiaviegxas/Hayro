@@ -1,7 +1,6 @@
 use crate::file::xref::XRef;
 use crate::trivia::{Comment, is_eol_character, is_white_space_character};
 use std::ops::Range;
-use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct Reader<'a> {

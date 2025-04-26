@@ -1,4 +1,4 @@
-use crate::content::{Stack, TypedIter, UntypedIter};
+use crate::content::{TypedIter, UntypedIter};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;

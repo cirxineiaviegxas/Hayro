@@ -1,6 +1,5 @@
 use hayro_interpret::device::Device;
 use hayro_interpret::{FillProps, GraphicsState, StrokeProps, interpret};
-use hayro_syntax::content::ops::{LineCap, Transform, TypedOperation};
 use hayro_syntax::document::page::Page;
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
@@ -9,8 +8,7 @@ use std::io::Cursor;
 use vello_api::color::palette::css::WHITE;
 use vello_api::color::{AlphaColor, Srgb};
 use vello_api::kurbo;
-use vello_api::kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
-use vello_api::peniko::Fill;
+use vello_api::kurbo::{Affine, BezPath, Rect};
 use vello_cpu::{Pixmap, RenderContext};
 
 struct Renderer(RenderContext);

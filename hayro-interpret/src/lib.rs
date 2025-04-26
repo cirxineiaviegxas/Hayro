@@ -5,10 +5,9 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::EXT_G_STATE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
-use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
+use kurbo::{Cap, Join, Point, Rect, Shape};
 use peniko::Fill;
 use smallvec::{SmallVec, smallvec};
-use std::fmt::format;
 
 type Color = SmallVec<[f32; 4]>;
 

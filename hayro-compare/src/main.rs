@@ -57,7 +57,7 @@ fn render_hayro(entries: &[PathBuf]) {
     for path in entries {
         let stem = path.file_stem().unwrap().to_str().unwrap();
         let file = std::fs::read(path).unwrap();
-        let mut data = Data::new(&file);
+        let data = Data::new(&file);
         let pdf = Pdf::new(&data).unwrap();
         let pages = hayro_render::render_png(&pdf, 1.0);
 

@@ -1,8 +1,6 @@
 use hayro_syntax::Data;
-use hayro_syntax::content::Stack;
 use hayro_syntax::content::ops::TypedOperation;
 use hayro_syntax::pdf::Pdf;
-use hayro_syntax::pdf::PdfError::EncryptionError;
 use walkdir::WalkDir;
 
 #[allow(dead_code)]

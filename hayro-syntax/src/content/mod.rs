@@ -1,18 +1,14 @@
 pub mod ops;
 
-use crate::content::TypedOperation::Fallback;
 use crate::content::ops::TypedOperation;
 use crate::file::xref::XRef;
-use crate::object::array::Array;
-use crate::object::dict::{Dict, InlineImageDict};
-use crate::object::name::{Name, escape_name_like, skip_name_like};
-use crate::object::number::Number;
-use crate::object::{Object, ObjectLike, string};
+use crate::object::dict::InlineImageDict;
+use crate::object::name::{escape_name_like, skip_name_like};
+use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
 use smallvec::SmallVec;
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
 use crate::object::stream::Stream;
 

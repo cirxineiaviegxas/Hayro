@@ -5,7 +5,6 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::{OptionLog, object};
 use log::warn;
-use pdf_writer::types::StructRole::P;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 

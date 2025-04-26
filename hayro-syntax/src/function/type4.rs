@@ -1,11 +1,10 @@
 use crate::file::xref::XRef;
 use crate::function::{CommonProperties, Values};
-use crate::object::number::{InternalNumber, Number};
+use crate::object::number::Number;
 use crate::reader::Reader;
 use crate::{OptionLog, content};
-use log::{debug, error};
+use log::error;
 use smallvec::{SmallVec, smallvec};
-use std::env::args;
 use std::ops::Rem;
 
 #[derive(Clone, Copy)]
@@ -464,7 +463,7 @@ mod tests {
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
     use crate::function::{Clamper, CommonProperties, Values};
     use crate::object::number::Number;
-    use log::__private_api::Value;
+    
     use smallvec::smallvec;
 
     #[test]

@@ -5,7 +5,6 @@ use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{FIRST, INDEX, N, PREV, SIZE, W, XREFSTM};
 use crate::object::indirect::IndirectObject;
-use crate::object::null::Null;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
