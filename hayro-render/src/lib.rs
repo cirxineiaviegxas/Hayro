@@ -37,12 +37,11 @@ struct GraphicsState {
 }
 
 impl GraphicsState {
-    pub fn new(height: f32) -> Self {
+    pub fn new(initial_transform: Affine) -> Self {
         let line_width = 1.0;
         let line_cap = Cap::Butt;
         let line_join = Join::Miter;
         let miter_limit = 10.0;
-        let affine = Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, height as f64]);
 
         Self {
             states: vec![State {
@@ -50,7 +49,7 @@ impl GraphicsState {
                 line_cap,
                 line_join,
                 miter_limit,
-                affine,
+                affine: initial_transform,
                 stroke_cs: Cs::DeviceRgb,
                 stroke_color: vec![0.0, 0.0, 0.0],
                 fill_color: vec![0.0, 0.0, 0.0],
@@ -86,11 +85,13 @@ impl GraphicsState {
     }
 }
 
-pub fn render(pdf: &Pdf) -> Pixmap {
+pub fn render(pdf: &Pdf, scale: f32) -> Pixmap {
     let pages = &pdf.pages().unwrap().pages[0];
-    let (width, height) = (pages.media_box()[2], pages.media_box()[3]);
-    let (pix_width, pix_height) = (width.ceil() as u16, height.ceil() as u16);
-    let mut state = GraphicsState::new(height);
+    let (unscaled_width, unscaled_height) = (pages.media_box()[2], pages.media_box()[3]);
+    let initial_transform = Affine::scale(scale as f64) * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height as f64]);
+    let (scaled_width, scaled_height) = ((unscaled_width *scale) as f64, (unscaled_height *scale) as f64);
+    let (pix_width, pix_height) = (scaled_width.ceil() as u16, scaled_height.ceil() as u16);
+    let mut state = GraphicsState::new(initial_transform);
     let mut render_ctx = RenderContext::new(pix_width, pix_height);
 
     render_ctx.set_paint(WHITE);
@@ -200,7 +201,7 @@ pub fn render(pdf: &Pdf) -> Pixmap {
 }
 
 pub fn render_png(pdf: &Pdf) -> Vec<u8> {
-    let pixmap = render(pdf);
+    let pixmap = render(pdf, 16.0);
 
     let mut png_data = Vec::new();
     let cursor = Cursor::new(&mut png_data);
