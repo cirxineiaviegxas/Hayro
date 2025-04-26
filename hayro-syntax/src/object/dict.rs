@@ -14,6 +14,12 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Dict<'a>(Arc<Repr<'a>>);
 
+impl Default for Dict<'_> {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 // TODO: Is this alright to do?
 impl PartialEq for Dict<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -22,6 +28,16 @@ impl PartialEq for Dict<'_> {
 }
 
 impl<'a> Dict<'a> {
+    pub fn empty() -> Dict<'a> {
+        let repr = Repr {
+            data: &[],
+            offsets: Default::default(),
+            xref: XRef::dummy(),
+        };
+        
+        Self(Arc::new(repr))
+    }
+    
     /// Returns the number of entries in the dictionary.
     pub fn len(&self) -> usize {
         self.0.offsets.len()
@@ -288,8 +304,9 @@ pub mod keys {
     key!(CONTENTS, b"Contents");
     key!(DECODE_PARMS, b"DecodeParms");
     key!(DOMAIN, b"Domain");
-    key!(ENCRYPT, b"Encrypt");
     key!(EARLY_CHANGE, b"EarlyChange");
+    key!(ENCRYPT, b"Encrypt");
+    key!(EXT_G_STATE, b"ExtGState");
     key!(F, b"F");
     key!(FILTER, b"Filter");
     key!(FIRST, b"First");
@@ -303,6 +320,7 @@ pub mod keys {
     key!(PREDICTOR, b"Predictor");
     key!(PREV, b"Prev");
     key!(RANGE, b"Range");
+    key!(RESOURCES, b"Resources");
     key!(ROOT, b"Root");
     key!(SIZE, b"Size");
     key!(TYPE, b"Type");

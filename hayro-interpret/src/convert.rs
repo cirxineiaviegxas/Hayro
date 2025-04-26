@@ -31,11 +31,11 @@ pub fn convert_line_join(lc: LineJoin) -> kurbo::Join {
     }
 }
 
-pub fn convert_color(c: &Color) -> AlphaColor<Srgb> {
+pub fn convert_color(c: &Color, alpha: f32) -> AlphaColor<Srgb> {
     if c.len() == 1 {
-        AlphaColor::new([c[0], c[0], c[0], 1.0])
+        AlphaColor::new([c[0], c[0], c[0], alpha])
     } else if c.len() == 3 {
-        AlphaColor::new([c[0], c[1], c[2], 1.0])
+        AlphaColor::new([c[0], c[1], c[2], alpha])
     } else {
         unimplemented!()
     }

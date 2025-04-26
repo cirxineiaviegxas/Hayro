@@ -13,7 +13,9 @@ pub(crate) struct State {
     pub(crate) miter_limit: f32,
     pub(crate) affine: Affine,
     pub(crate) stroke_color: Color,
+    pub(crate) stroke_alpha: f32,
     pub(crate) fill_color: Color,
+    pub(crate) fill_alpha: f32,
     // Strictly speaking not part of the graphics state, but we keep it there for
     // consistency.
     pub(crate) fill: Fill,
@@ -38,8 +40,10 @@ impl GraphicsState {
                 line_join,
                 miter_limit,
                 affine: initial_transform,
+                fill_alpha: 1.0,
                 stroke_color: smallvec![0.0, 0.0, 0.0],
                 fill_color: smallvec![0.0, 0.0, 0.0],
+                stroke_alpha: 1.0,
                 fill: Fill::NonZero,
             }],
             path: BezPath::new(),

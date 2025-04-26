@@ -47,7 +47,7 @@ impl<'a> Name<'a> {
             .to_string()
     }
 
-    pub(crate) fn get(&self) -> Cow<'a, [u8]> {
+    pub fn get(&self) -> Cow<'a, [u8]> {
         escape_name_like(self.data, self.has_escape)
     }
 }

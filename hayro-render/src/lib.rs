@@ -61,8 +61,8 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     device
         .0
         .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
-
-    interpret(page.typed_operations(), &mut state, &mut device);
+    
+    interpret(page.typed_operations(), page.resources(), &mut state, &mut device);
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
     device.0.render_to_pixmap(&mut pixmap);

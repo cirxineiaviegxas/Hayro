@@ -2,7 +2,7 @@ use crate::content::{Stack, TypedIter, UntypedIter};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{CONTENTS, KIDS, MEDIA_BOX, TYPE};
+use crate::object::dict::keys::{CONTENTS, KIDS, MEDIA_BOX, RESOURCES, TYPE};
 use crate::object::name::Name;
 use crate::object::stream::Stream;
 use log::warn;
@@ -50,6 +50,10 @@ impl<'a> Page<'a> {
             inner: dict,
             page_streams: OnceCell::new(),
         }
+    }
+    
+    pub fn resources(&self) -> Dict<'a> {
+        self.inner.get::<Dict>(RESOURCES).unwrap_or_default()
     }
 
     fn operations_impl(&self) -> Option<UntypedIter> {

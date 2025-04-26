@@ -1,17 +1,24 @@
+use std::fmt::format;
 use crate::convert::{convert_color, convert_line_cap, convert_line_join};
 use crate::device::Device;
-use hayro_syntax::content::ops::TypedOperation;
+use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Stroke};
 use peniko::Fill;
 use smallvec::{SmallVec, smallvec};
+use hayro_syntax::object::dict::Dict;
+use hayro_syntax::object::dict::keys::{EXT_G_STATE};
+use hayro_syntax::object::name::Name;
+use hayro_syntax::object::number::Number;
 
 type Color = SmallVec<[f32; 4]>;
 
 mod convert;
 pub mod device;
 mod state;
+mod util;
 
 pub use state::GraphicsState;
+use crate::util::OptionLog;
 
 pub struct StrokeProps {
     pub line_width: f32,
@@ -26,9 +33,12 @@ pub struct FillProps {
 
 pub fn interpret<'a>(
     ops: impl Iterator<Item = TypedOperation<'a>>,
+    resources: Dict,
     state: &mut GraphicsState,
     device: &mut impl Device,
 ) {
+    let ext_g_stages = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
+    
     for op in ops {
         match op {
             TypedOperation::SaveState(_) => state.save_state(),
@@ -125,6 +135,13 @@ pub fn interpret<'a>(
             TypedOperation::ClosePath(_) => {
                 state.path_mut().close_path();
             }
+            TypedOperation::SetGraphicsState(gs) => {
+                let gs = ext_g_stages.get::<Dict>(gs.0)
+                    .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
+                    .unwrap_or_default();
+                
+                handle_gs(&gs, state);
+            }
             TypedOperation::StrokePath(_) => {
                 stroke_path(state, device);
             }
@@ -136,8 +153,32 @@ pub fn interpret<'a>(
     }
 }
 
+fn handle_gs(dict: &Dict, state: &mut GraphicsState) {
+    for key in dict.keys() { 
+        handle_gs_single(dict, *key, state)
+            .warn_none(&format!("invalid value in graphics state for {}", key.as_str()));
+    }
+}
+
+fn handle_gs_single(dict: &Dict, key: Name, state: &mut GraphicsState) -> Option<()> {
+    
+    // TODO Can we use constants here somehow?
+    match key.as_str().as_str() {
+        "LW" => state.get_mut().line_width = dict.get::<f32>(key)?,
+        "LC" => state.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(key)?)),
+        "LJ" => state.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(key)?)),
+        "ML" => state.get_mut().miter_limit = dict.get::<f32>(key)?,
+        "CA" => state.get_mut().stroke_alpha = dict.get::<f32>(key)?,
+        "ca" => state.get_mut().fill_alpha = dict.get::<f32>(key)?,
+        "Type" => {}
+        _ => {}
+    }
+    
+    Some(())
+}
+
 fn fill_path(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = convert_color(&state.get().fill_color);
+    let color = convert_color(&state.get().fill_color, state.get().fill_alpha);
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.fill_path(state.path(), &state.fill_props());
@@ -147,7 +188,7 @@ fn fill_path(state: &mut GraphicsState, device: &mut impl Device) {
 }
 
 fn stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = convert_color(&state.get().stroke_color);
+    let color = convert_color(&state.get().stroke_color, state.get().stroke_alpha);
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.stroke_path(state.path(), &state.stroke_props());

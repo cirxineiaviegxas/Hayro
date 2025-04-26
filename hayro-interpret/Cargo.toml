@@ -8,3 +8,4 @@ hayro-syntax = { workspace = true }
 kurbo = { workspace = true }
 peniko = { workspace = true }
 smallvec = { workspace = true }
+log = { workspace = true }
