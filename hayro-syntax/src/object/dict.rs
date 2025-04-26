@@ -304,7 +304,8 @@ pub mod keys {
     key!(PREV, b"Prev");
     key!(RANGE, b"Range");
     key!(ROOT, b"Root");
-    key!(TYPE, b"Type");
     key!(SIZE, b"Size");
+    key!(TYPE, b"Type");
+    key!(XREFSTM, b"XRefStm");
     key!(W, b"W");
 }

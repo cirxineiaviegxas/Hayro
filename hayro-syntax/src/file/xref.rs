@@ -3,7 +3,7 @@ use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{FIRST, INDEX, N, PREV, SIZE, W};
+use crate::object::dict::keys::{FIRST, INDEX, N, PREV, SIZE, W, XREFSTM};
 use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
@@ -253,6 +253,12 @@ fn populate_from_xref_table<'a>(
     if let Some(prev) = trailer.get::<i32>(PREV) {
         // First insert the entries from any previous xref tables.
         populate_xref_impl(data, prev as usize, insert_map)?;
+    }
+    
+    // In hybrid files, entries in `XRefStm` should have higher priority, therefore we insert them
+    // after looking at `PREV`.
+    if let Some(xref_stm) = trailer.get::<i32>(XREFSTM) {
+        populate_xref_impl(data, xref_stm as usize, insert_map)?;
     }
 
     while let Some(header) = reader.read_plain::<SubsectionHeader>() {
