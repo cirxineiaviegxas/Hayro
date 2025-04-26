@@ -188,10 +188,24 @@ struct Repr<'a> {
     xref: XRef<'a>,
 }
 
+pub struct InlineImageDict<'a>(Dict<'a>);
+
+impl<'a> InlineImageDict<'a> {
+    pub fn get_dict(&self) -> &Dict<'a> {
+        &self.0
+    }
+}
+
+impl<'a> Readable<'a> for InlineImageDict<'a> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        Some(Self(read_inner::<true>(r, xref, None, b"ID")?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::file::xref::XRef;
-    use crate::object::dict::Dict;
+    use crate::object::dict::{Dict, InlineImageDict};
     use crate::object::name::Name;
     use crate::object::number::Number;
     use crate::object::string;
@@ -296,6 +310,17 @@ mod tests {
         let dict = dict_impl(dict_data).unwrap();
 
         assert_eq!(dict.len(), 1);
+    }
+
+    #[test]
+    fn inline_dict() {
+        let dict_data = b"/W 17 /H 17 /CS /RGB /BPC 8 /F [ /A85 /LZW ] ID";
+
+        let dict = Reader::new(&dict_data[..])
+            .read_with_xref::<InlineImageDict>(&XRef::dummy())
+            .unwrap();
+
+        assert_eq!(dict.get_dict().len(), 5);
     }
 }
 
