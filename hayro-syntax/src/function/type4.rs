@@ -506,9 +506,9 @@ mod tests {
         let procedure = parse_procedure(procedure.as_bytes()).unwrap();
 
         let type4 = Type4 {
-            // Note that a range is in theory required, but we leave it out for testing.
             common: CommonProperties {
-                domain: Clamper(smallvec![f32::MIN, f32::MAX]),
+                domain: Clamper(smallvec![]),
+                // Note that a range is in theory required, but we leave it out for testing.
                 range: None,
             },
             program: procedure,
