@@ -145,6 +145,22 @@ pub fn interpret<'a>(
             TypedOperation::EndPath(_) => {
                 state.path_mut().truncate(0);
             }
+            TypedOperation::NonStrokeColor(c) => {
+                let fill_c = &mut state.get_mut().fill_color;
+                fill_c.truncate(0);
+                
+                for e in c.0 {
+                    fill_c.push(e.as_f32());
+                }
+            }
+            TypedOperation::StrokeColor(c) => {
+                let stroke_c = &mut state.get_mut().stroke_color;
+                stroke_c.truncate(0);
+                
+                for e in c.0 {
+                    stroke_c.push(e.as_f32());
+                }
+            }
             TypedOperation::RestoreState(_) => state.restore_state(),
             _ => {
                 println!("{:?}", op);
