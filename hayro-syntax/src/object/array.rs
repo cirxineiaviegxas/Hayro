@@ -1,13 +1,13 @@
 use crate::file::xref::XRef;
+use crate::object::null::Null;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::{OptionLog, object};
-use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 use log::warn;
 use pdf_writer::types::StructRole::P;
-use crate::object::null::Null;
+use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
 
 /// An array of PDF objects.
 #[derive(Clone)]
@@ -147,14 +147,12 @@ where
         self.reader.skip_white_spaces_and_comments();
 
         if !self.reader.at_end() {
-            let res = self
-                .reader
-                .read_with_xref::<MaybeRef<T>>(&self.xref);
-            
-            if res.is_none()&& self.reader.read_with_xref::<Null>(&self.xref).is_none() {
+            let res = self.reader.read_with_xref::<MaybeRef<T>>(&self.xref);
+
+            if res.is_none() && self.reader.read_with_xref::<Null>(&self.xref).is_none() {
                 warn!("failed to read {} from array.", T::STATIC_NAME);
             }
-            
+
             return match res? {
                 MaybeRef::Ref(r) => self.xref.get::<T>(r.into()).warn_none(&format!(
                     "failed to resolve {:?} as {} in array.",

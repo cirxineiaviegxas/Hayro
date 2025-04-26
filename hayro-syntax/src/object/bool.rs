@@ -32,7 +32,9 @@ mod tests {
     #[test]
     fn bool_true() {
         assert_eq!(
-            Reader::new("true".as_bytes()).read_without_xref::<bool>().unwrap(),
+            Reader::new("true".as_bytes())
+                .read_without_xref::<bool>()
+                .unwrap(),
             true
         );
     }

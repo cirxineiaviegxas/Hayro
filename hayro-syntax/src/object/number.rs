@@ -40,11 +40,11 @@ impl Number {
         match self.0 {
             InternalNumber::Real(r) => {
                 let res = r as i32;
-                
+
                 if !(r.trunc() == r) {
                     debug!("float {} was truncated to {}", r, res);
                 }
-                
+
                 res
             }
             InternalNumber::Integer(i) => i,
@@ -272,13 +272,20 @@ mod tests {
 
     #[test]
     fn int_1() {
-        assert_eq!(Reader::new("0".as_bytes()).read_without_xref::<i32>().unwrap(), 0);
+        assert_eq!(
+            Reader::new("0".as_bytes())
+                .read_without_xref::<i32>()
+                .unwrap(),
+            0
+        );
     }
 
     #[test]
     fn int_3() {
         assert_eq!(
-            Reader::new("+32".as_bytes()).read_without_xref::<i32>().unwrap(),
+            Reader::new("+32".as_bytes())
+                .read_without_xref::<i32>()
+                .unwrap(),
             32
         );
     }
@@ -286,7 +293,9 @@ mod tests {
     #[test]
     fn int_4() {
         assert_eq!(
-            Reader::new("-32".as_bytes()).read_without_xref::<i32>().unwrap(),
+            Reader::new("-32".as_bytes())
+                .read_without_xref::<i32>()
+                .unwrap(),
             -32
         );
     }
@@ -294,7 +303,9 @@ mod tests {
     #[test]
     fn int_6() {
         assert_eq!(
-            Reader::new("98349".as_bytes()).read_without_xref::<i32>().unwrap(),
+            Reader::new("98349".as_bytes())
+                .read_without_xref::<i32>()
+                .unwrap(),
             98349
         );
     }
@@ -312,7 +323,9 @@ mod tests {
     #[test]
     fn int_trailing() {
         assert_eq!(
-            Reader::new("0abc".as_bytes()).read_without_xref::<i32>().unwrap(),
+            Reader::new("0abc".as_bytes())
+                .read_without_xref::<i32>()
+                .unwrap(),
             0
         );
     }
@@ -320,7 +333,9 @@ mod tests {
     #[test]
     fn real_1() {
         assert_eq!(
-            Reader::new("3".as_bytes()).read_without_xref::<f32>().unwrap(),
+            Reader::new("3".as_bytes())
+                .read_without_xref::<f32>()
+                .unwrap(),
             3.0
         );
     }
@@ -328,7 +343,9 @@ mod tests {
     #[test]
     fn real_3() {
         assert_eq!(
-            Reader::new("+32".as_bytes()).read_without_xref::<f32>().unwrap(),
+            Reader::new("+32".as_bytes())
+                .read_without_xref::<f32>()
+                .unwrap(),
             32.0
         );
     }
@@ -336,7 +353,9 @@ mod tests {
     #[test]
     fn real_4() {
         assert_eq!(
-            Reader::new("-32".as_bytes()).read_without_xref::<f32>().unwrap(),
+            Reader::new("-32".as_bytes())
+                .read_without_xref::<f32>()
+                .unwrap(),
             -32.0
         );
     }
@@ -354,7 +373,9 @@ mod tests {
     #[test]
     fn real_6() {
         assert_eq!(
-            Reader::new("-.345".as_bytes()).read_without_xref::<f32>().unwrap(),
+            Reader::new("-.345".as_bytes())
+                .read_without_xref::<f32>()
+                .unwrap(),
             -0.345
         );
     }
@@ -402,7 +423,9 @@ mod tests {
     #[test]
     fn real_trailing() {
         assert_eq!(
-            Reader::new("0abc".as_bytes()).read_without_xref::<f32>().unwrap(),
+            Reader::new("0abc".as_bytes())
+                .read_without_xref::<f32>()
+                .unwrap(),
             0.0
         );
     }
@@ -410,7 +433,9 @@ mod tests {
     #[test]
     fn real_failing() {
         assert_eq!(
-            Reader::new("+abc".as_bytes()).read_without_xref::<f32>().is_none(),
+            Reader::new("+abc".as_bytes())
+                .read_without_xref::<f32>()
+                .is_none(),
             true
         );
     }

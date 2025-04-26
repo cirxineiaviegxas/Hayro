@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 
 /// A PDF name.
-#[derive(Debug, Eq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Name<'a> {
     pub(crate) data: &'a [u8],
     pub(crate) has_escape: bool,
@@ -22,6 +22,8 @@ impl PartialEq for Name<'_> {
         self.get() == other.get()
     }
 }
+
+impl Eq for Name<'_> {}
 
 impl Hash for Name<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -130,6 +132,19 @@ pub(crate) fn skip_name_like(r: &mut Reader, solidus: bool) -> Option<bool> {
     Some(has_escape)
 }
 
+pub mod names {
+    use super::*;
+
+    macro_rules! name {
+        ($i:ident, $e:expr) => {
+            pub const $i: Name<'static> = Name::from_unescaped($e);
+        };
+    }
+
+    name!(DEVICE_RGB, b"DeviceRGB");
+    name!(DEVICE_GRAY, b"DeviceGray");
+}
+
 #[cfg(test)]
 mod tests {
     use crate::object::name::Name;
@@ -148,7 +163,11 @@ mod tests {
 
     #[test]
     fn name_2() {
-        assert!(Reader::new("dfg".as_bytes()).read_without_xref::<Name>().is_none());
+        assert!(
+            Reader::new("dfg".as_bytes())
+                .read_without_xref::<Name>()
+                .is_none()
+        );
     }
 
     #[test]

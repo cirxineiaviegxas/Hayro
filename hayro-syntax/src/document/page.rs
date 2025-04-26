@@ -89,9 +89,13 @@ impl<'a> Page<'a> {
 
         Some(iter)
     }
-    
+
     pub fn media_box(&self) -> Vec<f32> {
-        self.inner.get::<Array>(MEDIA_BOX).unwrap().iter::<f32>().collect()
+        self.inner
+            .get::<Array>(MEDIA_BOX)
+            .unwrap()
+            .iter::<f32>()
+            .collect()
     }
 
     pub fn operations(&self) -> UntypedIter {

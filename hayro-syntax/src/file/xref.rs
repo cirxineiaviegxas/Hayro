@@ -5,6 +5,7 @@ use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{FIRST, INDEX, N, PREV, SIZE, W, XREFSTM};
 use crate::object::indirect::IndirectObject;
+use crate::object::null::Null;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
@@ -15,7 +16,6 @@ use snafu::{OptionExt, ResultExt};
 use std::cmp::max;
 use std::iter;
 use std::sync::Arc;
-use crate::object::null::Null;
 
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
@@ -209,7 +209,11 @@ fn populate_xref_impl(data: &[u8], pos: usize, xref_map: &mut XrefMap) -> Option
     reader.jump(pos);
 
     let mut r2 = reader.clone();
-    if reader.clone().read_without_xref::<ObjectIdentifier>().is_some() {
+    if reader
+        .clone()
+        .read_without_xref::<ObjectIdentifier>()
+        .is_some()
+    {
         populate_from_xref_stream(data, &mut r2, xref_map)
     } else {
         populate_from_xref_table(data, &mut r2, xref_map)
@@ -253,7 +257,7 @@ fn populate_from_xref_table<'a>(
         // First insert the entries from any previous xref tables.
         populate_xref_impl(data, prev as usize, insert_map)?;
     }
-    
+
     // In hybrid files, entries in `XRefStm` should have higher priority, therefore we insert them
     // after looking at `PREV`.
     if let Some(xref_stm) = trailer.get::<i32>(XREFSTM) {

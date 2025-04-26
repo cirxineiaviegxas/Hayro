@@ -30,7 +30,9 @@ mod tests {
     #[test]
     fn null() {
         assert_eq!(
-            Reader::new("null".as_bytes()).read_without_xref::<Null>().unwrap(),
+            Reader::new("null".as_bytes())
+                .read_without_xref::<Null>()
+                .unwrap(),
             Null
         );
     }

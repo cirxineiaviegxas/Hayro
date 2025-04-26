@@ -3,13 +3,13 @@
 use crate::content::{OPERANDS_THRESHOLD, Operation, OperatorTrait, Stack};
 use crate::object::Object;
 use crate::object::array::Array;
-use crate::object::name::Name;
 use crate::object::dict::Dict;
+use crate::object::name::Name;
 use crate::object::number::Number;
 use crate::object::string;
-use smallvec::{smallvec, SmallVec};
+use smallvec::{SmallVec, smallvec};
 
-use crate::{op_all, op0, op1, op2, op3, op4, op6, op_impl};
+use crate::{op_all, op_impl, op0, op1, op2, op3, op4, op6};
 use log::warn;
 
 include!("ops_generated.rs");
@@ -17,9 +17,14 @@ include!("ops_generated.rs");
 // Need to special-case those becaues they have variable arguments
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct StrokeColorNamed<'a>(pub SmallVec<[Number; OPERANDS_THRESHOLD]>, pub Option<Name<'a>>);
+pub struct StrokeColorNamed<'a>(
+    pub SmallVec<[Number; OPERANDS_THRESHOLD]>,
+    pub Option<Name<'a>>,
+);
 
-fn scn_fn<'a>(stack: &Stack<'a>) -> Option<(SmallVec<[Number; OPERANDS_THRESHOLD]>, Option<Name<'a>>)> {
+fn scn_fn<'a>(
+    stack: &Stack<'a>,
+) -> Option<(SmallVec<[Number; OPERANDS_THRESHOLD]>, Option<Name<'a>>)> {
     let mut nums = smallvec![];
     let mut name = None;
 
@@ -29,37 +34,54 @@ fn scn_fn<'a>(stack: &Stack<'a>) -> Option<(SmallVec<[Number; OPERANDS_THRESHOLD
             Object::Name(n) => name = Some(n.clone()),
             _ => {
                 warn!("encountered unknown object {:?} when parsing scn/SCN", o);
-                
+
                 return None;
-            },
+            }
         }
     }
 
     Some((nums, name))
 }
 
-op_impl!(StrokeColorNamed<'a>, "SCN", u8::MAX as usize, |stack: &Stack<'a>| {
-    let res = scn_fn(stack);
-    res.map(|r| StrokeColorNamed(r.0, r.1))
-});
+op_impl!(
+    StrokeColorNamed<'a>,
+    "SCN",
+    u8::MAX as usize,
+    |stack: &Stack<'a>| {
+        let res = scn_fn(stack);
+        res.map(|r| StrokeColorNamed(r.0, r.1))
+    }
+);
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct NonStrokeColorNamed<'a>(pub SmallVec<[Number; OPERANDS_THRESHOLD]>, pub Option<Name<'a>>);
+pub struct NonStrokeColorNamed<'a>(
+    pub SmallVec<[Number; OPERANDS_THRESHOLD]>,
+    pub Option<Name<'a>>,
+);
 
-op_impl!(NonStrokeColorNamed<'a>, "scn", u8::MAX as usize, |stack: &Stack<'a>| {
-    let res = scn_fn(stack);
-    res.map(|r| NonStrokeColorNamed(r.0, r.1))
-});
+op_impl!(
+    NonStrokeColorNamed<'a>,
+    "scn",
+    u8::MAX as usize,
+    |stack: &Stack<'a>| {
+        let res = scn_fn(stack);
+        res.map(|r| NonStrokeColorNamed(r.0, r.1))
+    }
+);
 
 #[cfg(test)]
 mod tests {
-    use smallvec::smallvec;
-    use crate::content::ops::{ClosePath, FillPathNonZero, LineTo, MarkedContentPointWithProperties, MoveTo, NonStrokeColorDeviceRgb, NonStrokeColorNamed, SetGraphicsState, StrokeColorNamed, Transform, TypedOperation};
+    use crate::content::ops::{
+        ClosePath, FillPathNonZero, LineTo, MarkedContentPointWithProperties, MoveTo,
+        NonStrokeColorDeviceRgb, NonStrokeColorNamed, SetGraphicsState, StrokeColorNamed,
+        Transform, TypedOperation,
+    };
     use crate::content::{TypedIter, UntypedIter};
     use crate::object::dict::Dict;
     use crate::object::name::Name;
     use crate::object::number::Number;
     use crate::reader::Readable;
+    use smallvec::smallvec;
 
     fn n(num: i32) -> Number {
         Number::from_i32(num)
@@ -123,14 +145,24 @@ f
 ";
 
         let expected = vec![
-            TypedOperation::NonStrokeColorNamed(NonStrokeColorNamed(smallvec![Number::from_i32(0)], None)),
-            TypedOperation::StrokeColorNamed(StrokeColorNamed(smallvec![Number::from_f32(0.1), Number::from_f32(0.2), Number::from_f32(0.3)], Some(Name::from_unescaped(b"DeviceRgb")))),
+            TypedOperation::NonStrokeColorNamed(NonStrokeColorNamed(
+                smallvec![Number::from_i32(0)],
+                None,
+            )),
+            TypedOperation::StrokeColorNamed(StrokeColorNamed(
+                smallvec![
+                    Number::from_f32(0.1),
+                    Number::from_f32(0.2),
+                    Number::from_f32(0.3)
+                ],
+                Some(Name::from_unescaped(b"DeviceRgb")),
+            )),
         ];
 
         let elements = TypedIter::new(UntypedIter::new(input))
             .into_iter()
             .collect::<Vec<_>>();
-        
+
         assert_eq!(elements, expected);
     }
 
@@ -138,14 +170,17 @@ f
     fn dp() {
         let input = b"/Attribute<</ShowCenterPoint false >> DP";
 
-        let expected = vec![
-            TypedOperation::MarkedContentPointWithProperties(MarkedContentPointWithProperties(Name::from_unescaped(b"Attribute"), Dict::from_bytes(b"<</ShowCenterPoint false >>").unwrap())),
-        ];
+        let expected = vec![TypedOperation::MarkedContentPointWithProperties(
+            MarkedContentPointWithProperties(
+                Name::from_unescaped(b"Attribute"),
+                Dict::from_bytes(b"<</ShowCenterPoint false >>").unwrap(),
+            ),
+        )];
 
         let elements = TypedIter::new(UntypedIter::new(input))
             .into_iter()
             .collect::<Vec<_>>();
-        
+
         assert_eq!(elements, expected);
     }
 }

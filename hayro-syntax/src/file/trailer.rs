@@ -9,7 +9,11 @@ pub(super) fn trailer_impl<'a>(data: &'a [u8], pos: usize, xref: &XRef<'a>) -> O
     let mut reader = Reader::new(data);
     reader.jump(pos);
 
-    if reader.clone().read_without_xref::<ObjectIdentifier>().is_some() {
+    if reader
+        .clone()
+        .read_without_xref::<ObjectIdentifier>()
+        .is_some()
+    {
         read_xref_stream_trailer(&mut reader, xref)
     } else {
         read_xref_table_trailer(&mut reader, xref)
