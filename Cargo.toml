@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "hayro-interpret", "hayro-render","hayro-syntax"]
+members = [ "hayro-compare", "hayro-interpret", "hayro-render","hayro-syntax"]
 
 [workspace.dependencies]
 bitreader = { version = "0.3.11" }
