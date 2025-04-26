@@ -1093,6 +1093,8 @@ dependencies = [
 name = "sitro"
 version = "0.1.0"
 dependencies = [
+ "hayro-render",
+ "hayro-syntax",
  "image 0.24.9",
  "imagesize",
  "rayon",

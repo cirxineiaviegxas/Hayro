@@ -22,11 +22,13 @@ fn main() {
     entries.sort();
     
     // render_pdfium(&entries);
-    render_hayro(&entries);
+    render_hayro(&entries[0..30]);
 }
 
 fn render_pdfium(entries: &[PathBuf]) {
     let out_dir = Path::new("/Users/lstampfl/Programming/GitHub/hayro/hayro-compare/pdfium");
+    std::fs::remove_dir(out_dir);
+    std::fs::create_dir_all(out_dir);
     
     for path in entries {
         let stem = path.file_stem().unwrap().to_str().unwrap();
@@ -43,13 +45,15 @@ fn render_pdfium(entries: &[PathBuf]) {
 
 fn render_hayro(entries: &[PathBuf]) {
     let out_dir = Path::new("/Users/lstampfl/Programming/GitHub/hayro/hayro-compare/hayro");
+    std::fs::remove_dir(out_dir);
+    std::fs::create_dir_all(out_dir);
 
     for path in entries {
         let stem = path.file_stem().unwrap().to_str().unwrap();
         let file = std::fs::read(path).unwrap();
         let mut data = Data::new(&file);
         let pdf = Pdf::new(&data).unwrap();
-        let pages = hayro_render::render_png(&pdf);
+        let pages = hayro_render::render_png(&pdf, 1.0);
 
         for (idx, page) in pages.iter().enumerate() {
             let suffix = if pages.len() == 1 { "".to_string() } else { format!("_{}", idx) };

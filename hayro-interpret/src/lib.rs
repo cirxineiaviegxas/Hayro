@@ -90,6 +90,10 @@ pub fn interpret<'a>(
                 fill_path(state, device);
                 stroke_path(state, device);
             }
+            TypedOperation::CloseAndStrokePath(_) => {
+                state.path_mut().close_path();
+                stroke_path(state, device);
+            }
             TypedOperation::CloseFillAndStrokeEvenOdd(_) => {
                 state.path_mut().close_path();
                 state.get_mut().fill = Fill::EvenOdd;
@@ -112,6 +116,11 @@ pub fn interpret<'a>(
                 state
                     .path_mut()
                     .line_to(Point::new(m.0.as_f64(), m.1.as_f64()));
+            }
+            TypedOperation::CubicTo(c) => {
+                state
+                    .path_mut()
+                    .curve_to(Point::new(c.0.as_f64(), c.1.as_f64()), Point::new(c.2.as_f64(), c.3.as_f64()), Point::new(c.4.as_f64(), c.5.as_f64()))
             }
             TypedOperation::ClosePath(_) => {
                 state.path_mut().close_path();
@@ -138,7 +147,7 @@ fn fill_path(state: &mut GraphicsState, device: &mut impl Device) {
 }
 
 fn stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = convert_color(&state.get().fill_color);
+    let color = convert_color(&state.get().stroke_color);
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.stroke_path(state.path(), &state.stroke_props());
