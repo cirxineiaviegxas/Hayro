@@ -6,6 +6,7 @@ class Type(Enum):
     Array = "Array"
     Dict = "Dict"
     Object = "Object"
+    Stream = "Stream"
     VecNum = "SmallVec<[Number; OPERANDS_THRESHOLD]>"
     Name = "Name"
 
@@ -73,9 +74,10 @@ ops = {
         ("Do", "XObject", [Type.Name])
     ],
     "Inline-image operators": [
-        ("BI", "BeginInlineImage", []),
-        ("ID", "BeginInlineImageData", []),
-        ("EI", "EndInlineImage", []),
+        ("BI", "InlineImage", [Type.Stream]),
+        # We do not emit ID and EI in the parser.
+        # ("ID", "BeginInlineImageData", []),
+        # ("EI", "EndInlineImage", []),
     ],
     "Text-state operators": [
         ("Tc", "CharacterSpacing", [Type.Number]),
@@ -121,13 +123,14 @@ def rust_type(t: Type) -> str:
         Type.String: "string::String<'a>",
         Type.Array: "Array<'a>",
         Type.Object: "Object<'a>",
+        Type.Stream: "Stream<'a>",
         Type.Name: "Name<'a>",
         Type.Dict: "Dict<'a>",
         Type.VecNum: "SmallVec<[Number; OPERANDS_THRESHOLD]>",
     }[t]
 
 def lifetime_if_needed(types):
-    return "<'a>" if any(t in [Type.String, Type.Array, Type.Object, Type.Name, Type.Dict] for t in types) else ""
+    return "<'a>" if any(t in [Type.String, Type.Array, Type.Object, Type.Name, Type.Stream, Type.Dict] for t in types) else ""
 
 def gen_struct(name, code, types):
     lifetime = lifetime_if_needed(types)
@@ -150,7 +153,7 @@ def gen_struct(name, code, types):
     return "\n".join(struct)
 
 def gen_enum_variant(name, types):
-    has_lifetime = (type(types) is bool and types) or any(t in [Type.String, Type.Array, Type.Object, Type.Name] for t in types)
+    has_lifetime = (type(types) is bool and types) or any(t in [Type.String, Type.Array, Type.Object, Type.Name, Type.Stream] for t in types)
     inner_type = f"{name}<'a>" if has_lifetime else name
     return f"{name}({inner_type})"
 

@@ -22,6 +22,11 @@ impl<'a> Stream<'a> {
     pub fn raw_data(&self) -> &'a [u8] {
         self.data
     }
+    
+    /// Return the raw (potentially with some applied filters) data of the stream.
+    pub fn dict(&self) -> &Dict<'a> {
+        &self.dict
+    }
 
     /// Return the decoded data of the stream.
     ///
@@ -56,6 +61,13 @@ impl<'a> Stream<'a> {
             Ok(current)
         } else {
             Ok(Cow::Borrowed(self.data))
+        }
+    }
+    
+    pub fn from_raw(data: &'a [u8], dict: Dict<'a>) -> Self {
+        Self {
+            dict,
+            data,
         }
     }
 }

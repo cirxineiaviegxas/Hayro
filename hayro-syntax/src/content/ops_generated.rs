@@ -233,16 +233,8 @@ pub struct XObject<'a>(pub Name<'a>);
 op1!(XObject<'a>, "Do");
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BeginInlineImage;
-op0!(BeginInlineImage, "BI");
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct BeginInlineImageData;
-op0!(BeginInlineImageData, "ID");
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct EndInlineImage;
-op0!(EndInlineImage, "EI");
+pub struct InlineImage<'a>(pub Stream<'a>);
+op1!(InlineImage<'a>, "BI");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CharacterSpacing(pub Number);
@@ -424,9 +416,7 @@ pub enum TypedOperation<'a> {
     NonStrokeColorCmyk(NonStrokeColorCmyk),
     Shading(Shading<'a>),
     XObject(XObject<'a>),
-    BeginInlineImage(BeginInlineImage),
-    BeginInlineImageData(BeginInlineImageData),
-    EndInlineImage(EndInlineImage),
+    InlineImage(InlineImage<'a>),
     CharacterSpacing(CharacterSpacing),
     WordSpacing(WordSpacing),
     HorizontalScaling(HorizontalScaling),
@@ -504,9 +494,7 @@ impl<'a> TypedOperation<'a> {
             b"k" => NonStrokeColorCmyk::from_stack(&operation.operands)?.into(),
             b"sh" => Shading::from_stack(&operation.operands)?.into(),
             b"Do" => XObject::from_stack(&operation.operands)?.into(),
-            b"BI" => BeginInlineImage::from_stack(&operation.operands)?.into(),
-            b"ID" => BeginInlineImageData::from_stack(&operation.operands)?.into(),
-            b"EI" => EndInlineImage::from_stack(&operation.operands)?.into(),
+            b"BI" => InlineImage::from_stack(&operation.operands)?.into(),
             b"Tc" => CharacterSpacing::from_stack(&operation.operands)?.into(),
             b"Tw" => WordSpacing::from_stack(&operation.operands)?.into(),
             b"Tz" => HorizontalScaling::from_stack(&operation.operands)?.into(),

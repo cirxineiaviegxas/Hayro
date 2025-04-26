@@ -27,7 +27,7 @@ fn main() {
 
 fn render_pdfium(entries: &[PathBuf]) {
     let out_dir = Path::new("/Users/lstampfl/Programming/GitHub/hayro/hayro-compare/pdfium");
-    std::fs::remove_dir(out_dir);
+    std::fs::remove_dir_all(out_dir);
     std::fs::create_dir_all(out_dir);
 
     for path in entries {
@@ -49,7 +49,7 @@ fn render_pdfium(entries: &[PathBuf]) {
 
 fn render_hayro(entries: &[PathBuf]) {
     let out_dir = Path::new("/Users/lstampfl/Programming/GitHub/hayro/hayro-compare/hayro");
-    std::fs::remove_dir(out_dir);
+    std::fs::remove_dir_all(out_dir);
     std::fs::create_dir_all(out_dir);
 
     for path in entries {
