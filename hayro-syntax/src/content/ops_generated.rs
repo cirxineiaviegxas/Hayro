@@ -355,16 +355,22 @@ pub struct MarkedContentPoint<'a>(pub Name<'a>);
 op1!(MarkedContentPoint<'a>, "MP");
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MarkedContentPointWithProperties<'a>(pub Object<'a>);
-op1!(MarkedContentPointWithProperties<'a>, "DP");
+pub struct MarkedContentPointWithProperties<'a>(
+    pub Name<'a>,
+    pub Dict<'a>,
+);
+op2!(MarkedContentPointWithProperties<'a>, "DP");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BeginMarkedContent<'a>(pub Name<'a>);
 op1!(BeginMarkedContent<'a>, "DP");
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BeginMarkedContentWithProperties<'a>(pub Object<'a>);
-op1!(BeginMarkedContentWithProperties<'a>, "d1");
+pub struct BeginMarkedContentWithProperties<'a>(
+    pub Name<'a>,
+    pub Dict<'a>,
+);
+op2!(BeginMarkedContentWithProperties<'a>, "d1");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EndMarkedContent;

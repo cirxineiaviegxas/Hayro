@@ -4,6 +4,7 @@ class Type(Enum):
     Number = "Number"
     String = "String"
     Array = "Array"
+    Dict = "Dict"
     Object = "Object"
     VecNum = "SmallVec<[Number; OPERANDS_THRESHOLD]>"
     Name = "Name"
@@ -107,9 +108,9 @@ ops = {
     ],
     "Marked content operators": [
         ("MP", "MarkedContentPoint", [Type.Name]),
-        ("DP", "MarkedContentPointWithProperties", [Type.Object]),
+        ("DP", "MarkedContentPointWithProperties", [Type.Name, Type.Dict]),
         ("DP", "BeginMarkedContent", [Type.Name]),
-        ("d1", "BeginMarkedContentWithProperties", [Type.Object]),
+        ("d1", "BeginMarkedContentWithProperties", [Type.Name, Type.Dict]),
         ("DP", "EndMarkedContent", []),
     ],
 }
@@ -121,11 +122,12 @@ def rust_type(t: Type) -> str:
         Type.Array: "Array<'a>",
         Type.Object: "Object<'a>",
         Type.Name: "Name<'a>",
+        Type.Dict: "Dict<'a>",
         Type.VecNum: "SmallVec<[Number; OPERANDS_THRESHOLD]>",
     }[t]
 
 def lifetime_if_needed(types):
-    return "<'a>" if any(t in [Type.String, Type.Array, Type.Object, Type.Name] for t in types) else ""
+    return "<'a>" if any(t in [Type.String, Type.Array, Type.Object, Type.Name, Type.Dict] for t in types) else ""
 
 def gen_struct(name, code, types):
     lifetime = lifetime_if_needed(types)
