@@ -10,3 +10,7 @@ vello_cpu = { path = "../../vello/sparse_strips/vello_cpu" }
 vello_common = { path = "../../vello/sparse_strips/vello_common" }
 vello_api = { path = "../../vello/sparse_strips/vello_api" }
 
+[dev-dependencies]
+walkdir = "2.5.0"
+log = "0.4.27"
+

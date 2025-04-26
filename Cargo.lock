@@ -332,9 +332,11 @@ version = "0.1.0"
 dependencies = [
  "hayro-syntax",
  "image",
+ "log",
  "vello_api",
  "vello_common",
  "vello_cpu",
+ "walkdir",
 ]
 
 [[package]]
