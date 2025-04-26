@@ -179,16 +179,8 @@ pub struct StrokeColor(pub SmallVec<[Number; OPERANDS_THRESHOLD]>);
 op_all!(StrokeColor, "SC");
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct StrokeColorNamed<'a>(pub Object<'a>);
-op1!(StrokeColorNamed<'a>, "SCN");
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct NonStrokeColor(pub SmallVec<[Number; OPERANDS_THRESHOLD]>);
 op_all!(NonStrokeColor, "sc");
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct NonStrokeColorNamed<'a>(pub Object<'a>);
-op1!(NonStrokeColorNamed<'a>, "scn");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct StrokeColorDeviceGray(pub Number);

@@ -6,12 +6,49 @@ use crate::object::array::Array;
 use crate::object::name::Name;
 use crate::object::number::Number;
 use crate::object::string;
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 
-use crate::{op_all, op0, op1, op2, op3, op4, op6};
+use crate::{op_all, op0, op1, op2, op3, op4, op6, op_impl};
 use log::warn;
 
 include!("ops_generated.rs");
+
+// Need to special-case those becaues they have variable arguments
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StrokeColorNamed<'a>(pub SmallVec<[Number; OPERANDS_THRESHOLD]>, pub Option<Name<'a>>);
+
+fn scn_fn<'a>(stack: &Stack<'a>) -> Option<(SmallVec<[Number; OPERANDS_THRESHOLD]>, Option<Name<'a>>)> {
+    let mut nums = smallvec![];
+    let mut name = None;
+
+    for o in &stack.0 {
+        match o {
+            Object::Number(n) => nums.push(*n),
+            Object::Name(n) => name = Some(n.clone()),
+            _ => {
+                warn!("encountered unknown object {:?} when parsing scn/SCN", o);
+                
+                return None;
+            },
+        }
+    }
+
+    Some((nums, name))
+}
+
+op_impl!(StrokeColorNamed<'a>, "SCN", u8::MAX as usize, |stack: &Stack<'a>| {
+    let res = scn_fn(stack);
+    res.map(|r| StrokeColorNamed(r.0, r.1))
+});
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct NonStrokeColorNamed<'a>(pub SmallVec<[Number; OPERANDS_THRESHOLD]>, pub Option<Name<'a>>);
+
+op_impl!(NonStrokeColorNamed<'a>, "scn", u8::MAX as usize, |stack: &Stack<'a>| {
+    let res = scn_fn(stack);
+    res.map(|r| NonStrokeColorNamed(r.0, r.1))
+});
 
 #[cfg(test)]
 mod tests {

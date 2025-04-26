@@ -55,11 +55,9 @@ ops = {
         ("CS", "ColorSpaceStroke", [Type.Name]),
         ("cs", "ColorSpaceNonStroke", [Type.Name]),
         ("SC", "StrokeColor", [Type.VecNum]),
-        # TODO: More type safety for this?
-        ("SCN", "StrokeColorNamed", [Type.Object]),
+        ("SCN", "StrokeColorNamed", True),
         ("sc", "NonStrokeColor", [Type.VecNum]),
-        # TODO: More type safety for this?
-        ("scn", "NonStrokeColorNamed", [Type.Object]),
+        ("scn", "NonStrokeColorNamed", True),
         ("G", "StrokeColorDeviceGray", [Type.Number]),
         ("g", "NonStrokeColorDeviceGray", [Type.Number]),
         ("RG", "StrokeColorDeviceRgb", [Type.Number] * 3),
@@ -150,7 +148,7 @@ def gen_struct(name, code, types):
     return "\n".join(struct)
 
 def gen_enum_variant(name, types):
-    has_lifetime = any(t in [Type.String, Type.Array, Type.Object, Type.Name] for t in types)
+    has_lifetime = (type(types) is bool and types) or any(t in [Type.String, Type.Array, Type.Object, Type.Name] for t in types)
     inner_type = f"{name}<'a>" if has_lifetime else name
     return f"{name}({inner_type})"
 
@@ -165,7 +163,8 @@ dispatch_arms = []
 
 for category in ops.values():
     for code, name, types in category:
-        structs.append(gen_struct(name, code, types))
+        if type(types) is list:
+            structs.append(gen_struct(name, code, types))
         enum_variants.append(gen_enum_variant(name, types))
         dispatch_arms.append(gen_dispatch_match(code, name, types))
 
