@@ -341,6 +341,7 @@ pub mod keys {
     key!(COLUMNS, b"Columns");
     key!(COUNT, b"Count");
     key!(CONTENTS, b"Contents");
+    key!(CROP_BOX, b"CropBox");
     key!(DECODE_PARMS, b"DecodeParms");
     key!(DOMAIN, b"Domain");
     key!(EARLY_CHANGE, b"EarlyChange");

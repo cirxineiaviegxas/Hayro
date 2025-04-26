@@ -7,6 +7,7 @@ edition = "2024"
 bitreader = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
+kurbo = { workspace = true }
 pdf-writer = { workspace = true }
 rustc-hash = { workspace = true }
 smallvec = { workspace = true }

@@ -4,13 +4,13 @@ use crate::content::ops::TypedOperation;
 use crate::file::xref::XRef;
 use crate::object::dict::InlineImageDict;
 use crate::object::name::{escape_name_like, skip_name_like};
+use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
-use crate::object::stream::Stream;
 
 // 6 operands are used for example for ctm or cubic curves,
 // but anything above should be pretty rare (for example for
@@ -113,18 +113,18 @@ impl<'a> Iterator for UntypedIter<'a> {
                     // The ID operator will already be consumed by this.
                     let inline_dict = self.reader.read_without_xref::<InlineImageDict>()?;
                     let dict = inline_dict.get_dict().clone();
-                    
+
                     let stream_data = self.reader.tail()?;
                     let start_offset = self.reader.offset();
 
                     while let Some(bytes) = self.reader.peek_bytes(2) {
                         if bytes == b"EI" {
-                            
                             let end_offset = self.reader.offset() - start_offset;
                             let image_data = &stream_data[..end_offset];
-                            
-                            self.stack.push(Object::Stream(Stream::from_raw(image_data, dict)));
-                            
+
+                            self.stack
+                                .push(Object::Stream(Stream::from_raw(image_data, dict)));
+
                             self.reader.read_bytes(2)?;
                             self.reader.skip_white_spaces();
 

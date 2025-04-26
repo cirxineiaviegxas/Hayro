@@ -395,6 +395,7 @@ dependencies = [
  "bitreader",
  "hex",
  "itertools 0.14.0",
+ "kurbo",
  "log",
  "miniz_oxide",
  "pdf-writer",

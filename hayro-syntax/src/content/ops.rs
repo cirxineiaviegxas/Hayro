@@ -3,10 +3,10 @@
 use crate::content::{OPERANDS_THRESHOLD, Operation, OperatorTrait, Stack};
 use crate::object::Object;
 use crate::object::array::Array;
-use crate::object::stream::Stream;
 use crate::object::dict::Dict;
 use crate::object::name::Name;
 use crate::object::number::Number;
+use crate::object::stream::Stream;
 use crate::object::string;
 use smallvec::{SmallVec, smallvec};
 

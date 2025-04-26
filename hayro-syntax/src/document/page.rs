@@ -2,9 +2,10 @@ use crate::content::{TypedIter, UntypedIter};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{CONTENTS, KIDS, MEDIA_BOX, RESOURCES, TYPE};
+use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, TYPE};
 use crate::object::name::Name;
 use crate::object::stream::Stream;
+use kurbo::Rect;
 use log::warn;
 use std::cell::OnceCell;
 
@@ -27,7 +28,7 @@ impl<'a> Pages<'a> {
 
 fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>) -> Option<()> {
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
-    
+
     // TODO: Add inheritance of page attributes
 
     for dict in kids.iter::<Dict>() {
@@ -96,12 +97,29 @@ impl<'a> Page<'a> {
         Some(iter)
     }
 
-    pub fn media_box(&self) -> Vec<f32> {
-        self.inner
+    pub fn media_box(&self) -> Rect {
+        let arr: Vec<f32> = self
+            .inner
             .get::<Array>(MEDIA_BOX)
             .unwrap()
             .iter::<f32>()
-            .collect()
+            .collect();
+
+        Rect::new(arr[0] as f64, arr[1] as f64, arr[2] as f64, arr[3] as f64)
+    }
+
+    pub fn crop_box(&self) -> Rect {
+        let media_box = self.media_box();
+
+        let crop_box = if let Some(crop_box) = self.inner.get::<Array>(CROP_BOX) {
+            let arr: Vec<f32> = crop_box.iter::<f32>().collect();
+
+            Rect::new(arr[0] as f64, arr[1] as f64, arr[2] as f64, arr[3] as f64)
+        } else {
+            media_box
+        };
+
+        media_box.intersect(crop_box)
     }
 
     pub fn operations(&self) -> UntypedIter {

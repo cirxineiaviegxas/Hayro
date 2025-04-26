@@ -463,7 +463,7 @@ mod tests {
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
     use crate::function::{Clamper, CommonProperties, Values};
     use crate::object::number::Number;
-    
+
     use smallvec::smallvec;
 
     #[test]
