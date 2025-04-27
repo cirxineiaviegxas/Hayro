@@ -181,11 +181,15 @@ pub fn interpret<'a>(
                 let p2 = Point::new(c.0.as_f64(), c.1.as_f64());
                 let p3 = Point::new(c.2.as_f64(), c.3.as_f64());
 
+                *(state.last_point_mut()) = p3;
+
                 state.path_mut().curve_to(p1, p2, p3)
             }
             TypedOperation::CubicEndTo(c) => {
                 let p2 = Point::new(c.0.as_f64(), c.1.as_f64());
                 let p3 = Point::new(c.2.as_f64(), c.3.as_f64());
+
+                *(state.last_point_mut()) = p3;
 
                 state.path_mut().curve_to(p2, p3, p3)
             }
