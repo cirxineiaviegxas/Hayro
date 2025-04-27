@@ -351,9 +351,11 @@ pub mod keys {
     key!(CONTENTS, b"Contents");
     key!(CROP_BOX, b"CropBox");
     key!(DECODE_PARMS, b"DecodeParms");
+    key!(DIFFERENCES, b"Differences");
     key!(DOMAIN, b"Domain");
     key!(EARLY_CHANGE, b"EarlyChange");
     key!(ENCRYPT, b"Encrypt");
+    key!(ENCODING, b"Encoding");
     key!(EXT_G_STATE, b"ExtGState");
     key!(F, b"F");
     key!(FILTER, b"Filter");

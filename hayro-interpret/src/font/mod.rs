@@ -1,13 +1,16 @@
 use crate::font::base::BaseFont;
 use crate::font::blob::{FontBlob, ROBOTO};
+use hayro_syntax::object::Object;
+use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_FONT, SUBTYPE, TYPE};
+use hayro_syntax::object::dict::keys::{BASE_FONT, DIFFERENCES, ENCODING, SUBTYPE, TYPE};
 use hayro_syntax::object::name::Name;
 use kurbo::BezPath;
 use skrifa::instance::LocationRef;
 use skrifa::outline::{DrawSettings, OutlinePen};
 use skrifa::prelude::Size;
 use skrifa::{GlyphId, MetadataProvider};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -57,6 +60,7 @@ enum FontType {
 struct Type1Font {
     base_font: Option<BaseFont>,
     blob: FontBlob,
+    encoding: HashMap<u8, String>,
 }
 
 impl Type1Font {
@@ -70,15 +74,38 @@ impl Type1Font {
             unimplemented!()
         };
 
+        let mut encoding_map = HashMap::new();
+
+        if let Some(differences) = dict
+            .get::<Dict>(ENCODING)
+            .and_then(|d| d.get::<Array>(DIFFERENCES))
+        {
+            let entries = differences.iter::<Object>().collect::<Vec<_>>();
+
+            for obj in entries.chunks(2) {
+                let Object::Number(num) = obj[0] else {
+                    continue;
+                };
+                let Object::Name(n) = obj[1] else { continue };
+
+                encoding_map.insert(num.as_i32() as u8, n.as_str());
+            }
+        }
+
         Self {
             base_font: Some(base_font),
+            encoding: encoding_map,
             blob,
         }
     }
 
     pub fn map_code(&self, code: u8) -> GlyphId {
         let bf = self.base_font.as_ref().unwrap();
-        let cp = bf.map_code(code).unwrap();
+        let cp = if let Some(entry) = self.encoding.get(&code) {
+            bf.ps_to_unicode(entry.as_str()).unwrap()
+        } else {
+            bf.map_code(code).unwrap()
+        };
         self.blob
             .font_ref()
             .charmap()

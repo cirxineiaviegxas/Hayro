@@ -351,7 +351,8 @@ pub fn interpret<'a>(
             TypedOperation::NextLine(n) => {
                 let (tx, ty) = (n.0.as_f64(), n.1.as_f64());
                 eprintln!("Before: {:?}", context.get().text_state);
-                let new_matrix = context.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));;
+                let new_matrix =
+                    context.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));
                 context.get_mut().text_state.text_line_matrix = new_matrix;
                 context.get_mut().text_state.text_matrix = new_matrix;
                 eprintln!("After: {:?}", context.get().text_state);

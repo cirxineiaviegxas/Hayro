@@ -8,15 +8,22 @@ pub(crate) enum BaseFont {
 }
 
 impl BaseFont {
-    pub fn map_code(&self, code: u8) -> Option<&'static str> {
-        let ps_name = match self {
+    pub fn code_to_ps(&self, code: u8) -> Option<&'static str> {
+        match self {
             Self::Helvetica => HELVETICA.get(&code),
-        };
+        }
+        .copied()
+    }
 
-        ps_name
-            .and_then(|name| GLYPH_NAMES.get(name))
-            .warn_none(&format!("failed to map code {code} for Helvetica"))
+    pub fn ps_to_unicode(&self, name: &str) -> Option<&'static str> {
+        GLYPH_NAMES
+            .get(name)
+            .warn_none(&format!("failed to map code {name} for Helvetica"))
             .copied()
+    }
+
+    pub fn map_code(&self, code: u8) -> Option<&'static str> {
+        self.ps_to_unicode(self.code_to_ps(code)?)
     }
 }
 
