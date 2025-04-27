@@ -36,7 +36,7 @@ impl TextState {
     }
 
     fn font_size(&self) -> f32 {
-        self.font.map(|f| f.1).unwrap_or(1.0)
+        self.font.as_ref().map(|f| f.1).unwrap_or(1.0)
     }
 
     fn step(&mut self, glyph_width: f32, positional_adjustment: f32) {

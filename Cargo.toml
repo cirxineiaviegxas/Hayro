@@ -23,3 +23,5 @@ vello_common = { path = "../vello/sparse_strips/vello_common" }
 vello_api = { path = "../vello/sparse_strips/vello_api" }
 qcms = "0.3.0"
 phf = { version = "0.11.3" }
+skrifa = { version = "0.30.0" }
+yoke = { version = "0.8.0" }
