@@ -1,7 +1,6 @@
 use crate::cache::Static;
 use crate::file::xref::XRef;
 use crate::object::array::Array;
-use crate::object::dict::keys::MEDIA_BOX;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use log::warn;
@@ -52,7 +51,7 @@ impl TryFrom<Object<'_>> for Rect {
 }
 
 impl From<Rect> for Object<'_> {
-    fn from(value: Rect) -> Self {
+    fn from(_: Rect) -> Self {
         unimplemented!()
     }
 }

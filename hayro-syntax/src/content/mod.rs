@@ -17,8 +17,6 @@ use std::fmt::{Debug, Formatter};
 // DeviceN color spaces)
 const OPERANDS_THRESHOLD: usize = 6;
 
-type OpVec<'a> = SmallVec<[Object<'a>; OPERANDS_THRESHOLD]>;
-
 impl Debug for Operator<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", std::str::from_utf8(&self.get()).unwrap())

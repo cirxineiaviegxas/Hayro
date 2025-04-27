@@ -24,7 +24,7 @@ impl Type2 {
             *out = *c0 + input.powf(self.n) * (*c1 - *c0);
         }
 
-        self.common.clamp_range(&mut out);
+        let _ = self.common.clamp_range(&mut out);
 
         out
     }

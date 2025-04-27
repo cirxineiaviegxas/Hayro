@@ -36,7 +36,7 @@ impl Argument {
 }
 
 // TODO: Stack should overflow for more
-pub type ArgumentStack = SmallVec<[Argument; 64]>;
+type ArgumentStack = SmallVec<[Argument; 64]>;
 type ParseStack = SmallVec<[Vec<PostScriptOp>; 2]>;
 
 struct Type4 {
@@ -97,10 +97,10 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
 
             let res = match ((n1, n2)) {
                 (Argument::Float(f1), Argument::Float(f2)) => Argument::Float($eval_f(f1, f2)),
-                (Argument::Float(f1), Argument::Bool(f2)) => {
+                (Argument::Float(_), Argument::Bool(f2)) => {
                     Argument::Bool($eval_b(n1.as_bool(), f2))
                 }
-                (Argument::Bool(f1), Argument::Float(f2)) => {
+                (Argument::Bool(f1), Argument::Float(_)) => {
                     Argument::Bool($eval_b(f1, n2.as_bool()))
                 }
                 (Argument::Bool(f1), Argument::Bool(f2)) => Argument::Bool($eval_b(f1, f2)),

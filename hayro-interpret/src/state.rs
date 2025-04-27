@@ -104,10 +104,6 @@ impl GraphicsState {
         self.states.push(cur);
     }
 
-    pub(crate) fn set_stroke_color(&mut self, col: ColorComponents) {
-        self.get_mut().stroke_color = col;
-    }
-
     pub(crate) fn restore_state(&mut self) {
         self.states.pop();
     }

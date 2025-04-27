@@ -1,5 +1,4 @@
 use hayro_syntax::content::ops::{LineCap, LineJoin, Transform};
-use peniko::color::{AlphaColor, Srgb};
 
 pub fn convert_transform(t: Transform) -> kurbo::Affine {
     kurbo::Affine::new([

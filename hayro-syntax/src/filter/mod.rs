@@ -10,7 +10,7 @@ use crate::object::dict::Dict;
 use crate::object::name::Name;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
-use snafu::{OptionExt, ResultExt, whatever};
+use snafu::{OptionExt, whatever};
 
 pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<Vec<u8>> {
     filter.apply(data, params)

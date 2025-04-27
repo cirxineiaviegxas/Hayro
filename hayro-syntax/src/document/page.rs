@@ -6,7 +6,6 @@ use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, 
 use crate::object::name::Name;
 use crate::object::rect::Rect;
 use crate::object::stream::Stream;
-use itertools::Itertools;
 use log::warn;
 use std::cell::OnceCell;
 
@@ -86,7 +85,7 @@ impl<'a> Page<'a> {
             // TODO: A default media box
             .unwrap();
 
-        let mut crop_box = dict
+        let crop_box = dict
             .get::<Rect>(CROP_BOX)
             .or_else(|| ctx.crop_box)
             .unwrap_or(media_box);

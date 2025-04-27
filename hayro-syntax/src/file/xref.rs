@@ -11,7 +11,7 @@ use crate::reader::{Readable, Reader};
 use crate::{Data, Result};
 use log::{error, warn};
 use rustc_hash::FxHashMap;
-use snafu::{OptionExt, ResultExt};
+use snafu::OptionExt;
 use std::cmp::max;
 use std::iter;
 use std::sync::Arc;
@@ -44,7 +44,7 @@ impl<'a> XRef<'a> {
     fn new(data: &'a Data<'a>, cache: Cache<'a>, xref_map: XrefMap) -> Self {
         Self(Inner::Some(Arc::new(SomeRepr {
             data,
-            cache,
+            _cache: cache,
             xref_map,
         })))
     }
@@ -151,7 +151,7 @@ type XrefMap = FxHashMap<ObjectIdentifier, EntryType>;
 /// Representation of a proper xref table.
 struct SomeRepr<'a> {
     xref_map: XrefMap,
-    cache: Cache<'a>,
+    _cache: Cache<'a>,
     data: &'a Data<'a>,
 }
 

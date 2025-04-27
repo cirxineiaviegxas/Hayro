@@ -13,7 +13,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-pub(crate) trait Static: Sized {
+pub trait Static: Sized {
     type STATIC: Sized + Clone + 'static;
 }
 
@@ -52,11 +52,13 @@ static_impl_l!(HexString);
 static_impl_l!(LiteralString);
 static_impl_l!(Stream);
 
+#[allow(dead_code)]
 pub struct Cache<'a> {
     entries: RwLock<HashMap<ObjectIdentifier, Arc<dyn Any>>>,
     _data: &'a Data<'a>,
 }
 
+#[allow(dead_code)]
 impl<'a> Cache<'a> {
     pub(crate) fn new(data: &'a Data<'a>) -> Self {
         Self {
