@@ -359,6 +359,7 @@ version = "0.1.0"
 dependencies = [
  "hayro-render",
  "hayro-syntax",
+ "log",
  "sitro",
  "walkdir",
 ]

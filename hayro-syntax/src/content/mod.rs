@@ -179,7 +179,7 @@ impl<'a> Operation<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Stack<'a>(SmallVec<[Object<'a>; OPERANDS_THRESHOLD]>);
 
 impl<'a> Stack<'a> {

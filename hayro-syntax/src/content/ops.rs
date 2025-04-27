@@ -73,11 +73,12 @@ op_impl!(
 #[cfg(test)]
 mod tests {
     use crate::content::ops::{
-        ClosePath, FillPathNonZero, LineTo, MarkedContentPointWithProperties, MoveTo,
-        NonStrokeColorDeviceRgb, NonStrokeColorNamed, SetGraphicsState, StrokeColorNamed,
-        Transform, TypedOperation,
+        BeginMarkedContentWithProperties, ClosePath, EndMarkedContent, FillPathNonZero, LineTo,
+        MarkedContentPointWithProperties, MoveTo, NonStrokeColorDeviceRgb, NonStrokeColorNamed,
+        SetGraphicsState, StrokeColorNamed, Transform, TypedOperation,
     };
     use crate::content::{TypedIter, UntypedIter};
+    use crate::object::Object;
     use crate::object::dict::Dict;
     use crate::object::name::Name;
     use crate::object::number::Number;
@@ -174,9 +175,47 @@ f
         let expected = vec![TypedOperation::MarkedContentPointWithProperties(
             MarkedContentPointWithProperties(
                 Name::from_unescaped(b"Attribute"),
-                Dict::from_bytes(b"<</ShowCenterPoint false >>").unwrap(),
+                Object::Dict(Dict::from_bytes(b"<</ShowCenterPoint false >>").unwrap()),
             ),
         )];
+
+        let elements = TypedIter::new(UntypedIter::new(input))
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        assert_eq!(elements, expected);
+    }
+
+    #[test]
+    fn bdc_with_dict() {
+        let input = b"/Span << /MCID 0 /Alt (Alt)>> BDC EMC";
+
+        let expected = vec![
+            TypedOperation::BeginMarkedContentWithProperties(BeginMarkedContentWithProperties(
+                Name::from_unescaped(b"Span"),
+                Object::Dict(Dict::from_bytes(b"<< /MCID 0 /Alt (Alt)>>").unwrap()),
+            )),
+            TypedOperation::EndMarkedContent(EndMarkedContent),
+        ];
+
+        let elements = TypedIter::new(UntypedIter::new(input))
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        assert_eq!(elements, expected);
+    }
+
+    #[test]
+    fn bdc_with_name() {
+        let input = b"/Span /Name BDC EMC";
+
+        let expected = vec![
+            TypedOperation::BeginMarkedContentWithProperties(BeginMarkedContentWithProperties(
+                Name::from_unescaped(b"Span"),
+                Object::Name(Name::from_unescaped(b"Name")),
+            )),
+            TypedOperation::EndMarkedContent(EndMarkedContent),
+        ];
 
         let elements = TypedIter::new(UntypedIter::new(input))
             .into_iter()

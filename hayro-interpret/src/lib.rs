@@ -260,6 +260,9 @@ pub fn interpret<'a>(
                 state.get_mut().dash_offset = p.1.as_f32();
                 state.get_mut().dash_array = p.0.iter::<f32>().collect();
             }
+            TypedOperation::RenderingIntent(_) => {
+                // Ignore for now.
+            }
             _ => {
                 println!("{:?}", op);
             }

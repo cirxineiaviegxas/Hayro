@@ -349,24 +349,24 @@ op1!(MarkedContentPoint<'a>, "MP");
 #[derive(Debug, PartialEq, Clone)]
 pub struct MarkedContentPointWithProperties<'a>(
     pub Name<'a>,
-    pub Dict<'a>,
+    pub Object<'a>,
 );
 op2!(MarkedContentPointWithProperties<'a>, "DP");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BeginMarkedContent<'a>(pub Name<'a>);
-op1!(BeginMarkedContent<'a>, "DP");
+op1!(BeginMarkedContent<'a>, "BMC");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BeginMarkedContentWithProperties<'a>(
     pub Name<'a>,
-    pub Dict<'a>,
+    pub Object<'a>,
 );
-op2!(BeginMarkedContentWithProperties<'a>, "d1");
+op2!(BeginMarkedContentWithProperties<'a>, "BDC");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EndMarkedContent;
-op0!(EndMarkedContent, "DP");
+op0!(EndMarkedContent, "EMC");
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedOperation<'a> {
@@ -516,9 +516,9 @@ impl<'a> TypedOperation<'a> {
             b"d1" => ShapeGlyph::from_stack(&operation.operands)?.into(),
             b"MP" => MarkedContentPoint::from_stack(&operation.operands)?.into(),
             b"DP" => MarkedContentPointWithProperties::from_stack(&operation.operands)?.into(),
-            b"DP" => BeginMarkedContent::from_stack(&operation.operands)?.into(),
-            b"d1" => BeginMarkedContentWithProperties::from_stack(&operation.operands)?.into(),
-            b"DP" => EndMarkedContent::from_stack(&operation.operands)?.into(),
+            b"BMC" => BeginMarkedContent::from_stack(&operation.operands)?.into(),
+            b"BDC" => BeginMarkedContentWithProperties::from_stack(&operation.operands)?.into(),
+            b"EMC" => EndMarkedContent::from_stack(&operation.operands)?.into(),
             _ => return Self::Fallback.into(),
         })
     }

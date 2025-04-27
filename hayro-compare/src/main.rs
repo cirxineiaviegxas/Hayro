@@ -5,6 +5,10 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 fn main() {
+    if let Ok(()) = log::set_logger(&LOGGER) {
+        log::set_max_level(log::LevelFilter::Warn);
+    }
+
     let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/batch");
 
     let mut entries = WalkDir::new(&root_dir)
@@ -55,7 +59,8 @@ fn render_hayro(entries: &[PathBuf]) {
     std::fs::create_dir_all(out_dir);
 
     for path in entries {
-        // println!("{}", path.display());
+        println!("{}", path.display());
+
         let stem = path.file_stem().unwrap().to_str().unwrap();
         let file = std::fs::read(path).unwrap();
         let data = Data::new(&file);
@@ -72,4 +77,36 @@ fn render_hayro(entries: &[PathBuf]) {
             std::fs::write(out_path, page).unwrap();
         }
     }
+}
+
+/// A simple stderr logger.
+static LOGGER: SimpleLogger = SimpleLogger;
+struct SimpleLogger;
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::LevelFilter::Warn
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            let target = if record.target().len() > 0 {
+                record.target()
+            } else {
+                record.module_path().unwrap_or_default()
+            };
+
+            let line = record.line().unwrap_or(0);
+            let args = record.args();
+
+            match record.level() {
+                log::Level::Error => eprintln!("Error (in {}:{}): {}", target, line, args),
+                log::Level::Warn => eprintln!("Warning (in {}:{}): {}", target, line, args),
+                log::Level::Info => eprintln!("Info (in {}:{}): {}", target, line, args),
+                log::Level::Debug => eprintln!("Debug (in {}:{}): {}", target, line, args),
+                log::Level::Trace => eprintln!("Trace (in {}:{}): {}", target, line, args),
+            }
+        }
+    }
+
+    fn flush(&self) {}
 }

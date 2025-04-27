@@ -110,10 +110,12 @@ ops = {
     ],
     "Marked content operators": [
         ("MP", "MarkedContentPoint", [Type.Name]),
-        ("DP", "MarkedContentPointWithProperties", [Type.Name, Type.Dict]),
-        ("DP", "BeginMarkedContent", [Type.Name]),
-        ("d1", "BeginMarkedContentWithProperties", [Type.Name, Type.Dict]),
-        ("DP", "EndMarkedContent", []),
+        # Second argument can be name or dict
+        ("DP", "MarkedContentPointWithProperties", [Type.Name, Type.Object]),
+        ("BMC", "BeginMarkedContent", [Type.Name]),
+        # Second argument can be name or dict
+        ("BDC", "BeginMarkedContentWithProperties", [Type.Name, Type.Object]),
+        ("EMC", "EndMarkedContent", []),
     ],
 }
 

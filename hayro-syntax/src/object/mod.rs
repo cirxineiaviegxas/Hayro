@@ -18,10 +18,10 @@ pub(crate) mod indirect;
 pub mod name;
 pub mod null;
 pub mod number;
+pub mod rect;
 pub mod r#ref;
 pub mod stream;
 pub mod string;
-pub mod rect;
 
 /// A trait for PDF objects.
 pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Static + Clone {

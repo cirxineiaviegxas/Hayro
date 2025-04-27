@@ -4,11 +4,11 @@ use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, TYPE};
 use crate::object::name::Name;
+use crate::object::rect::Rect;
 use crate::object::stream::Stream;
+use itertools::Itertools;
 use log::warn;
 use std::cell::OnceCell;
-use itertools::Itertools;
-use crate::object::rect::Rect;
 
 pub struct Pages<'a> {
     pub pages: Vec<Page<'a>>,
@@ -43,15 +43,19 @@ impl<'a> Pages<'a> {
     }
 }
 
-fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>, mut ctx: PagesContext) -> Option<()> {
+fn resolve_pages<'a>(
+    pages_dict: Dict<'a>,
+    entries: &mut Vec<Page<'a>>,
+    mut ctx: PagesContext,
+) -> Option<()> {
     if let Some(media_box) = pages_dict.get::<Rect>(MEDIA_BOX) {
         ctx.media_box = Some(media_box);
     }
-    
+
     if let Some(crop_box) = pages_dict.get::<Rect>(CROP_BOX) {
         ctx.crop_box = Some(crop_box);
     }
-    
+
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
 
     // TODO: Add inheritance of page attributes
@@ -81,14 +85,14 @@ impl<'a> Page<'a> {
             .or_else(|| ctx.media_box)
             // TODO: A default media box
             .unwrap();
-        
+
         let mut crop_box = dict
             .get::<Rect>(CROP_BOX)
             .or_else(|| ctx.crop_box)
             .unwrap_or(media_box);
-        
+
         let crop_box = crop_box.get().intersect(media_box.get());
-        
+
         Self {
             inner: dict,
             media_box: media_box.get(),

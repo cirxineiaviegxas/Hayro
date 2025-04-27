@@ -7,4 +7,5 @@ edition = "2024"
 sitro = { path = "../../sitro" }
 hayro-render = { workspace = true }
 hayro-syntax = { workspace = true }
+log = { workspace = true }
 walkdir = "2.5.0"
