@@ -15,7 +15,6 @@ pub(crate) struct TextState {
     pub(crate) leading: f32,
     pub(crate) font: Option<(Font, f32)>,
     pub(crate) render_mode: TextRenderingMode,
-    pub(crate) initial_text_matrix: Affine,
     pub(crate) text_matrix: Affine,
     pub(crate) text_line_matrix: Affine,
     pub(crate) rise: f32,
@@ -66,7 +65,6 @@ impl Default for TextState {
             render_mode: Default::default(),
             text_matrix: Affine::IDENTITY,
             text_line_matrix: Affine::IDENTITY,
-            initial_text_matrix: Affine::IDENTITY,
             rise: 0.0,
         }
     }
@@ -96,12 +94,6 @@ pub(crate) struct State {
 
 impl State {
     pub(crate) fn text_transform(&self) -> Affine {
-        println!(
-            "{:?}, {:?}, {:?}",
-            self.affine,
-            self.text_state.text_matrix,
-            self.text_state.temp_transform()
-        );
         self.affine * self.text_state.text_matrix * self.text_state.temp_transform()
     }
 }

@@ -306,7 +306,7 @@ pub fn interpret<'a>(
                 context.get_mut().text_state.text_line_matrix = Affine::IDENTITY;
             }
             TypedOperation::SetTextMatrix(m) => {
-                context.get_mut().text_state.initial_text_matrix = Affine::new([
+                let m = Affine::new([
                     m.0.as_f64(),
                     m.1.as_f64(),
                     m.2.as_f64(),
@@ -314,8 +314,8 @@ pub fn interpret<'a>(
                     m.4.as_f64(),
                     m.5.as_f64(),
                 ]);
-                context.get_mut().text_state.text_matrix =
-                    context.get().text_state.initial_text_matrix
+                context.get_mut().text_state.text_line_matrix = m;
+                context.get_mut().text_state.text_matrix = m;
             }
             TypedOperation::EndText(_) => {}
             TypedOperation::TextFont(t) => {
@@ -342,12 +342,19 @@ pub fn interpret<'a>(
                     device.set_transform(t);
                     device.fill_path(&outline, &context.fill_props());
 
-                    eprintln!("advance width: {}", font.glyph_width(glyph));
                     context
                         .get_mut()
                         .text_state
                         .step(font.glyph_width(glyph), 0.0);
                 }
+            }
+            TypedOperation::NextLine(n) => {
+                let (tx, ty) = (n.0.as_f64(), n.1.as_f64());
+                eprintln!("Before: {:?}", context.get().text_state);
+                let new_matrix = context.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));;
+                context.get_mut().text_state.text_line_matrix = new_matrix;
+                context.get_mut().text_state.text_matrix = new_matrix;
+                eprintln!("After: {:?}", context.get().text_state);
             }
             _ => {
                 println!("{:?}", op);
