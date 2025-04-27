@@ -266,14 +266,14 @@ pub fn interpret<'a>(
             TypedOperation::NonStrokeColorNamed(n) => {
                 if n.1.is_none() {
                     state.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
-                }   else {
+                } else {
                     warn!("named color spaces are not supported!");
                 }
             }
             TypedOperation::StrokeColorNamed(n) => {
                 if n.1.is_none() {
                     state.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
-                }   else {
+                } else {
                     warn!("named color spaces are not supported!");
                 }
             }

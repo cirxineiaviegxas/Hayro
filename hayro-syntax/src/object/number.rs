@@ -4,6 +4,7 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::debug;
 use std::fmt::Debug;
+use std::str::FromStr;
 
 /// A PDF number.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -84,98 +85,16 @@ impl Skippable for Number {
 
 impl Readable<'_> for Number {
     fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
-        // Yes, this is not how you parse numbers correctly, especially floating point
-        // numbers! The result might not be 100% accurate in many cases. The problem we are facing
-        // is that parsing numbers is a huge bottleneck (after all 90% of content streams is usually
-        // just numbers), so handling them efficiently is pretty important if we care about having
-        // the highest speed.
-        //
-        // There are essentially three choices:
-        // 1) First determine the boundary of the number, then convert it to string and finally use
-        // the Rust `parse` implementation to parse the number as a float/int. However,
-        // as mentioned, this is relatively slow.
-        // 2) Use the `lexical` crate, which allows parsing (partial) numbers from a byte slice.
-        // However, this crate has a lot of unsafe, so I'm a bit hesitant to use it, although I'm
-        // sure it works just fine.
-        // 3) Write our own "sloppy" implementation of parsing numbers, which is very fast and
-        // safe, but unfortunately might result in a loss of precision for floating point numbers.
-        //
-        // I chose 3), because parsing PDF numbers does not strike me as a use case where numbers
-        // have to be 100% accurate, so I think this trade-off should be worth it.
-        // However, if at some point this bites us (hopefully not!), we can just revert
-        // to option 1 or 2.
+        // TODO: This function is probably the biggest bottleneck in content parsing, so
+        // worth optimizing.
 
-        let mut int_part: i64 = 0;
-        let mut frac_part: f64 = 0.0;
-        let mut frac_mul_factor: u64 = 1;
+        let data = r.skip::<PLAIN, Number>()?;
+        let num = f32::from_str(std::str::from_utf8(data).ok()?).ok()?;
 
-        let negative = match r.peek_byte()? {
-            b'+' => {
-                r.read_byte()?;
-                false
-            }
-            b'-' => {
-                r.read_byte()?;
-                true
-            }
-            _ => false,
-        };
-
-        let mut parse_frac = |r: &mut Reader<'_>| -> Option<()> {
-            while let Some(d) = r.peek_byte() {
-                match d {
-                    (b'0'..=b'9') => {
-                        frac_part *= 10.0;
-                        frac_part += (d - b'0') as f64;
-                        frac_mul_factor *= 10;
-
-                        r.read_byte()?;
-                    }
-                    _ => return Some(()),
-                }
-            }
-
-            Some(())
-        };
-
-        match r.peek_byte()? {
-            b'.' => {
-                r.read_byte()?;
-                parse_frac(r)?;
-            }
-            (b'0'..=b'9') => {
-                while let Some(d) = r.peek_byte() {
-                    match d {
-                        (b'0'..=b'9') => {
-                            int_part = int_part.checked_mul(10)?;
-                            int_part = int_part.checked_add((d - b'0') as i64)?;
-                            r.read_byte()?;
-                        }
-                        _ => break,
-                    }
-                }
-
-                if let Some(()) = r.forward_tag(b".") {
-                    parse_frac(r)?;
-                }
-            }
-            _ => return None,
-        }
-
-        if frac_part == 0.0 {
-            if negative {
-                int_part = -int_part;
-            }
-
-            Some(Number(InternalNumber::Integer(int_part.try_into().ok()?)))
+        if num.fract() == 0.0 {
+            Some(Number(InternalNumber::Integer(num as i32)))
         } else {
-            let mut res = (int_part as f64 + frac_part / frac_mul_factor as f64) as f32;
-
-            if negative {
-                res = -res;
-            }
-
-            Some(Number(InternalNumber::Real(res)))
+            Some(Number(InternalNumber::Real(num)))
         }
     }
 }
