@@ -1,21 +1,22 @@
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::Device;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
+use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::EXT_G_STATE;
+use hayro_syntax::object::dict::keys::{EXT_G_STATE, FONT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
-use kurbo::{Cap, Join, Point, Rect, Shape};
+use kurbo::{Affine, Cap, Join, Point, Rect, Shape};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::Fill;
 use qcms::Transform;
 use smallvec::{SmallVec, smallvec};
-use hayro_syntax::object::Object;
 
 pub mod color;
 mod convert;
 pub mod device;
+mod font;
 mod state;
 mod util;
 
@@ -61,7 +62,8 @@ pub fn interpret<'a>(
     state: &mut GraphicsState,
     device: &mut impl Device,
 ) {
-    let ext_g_stages = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
+    let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
+    let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
 
     for op in ops {
         match op {
@@ -200,7 +202,7 @@ pub fn interpret<'a>(
                 *(state.last_point_mut()) = *state.sub_path_start();
             }
             TypedOperation::SetGraphicsState(gs) => {
-                let gs = ext_g_stages
+                let gs = ext_g_states
                     .get::<Dict>(gs.0)
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap_or_default();
@@ -283,7 +285,14 @@ pub fn interpret<'a>(
                 }
             }
             TypedOperation::InlineImage(i) => {
-                println!("{:?}", i.0.dict().keys().into_iter().map(|l| l.as_str()).collect::<Vec<_>>());
+                println!(
+                    "{:?}",
+                    i.0.dict()
+                        .keys()
+                        .into_iter()
+                        .map(|l| l.as_str())
+                        .collect::<Vec<_>>()
+                );
                 // println!("{:?}", i.0.dict().get::<Object>(Name::from_unescaped(b"CS")));
             }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}
@@ -291,6 +300,11 @@ pub fn interpret<'a>(
             TypedOperation::EndMarkedContent(_) => {}
             TypedOperation::MarkedContentPoint(_) => {}
             TypedOperation::BeginMarkedContent(_) => {}
+            TypedOperation::BeginText(_) => {
+                state.get_mut().text_state.text_matrix = Affine::IDENTITY;
+                state.get_mut().text_state.text_line_matrix = Affine::IDENTITY;
+            }
+            TypedOperation::EndText(_) => {}
             _ => {
                 println!("{:?}", op);
             }

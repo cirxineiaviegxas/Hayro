@@ -16,7 +16,6 @@ fn main() {
     std::fs::write("out.png", &pixmaps[0]).unwrap();
 }
 
-
 /// A simple stderr logger.
 static LOGGER: SimpleLogger = SimpleLogger;
 struct SimpleLogger;

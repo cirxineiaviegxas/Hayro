@@ -1,10 +1,40 @@
 use crate::color::{ColorComponents, ColorSpace};
 use crate::convert::convert_transform;
+use crate::font::{Font, TextRenderingMode};
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::{SmallVec, smallvec};
+
+#[derive(Clone)]
+pub(crate) struct TextState {
+    pub(crate) char_space: f32,
+    pub(crate) word_space: f32,
+    pub(crate) horizontal_scaling: f32,
+    pub(crate) leading: f32,
+    pub(crate) font: Option<(Font, f32)>,
+    pub(crate) render_mode: TextRenderingMode,
+    pub(crate) text_matrix: Affine,
+    pub(crate) text_line_matrix: Affine,
+    pub(crate) rise: f32,
+}
+
+impl Default for TextState {
+    fn default() -> Self {
+        Self {
+            char_space: 0.0,
+            word_space: 0.0,
+            horizontal_scaling: 100.0,
+            leading: 0.0,
+            font: None,
+            render_mode: Default::default(),
+            text_matrix: Affine::IDENTITY,
+            text_line_matrix: Affine::IDENTITY,
+            rise: 0.0,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct State {
@@ -21,6 +51,7 @@ pub(crate) struct State {
     pub(crate) fill_color: ColorComponents,
     pub(crate) fill_cs: ColorSpace,
     pub(crate) fill_alpha: f32,
+    pub(crate) text_state: TextState,
     // Strictly speaking not part of the graphics state, but we keep it there for
     // consistency.
     pub(crate) fill: Fill,
@@ -59,6 +90,7 @@ impl GraphicsState {
                 stroke_alpha: 1.0,
                 fill: Fill::NonZero,
                 n_clips: 0,
+                text_state: TextState::default(),
             }],
             last_point: Point::default(),
             sub_path_start: Point::default(),

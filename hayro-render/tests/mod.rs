@@ -1,9 +1,9 @@
-use std::cmp::max;
-use std::path::PathBuf;
-use image::{load_from_memory, Rgba, RgbaImage};
 use hayro_syntax::Data;
 use hayro_syntax::pdf::Pdf;
+use image::{Rgba, RgbaImage, load_from_memory};
 use once_cell::sync::Lazy;
+use std::cmp::max;
+use std::path::PathBuf;
 
 mod tests;
 
@@ -20,19 +20,16 @@ pub(crate) static SNAPSHOTS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.jo
 type RenderedDocument = Vec<Vec<u8>>;
 type RenderedPage = Vec<u8>;
 
-pub fn check_render(
-    name: &str,
-    document: RenderedDocument,
-) {
+pub fn check_render(name: &str, document: RenderedDocument) {
     let mut refs_path = SNAPSHOTS_PATH.clone();
 
     let check_single = |name: String, page: &RenderedPage, page_num: usize| {
         let suffix = if document.len() == 1 {
             format!("{name}.png")
-        }   else {
+        } else {
             format!("{name}_{page_num}.png")
         };
-        
+
         let ref_path = refs_path.join(&suffix);
 
         if !ref_path.exists() {
@@ -42,7 +39,7 @@ pub fn check_render(
                 &oxipng::OutFile::from_path(ref_path),
                 &oxipng::Options::max_compression(),
             )
-                .unwrap();
+            .unwrap();
             panic!("new reference image was created");
         }
 
@@ -66,13 +63,11 @@ pub fn check_render(
                     &oxipng::OutFile::from_path(ref_path),
                     &oxipng::Options::max_compression(),
                 )
-                    .unwrap();
+                .unwrap();
                 panic!("test was replaced");
             }
 
-            panic!(
-                "pixel diff was {pixel_diff}"
-            );
+            panic!("pixel diff was {pixel_diff}");
         }
     };
 
@@ -90,7 +85,7 @@ pub fn run_test(name: &str) {
     let content = std::fs::read(&path).unwrap();
     let data = Data::new(&content);
     let pdf = Pdf::new(&data).unwrap();
-    
+
     check_render(name, hayro_render::render_png(&pdf, 1.0));
 }
 
