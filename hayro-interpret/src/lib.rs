@@ -18,10 +18,11 @@ pub mod device;
 mod font;
 mod state;
 mod util;
+mod context;
 
 use crate::color::{Color, ColorSpace};
+use crate::context::Context;
 use crate::util::OptionLog;
-pub use state::GraphicsState;
 
 static CMYK_TRANSFORM: Lazy<Transform> = Lazy::new(|| {
     let input = qcms::Profile::new_from_slice(
@@ -58,7 +59,7 @@ pub struct FillProps {
 pub fn interpret<'a>(
     ops: impl Iterator<Item = TypedOperation<'a>>,
     resources: Dict,
-    state: &mut GraphicsState,
+    context: &mut Context,
     device: &mut impl Device,
 ) {
     let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
@@ -66,34 +67,34 @@ pub fn interpret<'a>(
 
     for op in ops {
         match op {
-            TypedOperation::SaveState(_) => state.save_state(),
+            TypedOperation::SaveState(_) => context.save_state(),
             TypedOperation::StrokeColorDeviceRgb(s) => {
-                state.get_mut().stroke_cs = ColorSpace::DeviceRgb;
-                state.get_mut().stroke_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
+                context.get_mut().stroke_cs = ColorSpace::DeviceRgb;
+                context.get_mut().stroke_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::StrokeColorDeviceGray(s) => {
-                state.get_mut().stroke_cs = ColorSpace::DeviceGray;
-                state.get_mut().stroke_color = smallvec![s.0.as_f32()];
+                context.get_mut().stroke_cs = ColorSpace::DeviceGray;
+                context.get_mut().stroke_color = smallvec![s.0.as_f32()];
             }
             TypedOperation::StrokeColorCmyk(s) => {
-                state.get_mut().stroke_cs = ColorSpace::DeviceCmyk;
-                state.get_mut().stroke_color =
+                context.get_mut().stroke_cs = ColorSpace::DeviceCmyk;
+                context.get_mut().stroke_color =
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineWidth(w) => {
-                state.get_mut().line_width = w.0.as_f32();
+                context.get_mut().line_width = w.0.as_f32();
             }
             TypedOperation::LineCap(c) => {
-                state.get_mut().line_cap = convert_line_cap(c);
+                context.get_mut().line_cap = convert_line_cap(c);
             }
             TypedOperation::LineJoin(j) => {
-                state.get_mut().line_join = convert_line_join(j);
+                context.get_mut().line_join = convert_line_join(j);
             }
             TypedOperation::MiterLimit(l) => {
-                state.get_mut().miter_limit = l.0.as_f32();
+                context.get_mut().miter_limit = l.0.as_f32();
             }
             TypedOperation::Transform(t) => {
-                state.pre_concat_transform(t);
+                context.pre_concat_transform(t);
             }
             TypedOperation::RectPath(r) => {
                 let rect = Rect::new(
@@ -103,102 +104,102 @@ pub fn interpret<'a>(
                     r.1.as_f64() + r.3.as_f64(),
                 )
                 .to_path(0.1);
-                state.path_mut().extend(rect);
+                context.path_mut().extend(rect);
             }
             TypedOperation::MoveTo(m) => {
                 let p = Point::new(m.0.as_f64(), m.1.as_f64());
-                *(state.last_point_mut()) = p;
-                *(state.sub_path_start_mut()) = p;
-                state.path_mut().move_to(p);
+                *(context.last_point_mut()) = p;
+                *(context.sub_path_start_mut()) = p;
+                context.path_mut().move_to(p);
             }
             TypedOperation::FillPathEvenOdd(_) => {
-                state.get_mut().fill = Fill::EvenOdd;
-                fill_path(state, device);
+                context.get_mut().fill = Fill::EvenOdd;
+                fill_path(context, device);
             }
             TypedOperation::FillPathNonZero(_) => {
-                state.get_mut().fill = Fill::NonZero;
-                fill_path(state, device);
+                context.get_mut().fill = Fill::NonZero;
+                fill_path(context, device);
             }
             TypedOperation::FillPathNonZeroCompatibility(_) => {
-                state.get_mut().fill = Fill::NonZero;
-                fill_path(state, device);
+                context.get_mut().fill = Fill::NonZero;
+                fill_path(context, device);
             }
             TypedOperation::FillAndStrokeEvenOdd(_) => {
-                state.get_mut().fill = Fill::EvenOdd;
-                fill_stroke_path(state, device);
+                context.get_mut().fill = Fill::EvenOdd;
+                fill_stroke_path(context, device);
             }
             TypedOperation::FillAndStrokeNonZero(_) => {
-                state.get_mut().fill = Fill::NonZero;
-                fill_stroke_path(state, device);
+                context.get_mut().fill = Fill::NonZero;
+                fill_stroke_path(context, device);
             }
             TypedOperation::CloseAndStrokePath(_) => {
-                state.path_mut().close_path();
-                stroke_path(state, device);
+                context.path_mut().close_path();
+                stroke_path(context, device);
             }
             TypedOperation::CloseFillAndStrokeEvenOdd(_) => {
-                state.path_mut().close_path();
-                state.get_mut().fill = Fill::EvenOdd;
-                fill_stroke_path(state, device);
+                context.path_mut().close_path();
+                context.get_mut().fill = Fill::EvenOdd;
+                fill_stroke_path(context, device);
             }
             TypedOperation::CloseFillAndStrokeNonZero(_) => {
-                state.path_mut().close_path();
-                state.get_mut().fill = Fill::NonZero;
-                fill_stroke_path(state, device);
+                context.path_mut().close_path();
+                context.get_mut().fill = Fill::NonZero;
+                fill_stroke_path(context, device);
             }
             TypedOperation::NonStrokeColorDeviceGray(s) => {
-                state.get_mut().fill_cs = ColorSpace::DeviceGray;
-                state.get_mut().fill_color = smallvec![s.0.as_f32()];
+                context.get_mut().fill_cs = ColorSpace::DeviceGray;
+                context.get_mut().fill_color = smallvec![s.0.as_f32()];
             }
             TypedOperation::NonStrokeColorDeviceRgb(s) => {
-                state.get_mut().fill_cs = ColorSpace::DeviceRgb;
-                state.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
+                context.get_mut().fill_cs = ColorSpace::DeviceRgb;
+                context.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::NonStrokeColorCmyk(s) => {
-                state.get_mut().fill_cs = ColorSpace::DeviceCmyk;
-                state.get_mut().fill_color =
+                context.get_mut().fill_cs = ColorSpace::DeviceCmyk;
+                context.get_mut().fill_color =
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineTo(m) => {
-                let last_point = *state.last_point();
+                let last_point = *context.last_point();
                 let mut p = Point::new(m.0.as_f64(), m.1.as_f64());
-                *(state.last_point_mut()) = p;
+                *(context.last_point_mut()) = p;
                 if last_point == p {
                     // Add a small delta so that zero width lines can still have a round stroke.
                     p.x += 0.0001;
                 }
 
-                state.path_mut().line_to(p);
+                context.path_mut().line_to(p);
             }
             TypedOperation::CubicTo(c) => {
                 let p1 = Point::new(c.0.as_f64(), c.1.as_f64());
                 let p2 = Point::new(c.2.as_f64(), c.3.as_f64());
                 let p3 = Point::new(c.4.as_f64(), c.5.as_f64());
 
-                *(state.last_point_mut()) = p3;
+                *(context.last_point_mut()) = p3;
 
-                state.path_mut().curve_to(p1, p2, p3)
+                context.path_mut().curve_to(p1, p2, p3)
             }
             TypedOperation::CubicStartTo(c) => {
-                let p1 = *state.last_point();
+                let p1 = *context.last_point();
                 let p2 = Point::new(c.0.as_f64(), c.1.as_f64());
                 let p3 = Point::new(c.2.as_f64(), c.3.as_f64());
 
-                *(state.last_point_mut()) = p3;
+                *(context.last_point_mut()) = p3;
 
-                state.path_mut().curve_to(p1, p2, p3)
+                context.path_mut().curve_to(p1, p2, p3)
             }
             TypedOperation::CubicEndTo(c) => {
                 let p2 = Point::new(c.0.as_f64(), c.1.as_f64());
                 let p3 = Point::new(c.2.as_f64(), c.3.as_f64());
 
-                *(state.last_point_mut()) = p3;
+                *(context.last_point_mut()) = p3;
 
-                state.path_mut().curve_to(p2, p3, p3)
+                context.path_mut().curve_to(p2, p3, p3)
             }
             TypedOperation::ClosePath(_) => {
-                state.path_mut().close_path();
+                context.path_mut().close_path();
 
-                *(state.last_point_mut()) = *state.sub_path_start();
+                *(context.last_point_mut()) = *context.sub_path_start();
             }
             TypedOperation::SetGraphicsState(gs) => {
                 let gs = ext_g_states
@@ -206,23 +207,23 @@ pub fn interpret<'a>(
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap_or_default();
 
-                handle_gs(&gs, state);
+                handle_gs(&gs, context);
             }
             TypedOperation::StrokePath(_) => {
-                stroke_path(state, device);
+                stroke_path(context, device);
             }
             TypedOperation::EndPath(_) => {
-                if let Some(clip) = *state.clip() {
-                    device.set_transform(state.get().affine);
-                    device.push_clip(state.path(), clip);
+                if let Some(clip) = *context.clip() {
+                    device.set_transform(context.get().affine);
+                    device.push_clip(context.path(), clip);
 
-                    *(state.clip_mut()) = None;
-                    state.get_mut().n_clips += 1;
+                    *(context.clip_mut()) = None;
+                    context.get_mut().n_clips += 1;
                 }
-                state.path_mut().truncate(0);
+                context.path_mut().truncate(0);
             }
             TypedOperation::NonStrokeColor(c) => {
-                let fill_c = &mut state.get_mut().fill_color;
+                let fill_c = &mut context.get_mut().fill_color;
                 fill_c.truncate(0);
 
                 for e in c.0 {
@@ -230,7 +231,7 @@ pub fn interpret<'a>(
                 }
             }
             TypedOperation::StrokeColor(c) => {
-                let stroke_c = &mut state.get_mut().stroke_color;
+                let stroke_c = &mut context.get_mut().stroke_color;
                 stroke_c.truncate(0);
 
                 for e in c.0 {
@@ -238,15 +239,15 @@ pub fn interpret<'a>(
                 }
             }
             TypedOperation::ClipNonZero(_) => {
-                *(state.clip_mut()) = Some(Fill::NonZero);
+                *(context.clip_mut()) = Some(Fill::NonZero);
             }
             TypedOperation::ClipEvenOdd(_) => {
-                *(state.clip_mut()) = Some(Fill::EvenOdd);
+                *(context.clip_mut()) = Some(Fill::EvenOdd);
             }
             TypedOperation::RestoreState(_) => {
-                let mut num_clips = state.get().n_clips;
-                state.restore_state();
-                let target_clips = state.get().n_clips;
+                let mut num_clips = context.get().n_clips;
+                context.restore_state();
+                let target_clips = context.get().n_clips;
 
                 while num_clips > target_clips {
                     device.pop_clip();
@@ -257,28 +258,28 @@ pub fn interpret<'a>(
                 // Ignore for now.
             }
             TypedOperation::ColorSpaceStroke(c) => {
-                state.get_mut().stroke_cs = handle_cs(c.0);
+                context.get_mut().stroke_cs = handle_cs(c.0);
             }
             TypedOperation::ColorSpaceNonStroke(c) => {
-                state.get_mut().fill_cs = handle_cs(c.0);
+                context.get_mut().fill_cs = handle_cs(c.0);
             }
             TypedOperation::DashPattern(p) => {
-                state.get_mut().dash_offset = p.1.as_f32();
-                state.get_mut().dash_array = p.0.iter::<f32>().collect();
+                context.get_mut().dash_offset = p.1.as_f32();
+                context.get_mut().dash_array = p.0.iter::<f32>().collect();
             }
             TypedOperation::RenderingIntent(_) => {
                 // Ignore for now.
             }
             TypedOperation::NonStrokeColorNamed(n) => {
                 if n.1.is_none() {
-                    state.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
+                    context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 } else {
                     warn!("named color spaces are not supported!");
                 }
             }
             TypedOperation::StrokeColorNamed(n) => {
                 if n.1.is_none() {
-                    state.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
+                    context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 } else {
                     warn!("named color spaces are not supported!");
                 }
@@ -300,11 +301,11 @@ pub fn interpret<'a>(
             TypedOperation::MarkedContentPoint(_) => {}
             TypedOperation::BeginMarkedContent(_) => {}
             TypedOperation::BeginText(_) => {
-                state.get_mut().text_state.text_matrix = Affine::IDENTITY;
-                state.get_mut().text_state.text_line_matrix = Affine::IDENTITY;
+                context.get_mut().text_state.text_matrix = Affine::IDENTITY;
+                context.get_mut().text_state.text_line_matrix = Affine::IDENTITY;
             }
             TypedOperation::SetTextMatrix(m) => {
-                state.get_mut().text_state.initial_text_matrix = Affine::new([
+                context.get_mut().text_state.initial_text_matrix = Affine::new([
                     m.0.as_f64(),
                     m.1.as_f64(),
                     m.2.as_f64(),
@@ -312,7 +313,7 @@ pub fn interpret<'a>(
                     m.4.as_f64(),
                     m.5.as_f64(),
                 ]);
-                state.get_mut().text_state.text_matrix = state.get().text_state.initial_text_matrix
+                context.get_mut().text_state.text_matrix = context.get().text_state.initial_text_matrix
             }
             TypedOperation::EndText(_) => {}
             _ => {
@@ -321,7 +322,7 @@ pub fn interpret<'a>(
         }
     }
 
-    for _ in 0..state.get().n_clips {
+    for _ in 0..context.get().n_clips {
         device.pop_clip();
     }
 }
@@ -339,24 +340,24 @@ fn handle_cs(key: Name) -> ColorSpace {
     }
 }
 
-fn handle_gs(dict: &Dict, state: &mut GraphicsState) {
+fn handle_gs(dict: &Dict, context: &mut Context) {
     for key in dict.keys() {
-        handle_gs_single(dict, *key, state).warn_none(&format!(
+        handle_gs_single(dict, *key, context).warn_none(&format!(
             "invalid value in graphics state for {}",
             key.as_str()
         ));
     }
 }
 
-fn handle_gs_single(dict: &Dict, key: Name, state: &mut GraphicsState) -> Option<()> {
+fn handle_gs_single(dict: &Dict, key: Name, context: &mut Context) -> Option<()> {
     // TODO Can we use constants here somehow?
     match key.as_str().as_str() {
-        "LW" => state.get_mut().line_width = dict.get::<f32>(key)?,
-        "LC" => state.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(key)?)),
-        "LJ" => state.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(key)?)),
-        "ML" => state.get_mut().miter_limit = dict.get::<f32>(key)?,
-        "CA" => state.get_mut().stroke_alpha = dict.get::<f32>(key)?,
-        "ca" => state.get_mut().fill_alpha = dict.get::<f32>(key)?,
+        "LW" => context.get_mut().line_width = dict.get::<f32>(key)?,
+        "LC" => context.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(key)?)),
+        "LJ" => context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(key)?)),
+        "ML" => context.get_mut().miter_limit = dict.get::<f32>(key)?,
+        "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(key)?,
+        "ca" => context.get_mut().fill_alpha = dict.get::<f32>(key)?,
         "Type" => {}
         _ => {}
     }
@@ -364,41 +365,41 @@ fn handle_gs_single(dict: &Dict, key: Name, state: &mut GraphicsState) -> Option
     Some(())
 }
 
-fn fill_path(state: &mut GraphicsState, device: &mut impl Device) {
-    fill_path_impl(state, device);
+fn fill_path(context: &mut Context, device: &mut impl Device) {
+    fill_path_impl(context, device);
     // TODO: Where in spec?
-    state.path_mut().truncate(0);
+    context.path_mut().truncate(0);
 }
 
-fn stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
-    stroke_path_impl(state, device);
-    state.path_mut().truncate(0);
+fn stroke_path(context: &mut Context, device: &mut impl Device) {
+    stroke_path_impl(context, device);
+    context.path_mut().truncate(0);
 }
 
-fn fill_stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
-    fill_path_impl(state, device);
-    stroke_path_impl(state, device);
-    state.path_mut().truncate(0);
+fn fill_stroke_path(context: &mut Context, device: &mut impl Device) {
+    fill_path_impl(context, device);
+    stroke_path_impl(context, device);
+    context.path_mut().truncate(0);
 }
 
-fn fill_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
+fn fill_path_impl(context: &mut Context, device: &mut impl Device) {
     let color = Color::from_pdf(
-        state.get().fill_cs,
-        &state.get().fill_color,
-        state.get().fill_alpha,
+        context.get().fill_cs,
+        &context.get().fill_color,
+        context.get().fill_alpha,
     );
     device.set_paint(color);
-    device.set_transform(state.get().affine);
-    device.fill_path(state.path(), &state.fill_props());
+    device.set_transform(context.get().affine);
+    device.fill_path(context.path(), &context.fill_props());
 }
 
-fn stroke_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
+fn stroke_path_impl(context: &mut Context, device: &mut impl Device) {
     let color = Color::from_pdf(
-        state.get().stroke_cs,
-        &state.get().stroke_color,
-        state.get().stroke_alpha,
+        context.get().stroke_cs,
+        &context.get().stroke_color,
+        context.get().stroke_alpha,
     );
     device.set_paint(color);
-    device.set_transform(state.get().affine);
-    device.stroke_path(state.path(), &state.stroke_props());
+    device.set_transform(context.get().affine);
+    device.stroke_path(context.path(), &context.stroke_props());
 }

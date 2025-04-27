@@ -1,6 +1,6 @@
 use hayro_interpret::color::Color;
 use hayro_interpret::device::Device;
-use hayro_interpret::{FillProps, GraphicsState, StrokeProps, interpret};
+use hayro_interpret::{FillProps, Context, StrokeProps, interpret};
 use hayro_syntax::document::page::Page;
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
@@ -66,7 +66,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         (unscaled_height as f32 * scale) as f64,
     );
     let (pix_width, pix_height) = (scaled_width.floor() as u16, scaled_height.floor() as u16);
-    let mut state = GraphicsState::new(initial_transform);
+    let mut state = Context::new(initial_transform);
     let mut device = Renderer(RenderContext::new(pix_width, pix_height));
 
     device.0.set_paint(WHITE);
