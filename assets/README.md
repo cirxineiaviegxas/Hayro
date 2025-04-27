@@ -1,1 +1,3 @@
 CMYK Profile: https://github.com/saucecontrol/Compact-ICC-Profiles?tab=readme-ov-file#cmyk
+
+TODO: Add font licences
