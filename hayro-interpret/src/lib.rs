@@ -101,9 +101,9 @@ pub fn interpret<'a>(
                 state.path_mut().extend(rect);
             }
             TypedOperation::MoveTo(m) => {
-                state
-                    .path_mut()
-                    .move_to(Point::new(m.0.as_f64(), m.1.as_f64()));
+                let p = Point::new(m.0.as_f64(), m.1.as_f64());
+                *(state.last_point_mut()) = p;
+                state.path_mut().move_to(p);
             }
             TypedOperation::FillPathEvenOdd(_) => {
                 state.get_mut().fill = Fill::EvenOdd;
@@ -153,16 +153,27 @@ pub fn interpret<'a>(
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineTo(m) => {
-                state
-                    .path_mut()
-                    .line_to(Point::new(m.0.as_f64(), m.1.as_f64()));
+                let last_point = *state.last_point();
+                let mut p = Point::new(m.0.as_f64(), m.1.as_f64());
+                *(state.last_point_mut()) = p;
+                if last_point == p {
+                    // Add a small delta so that zero width lines can still have a round stroke.
+                    p.x += 0.0001;
+                }
+
+                state.path_mut().line_to(p);
             }
-            TypedOperation::CubicTo(c) => state.path_mut().curve_to(
-                Point::new(c.0.as_f64(), c.1.as_f64()),
-                Point::new(c.2.as_f64(), c.3.as_f64()),
-                Point::new(c.4.as_f64(), c.5.as_f64()),
-            ),
+            TypedOperation::CubicTo(c) => {
+                let p1 = Point::new(c.0.as_f64(), c.1.as_f64());
+                let p2 = Point::new(c.2.as_f64(), c.3.as_f64());
+                let p3 = Point::new(c.4.as_f64(), c.5.as_f64());
+
+                *(state.last_point_mut()) = p3;
+
+                state.path_mut().curve_to(p1, p2, p3)
+            }
             TypedOperation::ClosePath(_) => {
+                // TODO: Set last point?
                 state.path_mut().close_path();
             }
             TypedOperation::SetGraphicsState(gs) => {

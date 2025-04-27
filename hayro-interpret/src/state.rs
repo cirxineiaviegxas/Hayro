@@ -2,7 +2,7 @@ use crate::color::{ColorComponents, ColorSpace};
 use crate::convert::convert_transform;
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
-use kurbo::{Affine, BezPath, Cap, Join};
+use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 
@@ -28,6 +28,7 @@ pub(crate) struct State {
 pub struct GraphicsState {
     states: Vec<State>,
     path: BezPath,
+    last_point: Point,
     clip: Option<Fill>,
 }
 
@@ -54,6 +55,7 @@ impl GraphicsState {
                 fill: Fill::NonZero,
                 n_clips: 0,
             }],
+            last_point: Point::default(),
             clip: None,
             path: BezPath::new(),
         }
@@ -78,6 +80,14 @@ impl GraphicsState {
 
     pub(crate) fn path_mut(&mut self) -> &mut BezPath {
         &mut self.path
+    }
+
+    pub(crate) fn last_point(&self) -> &Point {
+        &self.last_point
+    }
+
+    pub(crate) fn last_point_mut(&mut self) -> &mut Point {
+        &mut self.last_point
     }
 
     pub(crate) fn clip(&self) -> &Option<Fill> {
