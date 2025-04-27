@@ -263,6 +263,20 @@ pub fn interpret<'a>(
             TypedOperation::RenderingIntent(_) => {
                 // Ignore for now.
             }
+            TypedOperation::NonStrokeColorNamed(n) => {
+                if n.1.is_none() {
+                    state.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
+                }   else {
+                    warn!("named color spaces are not supported!");
+                }
+            }
+            TypedOperation::StrokeColorNamed(n) => {
+                if n.1.is_none() {
+                    state.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
+                }   else {
+                    warn!("named color spaces are not supported!");
+                }
+            }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}
             TypedOperation::MarkedContentPointWithProperties(_) => {}
             TypedOperation::EndMarkedContent(_) => {}
