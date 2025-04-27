@@ -2,6 +2,8 @@
 name = "hayro-render"
 version = "0.1.0"
 edition = "2024"
+autotests = false
+
 
 [dependencies]
 hayro-syntax = { workspace = true }
@@ -11,7 +13,13 @@ vello_cpu = { workspace = true }
 vello_common = { workspace = true }
 vello_api = { workspace = true }
 
+[[test]]
+name = "tests"
+path = "tests/mod.rs"
+
+
 [dev-dependencies]
 walkdir = "2.5.0"
 log = "0.4.27"
+image = "0.25.6"
 
