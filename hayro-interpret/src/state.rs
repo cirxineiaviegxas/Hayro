@@ -1,10 +1,10 @@
+use crate::color::{ColorComponents, ColorSpace};
 use crate::convert::convert_transform;
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use kurbo::{Affine, BezPath, Cap, Join};
 use peniko::Fill;
 use smallvec::smallvec;
-use crate::color::{ColorComponents, ColorSpace};
 
 #[derive(Clone)]
 pub(crate) struct State {

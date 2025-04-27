@@ -1,3 +1,4 @@
+use hayro_interpret::color::Color;
 use hayro_interpret::device::Device;
 use hayro_interpret::{FillProps, GraphicsState, StrokeProps, interpret};
 use hayro_syntax::document::page::Page;
@@ -10,7 +11,6 @@ use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Rect};
 use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
-use hayro_interpret::color::Color;
 
 struct Renderer(RenderContext);
 
@@ -20,7 +20,8 @@ impl Device for Renderer {
     }
 
     fn set_paint(&mut self, color: Color) {
-        self.0.set_paint(color.to_rgba());
+        let res = color.to_rgba();
+        self.0.set_paint(res);
     }
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
@@ -55,7 +56,7 @@ impl Device for Renderer {
 
 pub fn render(page: &Page, scale: f32) -> Pixmap {
     let crop_box = page.crop_box();
-    
+
     let (unscaled_width, unscaled_height) = (crop_box.width(), crop_box.height());
     let initial_transform = Affine::scale(scale as f64)
         * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height])

@@ -370,7 +370,9 @@ dependencies = [
  "hayro-syntax",
  "kurbo",
  "log",
+ "once_cell",
  "peniko",
+ "qcms",
  "smallvec",
 ]
 
@@ -786,6 +788,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "qcms"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edecfcd5d755a5e5d98e24cf43113e7cdaec5a070edd0f6b250c03a573da30fa"
 
 [[package]]
 name = "qoi"

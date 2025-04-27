@@ -1,7 +1,7 @@
+use crate::color::Color;
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
 use peniko::Fill;
-use crate::color::Color;
 
 pub trait Device {
     fn set_transform(&mut self, affine: Affine);

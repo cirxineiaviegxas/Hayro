@@ -6,18 +6,39 @@ use hayro_syntax::object::dict::keys::EXT_G_STATE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use kurbo::{Cap, Join, Point, Rect, Shape};
+use once_cell::sync::Lazy;
 use peniko::Fill;
+use qcms::Transform;
 use smallvec::{SmallVec, smallvec};
 
+pub mod color;
 mod convert;
 pub mod device;
 mod state;
 mod util;
-pub mod color;
 
+use crate::color::{Color, ColorSpace};
 use crate::util::OptionLog;
 pub use state::GraphicsState;
-use crate::color::{Color, ColorSpace};
+
+static CMYK_TRANSFORM: Lazy<Transform> = Lazy::new(|| {
+    let input = qcms::Profile::new_from_slice(
+        include_bytes!("../../assets/CGATS001Compat-v2-micro.icc"),
+        false,
+    )
+    .unwrap();
+    let mut output = qcms::Profile::new_sRGB();
+    output.precache_output_transform();
+
+    Transform::new_to(
+        &input,
+        &output,
+        qcms::DataType::CMYK,
+        qcms::DataType::RGB8,
+        qcms::Intent::default(),
+    )
+    .unwrap()
+});
 
 pub struct StrokeProps {
     pub line_width: f32,
@@ -51,7 +72,8 @@ pub fn interpret<'a>(
             }
             TypedOperation::StrokeColorCmyk(s) => {
                 state.get_mut().stroke_cs = ColorSpace::DeviceCmyk;
-                state.get_mut().stroke_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
+                state.get_mut().stroke_color =
+                    smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineWidth(w) => {
                 state.get_mut().line_width = w.0.as_f32();
@@ -127,7 +149,8 @@ pub fn interpret<'a>(
             }
             TypedOperation::NonStrokeColorCmyk(s) => {
                 state.get_mut().fill_cs = ColorSpace::DeviceCmyk;
-                state.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
+                state.get_mut().fill_color =
+                    smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineTo(m) => {
                 state
@@ -157,7 +180,7 @@ pub fn interpret<'a>(
                 if let Some(clip) = *state.clip() {
                     device.set_transform(state.get().affine);
                     device.push_clip(state.path(), clip);
-                    
+
                     *(state.clip_mut()) = None;
                     state.get_mut().n_clips += 1;
                 }
@@ -166,7 +189,7 @@ pub fn interpret<'a>(
             TypedOperation::NonStrokeColor(c) => {
                 let fill_c = &mut state.get_mut().fill_color;
                 fill_c.truncate(0);
-                
+
                 for e in c.0 {
                     fill_c.push(e.as_f32());
                 }
@@ -174,7 +197,7 @@ pub fn interpret<'a>(
             TypedOperation::StrokeColor(c) => {
                 let stroke_c = &mut state.get_mut().stroke_color;
                 stroke_c.truncate(0);
-                
+
                 for e in c.0 {
                     stroke_c.push(e.as_f32());
                 }
@@ -189,18 +212,18 @@ pub fn interpret<'a>(
                 let mut num_clips = state.get().n_clips;
                 state.restore_state();
                 let target_clips = state.get().n_clips;
-                
+
                 while num_clips > target_clips {
                     device.pop_clip();
                     num_clips -= 1;
                 }
-            },
+            }
             _ => {
                 println!("{:?}", op);
             }
         }
     }
-    
+
     for _ in 0..state.get().n_clips {
         device.pop_clip();
     }
@@ -249,14 +272,22 @@ fn fill_stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
 }
 
 fn fill_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = Color::from_pdf(state.get().fill_cs, &state.get().fill_color, state.get().fill_alpha);
+    let color = Color::from_pdf(
+        state.get().fill_cs,
+        &state.get().fill_color,
+        state.get().fill_alpha,
+    );
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.fill_path(state.path(), &state.fill_props());
 }
 
 fn stroke_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = Color::from_pdf(state.get().stroke_cs, &state.get().stroke_color, state.get().stroke_alpha);
+    let color = Color::from_pdf(
+        state.get().stroke_cs,
+        &state.get().stroke_color,
+        state.get().stroke_alpha,
+    );
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.stroke_path(state.path(), &state.stroke_props());
