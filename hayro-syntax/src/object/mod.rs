@@ -21,6 +21,7 @@ pub mod number;
 pub mod r#ref;
 pub mod stream;
 pub mod string;
+pub mod rect;
 
 /// A trait for PDF objects.
 pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Static + Clone {

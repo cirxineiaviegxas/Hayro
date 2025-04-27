@@ -21,7 +21,7 @@ fn main() {
 
     entries.sort();
 
-    let entries = &entries[0..80];
+    let entries = &entries;
 
     render_pdfium(&entries);
     render_hayro(&entries);
@@ -55,6 +55,7 @@ fn render_hayro(entries: &[PathBuf]) {
     std::fs::create_dir_all(out_dir);
 
     for path in entries {
+        // println!("{}", path.display());
         let stem = path.file_stem().unwrap().to_str().unwrap();
         let file = std::fs::read(path).unwrap();
         let data = Data::new(&file);
