@@ -22,9 +22,9 @@ impl BaseFont {
 
 #[cfg(test)]
 mod tests {
-    use crate::font::encodings::HELVETICA;
-    use crate::font::glyph_list::GLYPH_NAMES;
-    use skrifa::{FontRef, MetadataProvider};
+    
+    
+    
 
     // TODO: Check whether fallback fonts cover all chars of standard fonts
 }

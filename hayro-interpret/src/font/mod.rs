@@ -1,14 +1,9 @@
 use crate::font::base::BaseFont;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_FONT, F, TYPE};
+use hayro_syntax::object::dict::keys::{BASE_FONT, TYPE};
 use hayro_syntax::object::name::Name;
-use peniko::color::Srgb;
-use skrifa::instance::{LocationRef, Size};
-use skrifa::metrics::GlyphMetrics;
-use skrifa::{FontRef, MetadataProvider, OutlineGlyphCollection};
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::sync::Arc;
-use yoke::{Yoke, Yokeable};
 use crate::font::blob::{FontBlob, ROBOTO};
 
 mod base;
