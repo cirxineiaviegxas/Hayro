@@ -263,6 +263,11 @@ pub fn interpret<'a>(
             TypedOperation::RenderingIntent(_) => {
                 // Ignore for now.
             }
+            TypedOperation::BeginMarkedContentWithProperties(_) => {}
+            TypedOperation::MarkedContentPointWithProperties(_) => {}
+            TypedOperation::EndMarkedContent(_) => {}
+            TypedOperation::MarkedContentPoint(_) => {}
+            TypedOperation::BeginMarkedContent(_) => {}
             _ => {
                 println!("{:?}", op);
             }
