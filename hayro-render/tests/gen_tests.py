@@ -1,0 +1,29 @@
+import os
+
+# Directory where your PDFs are located
+pdf_directory = os.path.join(os.path.dirname(__file__), '../assets')  # relative to current Python file
+# Output Rust file
+output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
+
+def generate_rust_function(file_stem):
+    return f"#[test] fn {file_stem}() {{ run_test(\"{file_stem}\"); }}"
+
+def main():
+    rust_functions = []
+    
+    names = [f for f in os.listdir(pdf_directory)]
+    names.sort()
+
+    for filename in names:
+        if filename.endswith('.pdf'):
+            file_stem = os.path.splitext(filename)[0]
+            rust_functions.append(generate_rust_function(file_stem))
+
+    with open(output_file, 'w') as f:
+        f.write('use crate::run_test;\n\n')
+        f.write('\n'.join(rust_functions))
+
+    print(f"Generated {len(rust_functions)} Rust test functions into {output_file}")
+
+if __name__ == '__main__':
+    main()
