@@ -1,4 +1,5 @@
 mod glyph_list;
+mod encodings;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Font();

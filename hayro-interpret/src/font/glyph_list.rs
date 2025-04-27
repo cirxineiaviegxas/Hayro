@@ -1,4 +1,4 @@
-
+// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
 pub(crate) static GLYPH_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
