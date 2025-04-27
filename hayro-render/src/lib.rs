@@ -6,11 +6,11 @@ use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
 use std::io::Cursor;
 use vello_api::color::palette::css::WHITE;
-use vello_api::color::{AlphaColor, Srgb};
 use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Rect};
 use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
+use hayro_interpret::color::Color;
 
 struct Renderer(RenderContext);
 
@@ -19,8 +19,8 @@ impl Device for Renderer {
         self.0.set_transform(affine);
     }
 
-    fn set_paint(&mut self, color: AlphaColor<Srgb>) {
-        self.0.set_paint(color);
+    fn set_paint(&mut self, color: Color) {
+        self.0.set_paint(color.to_rgba());
     }
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {

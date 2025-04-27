@@ -1,9 +1,10 @@
 use crate::convert::convert_transform;
-use crate::{Color, FillProps, StrokeProps};
+use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use kurbo::{Affine, BezPath, Cap, Join};
 use peniko::Fill;
 use smallvec::smallvec;
+use crate::color::{ColorComponents, ColorSpace};
 
 #[derive(Clone)]
 pub(crate) struct State {
@@ -12,9 +13,11 @@ pub(crate) struct State {
     pub(crate) line_join: Join,
     pub(crate) miter_limit: f32,
     pub(crate) affine: Affine,
-    pub(crate) stroke_color: Color,
+    pub(crate) stroke_color: ColorComponents,
+    pub(crate) stroke_cs: ColorSpace,
     pub(crate) stroke_alpha: f32,
-    pub(crate) fill_color: Color,
+    pub(crate) fill_color: ColorComponents,
+    pub(crate) fill_cs: ColorSpace,
     pub(crate) fill_alpha: f32,
     // Strictly speaking not part of the graphics state, but we keep it there for
     // consistency.
@@ -43,8 +46,10 @@ impl GraphicsState {
                 miter_limit,
                 affine: initial_transform,
                 fill_alpha: 1.0,
-                stroke_color: smallvec![0.0, 0.0, 0.0],
-                fill_color: smallvec![0.0, 0.0, 0.0],
+                stroke_cs: ColorSpace::DeviceGray,
+                stroke_color: smallvec![0.0,],
+                fill_cs: ColorSpace::DeviceGray,
+                fill_color: smallvec![0.0],
                 stroke_alpha: 1.0,
                 fill: Fill::NonZero,
                 n_clips: 0,
@@ -59,7 +64,7 @@ impl GraphicsState {
         self.states.push(cur);
     }
 
-    pub(crate) fn set_stroke_color(&mut self, col: Color) {
+    pub(crate) fn set_stroke_color(&mut self, col: ColorComponents) {
         self.get_mut().stroke_color = col;
     }
 

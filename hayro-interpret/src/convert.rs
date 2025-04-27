@@ -1,4 +1,3 @@
-use crate::Color;
 use hayro_syntax::content::ops::{LineCap, LineJoin, Transform};
 use peniko::color::{AlphaColor, Srgb};
 
@@ -28,15 +27,5 @@ pub fn convert_line_join(lc: LineJoin) -> kurbo::Join {
         1 => kurbo::Join::Round,
         2 => kurbo::Join::Bevel,
         _ => kurbo::Join::Miter,
-    }
-}
-
-pub fn convert_color(c: &Color, alpha: f32) -> AlphaColor<Srgb> {
-    if c.len() == 1 {
-        AlphaColor::new([c[0], c[0], c[0], alpha])
-    } else if c.len() == 3 {
-        AlphaColor::new([c[0], c[1], c[2], alpha])
-    } else {
-        unimplemented!()
     }
 }

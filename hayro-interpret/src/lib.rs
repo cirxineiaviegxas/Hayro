@@ -1,4 +1,4 @@
-use crate::convert::{convert_color, convert_line_cap, convert_line_join};
+use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::Device;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::dict::Dict;
@@ -9,15 +9,15 @@ use kurbo::{Cap, Join, Point, Rect, Shape};
 use peniko::Fill;
 use smallvec::{SmallVec, smallvec};
 
-type Color = SmallVec<[f32; 4]>;
-
 mod convert;
 pub mod device;
 mod state;
 mod util;
+pub mod color;
 
 use crate::util::OptionLog;
 pub use state::GraphicsState;
+use crate::color::{Color, ColorSpace};
 
 pub struct StrokeProps {
     pub line_width: f32,
@@ -42,10 +42,16 @@ pub fn interpret<'a>(
         match op {
             TypedOperation::SaveState(_) => state.save_state(),
             TypedOperation::StrokeColorDeviceRgb(s) => {
+                state.get_mut().stroke_cs = ColorSpace::DeviceRgb;
                 state.get_mut().stroke_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::StrokeColorDeviceGray(s) => {
+                state.get_mut().stroke_cs = ColorSpace::DeviceGray;
                 state.get_mut().stroke_color = smallvec![s.0.as_f32()];
+            }
+            TypedOperation::StrokeColorCmyk(s) => {
+                state.get_mut().stroke_cs = ColorSpace::DeviceCmyk;
+                state.get_mut().stroke_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineWidth(w) => {
                 state.get_mut().line_width = w.0.as_f32();
@@ -111,11 +117,17 @@ pub fn interpret<'a>(
                 state.get_mut().fill = Fill::NonZero;
                 fill_stroke_path(state, device);
             }
-            TypedOperation::NonStrokeColorDeviceGray(d) => {
-                state.get_mut().fill_color = smallvec![d.0.as_f32()];
+            TypedOperation::NonStrokeColorDeviceGray(s) => {
+                state.get_mut().fill_cs = ColorSpace::DeviceGray;
+                state.get_mut().fill_color = smallvec![s.0.as_f32()];
             }
-            TypedOperation::NonStrokeColorDeviceRgb(d) => {
-                state.get_mut().fill_color = smallvec![d.0.as_f32(), d.1.as_f32(), d.2.as_f32()];
+            TypedOperation::NonStrokeColorDeviceRgb(s) => {
+                state.get_mut().fill_cs = ColorSpace::DeviceRgb;
+                state.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
+            }
+            TypedOperation::NonStrokeColorCmyk(s) => {
+                state.get_mut().fill_cs = ColorSpace::DeviceCmyk;
+                state.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineTo(m) => {
                 state
@@ -237,14 +249,14 @@ fn fill_stroke_path(state: &mut GraphicsState, device: &mut impl Device) {
 }
 
 fn fill_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = convert_color(&state.get().fill_color, state.get().fill_alpha);
+    let color = Color::from_pdf(state.get().fill_cs, &state.get().fill_color, state.get().fill_alpha);
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.fill_path(state.path(), &state.fill_props());
 }
 
 fn stroke_path_impl(state: &mut GraphicsState, device: &mut impl Device) {
-    let color = convert_color(&state.get().stroke_color, state.get().stroke_alpha);
+    let color = Color::from_pdf(state.get().stroke_cs, &state.get().stroke_color, state.get().stroke_alpha);
     device.set_paint(color);
     device.set_transform(state.get().affine);
     device.stroke_path(state.path(), &state.stroke_props());
