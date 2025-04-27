@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+use skrifa::charmap::Charmap;
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
 use skrifa::{FontRef, MetadataProvider, OutlineGlyphCollection};
@@ -37,10 +38,27 @@ impl FontBlob {
                         // PDF fonts assume a upem of 1000, so setting this here saves us some
                         // work later.
                         .glyph_metrics(Size::new(1000.0), LocationRef::default()),
+                    charmap: font_ref.charmap(),
                 }
             });
 
         Self(Arc::new(font_ref_yoke))
+    }
+
+    pub fn font_ref(&self) -> &FontRef {
+        &self.0.as_ref().get().font_ref
+    }
+
+    pub fn glyph_metrics(&self) -> &GlyphMetrics {
+        &self.0.as_ref().get().glyph_metrics
+    }
+
+    pub fn outline_glyphs(&self) -> &OutlineGlyphCollection {
+        &self.0.as_ref().get().outline_glyphs
+    }
+
+    pub fn charmap(&self) -> &Charmap {
+        &self.0.as_ref().get().charmap
     }
 }
 
@@ -49,4 +67,5 @@ struct FontRefYoke<'a> {
     pub font_ref: FontRef<'a>,
     pub glyph_metrics: GlyphMetrics<'a>,
     pub outline_glyphs: OutlineGlyphCollection<'a>,
+    pub charmap: Charmap<'a>,
 }

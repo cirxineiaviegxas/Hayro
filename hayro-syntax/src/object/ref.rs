@@ -5,7 +5,7 @@ use crate::reader::{Readable, Reader, Skippable};
 use std::fmt::{Debug, Formatter};
 
 /// A reference to an object.
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct ObjRef {
     pub obj_number: i32,
     pub gen_number: i32,

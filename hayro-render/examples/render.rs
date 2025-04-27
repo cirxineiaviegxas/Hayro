@@ -7,7 +7,9 @@ fn main() {
         log::set_max_level(log::LevelFilter::Warn);
     }
 
-    let file = std::fs::read("/Users/lstampfl/Downloads/standard_pdf_fonts.pdf").unwrap();
+    let file =
+        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/pdftc_010k_0131_cleaned.pdf")
+            .unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 

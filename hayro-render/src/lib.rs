@@ -1,6 +1,7 @@
 use hayro_interpret::color::Color;
+use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
-use hayro_interpret::{FillProps, Context, StrokeProps, interpret};
+use hayro_interpret::{FillProps, StrokeProps, interpret};
 use hayro_syntax::document::page::Page;
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;

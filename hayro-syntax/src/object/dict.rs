@@ -2,7 +2,7 @@ use crate::file::xref::XRef;
 use crate::object;
 use crate::object::name::Name;
 use crate::object::null::Null;
-use crate::object::r#ref::MaybeRef;
+use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use std::collections::HashMap;
@@ -54,6 +54,13 @@ impl<'a> Dict<'a> {
         T: ObjectLike<'a>,
     {
         self.get_raw::<T>(key)?.resolve(&self.0.xref)
+    }
+
+    /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
+    pub fn get_ref(&self, key: Name) -> Option<ObjRef> {
+        let offset = *self.0.offsets.get(&key)?;
+
+        Reader::new(&self.0.data[offset..]).read_with_xref::<ObjRef>(&self.0.xref)
     }
 
     /// Returns an iterator over all keys in the dictionary.

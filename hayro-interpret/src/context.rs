@@ -1,11 +1,17 @@
+use crate::color::ColorSpace;
+use crate::convert::convert_transform;
+use crate::font::Font;
+use crate::state::{State, TextState};
+use crate::{FillProps, StrokeProps};
+use hayro_syntax::content::ops::Transform;
+use hayro_syntax::file::xref::XRef;
+use hayro_syntax::object::dict::Dict;
+use hayro_syntax::object::name::Name;
+use hayro_syntax::object::r#ref::ObjRef;
 use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
-use hayro_syntax::content::ops::Transform;
-use crate::color::ColorSpace;
-use crate::convert::convert_transform;
-use crate::state::{State, TextState};
-use crate::{FillProps, StrokeProps};
+use std::collections::HashMap;
 
 pub struct Context {
     states: Vec<State>,
@@ -13,6 +19,7 @@ pub struct Context {
     sub_path_start: Point,
     last_point: Point,
     clip: Option<Fill>,
+    font_cache: HashMap<ObjRef, Font>,
 }
 
 impl Context {
@@ -45,6 +52,7 @@ impl Context {
             sub_path_start: Point::default(),
             clip: None,
             path: BezPath::new(),
+            font_cache: HashMap::new(),
         }
     }
 
@@ -99,6 +107,19 @@ impl Context {
 
     pub(crate) fn pre_concat_transform(&mut self, transform: Transform) {
         self.get_mut().affine *= convert_transform(transform);
+    }
+
+    pub(crate) fn get_font(&mut self, dict: &Dict, name: Name) -> Font {
+        let font_ref = dict.get_ref(name).unwrap();
+
+        self.font_cache
+            .entry(font_ref)
+            .or_insert_with(|| {
+                let font_dict = dict.get::<Dict>(name).unwrap();
+
+                Font::new(&font_dict).unwrap()
+            })
+            .clone()
     }
 
     pub(crate) fn stroke_props(&self) -> StrokeProps {

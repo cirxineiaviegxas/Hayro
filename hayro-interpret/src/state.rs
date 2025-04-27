@@ -7,7 +7,7 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::{SmallVec, smallvec};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct TextState {
     pub(crate) char_space: f32,
     pub(crate) word_space: f32,
@@ -23,23 +23,25 @@ pub(crate) struct TextState {
 
 impl TextState {
     fn temp_transform(&self) -> Affine {
-        let font_size = self.font_size();
-
         Affine::new([
-            (font_size * self.horizontal_scaling) as f64,
+            self.horizontal_scaling as f64 / 100.0,
             0.0,
             0.0,
-            font_size as f64,
+            1.0,
             0.0,
             self.rise as f64,
         ])
     }
 
-    fn font_size(&self) -> f32 {
+    pub(crate) fn font_size(&self) -> f32 {
         self.font.as_ref().map(|f| f.1).unwrap_or(1.0)
     }
 
-    fn step(&mut self, glyph_width: f32, positional_adjustment: f32) {
+    pub(crate) fn font(&self) -> Font {
+        self.font.as_ref().map(|f| f.0.clone()).unwrap()
+    }
+
+    pub(crate) fn step(&mut self, glyph_width: f32, positional_adjustment: f32) {
         // TODO: Vertical writing
         let tx = ((glyph_width - positional_adjustment) * self.font_size()
             + self.char_space
@@ -66,7 +68,7 @@ impl Default for TextState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct State {
     pub(crate) line_width: f32,
     pub(crate) line_cap: Cap,
@@ -90,6 +92,12 @@ pub(crate) struct State {
 
 impl State {
     pub(crate) fn text_transform(&self) -> Affine {
+        println!(
+            "{:?}, {:?}, {:?}",
+            self.affine,
+            self.text_state.text_matrix,
+            self.text_state.temp_transform()
+        );
         self.affine * self.text_state.text_matrix * self.text_state.temp_transform()
     }
 }

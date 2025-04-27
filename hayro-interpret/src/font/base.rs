@@ -22,9 +22,6 @@ impl BaseFont {
 
 #[cfg(test)]
 mod tests {
-    
-    
-    
 
     // TODO: Check whether fallback fonts cover all chars of standard fonts
 }

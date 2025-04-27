@@ -13,12 +13,12 @@ use qcms::Transform;
 use smallvec::{SmallVec, smallvec};
 
 pub mod color;
+pub mod context;
 mod convert;
 pub mod device;
 mod font;
 mod state;
 mod util;
-mod context;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
@@ -70,7 +70,8 @@ pub fn interpret<'a>(
             TypedOperation::SaveState(_) => context.save_state(),
             TypedOperation::StrokeColorDeviceRgb(s) => {
                 context.get_mut().stroke_cs = ColorSpace::DeviceRgb;
-                context.get_mut().stroke_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
+                context.get_mut().stroke_color =
+                    smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::StrokeColorDeviceGray(s) => {
                 context.get_mut().stroke_cs = ColorSpace::DeviceGray;
@@ -313,9 +314,35 @@ pub fn interpret<'a>(
                     m.4.as_f64(),
                     m.5.as_f64(),
                 ]);
-                context.get_mut().text_state.text_matrix = context.get().text_state.initial_text_matrix
+                context.get_mut().text_state.text_matrix =
+                    context.get().text_state.initial_text_matrix
             }
             TypedOperation::EndText(_) => {}
+            TypedOperation::TextFont(t) => {
+                let font = context.get_font(&fonts, t.0);
+                context.get_mut().text_state.font = Some((font, t.1.as_f32()));
+            }
+            TypedOperation::ShowText(s) => {
+                let font = context.get().text_state.font();
+
+                for b in s.0.get().as_ref() {
+                    let glyph = font.map_code(*b);
+
+                    let outline = font.outline(context.get().text_state.font_size(), glyph);
+                    let t = context.get().text_transform();
+                    // eprintln!("{:?}", context.get());
+                    // eprintln!("{:?}", t);
+                    let color = Color::from_pdf(
+                        context.get().fill_cs,
+                        &context.get().fill_color,
+                        context.get().fill_alpha,
+                    );
+                    device.set_paint(color);
+
+                    device.set_transform(t);
+                    device.fill_path(&outline, &context.fill_props())
+                }
+            }
             _ => {
                 println!("{:?}", op);
             }
