@@ -11,6 +11,7 @@ use once_cell::sync::Lazy;
 use peniko::Fill;
 use qcms::Transform;
 use smallvec::{SmallVec, smallvec};
+use hayro_syntax::object::Object;
 
 pub mod color;
 mod convert;
@@ -280,6 +281,10 @@ pub fn interpret<'a>(
                 } else {
                     warn!("named color spaces are not supported!");
                 }
+            }
+            TypedOperation::InlineImage(i) => {
+                println!("{:?}", i.0.dict().keys().into_iter().map(|l| l.as_str()).collect::<Vec<_>>());
+                // println!("{:?}", i.0.dict().get::<Object>(Name::from_unescaped(b"CS")));
             }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}
             TypedOperation::MarkedContentPointWithProperties(_) => {}
