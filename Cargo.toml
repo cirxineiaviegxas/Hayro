@@ -22,3 +22,4 @@ vello_cpu = { path = "../vello/sparse_strips/vello_cpu" }
 vello_common = { path = "../vello/sparse_strips/vello_common" }
 vello_api = { path = "../vello/sparse_strips/vello_api" }
 qcms = "0.3.0"
+phf = { version = "0.11.3" }

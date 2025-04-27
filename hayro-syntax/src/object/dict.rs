@@ -351,6 +351,7 @@ pub mod keys {
     key!(FILTER, b"Filter");
     key!(FIRST, b"First");
     key!(FONT, b"Font");
+    key!(FONT_DESCRIPTOR, b"FontDescriptor");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
     key!(LENGTH, b"Length");
@@ -364,6 +365,7 @@ pub mod keys {
     key!(RESOURCES, b"Resources");
     key!(ROOT, b"Root");
     key!(SIZE, b"Size");
+    key!(SUBTYPE, b"Subtype");
     key!(TYPE, b"Type");
     key!(XREFSTM, b"XRefStm");
     key!(W, b"W");

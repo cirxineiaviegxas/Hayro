@@ -1,3 +1,7 @@
+use crate::font::glyph_list::GLYPH_NAME_MAP;
+
+mod glyph_list;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Font();
 
@@ -12,4 +16,8 @@ pub enum TextRenderingMode {
     StrokeAndClip,
     FillAndStrokeAndClip,
     Clip,
+}
+
+fn test() {
+    GLYPH_NAME_MAP.get("AEacute").unwrap();
 }

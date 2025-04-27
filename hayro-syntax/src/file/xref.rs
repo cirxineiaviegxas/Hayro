@@ -69,7 +69,7 @@ impl<'a> XRef<'a> {
         iter::from_fn(move || {
             keys_iter
                 .as_mut()
-                .and_then(|iter| iter.next().map(|k| self.get(*k).unwrap()))
+                .and_then(|iter| iter.next().and_then(|k| self.get(*k)))
         })
     }
 

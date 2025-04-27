@@ -11,3 +11,4 @@ smallvec = { workspace = true }
 log = { workspace = true }
 qcms=  { workspace = true }
 once_cell = "1.21.3"
+phf = { workspace = true, features = ["macros"] }

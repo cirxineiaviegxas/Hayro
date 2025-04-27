@@ -7,7 +7,7 @@ fn main() {
         log::set_max_level(log::LevelFilter::Warn);
     }
 
-    let file = std::fs::read("/Users/lstampfl/Downloads/pdfs/batch/pdftc_010k_0058.pdf").unwrap();
+    let file = std::fs::read("/Users/lstampfl/Downloads/standard_pdf_fonts.pdf").unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 
