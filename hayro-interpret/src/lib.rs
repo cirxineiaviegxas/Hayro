@@ -328,7 +328,7 @@ pub fn interpret<'a>(
                 for b in s.0.get().as_ref() {
                     let glyph = font.map_code(*b);
 
-                    let outline = font.outline(context.get().text_state.font_size(), glyph);
+                    let outline = font.outline(glyph);
                     let t = context.get().text_transform();
                     // eprintln!("{:?}", context.get());
                     // eprintln!("{:?}", t);
@@ -340,7 +340,13 @@ pub fn interpret<'a>(
                     device.set_paint(color);
 
                     device.set_transform(t);
-                    device.fill_path(&outline, &context.fill_props())
+                    device.fill_path(&outline, &context.fill_props());
+
+                    eprintln!("advance width: {}", font.glyph_width(glyph));
+                    context
+                        .get_mut()
+                        .text_state
+                        .step(font.glyph_width(glyph), 0.0);
                 }
             }
             _ => {

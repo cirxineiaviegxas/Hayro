@@ -24,13 +24,17 @@ pub(crate) struct TextState {
 impl TextState {
     fn temp_transform(&self) -> Affine {
         Affine::new([
-            self.horizontal_scaling as f64 / 100.0,
+            self.font_size() as f64 * self.horizontal_scaling() as f64,
             0.0,
             0.0,
-            1.0,
+            self.font_size() as f64,
             0.0,
             self.rise as f64,
         ])
+    }
+
+    fn horizontal_scaling(&self) -> f32 {
+        self.horizontal_scaling / 100.0
     }
 
     pub(crate) fn font_size(&self) -> f32 {
@@ -46,7 +50,7 @@ impl TextState {
         let tx = ((glyph_width - positional_adjustment) * self.font_size()
             + self.char_space
             + self.word_space)
-            * self.horizontal_scaling;
+            * self.horizontal_scaling();
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }
 }

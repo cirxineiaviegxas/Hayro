@@ -35,9 +35,15 @@ impl Font {
         }
     }
 
-    pub fn outline(&self, size: f32, glyph: GlyphId) -> BezPath {
+    pub fn outline(&self, glyph: GlyphId) -> BezPath {
         match self.0.as_ref() {
-            FontType::Type1Font(t) => t.draw_glyph(size, glyph),
+            FontType::Type1Font(t) => t.draw_glyph(glyph),
+        }
+    }
+
+    pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
+        match self.0.as_ref() {
+            FontType::Type1Font(t) => t.glyph_width(glyph),
         }
     }
 }
@@ -80,9 +86,9 @@ impl Type1Font {
             .unwrap_or(GlyphId::NOTDEF)
     }
 
-    pub fn draw_glyph(&self, size: f32, glyph: GlyphId) -> BezPath {
+    pub fn draw_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
-        let draw_settings = DrawSettings::unhinted(Size::new(size), LocationRef::default());
+        let draw_settings = DrawSettings::unhinted(Size::new(1.0), LocationRef::default());
 
         let Some(outline) = self.blob.outline_glyphs().get(glyph) else {
             return BezPath::new();
@@ -90,6 +96,13 @@ impl Type1Font {
 
         let _ = outline.draw(draw_settings, &mut path);
         path.0
+    }
+
+    pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
+        self.blob
+            .glyph_metrics()
+            .advance_width(glyph)
+            .unwrap_or(0.0)
     }
 }
 
