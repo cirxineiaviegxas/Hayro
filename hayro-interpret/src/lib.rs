@@ -6,6 +6,7 @@ use hayro_syntax::object::dict::keys::EXT_G_STATE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use kurbo::{Cap, Join, Point, Rect, Shape};
+use log::warn;
 use once_cell::sync::Lazy;
 use peniko::Fill;
 use qcms::Transform;
@@ -45,6 +46,8 @@ pub struct StrokeProps {
     pub line_cap: Cap,
     pub line_join: Join,
     pub miter_limit: f32,
+    pub dash_array: SmallVec<[f32; 4]>,
+    pub dash_offset: f32,
 }
 
 pub struct FillProps {
@@ -103,6 +106,7 @@ pub fn interpret<'a>(
             TypedOperation::MoveTo(m) => {
                 let p = Point::new(m.0.as_f64(), m.1.as_f64());
                 *(state.last_point_mut()) = p;
+                *(state.sub_path_start_mut()) = p;
                 state.path_mut().move_to(p);
             }
             TypedOperation::FillPathEvenOdd(_) => {
@@ -172,9 +176,23 @@ pub fn interpret<'a>(
 
                 state.path_mut().curve_to(p1, p2, p3)
             }
+            TypedOperation::CubicStartTo(c) => {
+                let p1 = *state.last_point();
+                let p2 = Point::new(c.0.as_f64(), c.1.as_f64());
+                let p3 = Point::new(c.2.as_f64(), c.3.as_f64());
+
+                state.path_mut().curve_to(p1, p2, p3)
+            }
+            TypedOperation::CubicEndTo(c) => {
+                let p2 = Point::new(c.0.as_f64(), c.1.as_f64());
+                let p3 = Point::new(c.2.as_f64(), c.3.as_f64());
+
+                state.path_mut().curve_to(p2, p3, p3)
+            }
             TypedOperation::ClosePath(_) => {
-                // TODO: Set last point?
                 state.path_mut().close_path();
+
+                *(state.last_point_mut()) = *state.sub_path_start();
             }
             TypedOperation::SetGraphicsState(gs) => {
                 let gs = ext_g_stages
@@ -229,6 +247,19 @@ pub fn interpret<'a>(
                     num_clips -= 1;
                 }
             }
+            TypedOperation::FlatnessTolerance(_) => {
+                // Ignore for now.
+            }
+            TypedOperation::ColorSpaceStroke(c) => {
+                state.get_mut().stroke_cs = handle_cs(c.0);
+            }
+            TypedOperation::ColorSpaceNonStroke(c) => {
+                state.get_mut().fill_cs = handle_cs(c.0);
+            }
+            TypedOperation::DashPattern(p) => {
+                state.get_mut().dash_offset = p.1.as_f32();
+                state.get_mut().dash_array = p.0.iter::<f32>().collect();
+            }
             _ => {
                 println!("{:?}", op);
             }
@@ -237,6 +268,19 @@ pub fn interpret<'a>(
 
     for _ in 0..state.get().n_clips {
         device.pop_clip();
+    }
+}
+
+fn handle_cs(key: Name) -> ColorSpace {
+    match key.get().as_ref() {
+        b"DeviceRGB" => ColorSpace::DeviceRgb,
+        b"DeviceGray" => ColorSpace::DeviceGray,
+        b"DeviceCMYK" => ColorSpace::DeviceCmyk,
+        _ => {
+            warn!("unsupported color space {}", key.as_str());
+
+            ColorSpace::DeviceGray
+        }
     }
 }
 

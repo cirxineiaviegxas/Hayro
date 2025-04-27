@@ -4,7 +4,7 @@ use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
-use smallvec::smallvec;
+use smallvec::{SmallVec, smallvec};
 
 #[derive(Clone)]
 pub(crate) struct State {
@@ -12,6 +12,8 @@ pub(crate) struct State {
     pub(crate) line_cap: Cap,
     pub(crate) line_join: Join,
     pub(crate) miter_limit: f32,
+    pub(crate) dash_array: SmallVec<[f32; 4]>,
+    pub(crate) dash_offset: f32,
     pub(crate) affine: Affine,
     pub(crate) stroke_color: ColorComponents,
     pub(crate) stroke_cs: ColorSpace,
@@ -28,6 +30,7 @@ pub(crate) struct State {
 pub struct GraphicsState {
     states: Vec<State>,
     path: BezPath,
+    sub_path_start: Point,
     last_point: Point,
     clip: Option<Fill>,
 }
@@ -45,6 +48,8 @@ impl GraphicsState {
                 line_cap,
                 line_join,
                 miter_limit,
+                dash_array: smallvec![],
+                dash_offset: 0.0,
                 affine: initial_transform,
                 fill_alpha: 1.0,
                 stroke_cs: ColorSpace::DeviceGray,
@@ -56,6 +61,7 @@ impl GraphicsState {
                 n_clips: 0,
             }],
             last_point: Point::default(),
+            sub_path_start: Point::default(),
             clip: None,
             path: BezPath::new(),
         }
@@ -80,6 +86,14 @@ impl GraphicsState {
 
     pub(crate) fn path_mut(&mut self) -> &mut BezPath {
         &mut self.path
+    }
+
+    pub(crate) fn sub_path_start(&self) -> &Point {
+        &self.sub_path_start
+    }
+
+    pub(crate) fn sub_path_start_mut(&mut self) -> &mut Point {
+        &mut self.sub_path_start
     }
 
     pub(crate) fn last_point(&self) -> &Point {
@@ -118,6 +132,8 @@ impl GraphicsState {
             line_cap: state.line_cap,
             line_join: state.line_join,
             miter_limit: state.miter_limit,
+            dash_array: state.dash_array.clone(),
+            dash_offset: state.dash_offset,
         }
     }
 

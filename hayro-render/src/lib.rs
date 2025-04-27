@@ -31,8 +31,8 @@ impl Device for Renderer {
             miter_limit: stroke_props.miter_limit as f64,
             start_cap: stroke_props.line_cap,
             end_cap: stroke_props.line_cap,
-            dash_pattern: Default::default(),
-            dash_offset: 0.0,
+            dash_pattern: stroke_props.dash_array.iter().map(|n| *n as f64).collect(),
+            dash_offset: stroke_props.dash_offset as f64,
         };
 
         self.0.set_stroke(stroke);
