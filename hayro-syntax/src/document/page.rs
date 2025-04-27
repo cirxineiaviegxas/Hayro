@@ -14,15 +14,26 @@ pub struct Pages<'a> {
     pub pages: Vec<Page<'a>>,
 }
 
+#[derive(Debug, Clone)]
 struct PagesContext {
     media_box: Option<Rect>,
-    clip_box: Option<Rect>,
+    crop_box: Option<Rect>,
+}
+
+impl PagesContext {
+    pub fn new() -> Self {
+        Self {
+            media_box: None,
+            crop_box: None,
+        }
+    }
 }
 
 impl<'a> Pages<'a> {
     pub fn new(pages_dict: Dict<'a>) -> Option<Pages<'a>> {
         let mut pages = vec![];
-        resolve_pages(pages_dict, &mut pages)?;
+        let ctx = PagesContext::new();
+        resolve_pages(pages_dict, &mut pages, ctx)?;
 
         Some(Self { pages })
     }
@@ -32,9 +43,13 @@ impl<'a> Pages<'a> {
     }
 }
 
-fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>) -> Option<()> {
+fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>, mut ctx: PagesContext) -> Option<()> {
     if let Some(media_box) = pages_dict.get::<Rect>(MEDIA_BOX) {
-        
+        ctx.media_box = Some(media_box);
+    }
+    
+    if let Some(crop_box) = pages_dict.get::<Rect>(CROP_BOX) {
+        ctx.crop_box = Some(crop_box);
     }
     
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
@@ -43,8 +58,8 @@ fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>) -> Optio
 
     for dict in kids.iter::<Dict>() {
         match dict.get::<Name>(TYPE)?.get().as_ref() {
-            b"Pages" => resolve_pages(dict, entries)?,
-            b"Page" => entries.push(Page::new(dict)),
+            b"Pages" => resolve_pages(dict, entries, ctx.clone())?,
+            b"Page" => entries.push(Page::new(dict, &ctx)),
             _ => return None,
         }
     }
@@ -54,13 +69,30 @@ fn resolve_pages<'a>(pages_dict: Dict<'a>, entries: &mut Vec<Page<'a>>) -> Optio
 
 pub struct Page<'a> {
     inner: Dict<'a>,
+    media_box: kurbo::Rect,
+    crop_box: kurbo::Rect,
     page_streams: OnceCell<Option<Vec<u8>>>,
 }
 
 impl<'a> Page<'a> {
-    fn new(dict: Dict<'a>) -> Page<'a> {
+    fn new(dict: Dict<'a>, ctx: &PagesContext) -> Page<'a> {
+        let media_box = dict
+            .get::<Rect>(MEDIA_BOX)
+            .or_else(|| ctx.media_box)
+            // TODO: A default media box
+            .unwrap();
+        
+        let mut crop_box = dict
+            .get::<Rect>(CROP_BOX)
+            .or_else(|| ctx.crop_box)
+            .unwrap_or(media_box);
+        
+        let crop_box = crop_box.get().intersect(media_box.get());
+        
         Self {
             inner: dict,
+            media_box: media_box.get(),
+            crop_box,
             page_streams: OnceCell::new(),
         }
     }
@@ -108,17 +140,11 @@ impl<'a> Page<'a> {
     }
 
     pub fn media_box(&self) -> kurbo::Rect {
-        self
-            .inner
-            .get::<Rect>(MEDIA_BOX).unwrap().get()
+        self.media_box
     }
 
     pub fn crop_box(&self) -> kurbo::Rect {
-        let media_box = self.media_box();
-
-        let crop_box = self.inner.get::<Rect>(CROP_BOX).map(|r| r.get()).unwrap_or(media_box);
-
-        media_box.intersect(crop_box)
+        self.crop_box
     }
 
     pub fn operations(&self) -> UntypedIter {
