@@ -1,3 +1,4 @@
+use once_cell::sync::Lazy;
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
 use skrifa::{FontRef, MetadataProvider, OutlineGlyphCollection};
@@ -5,14 +6,18 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use yoke::{Yoke, Yokeable};
 
+pub(crate) static ROBOTO: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/Roboto-Regular.ttf"
+    )))
+});
+
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 type FontYoke = Yoke<FontRefYoke<'static>, FontData>;
 
 // TODO: Wrap in Arc?
 #[derive(Clone)]
-pub struct FontBlob {
-    yoke: FontYoke,
-}
+pub struct FontBlob(Arc<FontYoke>);
 
 impl Debug for FontBlob {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -35,9 +40,7 @@ impl FontBlob {
                 }
             });
 
-        Self {
-            yoke: font_ref_yoke,
-        }
+        Self(Arc::new(font_ref_yoke))
     }
 }
 

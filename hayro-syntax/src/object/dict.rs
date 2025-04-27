@@ -334,6 +334,7 @@ pub mod keys {
         };
     }
 
+    key!(BASE_FONT, b"BaseFont");
     key!(BITS_PER_COMPONENT, b"BitsPerComponent");
     key!(C0, b"C0");
     key!(C1, b"C1");

@@ -2,6 +2,7 @@ use crate::font::encodings::HELVETICA;
 use crate::font::glyph_list::GLYPH_NAMES;
 use crate::util::OptionLog;
 
+#[derive(Copy, Clone, Debug)]
 pub(crate) enum BaseFont {
     Helvetica,
 }
