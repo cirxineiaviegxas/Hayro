@@ -303,6 +303,17 @@ pub fn interpret<'a>(
                 state.get_mut().text_state.text_matrix = Affine::IDENTITY;
                 state.get_mut().text_state.text_line_matrix = Affine::IDENTITY;
             }
+            TypedOperation::SetTextMatrix(m) => {
+                state.get_mut().text_state.initial_text_matrix = Affine::new([
+                    m.0.as_f64(),
+                    m.1.as_f64(),
+                    m.2.as_f64(),
+                    m.3.as_f64(),
+                    m.4.as_f64(),
+                    m.5.as_f64(),
+                ]);
+                state.get_mut().text_state.text_matrix = state.get().text_state.initial_text_matrix
+            }
             TypedOperation::EndText(_) => {}
             _ => {
                 println!("{:?}", op);

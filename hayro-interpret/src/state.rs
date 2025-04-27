@@ -15,9 +15,38 @@ pub(crate) struct TextState {
     pub(crate) leading: f32,
     pub(crate) font: Option<(Font, f32)>,
     pub(crate) render_mode: TextRenderingMode,
+    pub(crate) initial_text_matrix: Affine,
     pub(crate) text_matrix: Affine,
     pub(crate) text_line_matrix: Affine,
     pub(crate) rise: f32,
+}
+
+impl TextState {
+    fn temp_transform(&self) -> Affine {
+        let font_size = self.font_size();
+
+        Affine::new([
+            (font_size * self.horizontal_scaling) as f64,
+            0.0,
+            0.0,
+            font_size as f64,
+            0.0,
+            self.rise as f64,
+        ])
+    }
+
+    fn font_size(&self) -> f32 {
+        self.font.map(|f| f.1).unwrap_or(1.0)
+    }
+
+    fn step(&mut self, glyph_width: f32, positional_adjustment: f32) {
+        // TODO: Vertical writing
+        let tx = ((glyph_width - positional_adjustment) * self.font_size()
+            + self.char_space
+            + self.word_space)
+            * self.horizontal_scaling;
+        self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
+    }
 }
 
 impl Default for TextState {
@@ -31,6 +60,7 @@ impl Default for TextState {
             render_mode: Default::default(),
             text_matrix: Affine::IDENTITY,
             text_line_matrix: Affine::IDENTITY,
+            initial_text_matrix: Affine::IDENTITY,
             rise: 0.0,
         }
     }
@@ -56,6 +86,12 @@ pub(crate) struct State {
     // consistency.
     pub(crate) fill: Fill,
     pub(crate) n_clips: u32,
+}
+
+impl State {
+    pub(crate) fn text_transform(&self) -> Affine {
+        self.affine * self.text_state.text_matrix * self.text_state.temp_transform()
+    }
 }
 
 pub struct GraphicsState {
