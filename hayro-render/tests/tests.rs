@@ -77,6 +77,10 @@ fn pdftc_010k_0150() {
     run_test("pdftc_010k_0150");
 }
 #[test]
+fn pdftc_010k_0160() {
+    run_test("pdftc_010k_0160");
+}
+#[test]
 fn pdftc_010k_0211() {
     run_test("pdftc_010k_0211");
 }
