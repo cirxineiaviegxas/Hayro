@@ -10,7 +10,11 @@ use log::warn;
 use once_cell::sync::Lazy;
 use peniko::Fill;
 use qcms::Transform;
+use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
+use hayro_syntax::object::array::Array;
+use hayro_syntax::object::Object;
+use hayro_syntax::object::string::String;
 
 pub mod color;
 pub mod context;
@@ -22,6 +26,7 @@ mod util;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
+use crate::font::Font;
 use crate::util::OptionLog;
 
 static CMYK_TRANSFORM: Lazy<Transform> = Lazy::new(|| {
@@ -324,38 +329,37 @@ pub fn interpret<'a>(
             }
             TypedOperation::ShowText(s) => {
                 let font = context.get().text_state.font();
+                show_text_string(context, device, s.0, &font)
+            }
+            TypedOperation::ShowTexts(s) => {
+                let font = context.get().text_state.font();
 
-                for b in s.0.get().as_ref() {
-                    let glyph = font.map_code(*b);
-
-                    let outline = font.outline(glyph);
-                    let t = context.get().text_transform();
-                    // eprintln!("{:?}", context.get());
-                    // eprintln!("{:?}", t);
-                    let color = Color::from_pdf(
-                        context.get().fill_cs,
-                        &context.get().fill_color,
-                        context.get().fill_alpha,
-                    );
-                    device.set_paint(color);
-
-                    device.set_transform(t);
-                    device.fill_path(&outline, &context.fill_props());
-
-                    context
-                        .get_mut()
-                        .text_state
-                        .step(font.glyph_width(glyph), 0.0);
+                for obj in s.0.iter::<Object>() {
+                    if let Ok(adjustment) = obj.clone().cast::<f32>() {
+                        context.get_mut().text_state.apply_adjustment(adjustment);
+                    }   else if let Ok(text) = obj.cast::<String>() {
+                        show_text_string(context, device, text, &font);
+                    }
                 }
+            }
+            TypedOperation::HorizontalScaling(h) => {
+                context.get_mut().text_state.horizontal_scaling = h.0.as_f32();
+            }
+            TypedOperation::TextLeading(tl) => {
+                context.get_mut().text_state.leading = tl.0.as_f32();
+            }
+            TypedOperation::CharacterSpacing(c) => {
+                context.get_mut().text_state.char_space = c.0.as_f32()
+            }
+            TypedOperation::WordSpacing(w) => {
+                context.get_mut().text_state.word_space = w.0.as_f32();
             }
             TypedOperation::NextLine(n) => {
                 let (tx, ty) = (n.0.as_f64(), n.1.as_f64());
-                eprintln!("Before: {:?}", context.get().text_state);
-                let new_matrix =
-                    context.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));
-                context.get_mut().text_state.text_line_matrix = new_matrix;
-                context.get_mut().text_state.text_matrix = new_matrix;
-                eprintln!("After: {:?}", context.get().text_state);
+                next_line(context, tx, ty)
+            }
+            TypedOperation::NextLineUsingLeading(_) => {
+                next_line(context, 0.0, -context.get().text_state.leading as f64)
             }
             _ => {
                 println!("{:?}", op);
@@ -366,6 +370,39 @@ pub fn interpret<'a>(
     for _ in 0..context.get().n_clips {
         device.pop_clip();
     }
+}
+
+fn next_line(ctx: &mut Context, tx: f64, ty: f64) {
+    let new_matrix =
+        ctx.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));
+    ctx.get_mut().text_state.text_line_matrix = new_matrix;
+    ctx.get_mut().text_state.text_matrix = new_matrix;
+}
+
+fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, font: &Font) {
+    for b in text.get().as_ref() {
+        let glyph = font.map_code(*b);
+        show_glyph(ctx, device, glyph, &font);
+
+        ctx
+            .get_mut()
+            .text_state
+            .apply_glyph_width(font.glyph_width(glyph));
+    }
+}
+
+fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font: &Font) {
+    let outline = font.outline(glyph);
+    let t = ctx.get().text_transform();
+    let color = Color::from_pdf(
+        ctx.get().fill_cs,
+        &ctx.get().fill_color,
+        ctx.get().fill_alpha,
+    );
+    device.set_paint(color);
+
+    device.set_transform(t);
+    device.fill_path(&outline, &ctx.fill_props());
 }
 
 fn handle_cs(key: Name) -> ColorSpace {

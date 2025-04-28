@@ -44,9 +44,14 @@ impl TextState {
         self.font.as_ref().map(|f| f.0.clone()).unwrap()
     }
 
-    pub(crate) fn step(&mut self, glyph_width: f32, positional_adjustment: f32) {
+    pub(crate) fn apply_adjustment(&mut self, adjustment: f32) {
+        let tx = -adjustment / 1000.0 * self.font_size() * self.horizontal_scaling();
+        self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
+    }
+    
+    pub(crate) fn apply_glyph_width(&mut self, glyph_width: f32) {
         // TODO: Vertical writing
-        let tx = ((glyph_width - positional_adjustment) * self.font_size()
+        let tx = (glyph_width * self.font_size()
             + self.char_space
             + self.word_space)
             * self.horizontal_scaling();

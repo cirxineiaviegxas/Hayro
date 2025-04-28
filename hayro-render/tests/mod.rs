@@ -22,8 +22,10 @@ type RenderedPage = Vec<u8>;
 
 pub fn check_render(name: &str, document: RenderedDocument) {
     let mut refs_path = SNAPSHOTS_PATH.clone();
+    
+    let mut ref_created = false;
 
-    let check_single = |name: String, page: &RenderedPage, page_num: usize| {
+    let mut check_single = |name: String, page: &RenderedPage, page_num: usize| {
         let suffix = if document.len() == 1 {
             format!("{name}.png")
         } else {
@@ -40,7 +42,9 @@ pub fn check_render(name: &str, document: RenderedDocument) {
                 &oxipng::Options::max_compression(),
             )
             .unwrap();
-            panic!("new reference image was created");
+            ref_created = true;
+            
+            return;
         }
 
         let reference = load_from_memory(&std::fs::read(&ref_path).unwrap())
@@ -76,6 +80,10 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     } else {
         for (index, page) in document.iter().enumerate() {
             check_single(name.to_string(), page, index);
+        }
+        
+        if ref_created {
+            panic!("new reference image was created");
         }
     }
 }
