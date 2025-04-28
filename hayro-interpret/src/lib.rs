@@ -329,7 +329,7 @@ pub fn interpret<'a>(
             }
             TypedOperation::ShowText(s) => {
                 let font = context.get().text_state.font();
-                show_text_string(context, device, s.0, &font)
+                show_text_string(context, device, s.0, &font);
             }
             TypedOperation::ShowTexts(s) => {
                 let font = context.get().text_state.font();
@@ -359,7 +359,13 @@ pub fn interpret<'a>(
                 next_line(context, tx, ty)
             }
             TypedOperation::NextLineUsingLeading(_) => {
-                next_line(context, 0.0, -context.get().text_state.leading as f64)
+                next_line(context, 0.0, -context.get().text_state.leading as f64);
+            }
+            TypedOperation::NextLineAndShowText(n) => {
+                let font = context.get().text_state.font();
+                
+                next_line(context, 0.0, -context.get().text_state.leading as f64);
+                show_text_string(context, device, n.0, &font)
             }
             _ => {
                 println!("{:?}", op);
