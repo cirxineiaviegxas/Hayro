@@ -49,11 +49,17 @@ impl TextState {
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }
     
-    pub(crate) fn apply_glyph_width(&mut self, glyph_width: f32) {
+    pub(crate) fn apply_glyph_width(&mut self, glyph_width: f32, char_code: u8) {
+        let word_space = if char_code == 32 {
+            self.word_space
+        }   else {
+            0.0
+        };
+        
         // TODO: Vertical writing
         let tx = (glyph_width * self.font_size()
             + self.char_space
-            + self.word_space)
+            + word_space)
             * self.horizontal_scaling();
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }

@@ -393,7 +393,7 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
         ctx
             .get_mut()
             .text_state
-            .apply_glyph_width(font.glyph_width(glyph));
+            .apply_glyph_width(font.glyph_width(glyph), *b);
     }
 }
 
