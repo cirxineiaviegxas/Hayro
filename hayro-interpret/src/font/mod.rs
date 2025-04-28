@@ -1,5 +1,10 @@
 use crate::font::base::BaseFont;
-use crate::font::blob::{FontBlob, COURIER_PRIME_BOLD, COURIER_PRIME_BOLD_ITALIC, COURIER_PRIME_ITALIC, COURIER_PRIME_REGULAR, EBGARAMOND_BOLD, EBGARAMOND_BOLD_ITALIC, EBGARAMOND_ITALIC, EBGARAMOND_REGULAR, ROBOTO_BOLD, ROBOTO_BOLD_ITALIC, ROBOTO_ITALIC, ROBOTO_REGULAR};
+use crate::font::blob::{
+    COURIER_PRIME_BOLD, COURIER_PRIME_BOLD_ITALIC, COURIER_PRIME_ITALIC, COURIER_PRIME_REGULAR,
+    DEJAVU_SANS, EBGARAMOND_BOLD, EBGARAMOND_BOLD_ITALIC, EBGARAMOND_ITALIC, EBGARAMOND_REGULAR,
+    FontBlob, ROBOTO_BOLD, ROBOTO_BOLD_ITALIC, ROBOTO_ITALIC, ROBOTO_REGULAR, TUFFY,
+};
+use crate::font::glyph_list::ZAPF_DINGS;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
@@ -69,16 +74,23 @@ impl Type1Font {
             match n.get().as_ref() {
                 b"Helvetica" => (BaseFont::Helvetica, ROBOTO_REGULAR.clone()),
                 b"Helvetica-Bold" => (BaseFont::HelveticaBold, ROBOTO_BOLD.clone()),
-                b"Helvetica-BoldOblique" => (BaseFont::HelveticaBoldOblique, ROBOTO_BOLD_ITALIC.clone()),
+                b"Helvetica-BoldOblique" => {
+                    (BaseFont::HelveticaBoldOblique, ROBOTO_BOLD_ITALIC.clone())
+                }
                 b"Helvetica-Oblique" => (BaseFont::HelveticaOblique, ROBOTO_ITALIC.clone()),
                 b"Courier" => (BaseFont::Courier, COURIER_PRIME_REGULAR.clone()),
                 b"Courier-Bold" => (BaseFont::CourierBold, COURIER_PRIME_BOLD.clone()),
-                b"Courier-BoldOblique" => (BaseFont::CourierBoldOblique, COURIER_PRIME_BOLD_ITALIC.clone()),
+                b"Courier-BoldOblique" => (
+                    BaseFont::CourierBoldOblique,
+                    COURIER_PRIME_BOLD_ITALIC.clone(),
+                ),
                 b"Courier-Oblique" => (BaseFont::CourierOblique, COURIER_PRIME_ITALIC.clone()),
                 b"Times-Roman" => (BaseFont::TimesRoman, EBGARAMOND_REGULAR.clone()),
                 b"Times-Bold" => (BaseFont::TimesBold, EBGARAMOND_BOLD.clone()),
                 b"Times-Italic" => (BaseFont::TimesItalic, EBGARAMOND_ITALIC.clone()),
                 b"Times-BoldItalic" => (BaseFont::TimesBoldItalic, EBGARAMOND_BOLD_ITALIC.clone()),
+                b"Symbol" => (BaseFont::Symbol, TUFFY.clone()),
+                b"ZapfDingbats" => (BaseFont::ZapfDingBats, DEJAVU_SANS.clone()),
                 _ => unimplemented!(),
             }
         } else {

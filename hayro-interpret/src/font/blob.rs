@@ -13,11 +13,8 @@ pub(crate) static ROBOTO_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     )))
 });
 
-pub(crate) static ROBOTO_BOLD: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/Roboto-Bold.ttf"
-    )))
-});
+pub(crate) static ROBOTO_BOLD: Lazy<FontBlob> =
+    Lazy::new(|| FontBlob::new(Arc::new(include_bytes!("../../../assets/Roboto-Bold.ttf"))));
 
 pub(crate) static ROBOTO_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
@@ -78,6 +75,15 @@ pub(crate) static EBGARAMOND_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
         "../../../assets/EBGaramond-BoldItalic.ttf"
     )))
 });
+
+pub(crate) static DEJAVU_SANS: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/DejaVuSansSubset.ttf"
+    )))
+});
+
+pub(crate) static TUFFY: Lazy<FontBlob> =
+    Lazy::new(|| FontBlob::new(Arc::new(include_bytes!("../../../assets/TuffySubset.ttf"))));
 
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 type FontYoke = Yoke<FontRefYoke<'static>, FontData>;

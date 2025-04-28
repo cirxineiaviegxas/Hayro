@@ -1,5 +1,9 @@
-use crate::font::encodings::{COURIER, COURIER_BOLD, COURIER_BOLD_OBLIQUE, COURIER_OBLIQUE, HELVETICA, HELVETICA_BOLD, HELVETICA_BOLD_OBLIQUE, HELVETICA_OBLIQUE, TIMES_BOLD, TIMES_BOLD_ITALIC, TIMES_ITALIC, TIMES_ROMAN};
-use crate::font::glyph_list::GLYPH_NAMES;
+use crate::font::encodings::{
+    COURIER, COURIER_BOLD, COURIER_BOLD_OBLIQUE, COURIER_OBLIQUE, HELVETICA, HELVETICA_BOLD,
+    HELVETICA_BOLD_OBLIQUE, HELVETICA_OBLIQUE, SYMBOL, TIMES_BOLD, TIMES_BOLD_ITALIC, TIMES_ITALIC,
+    TIMES_ROMAN, ZAPF_DING_BATS,
+};
+use crate::font::glyph_list::{GLYPH_NAMES, ZAPF_DINGS};
 use crate::util::OptionLog;
 
 #[derive(Copy, Clone, Debug)]
@@ -16,10 +20,12 @@ pub(crate) enum BaseFont {
     TimesBold,
     TimesItalic,
     TimesBoldItalic,
+    ZapfDingBats,
+    Symbol,
 }
 
 impl BaseFont {
-    pub fn code_to_ps(&self, code: u8) -> Option<&'static str> {
+    pub fn code_to_name(&self, code: u8) -> Option<&'static str> {
         match self {
             Self::Helvetica => HELVETICA.get(&code),
             Self::HelveticaBold => HELVETICA_BOLD.get(&code),
@@ -32,20 +38,26 @@ impl BaseFont {
             Self::TimesRoman => TIMES_ROMAN.get(&code),
             Self::TimesBold => TIMES_BOLD.get(&code),
             Self::TimesItalic => TIMES_ITALIC.get(&code),
-            Self::TimesBoldItalic => TIMES_BOLD_ITALIC.get(&code)
+            Self::TimesBoldItalic => TIMES_BOLD_ITALIC.get(&code),
+            Self::Symbol => SYMBOL.get(&code),
+            // Note that this font does not return postscript character names,
+            // but instead has a custom encoding.
+            Self::ZapfDingBats => ZAPF_DING_BATS.get(&code),
         }
         .copied()
     }
 
     pub fn ps_to_unicode(&self, name: &str) -> Option<&'static str> {
-        GLYPH_NAMES
-            .get(name)
-            .warn_none(&format!("failed to map code {name} for Helvetica"))
-            .copied()
+        match self {
+            Self::ZapfDingBats => ZAPF_DINGS.get(name),
+            _ => GLYPH_NAMES.get(name),
+        }
+        .warn_none(&format!("failed to map code {name} for {:?}", self))
+        .copied()
     }
 
     pub fn map_code(&self, code: u8) -> Option<&'static str> {
-        self.ps_to_unicode(self.code_to_ps(code)?)
+        self.ps_to_unicode(self.code_to_name(code)?)
     }
 }
 

@@ -13,6 +13,7 @@ vello_cpu = { workspace = true }
 vello_common = { workspace = true }
 vello_api = { workspace = true }
 once_cell = "1.21.3"
+skrifa = { workspace = true }
 
 
 [[test]]

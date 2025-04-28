@@ -545,6 +545,7 @@ dependencies = [
  "qcms",
  "skrifa 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec",
+ "walkdir",
  "yoke",
 ]
 
@@ -558,6 +559,7 @@ dependencies = [
  "log",
  "once_cell",
  "oxipng",
+ "skrifa 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "vello_api",
  "vello_common",
  "vello_cpu",
