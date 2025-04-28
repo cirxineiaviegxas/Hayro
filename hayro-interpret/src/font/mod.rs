@@ -1,8 +1,8 @@
 use crate::font::base::BaseFont;
 use crate::font::blob::{
-    COURIER_PRIME_BOLD, COURIER_PRIME_BOLD_ITALIC, COURIER_PRIME_ITALIC, COURIER_PRIME_REGULAR,
-    DEJAVU_SANS, EBGARAMOND_BOLD, EBGARAMOND_BOLD_ITALIC, EBGARAMOND_ITALIC, EBGARAMOND_REGULAR,
-    FontBlob, ROBOTO_BOLD, ROBOTO_BOLD_ITALIC, ROBOTO_ITALIC, ROBOTO_REGULAR, TUFFY,
+    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR,
+    ZAPF_DINGS_BAT, TIMES_BOLD, TIMES_ROMAN_BOLD_ITALIC, TIMES_ITALIC, TIMES_REGULAR,
+    FontBlob, HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, SYMBOL,
 };
 use crate::font::glyph_list::ZAPF_DINGS;
 use hayro_syntax::object::Object;
@@ -72,25 +72,25 @@ impl Type1Font {
     pub fn new(dict: &Dict) -> Type1Font {
         let (base_font, blob) = if let Some(n) = dict.get::<Name>(BASE_FONT) {
             match n.get().as_ref() {
-                b"Helvetica" => (BaseFont::Helvetica, ROBOTO_REGULAR.clone()),
-                b"Helvetica-Bold" => (BaseFont::HelveticaBold, ROBOTO_BOLD.clone()),
+                b"Helvetica" => (BaseFont::Helvetica, HELVETICA_REGULAR.clone()),
+                b"Helvetica-Bold" => (BaseFont::HelveticaBold, HELVETICA_BOLD.clone()),
                 b"Helvetica-BoldOblique" => {
-                    (BaseFont::HelveticaBoldOblique, ROBOTO_BOLD_ITALIC.clone())
+                    (BaseFont::HelveticaBoldOblique, HELVETICA_BOLD_ITALIC.clone())
                 }
-                b"Helvetica-Oblique" => (BaseFont::HelveticaOblique, ROBOTO_ITALIC.clone()),
-                b"Courier" => (BaseFont::Courier, COURIER_PRIME_REGULAR.clone()),
-                b"Courier-Bold" => (BaseFont::CourierBold, COURIER_PRIME_BOLD.clone()),
+                b"Helvetica-Oblique" => (BaseFont::HelveticaOblique, HELVETICA_ITALIC.clone()),
+                b"Courier" => (BaseFont::Courier, COURIER_REGULAR.clone()),
+                b"Courier-Bold" => (BaseFont::CourierBold, COURIER_BOLD.clone()),
                 b"Courier-BoldOblique" => (
                     BaseFont::CourierBoldOblique,
-                    COURIER_PRIME_BOLD_ITALIC.clone(),
+                    COURIER_BOLD_ITALIC.clone(),
                 ),
-                b"Courier-Oblique" => (BaseFont::CourierOblique, COURIER_PRIME_ITALIC.clone()),
-                b"Times-Roman" => (BaseFont::TimesRoman, EBGARAMOND_REGULAR.clone()),
-                b"Times-Bold" => (BaseFont::TimesBold, EBGARAMOND_BOLD.clone()),
-                b"Times-Italic" => (BaseFont::TimesItalic, EBGARAMOND_ITALIC.clone()),
-                b"Times-BoldItalic" => (BaseFont::TimesBoldItalic, EBGARAMOND_BOLD_ITALIC.clone()),
-                b"Symbol" => (BaseFont::Symbol, TUFFY.clone()),
-                b"ZapfDingbats" => (BaseFont::ZapfDingBats, DEJAVU_SANS.clone()),
+                b"Courier-Oblique" => (BaseFont::CourierOblique, COURIER_ITALIC.clone()),
+                b"Times-Roman" => (BaseFont::TimesRoman, TIMES_REGULAR.clone()),
+                b"Times-Bold" => (BaseFont::TimesBold, TIMES_BOLD.clone()),
+                b"Times-Italic" => (BaseFont::TimesItalic, TIMES_ITALIC.clone()),
+                b"Times-BoldItalic" => (BaseFont::TimesBoldItalic, TIMES_ROMAN_BOLD_ITALIC.clone()),
+                b"Symbol" => (BaseFont::Symbol, SYMBOL.clone()),
+                b"ZapfDingbats" => (BaseFont::ZapfDingBats, ZAPF_DINGS_BAT.clone()),
                 _ => unimplemented!(),
             }
         } else {

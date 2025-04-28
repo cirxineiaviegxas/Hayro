@@ -7,83 +7,84 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use yoke::{Yoke, Yokeable};
 
-pub(crate) static ROBOTO_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static HELVETICA_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/Roboto-Regular.ttf"
-    )))
+        "/System/Library/Fonts/HelveticaNeue.ttc"
+    )), 0)
 });
 
-pub(crate) static ROBOTO_BOLD: Lazy<FontBlob> =
-    Lazy::new(|| FontBlob::new(Arc::new(include_bytes!("../../../assets/Roboto-Bold.ttf"))));
+pub(crate) static HELVETICA_BOLD: Lazy<FontBlob> =
+    Lazy::new(|| FontBlob::new(Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")), 1));
 
-pub(crate) static ROBOTO_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static HELVETICA_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/Roboto-Italic.ttf"
-    )))
+        "/System/Library/Fonts/HelveticaNeue.ttc"
+    )), 2)
 });
 
-pub(crate) static ROBOTO_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static HELVETICA_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/Roboto-BoldItalic.ttf"
-    )))
+        "/System/Library/Fonts/HelveticaNeue.ttc"
+    )), 3)
 });
 
-pub(crate) static COURIER_PRIME_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static COURIER_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/CourierPrime-Regular.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Courier New.ttf"
+    )), 0)
 });
 
-pub(crate) static COURIER_PRIME_BOLD: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static COURIER_BOLD: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/CourierPrime-Bold.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Courier New Bold.ttf"
+    )), 0)
 });
 
-pub(crate) static COURIER_PRIME_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static COURIER_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/CourierPrime-Italic.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Courier New Italic.ttf"
+    )), 0)
 });
 
-pub(crate) static COURIER_PRIME_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static COURIER_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/CourierPrime-BoldItalic.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Courier New Bold Italic.ttf"
+    )), 0)
 });
 
-pub(crate) static EBGARAMOND_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static TIMES_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/EBGaramond-Regular.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+        // "../../../assets/EBGaramond-Regular.ttf"
+    )), 0)
 });
 
-pub(crate) static EBGARAMOND_BOLD: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static TIMES_BOLD: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/EBGaramond-Bold.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf"
+    )), 0)
 });
 
-pub(crate) static EBGARAMOND_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static TIMES_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/EBGaramond-Italic.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Times New Roman Italic.ttf"
+    )), 0)
 });
 
-pub(crate) static EBGARAMOND_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/EBGaramond-BoldItalic.ttf"
-    )))
+        "/System/Library/Fonts/Supplemental/Times New Roman Bold Italic.ttf"
+    )), 0)
 });
 
-pub(crate) static DEJAVU_SANS: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static ZAPF_DINGS_BAT: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
-        "../../../assets/DejaVuSansSubset.ttf"
-    )))
+        "/System/Library/Fonts/ZapfDingbats.ttf"
+    )), 0)
 });
 
-pub(crate) static TUFFY: Lazy<FontBlob> =
-    Lazy::new(|| FontBlob::new(Arc::new(include_bytes!("../../../assets/TuffySubset.ttf"))));
+pub(crate) static SYMBOL: Lazy<FontBlob> =
+    Lazy::new(|| FontBlob::new(Arc::new(include_bytes!("/System/Library/Fonts/Symbol.ttf")), 0));
 
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 type FontYoke = Yoke<FontRefYoke<'static>, FontData>;
@@ -99,10 +100,10 @@ impl Debug for FontBlob {
 }
 
 impl FontBlob {
-    pub fn new(data: FontData) -> Self {
+    pub fn new(data: FontData, index: u32) -> Self {
         let font_ref_yoke =
             Yoke::<FontRefYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
-                let font_ref = FontRef::from_index(data.as_ref(), 0).unwrap();
+                let font_ref = FontRef::from_index(data.as_ref(), index).unwrap();
                 FontRefYoke {
                     font_ref: font_ref.clone(),
                     outline_glyphs: font_ref.outline_glyphs(),

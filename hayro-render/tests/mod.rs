@@ -14,7 +14,13 @@ pub(crate) static WORKSPACE_PATH: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(""));
 
 pub(crate) static ASSETS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("assets"));
-pub(crate) static DIFFS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("diffs"));
+pub(crate) static DIFFS_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    let path = WORKSPACE_PATH.join("diffs");
+    let _ = std::fs::remove_dir_all(&path);
+    let _ = std::fs::create_dir_all(&path);
+    
+    path
+});
 pub(crate) static SNAPSHOTS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("snapshots"));
 
 type RenderedDocument = Vec<Vec<u8>>;
