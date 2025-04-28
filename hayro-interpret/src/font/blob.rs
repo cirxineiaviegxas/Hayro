@@ -7,9 +7,75 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use yoke::{Yoke, Yokeable};
 
-pub(crate) static ROBOTO: Lazy<FontBlob> = Lazy::new(|| {
+pub(crate) static ROBOTO_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(Arc::new(include_bytes!(
         "../../../assets/Roboto-Regular.ttf"
+    )))
+});
+
+pub(crate) static ROBOTO_BOLD: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/Roboto-Bold.ttf"
+    )))
+});
+
+pub(crate) static ROBOTO_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/Roboto-Italic.ttf"
+    )))
+});
+
+pub(crate) static ROBOTO_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/Roboto-BoldItalic.ttf"
+    )))
+});
+
+pub(crate) static COURIER_PRIME_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/CourierPrime-Regular.ttf"
+    )))
+});
+
+pub(crate) static COURIER_PRIME_BOLD: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/CourierPrime-Bold.ttf"
+    )))
+});
+
+pub(crate) static COURIER_PRIME_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/CourierPrime-Italic.ttf"
+    )))
+});
+
+pub(crate) static COURIER_PRIME_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/CourierPrime-BoldItalic.ttf"
+    )))
+});
+
+pub(crate) static EBGARAMOND_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/EBGaramond-Regular.ttf"
+    )))
+});
+
+pub(crate) static EBGARAMOND_BOLD: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/EBGaramond-Bold.ttf"
+    )))
+});
+
+pub(crate) static EBGARAMOND_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/EBGaramond-Italic.ttf"
+    )))
+});
+
+pub(crate) static EBGARAMOND_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
+    FontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/EBGaramond-BoldItalic.ttf"
     )))
 });
 
