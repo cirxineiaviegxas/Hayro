@@ -103,15 +103,17 @@ impl Type1Font {
             .get::<Dict>(ENCODING)
             .and_then(|d| d.get::<Array>(DIFFERENCES))
         {
-            let entries = differences.iter::<Object>().collect::<Vec<_>>();
+            let mut entries = differences.iter::<Object>();
 
-            for obj in entries.chunks(2) {
-                let Object::Number(num) = obj[0] else {
-                    continue;
-                };
-                let Object::Name(n) = obj[1] else { continue };
+            let mut code = 0;
 
-                encoding_map.insert(num.as_i32() as u8, n.as_str());
+            while let Some(obj) = entries.next() {
+                if let Ok(num) = obj.clone().cast::<i32>() {
+                    code = num;
+                }   else if let Ok(name) = obj.cast::<Name>() {
+                    encoding_map.insert(code as u8, name.as_str());
+                    code += 1;
+                }
             }
         }
 
