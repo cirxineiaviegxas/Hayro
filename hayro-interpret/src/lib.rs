@@ -5,7 +5,7 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{EXT_G_STATE, FONT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
-use kurbo::{Affine, Cap, Join, Point, Rect, Shape};
+use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::Fill;
@@ -26,7 +26,7 @@ mod util;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
-use crate::font::Font;
+use crate::font::{Font, TextRenderingMode};
 use crate::util::OptionLog;
 
 static CMYK_TRANSFORM: Lazy<Transform> = Lazy::new(|| {
@@ -367,6 +367,21 @@ pub fn interpret<'a>(
                 next_line(context, 0.0, -context.get().text_state.leading as f64);
                 show_text_string(context, device, n.0, &font)
             }
+            TypedOperation::TextRenderingMode(r) => {
+                let mode = match r.0.as_i32() {
+                    0 => TextRenderingMode::Fill,
+                    1 => TextRenderingMode::Stroke,
+                    2 => TextRenderingMode::FillStroke,
+                    3 => TextRenderingMode::Invisible,
+                    _ => {
+                        warn!("text rendering mode {} is not supported yet", r.0.as_i32());
+                        
+                        TextRenderingMode::Fill
+                    }
+                };
+                
+                context.get_mut().text_state.render_mode = mode;
+            }
             _ => {
                 println!("{:?}", op);
             }
@@ -398,17 +413,19 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
 }
 
 fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font: &Font) {
-    let outline = font.outline(glyph);
     let t = ctx.get().text_transform();
-    let color = Color::from_pdf(
-        ctx.get().fill_cs,
-        &ctx.get().fill_color,
-        ctx.get().fill_alpha,
-    );
-    device.set_paint(color);
-
-    device.set_transform(t);
-    device.fill_path(&outline, &ctx.fill_props());
+    let outline = t * font.outline(glyph);
+    
+    match ctx.get().text_state.render_mode {
+        TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&outline), None),
+        TextRenderingMode::Stroke => stroke_path_impl(ctx, device, Some(&outline), None),
+        TextRenderingMode::FillStroke => {
+            fill_path_impl(ctx, device, Some(&outline), None);
+            stroke_path_impl(ctx, device, Some(&outline), None);
+        },
+        TextRenderingMode::Invisible => {}
+        _ => {}
+    }
 }
 
 fn handle_cs(key: Name) -> ColorSpace {
@@ -450,40 +467,41 @@ fn handle_gs_single(dict: &Dict, key: Name, context: &mut Context) -> Option<()>
 }
 
 fn fill_path(context: &mut Context, device: &mut impl Device) {
-    fill_path_impl(context, device);
+    fill_path_impl(context, device, None, None);
     // TODO: Where in spec?
     context.path_mut().truncate(0);
 }
 
 fn stroke_path(context: &mut Context, device: &mut impl Device) {
-    stroke_path_impl(context, device);
+    stroke_path_impl(context, device, None, None);
     context.path_mut().truncate(0);
 }
 
 fn fill_stroke_path(context: &mut Context, device: &mut impl Device) {
-    fill_path_impl(context, device);
-    stroke_path_impl(context, device);
+    fill_path_impl(context, device, None, None);
+    stroke_path_impl(context, device, None, None);
     context.path_mut().truncate(0);
 }
 
-fn fill_path_impl(context: &mut Context, device: &mut impl Device) {
+fn fill_path_impl(context: &mut Context, device: &mut impl Device, path: Option<&BezPath>, transform: Option<Affine>) {
     let color = Color::from_pdf(
         context.get().fill_cs,
         &context.get().fill_color,
         context.get().fill_alpha,
     );
+    
     device.set_paint(color);
-    device.set_transform(context.get().affine);
-    device.fill_path(context.path(), &context.fill_props());
+    device.set_transform(transform.unwrap_or(context.get().affine));
+    device.fill_path(path.unwrap_or(context.path()), &context.fill_props());
 }
 
-fn stroke_path_impl(context: &mut Context, device: &mut impl Device) {
+fn stroke_path_impl(context: &mut Context, device: &mut impl Device, path: Option<&BezPath>, transform: Option<Affine>) {
     let color = Color::from_pdf(
         context.get().stroke_cs,
         &context.get().stroke_color,
         context.get().stroke_alpha,
     );
     device.set_paint(color);
-    device.set_transform(context.get().affine);
-    device.stroke_path(context.path(), &context.stroke_props());
+    device.set_transform(transform.unwrap_or(context.get().affine));
+    device.stroke_path(path.unwrap_or(context.path()), &context.stroke_props());
 }

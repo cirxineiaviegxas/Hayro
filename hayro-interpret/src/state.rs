@@ -105,6 +105,6 @@ pub(crate) struct State {
 
 impl State {
     pub(crate) fn text_transform(&self) -> Affine {
-        self.affine * self.text_state.text_matrix * self.text_state.temp_transform()
+        self.text_state.text_matrix * self.text_state.temp_transform()
     }
 }

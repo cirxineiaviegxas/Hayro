@@ -23,6 +23,7 @@ use crate::run_test;
 #[test] fn pdftc_010k_0175() { run_test("pdftc_010k_0175"); }
 #[test] fn pdftc_010k_0192() { run_test("pdftc_010k_0192"); }
 #[test] fn pdftc_010k_0211() { run_test("pdftc_010k_0211"); }
+#[test] fn pdftc_010k_0400() { run_test("pdftc_010k_0400"); }
 #[test] fn pdftc_010k_1037() { run_test("pdftc_010k_1037"); }
 #[test] fn pdftc_010k_1969() { run_test("pdftc_010k_1969"); }
 #[test] fn pdftc_100k_0173() { run_test("pdftc_100k_0173"); }

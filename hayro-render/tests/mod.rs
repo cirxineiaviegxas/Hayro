@@ -30,6 +30,7 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     let mut refs_path = SNAPSHOTS_PATH.clone();
     
     let mut ref_created = false;
+    let mut test_replaced = false;
 
     let mut check_single = |name: String, page: &RenderedPage, page_num: usize| {
         let suffix = if document.len() == 1 {
@@ -74,7 +75,7 @@ pub fn check_render(name: &str, document: RenderedDocument) {
                     &oxipng::Options::max_compression(),
                 )
                 .unwrap();
-                panic!("test was replaced");
+                test_replaced = true;
             }
 
             panic!("pixel diff was {pixel_diff}");
@@ -86,6 +87,10 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     } else {
         for (index, page) in document.iter().enumerate() {
             check_single(name.to_string(), page, index);
+        }
+        
+        if test_replaced {
+            panic!("test was replaced");
         }
         
         if ref_created {
