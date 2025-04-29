@@ -1,11 +1,8 @@
 use crate::color::{ColorComponents, ColorSpace};
-use crate::convert::convert_transform;
 use crate::font::{Font, TextRenderingMode};
-use crate::{FillProps, StrokeProps};
-use hayro_syntax::content::ops::Transform;
-use kurbo::{Affine, BezPath, Cap, Join, Point};
+use kurbo::{Affine, BezPath, Cap, Join};
 use peniko::Fill;
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
 pub(crate) struct TextState {

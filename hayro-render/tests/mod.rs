@@ -27,7 +27,7 @@ type RenderedDocument = Vec<Vec<u8>>;
 type RenderedPage = Vec<u8>;
 
 pub fn check_render(name: &str, document: RenderedDocument) {
-    let mut refs_path = SNAPSHOTS_PATH.clone();
+    let refs_path = SNAPSHOTS_PATH.clone();
 
     let mut ref_created = false;
     let mut test_replaced = false;

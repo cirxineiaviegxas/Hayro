@@ -2,7 +2,6 @@ use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::Device;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
-use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{EXT_G_STATE, FONT};
 use hayro_syntax::object::name::Name;

@@ -4,7 +4,6 @@ use crate::font::Font;
 use crate::state::{State, TextState};
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
-use hayro_syntax::file::xref::XRef;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::r#ref::ObjRef;
