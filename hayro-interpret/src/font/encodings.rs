@@ -1,6 +1,8 @@
 // Those codings were copied from PDFBox.
 use phf::phf_map;
 
+// TODO: 
+// In WinAnsiEncoding, all unused codes greater than 40 map to the bullet character.
 pub(crate) static WIN_ANSI: phf::Map<u8, &'static str> = phf_map! {
     0o101u8 => "A",
     0o306u8 => "AE",
