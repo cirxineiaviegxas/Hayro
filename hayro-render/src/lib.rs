@@ -7,6 +7,7 @@ use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
 use std::io::Cursor;
+use std::ops::RangeInclusive;
 use vello_api::color::palette::css::WHITE;
 use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Rect};
@@ -87,12 +88,17 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     pixmap
 }
 
-pub fn render_png(pdf: &Pdf, scale: f32) -> Vec<Vec<u8>> {
+pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -> Vec<Vec<u8>> {
     pdf.pages()
         .unwrap()
         .pages
         .iter()
-        .map(|page| {
+        .enumerate()
+        .flat_map(|(idx, page)| {
+            if range.clone().is_some_and(|range| !range.contains(&idx)) {
+                return None;
+            }
+
             let pixmap = render(page, scale);
 
             let mut png_data = Vec::new();
@@ -107,7 +113,7 @@ pub fn render_png(pdf: &Pdf, scale: f32) -> Vec<Vec<u8>> {
                 )
                 .expect("Failed to encode image");
 
-            png_data
+            Some(png_data)
         })
         .collect()
 }

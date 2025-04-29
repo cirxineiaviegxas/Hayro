@@ -3,6 +3,7 @@ use hayro_syntax::pdf::Pdf;
 use image::{Rgba, RgbaImage, load_from_memory};
 use once_cell::sync::Lazy;
 use std::cmp::max;
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 
 mod tests;
@@ -99,13 +100,13 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     }
 }
 
-pub fn run_test(name: &str) {
+pub fn run_test(name: &str, range: Option<RangeInclusive<usize>>) {
     let path = ASSETS_PATH.join(format!("{name}.pdf",));
     let content = std::fs::read(&path).unwrap();
     let data = Data::new(&content);
     let pdf = Pdf::new(&data).unwrap();
 
-    check_render(name, hayro_render::render_png(&pdf, 1.0));
+    check_render(name, hayro_render::render_png(&pdf, 1.0, range));
 }
 
 pub fn get_diff(expected_image: &RgbaImage, actual_image: &RgbaImage) -> (RgbaImage, u32) {

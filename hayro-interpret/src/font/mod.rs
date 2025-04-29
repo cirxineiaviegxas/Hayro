@@ -7,7 +7,7 @@ use crate::font::blob::{
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_FONT, DIFFERENCES, ENCODING, SUBTYPE};
+use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, SUBTYPE};
 use hayro_syntax::object::name::Name;
 use kurbo::BezPath;
 use skrifa::instance::LocationRef;
@@ -110,33 +110,41 @@ impl Type1Font {
 
         let mut encoding_map = HashMap::new();
         
-        if let Some(differences) = dict
-            .get::<Dict>(ENCODING)
-            .and_then(|d| d.get::<Array>(DIFFERENCES))
-        {
-            let mut entries = differences.iter::<Object>();
-
-            let mut code = 0;
-
-            while let Some(obj) = entries.next() {
-                if let Ok(num) = obj.clone().cast::<i32>() {
-                    code = num;
-                } else if let Ok(name) = obj.cast::<Name>() {
-                    encoding_map.insert(code as u8, name.as_str());
-                    code += 1;
+        fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
+            match dict.get::<Name>(name) {
+                Some(n) => match n.get().as_ref() {
+                    b"WinAnsiEncoding" => Encoding::WinAnsi,
+                    b"MacRomanEncoding" => Encoding::MacRoman,
+                    b"MacExpertEncoding" => Encoding::MacExpert,
+                    _ => Encoding::Standard,
                 }
+                None => Encoding::Standard,
             }
         }
         
-        let encoding = match dict.get::<Name>(ENCODING) {
-            Some(n) => match n.get().as_ref() {
-                b"WinAnsiEncoding" => Encoding::WinAnsi,
-                b"MacRomanEncoding" => Encoding::MacRoman,
-                b"MacExpertEncoding" => Encoding::MacExpert,
-                _ => Encoding::Standard,
+        let encoding;
+        
+        if let Some(encoding_dict) = dict
+            .get::<Dict>(ENCODING) {
+            if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
+                let mut entries = differences.iter::<Object>();
+
+                let mut code = 0;
+
+                while let Some(obj) = entries.next() {
+                    if let Ok(num) = obj.clone().cast::<i32>() {
+                        code = num;
+                    } else if let Ok(name) = obj.cast::<Name>() {
+                        encoding_map.insert(code as u8, name.as_str());
+                        code += 1;
+                    }
+                }
             }
-            None => Encoding::Standard,
-        };
+            
+            encoding = get_encoding_base(&encoding_dict, BASE_ENCODING);
+        }   else {
+            encoding = get_encoding_base(&dict, ENCODING);
+        }
 
         Self {
             base_font: Some(base_font),

@@ -67,7 +67,7 @@ fn render_hayro(entries: &[PathBuf]) {
         let file = std::fs::read(path).unwrap();
         let data = Data::new(&file);
         let pdf = Pdf::new(&data).unwrap();
-        let pages = hayro_render::render_png(&pdf, 1.0);
+        let pages = hayro_render::render_png(&pdf, 1.0, None);
 
         for (idx, page) in pages.iter().enumerate().take(MAX_PAGES) {
             let suffix = if pages.len() == 1 {

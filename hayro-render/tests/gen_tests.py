@@ -7,8 +7,13 @@ output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 
 ignore_list = ["pdftc_010k_0083"]
 
+lengths = {
+    "pdftc_100k_0279": "0..=0"
+}
+
 def generate_rust_function(file_stem):
-    return f"#[test] fn {file_stem}() {{ run_test(\"{file_stem}\"); }}"
+    length = f"Some({lengths[file_stem]})" if file_stem in lengths else "None"
+    return f"#[test] fn {file_stem}() {{ run_test(\"{file_stem}\", {length}); }}"
 
 def main():
     rust_functions = []
