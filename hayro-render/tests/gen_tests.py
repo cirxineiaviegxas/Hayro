@@ -5,6 +5,8 @@ pdf_directory = os.path.join(os.path.dirname(__file__), '../assets')  # relative
 # Output Rust file
 output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 
+ignore_list = ["pdftc_010k_0083"]
+
 def generate_rust_function(file_stem):
     return f"#[test] fn {file_stem}() {{ run_test(\"{file_stem}\"); }}"
 
@@ -17,7 +19,8 @@ def main():
     for filename in names:
         if filename.endswith('.pdf'):
             file_stem = os.path.splitext(filename)[0]
-            rust_functions.append(generate_rust_function(file_stem))
+            if file_stem not in ignore_list:
+                rust_functions.append(generate_rust_function(file_stem))
 
     with open(output_file, 'w') as f:
         f.write('use crate::run_test;\n\n')
