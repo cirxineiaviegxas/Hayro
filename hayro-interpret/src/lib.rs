@@ -403,6 +403,11 @@ pub fn interpret<'a>(
 
                 context.get_mut().text_state.render_mode = mode;
             }
+            TypedOperation::NextLineAndSetLeading(n) => {
+                let (tx, ty) = (n.0.as_f64(), n.1.as_f64());
+                context.get_mut().text_state.leading = -ty as f32;
+                next_line(context, tx, ty)
+            }
             _ => {
                 println!("{:?}", op);
             }
