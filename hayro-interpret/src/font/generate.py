@@ -49,17 +49,8 @@ use phf::phf_map;"""
     
     for (font, file) in [
         ("COURIER", "Courier"),
-        ("COURIER_BOLD", "Courier-Bold"),
-        ("COURIER_BOLD_OBLIQUE", "Courier-BoldOblique"),
-        ("COURIER_OBLIQUE", "Courier-Oblique"),
         ("HELVETICA", "Helvetica"),
-        ("HELVETICA_BOLD", "Helvetica-Bold"),
-        ("HELVETICA_BOLD_OBLIQUE", "Helvetica-BoldOblique"),
-        ("HELVETICA_OBLIQUE", "Helvetica-Oblique"),
         ("SYMBOL", "Symbol"),
-        ("TIMES_BOLD", "Times-Bold"),
-        ("TIMES_BOLD_ITALIC", "Times-BoldItalic"),
-        ("TIMES_ITALIC", "Times-Italic"),
         ("TIMES_ROMAN", "Times-Roman"),
         ("ZAPF_DING_BATS", "ZapfDingbats"),
     ]:

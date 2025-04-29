@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 mod base;
 mod blob;
+#[rustfmt::skip]
 mod encodings;
 mod glyph_list;
 
