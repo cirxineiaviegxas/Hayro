@@ -17,6 +17,7 @@ pub(crate) struct TextState {
     pub(crate) render_mode: TextRenderingMode,
     pub(crate) text_matrix: Affine,
     pub(crate) text_line_matrix: Affine,
+    pub(crate) clip_paths: BezPath,
     pub(crate) rise: f32,
 }
 
@@ -48,18 +49,16 @@ impl TextState {
         let tx = -adjustment / 1000.0 * self.font_size() * self.horizontal_scaling();
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }
-    
+
     pub(crate) fn apply_glyph_width(&mut self, glyph_width: f32, char_code: u8) {
         let word_space = if char_code == 32 {
             self.word_space
-        }   else {
+        } else {
             0.0
         };
-        
+
         // TODO: Vertical writing
-        let tx = (glyph_width * self.font_size()
-            + self.char_space
-            + word_space)
+        let tx = (glyph_width * self.font_size() + self.char_space + word_space)
             * self.horizontal_scaling();
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }
@@ -77,6 +76,7 @@ impl Default for TextState {
             text_matrix: Affine::IDENTITY,
             text_line_matrix: Affine::IDENTITY,
             rise: 0.0,
+            clip_paths: BezPath::default(),
         }
     }
 }

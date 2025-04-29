@@ -18,7 +18,7 @@ pub(crate) static DIFFS_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let path = WORKSPACE_PATH.join("diffs");
     let _ = std::fs::remove_dir_all(&path);
     let _ = std::fs::create_dir_all(&path);
-    
+
     path
 });
 pub(crate) static SNAPSHOTS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("snapshots"));
@@ -28,7 +28,7 @@ type RenderedPage = Vec<u8>;
 
 pub fn check_render(name: &str, document: RenderedDocument) {
     let mut refs_path = SNAPSHOTS_PATH.clone();
-    
+
     let mut ref_created = false;
     let mut test_replaced = false;
 
@@ -50,7 +50,7 @@ pub fn check_render(name: &str, document: RenderedDocument) {
             )
             .unwrap();
             ref_created = true;
-            
+
             return;
         }
 
@@ -88,11 +88,11 @@ pub fn check_render(name: &str, document: RenderedDocument) {
         for (index, page) in document.iter().enumerate() {
             check_single(name.to_string(), page, index);
         }
-        
+
         if test_replaced {
             panic!("test was replaced");
         }
-        
+
         if ref_created {
             panic!("new reference image was created");
         }

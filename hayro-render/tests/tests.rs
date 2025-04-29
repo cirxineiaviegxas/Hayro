@@ -30,3 +30,6 @@ use crate::run_test;
 #[test] fn pdftc_100k_0234() { run_test("pdftc_100k_0234"); }
 #[test] fn resvg_masking_clipPath_clip_rule_evenodd() { run_test("resvg_masking_clipPath_clip_rule_evenodd"); }
 #[test] fn resvg_masking_clipPath_nested_clip_path() { run_test("resvg_masking_clipPath_nested_clip_path"); }
+#[test] fn text_rendering_clipping() { run_test("text_rendering_clipping"); }
+#[test] fn text_rendering_glyph_scaled() { run_test("text_rendering_glyph_scaled"); }
+#[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping"); }

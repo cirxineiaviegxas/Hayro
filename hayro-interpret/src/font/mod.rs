@@ -1,8 +1,8 @@
 use crate::font::base::BaseFont;
 use crate::font::blob::{
-    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR,
-    ZAPF_DINGS_BAT, TIMES_BOLD, TIMES_ROMAN_BOLD_ITALIC, TIMES_ITALIC, TIMES_REGULAR,
-    FontBlob, HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, SYMBOL,
+    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, FontBlob, HELVETICA_BOLD,
+    HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, SYMBOL, TIMES_BOLD, TIMES_ITALIC,
+    TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
 use crate::font::glyph_list::ZAPF_DINGS;
 use hayro_syntax::object::Object;
@@ -74,16 +74,16 @@ impl Type1Font {
             match n.get().as_ref() {
                 b"Helvetica" => (BaseFont::Helvetica, HELVETICA_REGULAR.clone()),
                 b"Helvetica-Bold" => (BaseFont::HelveticaBold, HELVETICA_BOLD.clone()),
-                b"Helvetica-BoldOblique" => {
-                    (BaseFont::HelveticaBoldOblique, HELVETICA_BOLD_ITALIC.clone())
-                }
+                b"Helvetica-BoldOblique" => (
+                    BaseFont::HelveticaBoldOblique,
+                    HELVETICA_BOLD_ITALIC.clone(),
+                ),
                 b"Helvetica-Oblique" => (BaseFont::HelveticaOblique, HELVETICA_ITALIC.clone()),
                 b"Courier" => (BaseFont::Courier, COURIER_REGULAR.clone()),
                 b"Courier-Bold" => (BaseFont::CourierBold, COURIER_BOLD.clone()),
-                b"Courier-BoldOblique" => (
-                    BaseFont::CourierBoldOblique,
-                    COURIER_BOLD_ITALIC.clone(),
-                ),
+                b"Courier-BoldOblique" => {
+                    (BaseFont::CourierBoldOblique, COURIER_BOLD_ITALIC.clone())
+                }
                 b"Courier-Oblique" => (BaseFont::CourierOblique, COURIER_ITALIC.clone()),
                 b"Times-Roman" => (BaseFont::TimesRoman, TIMES_REGULAR.clone()),
                 b"Times-Bold" => (BaseFont::TimesBold, TIMES_BOLD.clone()),
@@ -110,7 +110,7 @@ impl Type1Font {
             while let Some(obj) = entries.next() {
                 if let Ok(num) = obj.clone().cast::<i32>() {
                     code = num;
-                }   else if let Ok(name) = obj.cast::<Name>() {
+                } else if let Ok(name) = obj.cast::<Name>() {
                     encoding_map.insert(code as u8, name.as_str());
                     code += 1;
                 }
@@ -140,7 +140,7 @@ impl Type1Font {
 
     pub fn draw_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
-        let draw_settings = DrawSettings::unhinted(Size::new(1.0), LocationRef::default());
+        let draw_settings = DrawSettings::unhinted(Size::new(1000.0), LocationRef::default());
 
         let Some(outline) = self.blob.outline_glyphs().get(glyph) else {
             return BezPath::new();

@@ -1,10 +1,13 @@
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::Device;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
+use hayro_syntax::object::Object;
+use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{EXT_G_STATE, FONT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
+use hayro_syntax::object::string::String;
 use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape};
 use log::warn;
 use once_cell::sync::Lazy;
@@ -12,9 +15,6 @@ use peniko::Fill;
 use qcms::Transform;
 use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
-use hayro_syntax::object::array::Array;
-use hayro_syntax::object::Object;
-use hayro_syntax::object::string::String;
 
 pub mod color;
 pub mod context;
@@ -226,6 +226,7 @@ pub fn interpret<'a>(
                     *(context.clip_mut()) = None;
                     context.get_mut().n_clips += 1;
                 }
+
                 context.path_mut().truncate(0);
             }
             TypedOperation::NonStrokeColor(c) => {
@@ -322,7 +323,24 @@ pub fn interpret<'a>(
                 context.get_mut().text_state.text_line_matrix = m;
                 context.get_mut().text_state.text_matrix = m;
             }
-            TypedOperation::EndText(_) => {}
+            TypedOperation::EndText(_) => {
+                let has_outline = context
+                    .get()
+                    .text_state
+                    .clip_paths
+                    .segments()
+                    .next()
+                    .is_some();
+
+                if has_outline {
+                    println!("reached");
+                    device.set_transform(context.get().affine);
+                    device.push_clip(&context.get().text_state.clip_paths, Fill::NonZero);
+                    context.get_mut().n_clips += 1;
+                }
+
+                context.get_mut().text_state.clip_paths.truncate(0);
+            }
             TypedOperation::TextFont(t) => {
                 let font = context.get_font(&fonts, t.0);
                 context.get_mut().text_state.font = Some((font, t.1.as_f32()));
@@ -337,7 +355,7 @@ pub fn interpret<'a>(
                 for obj in s.0.iter::<Object>() {
                     if let Ok(adjustment) = obj.clone().cast::<f32>() {
                         context.get_mut().text_state.apply_adjustment(adjustment);
-                    }   else if let Ok(text) = obj.cast::<String>() {
+                    } else if let Ok(text) = obj.cast::<String>() {
                         show_text_string(context, device, text, &font);
                     }
                 }
@@ -363,7 +381,7 @@ pub fn interpret<'a>(
             }
             TypedOperation::NextLineAndShowText(n) => {
                 let font = context.get().text_state.font();
-                
+
                 next_line(context, 0.0, -context.get().text_state.leading as f64);
                 show_text_string(context, device, n.0, &font)
             }
@@ -373,13 +391,17 @@ pub fn interpret<'a>(
                     1 => TextRenderingMode::Stroke,
                     2 => TextRenderingMode::FillStroke,
                     3 => TextRenderingMode::Invisible,
+                    4 => TextRenderingMode::FillAndClip,
+                    5 => TextRenderingMode::StrokeAndClip,
+                    6 => TextRenderingMode::FillAndStrokeAndClip,
+                    7 => TextRenderingMode::Clip,
                     _ => {
-                        warn!("text rendering mode {} is not supported yet", r.0.as_i32());
-                        
+                        warn!("unknown text rendering mode {}", r.0.as_i32());
+
                         TextRenderingMode::Fill
                     }
                 };
-                
+
                 context.get_mut().text_state.render_mode = mode;
             }
             _ => {
@@ -394,8 +416,7 @@ pub fn interpret<'a>(
 }
 
 fn next_line(ctx: &mut Context, tx: f64, ty: f64) {
-    let new_matrix =
-        ctx.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));
+    let new_matrix = ctx.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));
     ctx.get_mut().text_state.text_line_matrix = new_matrix;
     ctx.get_mut().text_state.text_matrix = new_matrix;
 }
@@ -405,26 +426,40 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
         let glyph = font.map_code(*b);
         show_glyph(ctx, device, glyph, &font);
 
-        ctx
-            .get_mut()
+        ctx.get_mut()
             .text_state
             .apply_glyph_width(font.glyph_width(glyph), *b);
     }
 }
 
 fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font: &Font) {
-    let t = ctx.get().text_transform();
+    let t = ctx.get().text_transform() * Affine::scale(1.0 / 1000.0);
     let outline = t * font.outline(glyph);
-    
+
     match ctx.get().text_state.render_mode {
         TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&outline), None),
         TextRenderingMode::Stroke => stroke_path_impl(ctx, device, Some(&outline), None),
         TextRenderingMode::FillStroke => {
             fill_path_impl(ctx, device, Some(&outline), None);
             stroke_path_impl(ctx, device, Some(&outline), None);
-        },
+        }
         TextRenderingMode::Invisible => {}
-        _ => {}
+        TextRenderingMode::Clip => {
+            clip_impl(ctx, &outline);
+        }
+        TextRenderingMode::FillAndClip => {
+            clip_impl(ctx, &outline);
+            fill_path_impl(ctx, device, Some(&outline), None);
+        }
+        TextRenderingMode::StrokeAndClip => {
+            clip_impl(ctx, &outline);
+            stroke_path_impl(ctx, device, Some(&outline), None);
+        }
+        TextRenderingMode::FillAndStrokeAndClip => {
+            clip_impl(ctx, &outline);
+            fill_path_impl(ctx, device, Some(&outline), None);
+            stroke_path_impl(ctx, device, Some(&outline), None);
+        }
     }
 }
 
@@ -483,19 +518,37 @@ fn fill_stroke_path(context: &mut Context, device: &mut impl Device) {
     context.path_mut().truncate(0);
 }
 
-fn fill_path_impl(context: &mut Context, device: &mut impl Device, path: Option<&BezPath>, transform: Option<Affine>) {
+fn clip_impl(context: &mut Context, outline: &BezPath) {
+    let has_outline = outline.segments().next().is_some();
+
+    if has_outline {
+        context.get_mut().text_state.clip_paths.extend(outline);
+    }
+}
+
+fn fill_path_impl(
+    context: &mut Context,
+    device: &mut impl Device,
+    path: Option<&BezPath>,
+    transform: Option<Affine>,
+) {
     let color = Color::from_pdf(
         context.get().fill_cs,
         &context.get().fill_color,
         context.get().fill_alpha,
     );
-    
+
     device.set_paint(color);
     device.set_transform(transform.unwrap_or(context.get().affine));
     device.fill_path(path.unwrap_or(context.path()), &context.fill_props());
 }
 
-fn stroke_path_impl(context: &mut Context, device: &mut impl Device, path: Option<&BezPath>, transform: Option<Affine>) {
+fn stroke_path_impl(
+    context: &mut Context,
+    device: &mut impl Device,
+    path: Option<&BezPath>,
+    transform: Option<Affine>,
+) {
     let color = Color::from_pdf(
         context.get().stroke_cs,
         &context.get().stroke_color,
