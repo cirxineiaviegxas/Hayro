@@ -17,10 +17,12 @@ use skrifa::{GlyphId, MetadataProvider};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::font::encodings::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
 
 mod base;
 mod blob;
 #[rustfmt::skip]
+mod generated_encodings;
 mod encodings;
 mod glyph_list;
 
@@ -57,6 +59,14 @@ impl Font {
 }
 
 #[derive(Debug)]
+enum Encoding {
+    Standard,
+    MacRoman,
+    WinAnsi,
+    MacExpert,
+}
+
+#[derive(Debug)]
 enum FontType {
     Type1Font(Type1Font),
 }
@@ -65,7 +75,8 @@ enum FontType {
 struct Type1Font {
     base_font: Option<BaseFont>,
     blob: FontBlob,
-    encoding: HashMap<u8, String>,
+    encoding: Encoding,
+    encodings: HashMap<u8, String>,
 }
 
 impl Type1Font {
@@ -98,7 +109,7 @@ impl Type1Font {
         };
 
         let mut encoding_map = HashMap::new();
-
+        
         if let Some(differences) = dict
             .get::<Dict>(ENCODING)
             .and_then(|d| d.get::<Array>(DIFFERENCES))
@@ -116,20 +127,37 @@ impl Type1Font {
                 }
             }
         }
+        
+        let encoding = match dict.get::<Name>(ENCODING) {
+            Some(n) => match n.get().as_ref() {
+                b"WinAnsiEncoding" => Encoding::WinAnsi,
+                b"MacRomanEncoding" => Encoding::MacRoman,
+                b"MacExpertEncoding" => Encoding::MacExpert,
+                _ => Encoding::Standard,
+            }
+            None => Encoding::Standard,
+        };
 
         Self {
             base_font: Some(base_font),
-            encoding: encoding_map,
+            encodings: encoding_map,
+            encoding,
             blob,
         }
     }
 
     pub fn map_code(&self, code: u8) -> GlyphId {
         let bf = self.base_font.as_ref().unwrap();
-        let cp = if let Some(entry) = self.encoding.get(&code) {
+        
+        let cp = if let Some(entry) = self.encodings.get(&code) {
             bf.ps_to_unicode(entry.as_str()).unwrap()
         } else {
-            bf.map_code(code).unwrap()
+            match self.encoding {
+                Encoding::Standard => bf.map_code(code).unwrap(),
+                Encoding::MacRoman => bf.ps_to_unicode(MAC_ROMAN.get(&code).unwrap()).unwrap(),
+                Encoding::WinAnsi => bf.ps_to_unicode(WIN_ANSI.get(&code).unwrap()).unwrap(),
+                Encoding::MacExpert => bf.ps_to_unicode(MAC_EXPERT.get(&code).unwrap()).unwrap(),
+            }
         };
         self.blob
             .font_ref()

@@ -1,4 +1,4 @@
-use crate::font::encodings::{STANDARD, SYMBOL, ZAPF_DING_BATS};
+use crate::font::generated_encodings::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use crate::font::glyph_list::{GLYPH_NAMES, ZAPF_DINGS};
 use crate::util::OptionLog;
 

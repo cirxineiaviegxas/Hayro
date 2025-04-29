@@ -5,7 +5,7 @@ GLYPH_LIST = ASSETS_DIR / "glyphlist" / "glyphlist.txt"
 ZAPF_DINGS_BATS = ASSETS_DIR / "glyphlist" / "zapfdingbats.txt"
 ADDITIONAL = ASSETS_DIR / "glyphlist" / "additional.txt"
 GLYPH_LIST_RS = pathlib.Path(__file__).parent / "glyph_list.rs"
-ENCODINGS_RS = pathlib.Path(__file__).parent / "encodings.rs"
+ENCODINGS_RS = pathlib.Path(__file__).parent / "generated_encodings.rs"
 
 print(ASSETS_DIR)
 
