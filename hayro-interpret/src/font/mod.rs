@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 use crate::font::encodings::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
+use crate::util::OptionLog;
 
 mod base;
 mod blob;
@@ -158,20 +159,21 @@ impl Type1Font {
         let bf = self.base_font.as_ref().unwrap();
         
         let cp = if let Some(entry) = self.encodings.get(&code) {
-            bf.ps_to_unicode(entry.as_str()).unwrap()
+            bf.ps_to_unicode(entry.as_str())
         } else {
             match self.encoding {
-                Encoding::Standard => bf.map_code(code).unwrap(),
-                Encoding::MacRoman => bf.ps_to_unicode(MAC_ROMAN.get(&code).unwrap()).unwrap(),
-                Encoding::WinAnsi => bf.ps_to_unicode(WIN_ANSI.get(&code).unwrap()).unwrap(),
-                Encoding::MacExpert => bf.ps_to_unicode(MAC_EXPERT.get(&code).unwrap()).unwrap(),
+                Encoding::Standard => bf.map_code(code),
+                Encoding::MacRoman => MAC_ROMAN.get(&code).and_then(|v| bf.ps_to_unicode(v)),
+                Encoding::WinAnsi => WIN_ANSI.get(&code).and_then(|v| bf.ps_to_unicode(v)),
+                Encoding::MacExpert => MAC_EXPERT.get(&code).and_then(|v| bf.ps_to_unicode(v)),
             }
-        };
-        self.blob
+        }.warn_none(&format!("failed to map code {code} to a ps string."));
+        
+        cp.and_then(|c|  self.blob
             .font_ref()
             .charmap()
-            .map(cp.chars().nth(0).unwrap())
-            .unwrap_or(GlyphId::NOTDEF)
+            .map(c.chars().nth(0).unwrap())
+        ).unwrap_or(GlyphId::NOTDEF)
     }
 
     pub fn draw_glyph(&self, glyph: GlyphId) -> BezPath {

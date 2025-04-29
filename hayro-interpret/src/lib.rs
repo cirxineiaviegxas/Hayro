@@ -290,17 +290,6 @@ pub fn interpret<'a>(
                     warn!("named color spaces are not supported!");
                 }
             }
-            TypedOperation::InlineImage(i) => {
-                println!(
-                    "{:?}",
-                    i.0.dict()
-                        .keys()
-                        .into_iter()
-                        .map(|l| l.as_str())
-                        .collect::<Vec<_>>()
-                );
-                // println!("{:?}", i.0.dict().get::<Object>(Name::from_unescaped(b"CS")));
-            }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}
             TypedOperation::MarkedContentPointWithProperties(_) => {}
             TypedOperation::EndMarkedContent(_) => {}
@@ -332,7 +321,6 @@ pub fn interpret<'a>(
                     .is_some();
 
                 if has_outline {
-                    println!("reached");
                     device.set_transform(context.get().affine);
                     device.push_clip(&context.get().text_state.clip_paths, Fill::NonZero);
                     context.get_mut().n_clips += 1;
