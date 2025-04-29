@@ -1,4 +1,4 @@
-use crate::font::encodings::{COURIER, HELVETICA, SYMBOL, TIMES_ROMAN, ZAPF_DING_BATS};
+use crate::font::encodings::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use crate::font::glyph_list::{GLYPH_NAMES, ZAPF_DINGS};
 use crate::util::OptionLog;
 
@@ -23,22 +23,11 @@ pub(crate) enum BaseFont {
 impl BaseFont {
     pub fn code_to_name(&self, code: u8) -> Option<&'static str> {
         match self {
-            Self::Helvetica => HELVETICA.get(&code),
-            Self::HelveticaBold => HELVETICA.get(&code),
-            Self::HelveticaOblique => HELVETICA.get(&code),
-            Self::HelveticaBoldOblique => HELVETICA.get(&code),
-            Self::Courier => COURIER.get(&code),
-            Self::CourierBold => COURIER.get(&code),
-            Self::CourierOblique => COURIER.get(&code),
-            Self::CourierBoldOblique => COURIER.get(&code),
-            Self::TimesRoman => TIMES_ROMAN.get(&code),
-            Self::TimesBold => TIMES_ROMAN.get(&code),
-            Self::TimesItalic => TIMES_ROMAN.get(&code),
-            Self::TimesBoldItalic => TIMES_ROMAN.get(&code),
             Self::Symbol => SYMBOL.get(&code),
             // Note that this font does not return postscript character names,
             // but instead has a custom encoding.
             Self::ZapfDingBats => ZAPF_DING_BATS.get(&code),
+            _ => STANDARD.get(&code),
         }
         .copied()
     }

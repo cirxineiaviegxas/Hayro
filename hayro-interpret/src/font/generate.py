@@ -48,10 +48,9 @@ def generate_encodings():
 use phf::phf_map;"""
     
     for (font, file) in [
-        ("COURIER", "Courier"),
-        ("HELVETICA", "Helvetica"),
+        # Is the same for Helvetica and Courier as well.
+        ("STANDARD", "Times-Roman"),
         ("SYMBOL", "Symbol"),
-        ("TIMES_ROMAN", "Times-Roman"),
         ("ZAPF_DING_BATS", "ZapfDingbats"),
     ]:
         
