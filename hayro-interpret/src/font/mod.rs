@@ -6,7 +6,10 @@ use skrifa::outline::OutlinePen;
 use skrifa::GlyphId;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
+
+pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
 mod standard;
 mod blob;
@@ -20,7 +23,8 @@ pub struct Font(Arc<FontType>);
 impl Font {
     pub fn new(dict: &Dict) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)?.as_str().as_bytes() {
-            b"Type1" => FontType::Type1Font(Type1Font::new(dict)),
+            b"Type1" => FontType::Type1(Type1Font::new(dict)),
+            b"TrueType" => FontType::TrueType(TrueTypeFont::new(dict)),
             _ => unimplemented!(),
         };
 
@@ -29,19 +33,22 @@ impl Font {
 
     pub fn map_code(&self, code: u8) -> GlyphId {
         match self.0.as_ref() {
-            FontType::Type1Font(f) => f.map_code(code),
+            FontType::Type1(f) => f.map_code(code),
+            FontType::TrueType(_) => todo!()
         }
     }
 
     pub fn outline(&self, glyph: GlyphId) -> BezPath {
         match self.0.as_ref() {
-            FontType::Type1Font(t) => t.draw_glyph(glyph),
+            FontType::Type1(t) => t.draw_glyph(glyph),
+            FontType::TrueType(_) => todo!()
         }
     }
 
     pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
         match self.0.as_ref() {
-            FontType::Type1Font(t) => t.glyph_width(glyph),
+            FontType::Type1(t) => t.glyph_width(glyph),
+            FontType::TrueType(_) => todo!()
         }
     }
 }
@@ -57,7 +64,8 @@ enum Encoding {
 
 #[derive(Debug)]
 enum FontType {
-    Type1Font(Type1Font),
+    Type1(Type1Font),
+    TrueType(TrueTypeFont),
 }
 
 

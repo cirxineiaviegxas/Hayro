@@ -7,7 +7,7 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING};
 use hayro_syntax::object::name::Name;
 use crate::font::blob::FontBlob;
-use crate::font::{Encoding, OutlinePath};
+use crate::font::{Encoding, OutlinePath, UNITS_PER_EM};
 use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
 use crate::font::standard::{select_standard_font, StandardFont};
 use crate::font::true_type::read_encoding;
@@ -63,7 +63,7 @@ impl Type1Font {
 
     pub fn draw_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
-        let draw_settings = DrawSettings::unhinted(Size::new(1000.0), LocationRef::default());
+        let draw_settings = DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default());
 
         let Some(outline) = self.blob.outline_glyphs().get(glyph) else {
             return BezPath::new();

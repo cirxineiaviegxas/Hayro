@@ -1,5 +1,5 @@
 use crate::color::{ColorComponents, ColorSpace};
-use crate::font::{Font, TextRenderingMode};
+use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
 use kurbo::{Affine, BezPath, Cap, Join};
 use peniko::Fill;
 use smallvec::SmallVec;
@@ -43,7 +43,7 @@ impl TextState {
     }
 
     pub(crate) fn apply_adjustment(&mut self, adjustment: f32) {
-        let tx = -adjustment / 1000.0 * self.font_size() * self.horizontal_scaling();
+        let tx = -adjustment / UNITS_PER_EM * self.font_size() * self.horizontal_scaling();
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }
 
@@ -55,7 +55,7 @@ impl TextState {
         };
 
         // TODO: Vertical writing
-        let tx = (glyph_width * self.font_size() + self.char_space + word_space)
+        let tx = (glyph_width / UNITS_PER_EM * self.font_size() + self.char_space + word_space)
             * self.horizontal_scaling();
         self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
     }
