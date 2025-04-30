@@ -1,20 +1,11 @@
-use crate::font::standard::{select, StandardFont};
-use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
-use crate::util::OptionLog;
-use hayro_syntax::object::Object;
-use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, SUBTYPE};
+use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
 use kurbo::BezPath;
-use skrifa::instance::LocationRef;
-use skrifa::outline::{DrawSettings, OutlinePen};
-use skrifa::prelude::Size;
-use skrifa::{GlyphId, MetadataProvider};
-use std::collections::HashMap;
+use skrifa::outline::OutlinePen;
+use skrifa::GlyphId;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::font::blob::FontBlob;
 use crate::font::type1::Type1Font;
 
 mod standard;
