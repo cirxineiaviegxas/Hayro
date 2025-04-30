@@ -208,7 +208,7 @@ pub fn interpret<'a>(
             }
             TypedOperation::SetGraphicsState(gs) => {
                 let gs = ext_g_states
-                    .get::<Dict>(gs.0)
+                    .get::<Dict>(&gs.0)
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap_or_default();
 
@@ -456,7 +456,7 @@ fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font:
 }
 
 fn handle_cs(key: Name) -> ColorSpace {
-    match key.get().as_ref() {
+    match key.as_ref() {
         b"DeviceRGB" => ColorSpace::DeviceRgb,
         b"DeviceGray" => ColorSpace::DeviceGray,
         b"DeviceCMYK" => ColorSpace::DeviceCmyk,
@@ -470,22 +470,22 @@ fn handle_cs(key: Name) -> ColorSpace {
 
 fn handle_gs(dict: &Dict, context: &mut Context) {
     for key in dict.keys() {
-        handle_gs_single(dict, *key, context).warn_none(&format!(
+        handle_gs_single(dict, key, context).warn_none(&format!(
             "invalid value in graphics state for {}",
             key.as_str()
         ));
     }
 }
 
-fn handle_gs_single(dict: &Dict, key: Name, context: &mut Context) -> Option<()> {
+fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()> {
     // TODO Can we use constants here somehow?
-    match key.as_str().as_str() {
-        "LW" => context.get_mut().line_width = dict.get::<f32>(key)?,
-        "LC" => context.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(key)?)),
-        "LJ" => context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(key)?)),
-        "ML" => context.get_mut().miter_limit = dict.get::<f32>(key)?,
-        "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(key)?,
-        "ca" => context.get_mut().fill_alpha = dict.get::<f32>(key)?,
+    match key.as_str() {
+        "LW" => context.get_mut().line_width = dict.get::<f32>(&key)?,
+        "LC" => context.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(&key)?)),
+        "LJ" => context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(&key)?)),
+        "ML" => context.get_mut().miter_limit = dict.get::<f32>(&key)?,
+        "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(&key)?,
+        "ca" => context.get_mut().fill_alpha = dict.get::<f32>(&key)?,
         "Type" => {}
         _ => {}
     }

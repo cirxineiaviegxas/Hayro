@@ -102,7 +102,7 @@ mod tests {
 
         let expected = vec![
             TypedOperation::Transform(Transform(n(1), n(0), n(0), n(-1), n(0), n(200))),
-            TypedOperation::SetGraphicsState(SetGraphicsState(Name::from_unescaped(b"g0"))),
+            TypedOperation::SetGraphicsState(SetGraphicsState(Name::new(b"g0"))),
             TypedOperation::NonStrokeColorDeviceRgb(NonStrokeColorDeviceRgb(n(1), n(0), n(0))),
         ];
 
@@ -156,7 +156,7 @@ f
                     Number::from_f32(0.2),
                     Number::from_f32(0.3)
                 ],
-                Some(Name::from_unescaped(b"DeviceRgb")),
+                Some(Name::new(b"DeviceRgb")),
             )),
         ];
 
@@ -173,7 +173,7 @@ f
 
         let expected = vec![TypedOperation::MarkedContentPointWithProperties(
             MarkedContentPointWithProperties(
-                Name::from_unescaped(b"Attribute"),
+                Name::new(b"Attribute"),
                 Object::Dict(Dict::from_bytes(b"<</ShowCenterPoint false >>").unwrap()),
             ),
         )];
@@ -191,7 +191,7 @@ f
 
         let expected = vec![
             TypedOperation::BeginMarkedContentWithProperties(BeginMarkedContentWithProperties(
-                Name::from_unescaped(b"Span"),
+                Name::new(b"Span"),
                 Object::Dict(Dict::from_bytes(b"<< /MCID 0 /Alt (Alt)>>").unwrap()),
             )),
             TypedOperation::EndMarkedContent(EndMarkedContent),
@@ -210,8 +210,8 @@ f
 
         let expected = vec![
             TypedOperation::BeginMarkedContentWithProperties(BeginMarkedContentWithProperties(
-                Name::from_unescaped(b"Span"),
-                Object::Name(Name::from_unescaped(b"Name")),
+                Name::new(b"Span"),
+                Object::Name(Name::new(b"Name")),
             )),
             TypedOperation::EndMarkedContent(EndMarkedContent),
         ];

@@ -97,7 +97,7 @@ impl WriteDirect for Null {
 
 impl WriteDirect for Name<'_> {
     fn write_direct(&self, obj: Obj) {
-        obj.primitive(pdf_writer::Name(&self.get()))
+        obj.primitive(pdf_writer::Name(&self.as_ref()))
     }
 }
 
@@ -112,8 +112,8 @@ impl WriteDirect for Dict<'_> {
         let mut dict = obj.dict();
 
         for key in self.keys() {
-            let obj = dict.insert(pdf_writer::Name(key.get().as_ref()));
-            let entry = self.get_raw::<Object>(*key).unwrap();
+            let obj = dict.insert(pdf_writer::Name(key.as_ref()));
+            let entry = self.get_raw::<Object>(key).unwrap();
             entry.write_direct(obj);
         }
     }

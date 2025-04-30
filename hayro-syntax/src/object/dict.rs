@@ -44,12 +44,12 @@ impl<'a> Dict<'a> {
     }
 
     /// Checks whether the dictionary contains an entry with a specific key.
-    pub fn contains_key(&self, key: Name) -> bool {
-        self.0.offsets.contains_key(&key)
+    pub fn contains_key(&self, key: &Name) -> bool {
+        self.0.offsets.contains_key(key)
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
-    pub fn get<T>(&self, key: Name) -> Option<T>
+    pub fn get<T>(&self, key: &Name) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
@@ -57,8 +57,8 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
-    pub fn get_ref(&self, key: Name) -> Option<ObjRef> {
-        let offset = *self.0.offsets.get(&key)?;
+    pub fn get_ref(&self, key: &Name) -> Option<ObjRef> {
+        let offset = *self.0.offsets.get(key)?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<ObjRef>(&self.0.xref)
     }
@@ -68,11 +68,11 @@ impl<'a> Dict<'a> {
         self.0.offsets.keys()
     }
 
-    pub(crate) fn get_raw<T>(&self, key: Name) -> Option<MaybeRef<T>>
+    pub(crate) fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
     where
         T: ObjectLike<'a>,
     {
-        let offset = *self.0.offsets.get(&key)?;
+        let offset = *self.0.offsets.get(key)?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
     }
@@ -244,7 +244,7 @@ mod tests {
         let dict = dict_impl(dict_data).unwrap();
 
         assert_eq!(dict.len(), 1);
-        assert!(dict.get::<Number>(Name::from_unescaped(b"Hi")).is_some());
+        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
     }
 
     #[test]
@@ -253,8 +253,8 @@ mod tests {
         let dict = dict_impl(dict_data).unwrap();
 
         assert_eq!(dict.len(), 2);
-        assert!(dict.get::<Number>(Name::from_unescaped(b"Hi")).is_some());
-        assert!(dict.get::<bool>(Name::from_unescaped(b"Second")).is_some());
+        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
+        assert!(dict.get::<bool>(&Name::new(b"Second")).is_some());
     }
 
     #[test]
@@ -283,22 +283,22 @@ mod tests {
             .read_with_xref::<Dict>(&XRef::dummy())
             .unwrap();
         assert_eq!(dict.len(), 6);
-        assert!(dict.get::<Name>(Name::from_unescaped(b"Type")).is_some());
-        assert!(dict.get::<Name>(Name::from_unescaped(b"Subtype")).is_some());
+        assert!(dict.get::<Name>(&Name::new(b"Type")).is_some());
+        assert!(dict.get::<Name>(&Name::new(b"Subtype")).is_some());
         assert!(
-            dict.get::<Number>(Name::from_unescaped(b"Version"))
+            dict.get::<Number>(&Name::new(b"Version"))
                 .is_some()
         );
         assert!(
-            dict.get::<i32>(Name::from_unescaped(b"IntegerItem"))
+            dict.get::<i32>(&Name::new(b"IntegerItem"))
                 .is_some()
         );
         assert!(
-            dict.get::<string::String>(Name::from_unescaped(b"StringItem"))
+            dict.get::<string::String>(&Name::new(b"StringItem"))
                 .is_some()
         );
         assert!(
-            dict.get::<Dict>(Name::from_unescaped(b"Subdictionary"))
+            dict.get::<Dict>(&Name::new(b"Subdictionary"))
                 .is_some()
         );
     }
@@ -337,7 +337,7 @@ pub mod keys {
 
     macro_rules! key {
         ($i:ident, $e:expr) => {
-            pub const $i: Name<'static> = Name::from_unescaped($e);
+            pub const $i: &'static Name<'static> = &Name::from_unescaped($e);
         };
     }
 

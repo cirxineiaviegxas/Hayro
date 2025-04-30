@@ -109,12 +109,12 @@ impl Context {
     }
 
     pub(crate) fn get_font(&mut self, dict: &Dict, name: Name) -> Font {
-        let font_ref = dict.get_ref(name).unwrap();
+        let font_ref = dict.get_ref(&name).unwrap();
 
         self.font_cache
             .entry(font_ref)
             .or_insert_with(|| {
-                let font_dict = dict.get::<Dict>(name).unwrap();
+                let font_dict = dict.get::<Dict>(&name).unwrap();
 
                 Font::new(&font_dict).unwrap()
             })

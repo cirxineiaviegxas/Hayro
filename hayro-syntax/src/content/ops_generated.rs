@@ -446,7 +446,7 @@ pub enum TypedOperation<'a> {
 
 impl<'a> TypedOperation<'a> {
     pub(crate) fn dispatch(operation: &Operation<'a>) -> Option<TypedOperation<'a>> {
-        let op_name = operation.operator.get();
+        let op_name = operation.operator.as_ref();
         Some(match op_name.as_ref() {
             b"BX" => BeginCompatibility::from_stack(&operation.operands)?.into(),
             b"EX" => EndCompatibility::from_stack(&operation.operands)?.into(),

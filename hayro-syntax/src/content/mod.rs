@@ -3,7 +3,7 @@ pub mod ops;
 use crate::content::ops::TypedOperation;
 use crate::file::xref::XRef;
 use crate::object::dict::InlineImageDict;
-use crate::object::name::{escape_name_like, skip_name_like};
+use crate::object::name::{skip_name_like, Name};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
@@ -11,6 +11,7 @@ use log::warn;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
+use std::ops::Deref;
 
 // 6 operands are used for example for ctm or cubic curves,
 // but anything above should be pretty rare (for example for
@@ -19,18 +20,17 @@ const OPERANDS_THRESHOLD: usize = 6;
 
 impl Debug for Operator<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", std::str::from_utf8(&self.get()).unwrap())
+        write!(f, "{}", std::str::from_utf8(self.deref()).unwrap())
     }
 }
 
-pub struct Operator<'a> {
-    data: &'a [u8],
-    has_escape: bool,
-}
+pub struct Operator<'a>(Name<'a>);
 
-impl<'a> Operator<'a> {
-    pub fn get(&self) -> Cow<'a, [u8]> {
-        escape_name_like(self.data, self.has_escape)
+impl Deref for Operator<'_> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref()
     }
 }
 
@@ -42,9 +42,9 @@ impl Skippable for Operator<'_> {
 
 impl<'a> Readable<'a> for Operator<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'a>) -> Option<Self> {
-        let (data, has_escape) = {
+        let data = {
             let start = r.offset();
-            let has_escape = skip_name_like(r, false)?;
+            skip_name_like(r, false)?;
             let end = r.offset();
             let data = r.range(start..end).unwrap();
 
@@ -52,10 +52,10 @@ impl<'a> Readable<'a> for Operator<'a> {
                 return None;
             }
 
-            (data, has_escape)
+            data
         };
 
-        Some(Operator { data, has_escape })
+        Some(Operator(Name::from_unescaped(data)))
     }
 }
 
@@ -107,7 +107,7 @@ impl<'a> Iterator for UntypedIter<'a> {
                 };
 
                 // Hack for now to skip inline images, which form an exception.
-                if operator.get().as_ref() == b"BI" {
+                if operator.as_ref() == b"BI" {
                     // The ID operator will already be consumed by this.
                     let inline_dict = self.reader.read_without_xref::<InlineImageDict>()?;
                     let dict = inline_dict.get_dict().clone();

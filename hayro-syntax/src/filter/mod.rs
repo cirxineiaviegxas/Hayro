@@ -89,7 +89,7 @@ impl TryFrom<Name<'_>> for Filter {
     type Error = ();
 
     fn try_from(value: Name) -> std::result::Result<Self, Self::Error> {
-        match value.get().as_ref() {
+        match value.as_ref() {
             b"ASCIIHexDecode" => Ok(Filter::AsciiHexDecode),
             b"ASCII85Decode" => Ok(Filter::Ascii85Decode),
             b"LZWDecode" => Ok(Filter::LzwDecode),

@@ -60,7 +60,7 @@ fn resolve_pages<'a>(
     // TODO: Add inheritance of page attributes
 
     for dict in kids.iter::<Dict>() {
-        match dict.get::<Name>(TYPE)?.get().as_ref() {
+        match dict.get::<Name>(TYPE)?.as_ref() {
             b"Pages" => resolve_pages(dict, entries, ctx.clone())?,
             b"Page" => entries.push(Page::new(dict, &ctx)),
             _ => return None,

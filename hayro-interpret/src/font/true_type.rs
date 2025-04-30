@@ -23,10 +23,10 @@ enum InnerFont {
 }
 
 impl InnerFont {
-    fn blob(&self) -> &FontBlob {
+    fn blob(&self) -> FontBlob {
         match self {
-            InnerFont::Standard(s) => &s.get_blob(),
-            InnerFont::Custom(c) => c
+            InnerFont::Standard(s) => s.get_blob().clone(),
+            InnerFont::Custom(c) => c.clone()
         }
     }
 }
@@ -134,9 +134,9 @@ fn read_widths(dict: &Dict, descriptor: &Dict) -> HashMap<u8, f32> {
 }
 
 pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
-    fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
+    fn get_encoding_base(dict: &Dict, name: &Name) -> Encoding {
         match dict.get::<Name>(name) {
-            Some(n) => match n.get().as_ref() {
+            Some(n) => match n.as_ref() {
                 b"WinAnsiEncoding" => Encoding::WinAnsi,
                 b"MacRomanEncoding" => Encoding::MacRoman,
                 b"MacExpertEncoding" => Encoding::MacExpert,
@@ -163,7 +163,7 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
                 if let Ok(num) = obj.clone().cast::<i32>() {
                     code = num;
                 } else if let Ok(name) = obj.cast::<Name>() {
-                    map.insert(code as u8, name.as_str());
+                    map.insert(code as u8, name.as_str().to_string());
                     code += 1;
                 }
             }
