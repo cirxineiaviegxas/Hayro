@@ -9,19 +9,8 @@ use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
 /// A PDF name.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Name<'a>(Cow<'a, [u8]>);
-
-// Custom PartialEq and Hash implementation.
-// We do this so that when having a dict where the key is a name, escaped and unescaped
-// versions of the same name get mapped to the same key.
-impl PartialEq for Name<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.deref() == other.deref()
-    }
-}
-
-impl Eq for Name<'_> {}
 
 impl Hash for Name<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -129,17 +118,32 @@ pub(crate) fn skip_name_like(r: &mut Reader, solidus: bool) -> Option<()> {
 }
 
 pub mod names {
-    use super::*;
-
     macro_rules! name {
         ($i:ident, $e:expr) => {
-            pub const $i: Name<'static> = Name::from_unescaped($e);
+            pub const $i: &[u8] = $e;
         };
     }
 
-    name!(DEVICE_RGB, b"DeviceRGB");
+    name!(ASCII85_DECODE, b"ASCII85Decode");
+    name!(ASCII_HEX_DECODE, b"ASCIIHexDecode");
+    name!(CCITTFAX_DECODE, b"CCITTFaxDecode");
+    name!(CRYPT, b"Crypt");
+    name!(DCT_DECODE, b"DCTDecode");
+    name!(DEVICE_CMYK, b"DeviceCMYK");
     name!(DEVICE_GRAY, b"DeviceGray");
+    name!(DEVICE_RGB, b"DeviceRGB");
+    name!(FLATE_DECODE, b"FlateDecode");
+    name!(JBIG2_DECODE, b"JBIG2Decode");
+    name!(JPX_DECODE, b"JPXDecode");
+    name!(LZW_DECODE, b"LZWDecode");
+    name!(MAC_EXPERT_ENCODING, b"MacExpertEncoding");
+    name!(MAC_ROMAN_ENCODING, b"MacRomanEncoding");
+    name!(PAGE, b"Page");
+    name!(PAGES, b"Pages");
+    name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
+    name!(WIN_ANSI_ENCODING, b"WinAnsiEncoding");
 }
+
 
 #[cfg(test)]
 mod tests {

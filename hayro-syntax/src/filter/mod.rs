@@ -8,6 +8,7 @@ use crate::Result;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
 use crate::object::name::Name;
+use crate::object::name::names::*;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use snafu::{OptionExt, whatever};
@@ -90,16 +91,16 @@ impl TryFrom<Name<'_>> for Filter {
 
     fn try_from(value: Name) -> std::result::Result<Self, Self::Error> {
         match value.as_ref() {
-            b"ASCIIHexDecode" => Ok(Filter::AsciiHexDecode),
-            b"ASCII85Decode" => Ok(Filter::Ascii85Decode),
-            b"LZWDecode" => Ok(Filter::LzwDecode),
-            b"FlateDecode" => Ok(Filter::FlateDecode),
-            b"RunLengthDecode" => Ok(Filter::RunLengthDecode),
-            b"CCITTFaxDecode" => Ok(Filter::CcittFaxDecode),
-            b"JBIG2Decode" => Ok(Filter::Jbig2Decode),
-            b"DCTDecode" => Ok(Filter::DctDecode),
-            b"JPXDecode" => Ok(Filter::JpxDecode),
-            b"Crypt" => Ok(Filter::Crypt),
+            ASCII_HEX_DECODE => Ok(Filter::AsciiHexDecode),
+            ASCII85_DECODE => Ok(Filter::Ascii85Decode),
+            LZW_DECODE => Ok(Filter::LzwDecode),
+            FLATE_DECODE => Ok(Filter::FlateDecode),
+            RUN_LENGTH_DECODE => Ok(Filter::RunLengthDecode),
+            CCITTFAX_DECODE => Ok(Filter::CcittFaxDecode),
+            JBIG2_DECODE => Ok(Filter::Jbig2Decode),
+            DCT_DECODE => Ok(Filter::DctDecode),
+            JPX_DECODE => Ok(Filter::JpxDecode),
+            CRYPT => Ok(Filter::Crypt),
             _ => Err(()),
         }
     }

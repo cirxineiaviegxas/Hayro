@@ -4,6 +4,7 @@ use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, TYPE};
 use crate::object::name::Name;
+use crate::object::name::names::*;
 use crate::object::rect::Rect;
 use crate::object::stream::Stream;
 use log::warn;
@@ -61,14 +62,15 @@ fn resolve_pages<'a>(
 
     for dict in kids.iter::<Dict>() {
         match dict.get::<Name>(TYPE)?.as_ref() {
-            b"Pages" => resolve_pages(dict, entries, ctx.clone())?,
-            b"Page" => entries.push(Page::new(dict, &ctx)),
+            PAGES => resolve_pages(dict, entries, ctx.clone())?,
+            PAGE => entries.push(Page::new(dict, &ctx)),
             _ => return None,
         }
     }
 
     Some(())
 }
+
 
 pub struct Page<'a> {
     inner: Dict<'a>,

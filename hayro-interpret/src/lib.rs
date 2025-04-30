@@ -5,6 +5,7 @@ use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{EXT_G_STATE, FONT};
 use hayro_syntax::object::name::Name;
+use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::string::String;
 use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape};
@@ -457,9 +458,9 @@ fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font:
 
 fn handle_cs(key: Name) -> ColorSpace {
     match key.as_ref() {
-        b"DeviceRGB" => ColorSpace::DeviceRgb,
-        b"DeviceGray" => ColorSpace::DeviceGray,
-        b"DeviceCMYK" => ColorSpace::DeviceCmyk,
+        DEVICE_RGB => ColorSpace::DeviceRgb,
+        DEVICE_GRAY => ColorSpace::DeviceGray,
+        DEVICE_CMYK => ColorSpace::DeviceCmyk,
         _ => {
             warn!("unsupported color space {}", key.as_str());
 
