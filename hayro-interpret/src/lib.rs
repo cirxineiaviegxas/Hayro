@@ -420,13 +420,13 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
 
         ctx.get_mut()
             .text_state
-            .apply_glyph_width(font.glyph_width(glyph), *b);
+            .apply_glyph_width(font.glyph_width(*b), *b);
     }
 }
 
 fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font: &Font) {
     let t = ctx.get().text_transform() * Affine::scale(1.0 / 1000.0);
-    let outline = t * font.outline(glyph);
+    let outline = t * font.outline_glyph(glyph);
 
     match ctx.get().text_state.render_mode {
         TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&outline), None),

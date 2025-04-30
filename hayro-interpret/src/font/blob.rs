@@ -1,11 +1,13 @@
-use crate::font::UNITS_PER_EM;
+use crate::font::{OutlinePath, UNITS_PER_EM};
 use once_cell::sync::Lazy;
 use skrifa::charmap::Charmap;
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
-use skrifa::{FontRef, MetadataProvider, OutlineGlyphCollection};
+use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use kurbo::BezPath;
+use skrifa::outline::DrawSettings;
 use yoke::{Yoke, Yokeable};
 
 pub(crate) static HELVETICA_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
@@ -160,8 +162,20 @@ impl FontBlob {
         &self.0.as_ref().get().glyph_metrics
     }
 
-    pub fn outline_glyphs(&self) -> &OutlineGlyphCollection {
+    fn outline_glyphs(&self) -> &OutlineGlyphCollection {
         &self.0.as_ref().get().outline_glyphs
+    }
+    
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        let mut path = OutlinePath(BezPath::new());
+        let draw_settings = DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default());
+
+        let Some(outline) = self.outline_glyphs().get(glyph) else {
+            return BezPath::new();
+        };
+
+        let _ = outline.draw(draw_settings, &mut path);
+        path.0
     }
 
     pub fn charmap(&self) -> &Charmap {

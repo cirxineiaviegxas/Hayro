@@ -38,16 +38,16 @@ impl Font {
         }
     }
 
-    pub fn outline(&self, glyph: GlyphId) -> BezPath {
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         match self.0.as_ref() {
-            FontType::Type1(t) => t.draw_glyph(glyph),
-            FontType::TrueType(_) => todo!(),
+            FontType::Type1(t) => t.outline_glyph(glyph),
+            FontType::TrueType(t) => t.outline_glyph(glyph),
         }
     }
 
-    pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
+    pub fn glyph_width(&self, code: u8) -> f32 {
         match self.0.as_ref() {
-            FontType::Type1(t) => t.glyph_width(glyph),
+            FontType::Type1(t) => t.glyph_width(code),
             FontType::TrueType(_) => todo!(),
         }
     }

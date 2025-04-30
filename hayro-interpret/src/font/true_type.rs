@@ -14,6 +14,8 @@ use hayro_syntax::object::stream::Stream;
 use log::warn;
 use std::collections::HashMap;
 use std::sync::Arc;
+use kurbo::BezPath;
+use skrifa::GlyphId;
 
 #[derive(Debug)]
 enum InnerFont {
@@ -53,6 +55,21 @@ impl TrueTypeFont {
             widths,
             encoding,
         }
+    }
+    
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        match &self.base_font {
+            InnerFont::Standard(s) => s.get_blob().outline_glyph(glyph),
+            InnerFont::Custom(c) => c.outline_glyph(glyph),
+        }
+    }
+
+    pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
+        todo!();
+        // self.blob
+        //     .glyph_metrics()
+        //     .advance_width(glyph)
+        //     .unwrap_or(0.0)
     }
 }
 

@@ -61,22 +61,14 @@ impl Type1Font {
         .unwrap_or(GlyphId::NOTDEF)
     }
 
-    pub fn draw_glyph(&self, glyph: GlyphId) -> BezPath {
-        let mut path = OutlinePath(BezPath::new());
-        let draw_settings = DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default());
-
-        let Some(outline) = self.blob.outline_glyphs().get(glyph) else {
-            return BezPath::new();
-        };
-
-        let _ = outline.draw(draw_settings, &mut path);
-        path.0
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        self.blob.outline_glyph(glyph)
     }
 
-    pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
+    pub fn glyph_width(&self, code: u8) -> f32 {
         self.blob
             .glyph_metrics()
-            .advance_width(glyph)
+            .advance_width(self.map_code(code))
             .unwrap_or(0.0)
     }
 }
