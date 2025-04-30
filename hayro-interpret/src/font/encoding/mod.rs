@@ -1,5 +1,6 @@
 mod glyph_names;
 mod mac_expert;
+mod mac_os_roman;
 mod mac_roman;
 mod standard;
 mod symbol;

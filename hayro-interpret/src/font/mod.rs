@@ -1,21 +1,21 @@
+use crate::font::true_type::TrueTypeFont;
+use crate::font::type1::Type1Font;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
 use kurbo::BezPath;
-use skrifa::outline::OutlinePen;
 use skrifa::GlyphId;
+use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::font::true_type::TrueTypeFont;
-use crate::font::type1::Type1Font;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
-mod standard;
 mod blob;
 mod encoding;
-mod type1;
+mod standard;
 mod true_type;
+mod type1;
 
 #[derive(Clone, Debug)]
 pub struct Font(Arc<FontType>);
@@ -34,21 +34,21 @@ impl Font {
     pub fn map_code(&self, code: u8) -> GlyphId {
         match self.0.as_ref() {
             FontType::Type1(f) => f.map_code(code),
-            FontType::TrueType(_) => todo!()
+            FontType::TrueType(_) => todo!(),
         }
     }
 
     pub fn outline(&self, glyph: GlyphId) -> BezPath {
         match self.0.as_ref() {
             FontType::Type1(t) => t.draw_glyph(glyph),
-            FontType::TrueType(_) => todo!()
+            FontType::TrueType(_) => todo!(),
         }
     }
 
     pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
         match self.0.as_ref() {
             FontType::Type1(t) => t.glyph_width(glyph),
-            FontType::TrueType(_) => todo!()
+            FontType::TrueType(_) => todo!(),
         }
     }
 }
@@ -59,7 +59,7 @@ enum Encoding {
     MacRoman,
     WinAnsi,
     MacExpert,
-    BuiltIn
+    BuiltIn,
 }
 
 #[derive(Debug)]
@@ -67,7 +67,6 @@ enum FontType {
     Type1(Type1Font),
     TrueType(TrueTypeFont),
 }
-
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum TextRenderingMode {

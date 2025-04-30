@@ -1,3 +1,4 @@
+use crate::font::UNITS_PER_EM;
 use once_cell::sync::Lazy;
 use skrifa::charmap::Charmap;
 use skrifa::instance::{LocationRef, Size};
@@ -6,7 +7,6 @@ use skrifa::{FontRef, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use yoke::{Yoke, Yokeable};
-use crate::font::UNITS_PER_EM;
 
 pub(crate) static HELVETICA_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     FontBlob::new(
@@ -143,7 +143,8 @@ impl FontBlob {
                 FontRefYoke {
                     font_ref: font_ref.clone(),
                     outline_glyphs: font_ref.outline_glyphs(),
-                    glyph_metrics: font_ref.glyph_metrics(Size::new(UNITS_PER_EM), LocationRef::default()),
+                    glyph_metrics: font_ref
+                        .glyph_metrics(Size::new(UNITS_PER_EM), LocationRef::default()),
                     charmap: font_ref.charmap(),
                 }
             });

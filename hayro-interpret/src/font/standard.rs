@@ -1,12 +1,16 @@
-use log::warn;
-use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::BASE_FONT;
-use hayro_syntax::object::name::Name;
 use crate::font::blob;
-use crate::font::blob::{FontBlob, COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD, TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT};
+use crate::font::blob::{
+    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, FontBlob, HELVETICA_BOLD,
+    HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD, TIMES_ITALIC,
+    TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
+};
 use crate::font::encoding::{GLYPH_NAMES, ZAPF_DINGS_NAMES};
 use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use crate::util::OptionLog;
+use hayro_syntax::object::dict::Dict;
+use hayro_syntax::object::dict::keys::BASE_FONT;
+use hayro_syntax::object::name::Name;
+use log::warn;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum StandardFont {
@@ -50,7 +54,7 @@ impl StandardFont {
     pub fn code_to_unicode(&self, code: u8) -> Option<&'static str> {
         self.name_to_unicode(self.code_to_name(code)?)
     }
-    
+
     pub fn get_blob(&self) -> FontBlob {
         match self {
             StandardFont::Helvetica => HELVETICA_REGULAR.clone(),
@@ -93,8 +97,9 @@ pub(crate) fn select_standard_font(dict: &Dict) -> Option<StandardFont> {
         | b"Helvetica-BoldItalic"
         | b"LiberationSans-BoldItalic"
         | b"NimbusSanL-BoldItal" => Some(StandardFont::HelveticaBoldOblique),
-        b"Courier" | b"CourierNew" | b"CourierNewPSMT" | b"LiberationMono"
-        | b"NimbusMonL-Regu" => Some(StandardFont::Courier),
+        b"Courier" | b"CourierNew" | b"CourierNewPSMT" | b"LiberationMono" | b"NimbusMonL-Regu" => {
+            Some(StandardFont::Courier)
+        }
         b"Courier-Bold"
         | b"CourierNewPS-BoldMT"
         | b"CourierNew-Bold"
@@ -109,9 +114,7 @@ pub(crate) fn select_standard_font(dict: &Dict) -> Option<StandardFont> {
         | b"CourierNewPS-BoldItalicMT"
         | b"CourierNew-BoldItalic"
         | b"LiberationMono-BoldItalic"
-        | b"NimbusMonL-BoldObli" => {
-            Some(StandardFont::CourierBoldOblique)
-        }
+        | b"NimbusMonL-BoldObli" => Some(StandardFont::CourierBoldOblique),
         b"Times-Roman"
         | b"TimesNewRomanPSMT"
         | b"TimesNewRoman"
@@ -135,17 +138,13 @@ pub(crate) fn select_standard_font(dict: &Dict) -> Option<StandardFont> {
         | b"TimesNewRomanPS-BoldItalic"
         | b"TimesNewRoman-BoldItalic"
         | b"LiberationSerif-BoldItalic"
-        | b"NimbusRomNo9L-MediItal" => {
-            Some(StandardFont::TimesBoldItalic)
-        }
+        | b"NimbusRomNo9L-MediItal" => Some(StandardFont::TimesBoldItalic),
         b"Symbol" | b"SymbolMT" | b"StandardSymL" => Some(StandardFont::Symbol),
         b"ZapfDingbats"
         | b"ZapfDingbatsITCbyBT-Regular"
         | b"ZapfDingbatsITC"
         | b"Dingbats"
         | b"MS-Gothic" => Some(StandardFont::ZapfDingBats),
-        _ => {
-            None
-        }
+        _ => None,
     }
 }

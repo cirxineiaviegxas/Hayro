@@ -1,17 +1,17 @@
-use std::collections::HashMap;
-use kurbo::BezPath;
-use skrifa::{GlyphId, MetadataProvider};
-use skrifa::instance::{LocationRef, Size};
-use skrifa::outline::DrawSettings;
+use crate::font::blob::FontBlob;
+use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
+use crate::font::standard::{StandardFont, select_standard_font};
+use crate::font::true_type::read_encoding;
+use crate::font::{Encoding, OutlinePath, UNITS_PER_EM};
+use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING};
 use hayro_syntax::object::name::Name;
-use crate::font::blob::FontBlob;
-use crate::font::{Encoding, OutlinePath, UNITS_PER_EM};
-use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
-use crate::font::standard::{select_standard_font, StandardFont};
-use crate::font::true_type::read_encoding;
-use crate::util::OptionLog;
+use kurbo::BezPath;
+use skrifa::instance::{LocationRef, Size};
+use skrifa::outline::DrawSettings;
+use skrifa::{GlyphId, MetadataProvider};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub(crate) struct Type1Font {
@@ -50,7 +50,7 @@ impl Type1Font {
                 Encoding::BuiltIn => bf.code_to_unicode(code),
             }
         }
-            .warn_none(&format!("failed to map code {code} to a ps string."));
+        .warn_none(&format!("failed to map code {code} to a ps string."));
 
         cp.and_then(|c| {
             self.blob
@@ -58,7 +58,7 @@ impl Type1Font {
                 .charmap()
                 .map(c.chars().nth(0).unwrap())
         })
-            .unwrap_or(GlyphId::NOTDEF)
+        .unwrap_or(GlyphId::NOTDEF)
     }
 
     pub fn draw_glyph(&self, glyph: GlyphId) -> BezPath {
