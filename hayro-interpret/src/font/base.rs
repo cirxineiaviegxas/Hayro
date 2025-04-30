@@ -45,9 +45,3 @@ impl BaseFont {
         self.ps_to_unicode(self.code_to_name(code)?)
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    // TODO: Check whether fallback fonts cover all chars of standard fonts
-}
