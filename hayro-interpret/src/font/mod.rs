@@ -1,9 +1,4 @@
-use crate::font::base::BaseFont;
-use crate::font::blob::{
-    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, FontBlob, HELVETICA_BOLD,
-    HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, SYMBOL, TIMES_BOLD, TIMES_ITALIC,
-    TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
-};
+use crate::font::base::{select, BaseFont};
 use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
 use crate::util::OptionLog;
 use hayro_syntax::object::Object;
@@ -19,6 +14,7 @@ use skrifa::{GlyphId, MetadataProvider};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::font::blob::FontBlob;
 
 mod base;
 mod blob;
@@ -79,88 +75,9 @@ struct Type1Font {
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Type1Font {
-        let (base_font, blob) = if let Some(n) = dict.get::<Name>(BASE_FONT) {
-            // See <https://github.com/apache/pdfbox/blob/4438b8fdc67a3a9ebfb194595d0e81f88b708a37/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/font/FontMapperImpl.java#L62-L102>
-            match n.get().as_ref() {
-                b"Helvetica" | b"ArialMT" | b"Arial" | b"LiberationSans" | b"NimbusSanL-Regu" => {
-                    (BaseFont::Helvetica, HELVETICA_REGULAR.clone())
-                }
-                b"Helvetica-Bold"
-                | b"Arial-BoldMT"
-                | b"Arial-Bold"
-                | b"LiberationSans-Bold"
-                | b"NimbusSanL-Bold" => (BaseFont::HelveticaBold, HELVETICA_BOLD.clone()),
-                b"Helvetica-Oblique"
-                | b"Arial-ItalicMT"
-                | b"Arial-Italic"
-                | b"Helvetica-Italic"
-                | b"LiberationSans-Italic"
-                | b"NimbusSanL-ReguItal" => (BaseFont::HelveticaOblique, HELVETICA_ITALIC.clone()),
-                b"Helvetica-BoldOblique"
-                | b"Arial-BoldItalicMT"
-                | b"Helvetica-BoldItalic"
-                | b"LiberationSans-BoldItalic"
-                | b"NimbusSanL-BoldItal" => (
-                    BaseFont::HelveticaBoldOblique,
-                    HELVETICA_BOLD_ITALIC.clone(),
-                ),
-                b"Courier" | b"CourierNew" | b"CourierNewPSMT" | b"LiberationMono"
-                | b"NimbusMonL-Regu" => (BaseFont::Courier, COURIER_REGULAR.clone()),
-                b"Courier-Bold"
-                | b"CourierNewPS-BoldMT"
-                | b"CourierNew-Bold"
-                | b"LiberationMono-Bold"
-                | b"NimbusMonL-Bold" => (BaseFont::CourierBold, COURIER_BOLD.clone()),
-                b"Courier-Oblique"
-                | b"CourierNewPS-ItalicMT"
-                | b"CourierNew-Italic"
-                | b"LiberationMono-Italic"
-                | b"NimbusMonL-ReguObli" => (BaseFont::CourierOblique, COURIER_ITALIC.clone()),
-                b"Courier-BoldOblique"
-                | b"CourierNewPS-BoldItalicMT"
-                | b"CourierNew-BoldItalic"
-                | b"LiberationMono-BoldItalic"
-                | b"NimbusMonL-BoldObli" => {
-                    (BaseFont::CourierBoldOblique, COURIER_BOLD_ITALIC.clone())
-                }
-                b"Times-Roman"
-                | b"TimesNewRomanPSMT"
-                | b"TimesNewRoman"
-                | b"TimesNewRomanPS"
-                | b"LiberationSerif"
-                | b"NimbusRomNo9L-Regu" => (BaseFont::TimesRoman, TIMES_REGULAR.clone()),
-                b"Times-Bold"
-                | b"TimesNewRomanPS-BoldMT"
-                | b"TimesNewRomanPS-Bold"
-                | b"TimesNewRoman-Bold"
-                | b"LiberationSerif-Bold"
-                | b"NimbusRomNo9L-Medi" => (BaseFont::TimesBold, TIMES_BOLD.clone()),
-                b"Times-Italic"
-                | b"TimesNewRomanPS-ItalicMT"
-                | b"TimesNewRomanPS-Italic"
-                | b"TimesNewRoman-Italic"
-                | b"LiberationSerif-Italic"
-                | b"NimbusRomNo9L-ReguItal" => (BaseFont::TimesItalic, TIMES_ITALIC.clone()),
-                b"Times-BoldItalic"
-                | b"TimesNewRomanPS-BoldItalicMT"
-                | b"TimesNewRomanPS-BoldItalic"
-                | b"TimesNewRoman-BoldItalic"
-                | b"LiberationSerif-BoldItalic"
-                | b"NimbusRomNo9L-MediItal" => {
-                    (BaseFont::TimesBoldItalic, TIMES_ROMAN_BOLD_ITALIC.clone())
-                }
-                b"Symbol" | b"SymbolMT" | b"StandardSymL" => (BaseFont::Symbol, SYMBOL.clone()),
-                b"ZapfDingbats"
-                | b"ZapfDingbatsITCbyBT-Regular"
-                | b"ZapfDingbatsITC"
-                | b"Dingbats"
-                | b"MS-Gothic" => (BaseFont::ZapfDingBats, ZAPF_DINGS_BAT.clone()),
-
-                _ => unimplemented!(),
-            }
-        } else {
-            unimplemented!()
-        };
+        let base_font = dict.get::<Name>(BASE_FONT)
+            .and_then(|b| select(b)).unwrap();
+        let blob = base_font.get_blob();
 
         let mut encoding_map = HashMap::new();
 
