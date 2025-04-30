@@ -43,6 +43,7 @@ pub fn check_render(name: &str, document: RenderedDocument) {
         let ref_path = refs_path.join(&suffix);
 
         if !ref_path.exists() {
+            eprintln!("{:?}", ref_path);
             std::fs::write(&ref_path, page).unwrap();
             oxipng::optimize(
                 &oxipng::InFile::Path(ref_path.clone()),
