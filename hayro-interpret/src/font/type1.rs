@@ -9,7 +9,7 @@ use hayro_syntax::object::name::Name;
 use crate::font::blob::FontBlob;
 use crate::font::{Encoding, OutlinePath};
 use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
-use crate::font::standard::{select, StandardFont};
+use crate::font::standard::{select_standard_font, StandardFont};
 use crate::font::true_type::read_encoding;
 use crate::util::OptionLog;
 
@@ -23,8 +23,7 @@ pub(crate) struct Type1Font {
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Type1Font {
-        let base_font = dict.get::<Name>(BASE_FONT)
-            .and_then(|b| select(b)).unwrap();
+        let base_font = select_standard_font(dict).unwrap();
         let blob = base_font.get_blob();
 
         let (encoding, encoding_map) = read_encoding(dict);

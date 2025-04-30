@@ -1,59 +1,66 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 use log::warn;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FONT_DESCRIPTOR, MISSING_WIDTH, WIDTHS};
+use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FONT_DESCRIPTOR, FONT_FILE2, MISSING_WIDTH, WIDTHS};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::Object;
+use hayro_syntax::object::stream::Stream;
 use crate::font::blob::FontBlob;
 use crate::font::Encoding;
-use crate::font::standard::{select, StandardFont};
+use crate::font::standard::{select_standard_font, StandardFont};
 use crate::font::type1::{Type1Font};
 
 #[derive(Debug)]
+enum InnerFont {
+    Standard(StandardFont),
+    Custom(FontBlob)
+}
+
+#[derive(Debug)]
 pub(crate) struct TrueTypeFont {
-    base_font: Option<StandardFont>,
+    base_font: InnerFont,
     widths: HashMap<u8, f32>,
-    blob: FontBlob,
     encoding: Encoding,
 }
 
-
 impl TrueTypeFont {
     pub fn new(dict: &Dict) -> TrueTypeFont {
-        let widths = read_widths(dict);
-        // let encoding = read_encoding()
-        todo!();
-        // match dict.get::<Name>(BASE_FONT)
-        //     .and_then(|b| select(b)) {
-        //     Some(f)
-        // }
-        // 
-        // let base_font = dict.get::<Name>(BASE_FONT)
-        //     .and_then(|b| select(b)).unwrap();
-        // let blob = base_font.get_blob();
-        // 
-        // let mut encoding_map = HashMap::new();
-        // let encoding = read_encoding(dict, &mut encoding_map);
-        // 
-        // Self {
-        //     base_font: Some(base_font),
-        //     encodings: encoding_map,
-        //     encoding,
-        //     blob,
-        // }
+        let descriptor = dict
+            .get::<Dict>(FONT_DESCRIPTOR).unwrap();
+        
+        let widths = read_widths(dict, &descriptor);
+        let (encoding, _) = read_encoding(dict);
+        let base_font = select_standard_font(dict)
+            .map(|d| InnerFont::Standard(d))
+            .or_else(|| 
+                descriptor.get::<Stream>(FONT_FILE2)
+                    .and_then(|s| s.decoded().ok())
+                    .map(|d| InnerFont::Custom(FontBlob::new(Arc::new(d.to_vec()), 0)))
+            )
+            .unwrap_or_else(|| {
+                warn!("failed to extract base font. falling back to Times New Roman.");
+                
+                InnerFont::Standard(StandardFont::TimesRoman)
+            });
+        
+        
+        Self {
+            base_font,
+            widths,
+            encoding,
+        }
     }
 }
 
-fn read_widths(dict: &Dict) -> HashMap<u8, f32> {
+fn read_widths(dict: &Dict, descriptor: &Dict) -> HashMap<u8, f32> {
     let mut widths = HashMap::new();
     
     let first_char = dict.get::<u8>(FIRST_CHAR);
     let last_char = dict.get::<u8>(FIRST_CHAR);
     let widths_arr = dict.get::<Array>(WIDTHS);
-    let missing_width = dict
-        .get::<Dict>(FONT_DESCRIPTOR)
-        .and_then(|d| d.get::<f32>(MISSING_WIDTH))
+    let missing_width = descriptor.get::<f32>(MISSING_WIDTH)
         .unwrap_or(0.0);
     
     match (first_char, last_char, widths_arr) {

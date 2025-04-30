@@ -365,6 +365,9 @@ pub mod keys {
     key!(LAST_CHAR, b"LastChar");
     key!(FONT, b"Font");
     key!(FONT_DESCRIPTOR, b"FontDescriptor");
+    key!(FONT_FILE, b"FontFile");
+    key!(FONT_FILE2, b"FontFile2");
+    key!(FONT_FILE3, b"FontFile3");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
     key!(LENGTH, b"Length");
