@@ -1,3 +1,4 @@
+use log::warn;
 use hayro_syntax::object::name::Name;
 use crate::font::blob;
 use crate::font::blob::{FontBlob, COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD, TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT};
@@ -141,7 +142,8 @@ pub(crate) fn select(name: Name) -> Option<StandardFont> {
         | b"ZapfDingbatsITC"
         | b"Dingbats"
         | b"MS-Gothic" => Some(StandardFont::ZapfDingBats),
-
-        _ => unimplemented!(),
+        _ => {
+            None
+        }
     }
 }
