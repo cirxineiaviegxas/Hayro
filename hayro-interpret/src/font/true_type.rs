@@ -5,22 +5,30 @@ use crate::font::type1::Type1Font;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FONT_DESCRIPTOR, FONT_FILE2,
-    MISSING_WIDTH, WIDTHS,
-};
+use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2, MISSING_WIDTH, WIDTHS};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use log::warn;
 use std::collections::HashMap;
 use std::sync::Arc;
+use bitflags::bitflags;
 use kurbo::BezPath;
 use skrifa::GlyphId;
+use skrifa::raw::TableProvider;
 
 #[derive(Debug)]
 enum InnerFont {
     Standard(StandardFont),
     Custom(FontBlob),
+}
+
+impl InnerFont {
+    fn blob(&self) -> &FontBlob {
+        match self {
+            InnerFont::Standard(s) => &s.get_blob(),
+            InnerFont::Custom(c) => c
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -34,6 +42,9 @@ impl TrueTypeFont {
     pub fn new(dict: &Dict) -> TrueTypeFont {
         let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
 
+        let flags = descriptor.get::<u32>(FLAGS).and_then(|n| FontFlags::from_bits(n))
+            .unwrap_or(FontFlags::empty());
+        
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
         let base_font = select_standard_font(dict)
@@ -70,6 +81,21 @@ impl TrueTypeFont {
         //     .glyph_metrics()
         //     .advance_width(glyph)
         //     .unwrap_or(0.0)
+    }
+}
+
+bitflags! {
+    /// Bitflags describing various characteristics of fonts.
+    pub struct FontFlags: u32 {
+        const FIXED_PITCH = 1 << 0;
+        const SERIF = 1 << 1;
+        const SYMBOLIC = 1 << 2;
+        const SCRIPT = 1 << 3;
+        const NON_SYMBOLIC = 1 << 5;
+        const ITALIC = 1 << 6;
+        const ALL_CAP = 1 << 16;
+        const SMALL_CAP = 1 << 17;
+        const FORCE_BOLD = 1 << 18;
     }
 }
 

@@ -560,6 +560,7 @@ dependencies = [
 name = "hayro-interpret"
 version = "0.1.0"
 dependencies = [
+ "bitflags 2.9.0",
  "fontdb",
  "hayro-syntax",
  "kurbo",

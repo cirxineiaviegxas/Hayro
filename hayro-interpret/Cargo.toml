@@ -16,3 +16,4 @@ phf = { workspace = true, features = ["macros"] }
 skrifa = { version = "0.30.0" }
 yoke = { workspace = true, features = ["derive"]}
 fontdb = "0.23.0"
+bitflags = "2.9.0"

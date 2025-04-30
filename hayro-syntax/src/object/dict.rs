@@ -362,7 +362,7 @@ pub mod keys {
     key!(FILTER, b"Filter");
     key!(FIRST, b"First");
     key!(FIRST_CHAR, b"FirstChar");
-    key!(LAST_CHAR, b"LastChar");
+    key!(FLAGS, b"Flags");
     key!(FONT, b"Font");
     key!(FONT_DESCRIPTOR, b"FontDescriptor");
     key!(FONT_FILE, b"FontFile");
@@ -370,6 +370,7 @@ pub mod keys {
     key!(FONT_FILE3, b"FontFile3");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
+    key!(LAST_CHAR, b"LastChar");
     key!(LENGTH, b"Length");
     key!(MEDIA_BOX, b"MediaBox");
     key!(MISSING_WIDTH, b"MissingWidth");
