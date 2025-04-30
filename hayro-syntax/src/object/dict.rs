@@ -361,12 +361,15 @@ pub mod keys {
     key!(F, b"F");
     key!(FILTER, b"Filter");
     key!(FIRST, b"First");
+    key!(FIRST_CHAR, b"FirstChar");
+    key!(LAST_CHAR, b"LastChar");
     key!(FONT, b"Font");
     key!(FONT_DESCRIPTOR, b"FontDescriptor");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
     key!(LENGTH, b"Length");
     key!(MEDIA_BOX, b"MediaBox");
+    key!(MISSING_WIDTH, b"MissingWidth");
     key!(N, b"N");
     key!(PARENT, b"Parent");
     key!(PAGES, b"Pages");
@@ -380,4 +383,5 @@ pub mod keys {
     key!(TYPE, b"Type");
     key!(XREFSTM, b"XRefStm");
     key!(W, b"W");
+    key!(WIDTHS, b"Widths");
 }

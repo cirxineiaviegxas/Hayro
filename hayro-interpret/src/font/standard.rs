@@ -36,7 +36,7 @@ impl StandardFont {
         .copied()
     }
 
-    pub fn ps_to_unicode(&self, name: &str) -> Option<&'static str> {
+    pub fn name_to_unicode(&self, name: &str) -> Option<&'static str> {
         match self {
             Self::ZapfDingBats => ZAPF_DINGS_NAMES.get(name),
             _ => GLYPH_NAMES.get(name),
@@ -45,8 +45,8 @@ impl StandardFont {
         .copied()
     }
 
-    pub fn map_code(&self, code: u8) -> Option<&'static str> {
-        self.ps_to_unicode(self.code_to_name(code)?)
+    pub fn code_to_unicode(&self, code: u8) -> Option<&'static str> {
+        self.name_to_unicode(self.code_to_name(code)?)
     }
     
     pub fn get_blob(&self) -> FontBlob {

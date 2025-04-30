@@ -12,6 +12,7 @@ mod standard;
 mod blob;
 mod encoding;
 mod type1;
+mod true_type;
 
 #[derive(Clone, Debug)]
 pub struct Font(Arc<FontType>);
@@ -51,6 +52,7 @@ enum Encoding {
     MacRoman,
     WinAnsi,
     MacExpert,
+    BuiltIn
 }
 
 #[derive(Debug)]

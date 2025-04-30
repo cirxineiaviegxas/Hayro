@@ -17,7 +17,7 @@ pub mod filter;
 mod function;
 pub mod object;
 pub mod pdf;
-pub(crate) mod reader;
+pub mod reader;
 pub mod trivia;
 pub mod write;
 
