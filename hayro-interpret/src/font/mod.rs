@@ -1,4 +1,4 @@
-use crate::font::base::{select, BaseFont};
+use crate::font::standard::{select, StandardFont};
 use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
 use crate::util::OptionLog;
 use hayro_syntax::object::Object;
@@ -16,7 +16,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use crate::font::blob::FontBlob;
 
-mod base;
+mod standard;
 mod blob;
 mod encoding;
 
@@ -67,7 +67,7 @@ enum FontType {
 
 #[derive(Debug)]
 struct Type1Font {
-    base_font: Option<BaseFont>,
+    base_font: Option<StandardFont>,
     blob: FontBlob,
     encoding: Encoding,
     encodings: HashMap<u8, String>,
