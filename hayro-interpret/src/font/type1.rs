@@ -29,41 +29,7 @@ impl Type1Font {
         let blob = base_font.get_blob();
 
         let mut encoding_map = HashMap::new();
-
-        fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
-            match dict.get::<Name>(name) {
-                Some(n) => match n.get().as_ref() {
-                    b"WinAnsiEncoding" => Encoding::WinAnsi,
-                    b"MacRomanEncoding" => Encoding::MacRoman,
-                    b"MacExpertEncoding" => Encoding::MacExpert,
-                    _ => Encoding::Standard,
-                },
-                None => Encoding::Standard,
-            }
-        }
-
-        let encoding;
-
-        if let Some(encoding_dict) = dict.get::<Dict>(ENCODING) {
-            if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
-                let mut entries = differences.iter::<Object>();
-
-                let mut code = 0;
-
-                while let Some(obj) = entries.next() {
-                    if let Ok(num) = obj.clone().cast::<i32>() {
-                        code = num;
-                    } else if let Ok(name) = obj.cast::<Name>() {
-                        encoding_map.insert(code as u8, name.as_str());
-                        code += 1;
-                    }
-                }
-            }
-
-            encoding = get_encoding_base(&encoding_dict, BASE_ENCODING);
-        } else {
-            encoding = get_encoding_base(&dict, ENCODING);
-        }
+        let encoding = read_encoding(dict, &mut encoding_map);
 
         Self {
             base_font: Some(base_font),
@@ -115,4 +81,40 @@ impl Type1Font {
             .advance_width(glyph)
             .unwrap_or(0.0)
     }
+}
+
+pub(crate) fn read_encoding(dict: &Dict, encoding_map: &mut HashMap<u8, String>) -> Encoding {
+    fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
+        match dict.get::<Name>(name) {
+            Some(n) => match n.get().as_ref() {
+                b"WinAnsiEncoding" => Encoding::WinAnsi,
+                b"MacRomanEncoding" => Encoding::MacRoman,
+                b"MacExpertEncoding" => Encoding::MacExpert,
+                _ => Encoding::Standard,
+            },
+            None => Encoding::Standard,
+        }
+    }
+
+    if let Some(encoding_dict) = dict.get::<Dict>(ENCODING) {
+        if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
+            let mut entries = differences.iter::<Object>();
+
+            let mut code = 0;
+
+            while let Some(obj) = entries.next() {
+                if let Ok(num) = obj.clone().cast::<i32>() {
+                    code = num;
+                } else if let Ok(name) = obj.cast::<Name>() {
+                    encoding_map.insert(code as u8, name.as_str());
+                    code += 1;
+                }
+            }
+        }
+
+        get_encoding_base(&encoding_dict, BASE_ENCODING)
+    } else {
+        get_encoding_base(&dict, ENCODING)
+    }
+    
 }
