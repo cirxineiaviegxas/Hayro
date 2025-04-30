@@ -1,5 +1,5 @@
-use crate::font::generated_encodings::{STANDARD, SYMBOL, ZAPF_DING_BATS};
-use crate::font::glyph_list::{GLYPH_NAMES, ZAPF_DINGS};
+use crate::font::encoding::{GLYPH_NAMES, ZAPF_DINGS_NAMES};
+use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use crate::util::OptionLog;
 
 #[derive(Copy, Clone, Debug)]
@@ -34,7 +34,7 @@ impl BaseFont {
 
     pub fn ps_to_unicode(&self, name: &str) -> Option<&'static str> {
         match self {
-            Self::ZapfDingBats => ZAPF_DINGS.get(name),
+            Self::ZapfDingBats => ZAPF_DINGS_NAMES.get(name),
             _ => GLYPH_NAMES.get(name),
         }
         .warn_none(&format!("failed to map code {name} for {:?}", self))

@@ -4,7 +4,7 @@ use crate::font::blob::{
     HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, SYMBOL, TIMES_BOLD, TIMES_ITALIC,
     TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
-use crate::font::encodings::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
+use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
 use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
@@ -22,10 +22,7 @@ use std::sync::Arc;
 
 mod base;
 mod blob;
-#[rustfmt::skip]
-mod generated_encodings;
-mod encodings;
-mod glyph_list;
+mod encoding;
 
 #[derive(Clone, Debug)]
 pub struct Font(Arc<FontType>);

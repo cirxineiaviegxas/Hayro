@@ -1,13 +1,13 @@
 import pathlib
 
-ASSETS_DIR = pathlib.Path(__file__).parent.parent.parent.parent / "assets"
+ASSETS_DIR = pathlib.Path(__file__).parent.parent.parent.parent.parent / "assets"
 GLYPH_LIST = ASSETS_DIR / "glyphlist" / "glyphlist.txt"
 ZAPF_DINGS_BATS = ASSETS_DIR / "glyphlist" / "zapfdingbats.txt"
 ADDITIONAL = ASSETS_DIR / "glyphlist" / "additional.txt"
-GLYPH_LIST_RS = pathlib.Path(__file__).parent / "glyph_list.rs"
-ENCODINGS_RS = pathlib.Path(__file__).parent / "generated_encodings.rs"
-
-print(ASSETS_DIR)
+GLYPH_LIST_RS = pathlib.Path(__file__).parent / "glyph_names.rs"
+STANDARD_RS = pathlib.Path(__file__).parent / "standard.rs"
+SYMBOL_RS = pathlib.Path(__file__).parent / "symbol.rs"
+ZAPF_DINGS_RS = pathlib.Path(__file__).parent / "zapf_dings.rs"
 
 def generate_glyph_list():
     start = """// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
@@ -31,7 +31,7 @@ pub(crate) static GLYPH_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
     start += "};"
         
     start += """\n\n
-pub(crate) static ZAPF_DINGS: phf::Map<&'static str, &'static str> = phf_map! {
+pub(crate) static ZAPF_DINGS_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
 """
 
     with open(ZAPF_DINGS_BATS) as file:
@@ -43,17 +43,16 @@ pub(crate) static ZAPF_DINGS: phf::Map<&'static str, &'static str> = phf_map! {
     with open(GLYPH_LIST_RS, 'w') as file:
         file.write(start)
 
-def generate_encodings():
-    start = """// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
-use phf::phf_map;"""
-    
-    for (font, file) in [
+def generate_encodings():    
+    for (font, file, out) in [
         # Is the same for Helvetica and Courier as well.
-        ("STANDARD", "Times-Roman"),
-        ("SYMBOL", "Symbol"),
-        ("ZAPF_DING_BATS", "ZapfDingbats"),
+        ("STANDARD", "Times-Roman", STANDARD_RS),
+        ("SYMBOL", "Symbol", SYMBOL_RS),
+        ("ZAPF_DING_BATS", "ZapfDingbats", ZAPF_DINGS_RS),
     ]:
-        
+
+        start = """// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
+use phf::phf_map;"""
 
         with open(ASSETS_DIR / "font_metrics" / f"{file}.afm") as file:
 
@@ -74,8 +73,8 @@ pub(crate) static {font}: phf::Map<u8, &'static str> = phf_map! {{
 
             start += "};"
         
-    with open(ENCODINGS_RS, 'w') as file:
-        file.write(start)
+        with open(out, 'w') as file:
+            file.write(start)
 
             
 generate_glyph_list()
