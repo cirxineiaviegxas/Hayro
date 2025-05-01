@@ -162,9 +162,14 @@ impl TrueTypeFont {
                     {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             glyph = glyph.or_else(|| match subtable {
+                                CmapSubtable::Format0(f0) => f0.map_codepoint(code),
                                 CmapSubtable::Format4(f4) => f4.map_codepoint(code),
                                 CmapSubtable::Format12(f12) => f12.map_codepoint(code),
-                                _ => None,
+                                _ => {
+                                    warn!("encountered cmap with format {:?}", subtable);
+                                    
+                                    None
+                                },
                             })
                         }
                     }

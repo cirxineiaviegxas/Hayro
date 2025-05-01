@@ -27,7 +27,7 @@ fn main() {
 
     entries.sort();
 
-    let entries = &entries[0..10];
+    let entries = &entries[0..20];
 
     render_pdfium(&entries);
     render_hayro(&entries);
