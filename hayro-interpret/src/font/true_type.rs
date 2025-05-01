@@ -192,7 +192,7 @@ bitflags! {
     }
 }
 
-fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
+pub(crate) fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
     let mut widths = Vec::new();
 
     let first_char = dict.get::<usize>(FIRST_CHAR);

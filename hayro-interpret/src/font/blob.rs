@@ -1,7 +1,6 @@
 use crate::font::{OutlinePath, UNITS_PER_EM};
-use kurbo::BezPath;
+use kurbo::{Affine, BezPath};
 use once_cell::sync::Lazy;
-use skrifa::charmap::Charmap;
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
 use skrifa::outline::DrawSettings;
@@ -128,28 +127,42 @@ pub(crate) static SYMBOL: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
 
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 type OpenTypeFontYoke = Yoke<OTFYoke<'static>, FontData>;
-type Type1FontYoke = Yoke<T1Yoke<'static>, FontData>;
+type CffFontYoke = Yoke<CFFYoke<'static>, FontData>;
 
 #[derive(Clone)]
-pub struct Type1FontBlob(Arc<Type1FontYoke>);
+pub struct CffFontBlob(Arc<CffFontYoke>);
 
-impl Debug for Type1FontBlob {
+impl Debug for CffFontBlob {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Type1 Font {{ .. }}")
     }
 }
 
-impl Type1FontBlob {
+impl CffFontBlob {
     pub fn new(data: FontData) -> Self {
         let yoke =
-            Yoke::<T1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
+            Yoke::<CFFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
                 let table = cff::Table::parse(data.as_ref().as_ref()).unwrap();
-                T1Yoke {
+                CFFYoke {
                     table,
                 }
             });
 
         Self(Arc::new(yoke))
+    }
+    
+    pub(crate) fn table(&self) -> &cff::Table {
+        &self.0.as_ref().get().table
+    }
+
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        let mut path = OutlinePath(BezPath::new());
+        
+        let Ok(_) = self.table().outline(ttf_parser::GlyphId(glyph.to_u32() as u16), &mut path) else {
+            return BezPath::new();
+        };
+        
+        Affine::scale(UNITS_PER_EM as f64) * convert_matrix(self.table().matrix()) * path.0
     }
 }
 
@@ -172,7 +185,6 @@ impl OpenTypeFontBlob {
                     outline_glyphs: font_ref.outline_glyphs(),
                     glyph_metrics: font_ref
                         .glyph_metrics(Size::new(UNITS_PER_EM), LocationRef::default()),
-                    charmap: font_ref.charmap(),
                 }
             });
 
@@ -208,15 +220,18 @@ impl OpenTypeFontBlob {
     }
 }
 
+fn convert_matrix(matrix: ttf_parser::cff::Matrix) -> Affine {
+    Affine::new([matrix.sx as f64, matrix.kx as f64, matrix.ky as f64, matrix.sy as f64, matrix.tx as f64, matrix.ty as f64])
+}
+
 #[derive(Yokeable, Clone)]
 struct OTFYoke<'a> {
     pub font_ref: FontRef<'a>,
     pub glyph_metrics: GlyphMetrics<'a>,
     pub outline_glyphs: OutlineGlyphCollection<'a>,
-    pub charmap: Charmap<'a>,
 }
 
 #[derive(Yokeable, Clone)]
-struct T1Yoke<'a> {
+struct CFFYoke<'a> {
     pub table: cff::Table<'a>
 }
