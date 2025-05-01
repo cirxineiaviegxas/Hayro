@@ -1,4 +1,4 @@
-use crate::font::blob::FontBlob;
+use crate::font::blob::OpenTypeFontBlob;
 use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_ROMAN};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::read_encoding;
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub(crate) struct Type1Font {
     base_font: Option<StandardFont>,
-    blob: FontBlob,
+    blob: OpenTypeFontBlob,
     encoding: Encoding,
     encodings: HashMap<u8, String>,
 }

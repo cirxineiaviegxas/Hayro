@@ -9,38 +9,39 @@ use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use skrifa::raw::TableProvider;
+use ttf_parser::cff;
 use yoke::{Yoke, Yokeable};
 
-pub(crate) static HELVETICA_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static HELVETICA_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         0,
     )
 });
 
-pub(crate) static HELVETICA_BOLD: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static HELVETICA_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         1,
     )
 });
 
-pub(crate) static HELVETICA_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static HELVETICA_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         2,
     )
 });
 
-pub(crate) static HELVETICA_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static HELVETICA_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         3,
     )
 });
 
-pub(crate) static COURIER_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static COURIER_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Courier New.ttf"
         )),
@@ -48,8 +49,8 @@ pub(crate) static COURIER_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static COURIER_BOLD: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static COURIER_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Courier New Bold.ttf"
         )),
@@ -57,8 +58,8 @@ pub(crate) static COURIER_BOLD: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static COURIER_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static COURIER_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Courier New Italic.ttf"
         )),
@@ -66,8 +67,8 @@ pub(crate) static COURIER_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static COURIER_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static COURIER_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Courier New Bold Italic.ttf"
         )),
@@ -75,8 +76,8 @@ pub(crate) static COURIER_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static TIMES_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static TIMES_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Times New Roman.ttf" // "../../../assets/EBGaramond-Regular.ttf"
         )),
@@ -84,8 +85,8 @@ pub(crate) static TIMES_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static TIMES_BOLD: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static TIMES_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf"
         )),
@@ -93,8 +94,8 @@ pub(crate) static TIMES_BOLD: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static TIMES_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static TIMES_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Times New Roman Italic.ttf"
         )),
@@ -102,8 +103,8 @@ pub(crate) static TIMES_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!(
             "/System/Library/Fonts/Supplemental/Times New Roman Bold Italic.ttf"
         )),
@@ -111,39 +112,62 @@ pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<FontBlob> = Lazy::new(|| {
     )
 });
 
-pub(crate) static ZAPF_DINGS_BAT: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static ZAPF_DINGS_BAT: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!("/System/Library/Fonts/ZapfDingbats.ttf")),
         0,
     )
 });
 
-pub(crate) static SYMBOL: Lazy<FontBlob> = Lazy::new(|| {
-    FontBlob::new(
+pub(crate) static SYMBOL: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
+    OpenTypeFontBlob::new(
         Arc::new(include_bytes!("/System/Library/Fonts/Symbol.ttf")),
         0,
     )
 });
 
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
-type FontYoke = Yoke<FontRefYoke<'static>, FontData>;
+type OpenTypeFontYoke = Yoke<OTFYoke<'static>, FontData>;
+type Type1FontYoke = Yoke<T1Yoke<'static>, FontData>;
 
-// TODO: Wrap in Arc?
 #[derive(Clone)]
-pub struct FontBlob(Arc<FontYoke>);
+pub struct Type1FontBlob(Arc<Type1FontYoke>);
 
-impl Debug for FontBlob {
+impl Debug for Type1FontBlob {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Font {{ .. }}")
+        write!(f, "Type1 Font {{ .. }}")
     }
 }
 
-impl FontBlob {
+impl Type1FontBlob {
+    pub fn new(data: FontData) -> Self {
+        let yoke =
+            Yoke::<T1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
+                let table = cff::Table::parse(data.as_ref().as_ref()).unwrap();
+                T1Yoke {
+                    table,
+                }
+            });
+
+        Self(Arc::new(yoke))
+    }
+}
+
+#[derive(Clone)]
+pub struct OpenTypeFontBlob(Arc<OpenTypeFontYoke>);
+
+impl Debug for OpenTypeFontBlob {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OpenType Font {{ .. }}")
+    }
+}
+
+impl OpenTypeFontBlob {
     pub fn new(data: FontData, index: u32) -> Self {
         let font_ref_yoke =
-            Yoke::<FontRefYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
+            Yoke::<OTFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
                 let font_ref = FontRef::from_index(data.as_ref(), index).unwrap();
-                FontRefYoke {
+                OTFYoke {
                     font_ref: font_ref.clone(),
                     outline_glyphs: font_ref.outline_glyphs(),
                     glyph_metrics: font_ref
@@ -189,9 +213,14 @@ impl FontBlob {
 }
 
 #[derive(Yokeable, Clone)]
-struct FontRefYoke<'a> {
+struct OTFYoke<'a> {
     pub font_ref: FontRef<'a>,
     pub glyph_metrics: GlyphMetrics<'a>,
     pub outline_glyphs: OutlineGlyphCollection<'a>,
     pub charmap: Charmap<'a>,
+}
+
+#[derive(Yokeable, Clone)]
+struct T1Yoke<'a> {
+    pub table: ttf_parser::cff::Table<'a>
 }

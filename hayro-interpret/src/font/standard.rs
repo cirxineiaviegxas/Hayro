@@ -1,6 +1,6 @@
 use crate::font::blob;
 use crate::font::blob::{
-    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, FontBlob, HELVETICA_BOLD,
+    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, OpenTypeFontBlob, HELVETICA_BOLD,
     HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD, TIMES_ITALIC,
     TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
@@ -55,7 +55,7 @@ impl StandardFont {
         self.name_to_unicode(self.code_to_name(code)?)
     }
 
-    pub fn get_blob(&self) -> FontBlob {
+    pub fn get_blob(&self) -> OpenTypeFontBlob {
         match self {
             StandardFont::Helvetica => HELVETICA_REGULAR.clone(),
             StandardFont::HelveticaBold => HELVETICA_BOLD.clone(),

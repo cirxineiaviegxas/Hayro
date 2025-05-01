@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use crate::font::Encoding;
-use crate::font::blob::FontBlob;
+use crate::font::blob::OpenTypeFontBlob;
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN, MAC_ROMAN_INVERSE};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::type1::Type1Font;
@@ -22,23 +22,23 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Debug)]
-enum InnerFont {
+enum OpenTypeFont {
     Standard(StandardFont),
-    Custom(FontBlob),
+    Custom(OpenTypeFontBlob),
 }
 
-impl InnerFont {
-    fn blob(&self) -> FontBlob {
+impl OpenTypeFont {
+    fn blob(&self) -> OpenTypeFontBlob {
         match self {
-            InnerFont::Standard(s) => s.get_blob().clone(),
-            InnerFont::Custom(c) => c.clone(),
+            OpenTypeFont::Standard(s) => s.get_blob().clone(),
+            OpenTypeFont::Custom(c) => c.clone(),
         }
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct TrueTypeFont {
-    base_font: InnerFont,
+    base_font: OpenTypeFont,
     widths: Vec<f32>,
     font_flags: FontFlags,
     encoding: Encoding,
@@ -57,17 +57,17 @@ impl TrueTypeFont {
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
         let base_font = select_standard_font(dict)
-            .map(|d| InnerFont::Standard(d))
+            .map(|d| OpenTypeFont::Standard(d))
             .or_else(|| {
                 descriptor
                     .get::<Stream>(FONT_FILE2)
                     .and_then(|s| s.decoded().ok())
-                    .map(|d| InnerFont::Custom(FontBlob::new(Arc::new(d.to_vec()), 0)))
+                    .map(|d| OpenTypeFont::Custom(OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)))
             })
             .unwrap_or_else(|| {
                 warn!("failed to extract base font. falling back to Times New Roman.");
 
-                InnerFont::Standard(StandardFont::TimesRoman)
+                OpenTypeFont::Standard(StandardFont::TimesRoman)
             });
 
         Self {
@@ -81,8 +81,8 @@ impl TrueTypeFont {
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         match &self.base_font {
-            InnerFont::Standard(s) => s.get_blob().outline_glyph(glyph),
-            InnerFont::Custom(c) => c.outline_glyph(glyph),
+            OpenTypeFont::Standard(s) => s.get_blob().outline_glyph(glyph),
+            OpenTypeFont::Custom(c) => c.outline_glyph(glyph),
         }
     }
 
