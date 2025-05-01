@@ -2,7 +2,7 @@ use crate::content::{TypedIter, UntypedIter};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, TYPE};
+use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, ROTATE, TYPE};
 use crate::object::name::Name;
 use crate::object::name::names::*;
 use crate::object::rect::Rect;
@@ -18,6 +18,7 @@ pub struct Pages<'a> {
 struct PagesContext {
     media_box: Option<Rect>,
     crop_box: Option<Rect>,
+    rotate: Option<u32>
 }
 
 impl PagesContext {
@@ -25,6 +26,7 @@ impl PagesContext {
         Self {
             media_box: None,
             crop_box: None,
+            rotate: None
         }
     }
 }
@@ -56,6 +58,10 @@ fn resolve_pages<'a>(
         ctx.crop_box = Some(crop_box);
     }
 
+    if let Some(rotate) = pages_dict.get::<u32>(ROTATE) {
+        ctx.rotate = Some(rotate);
+    }
+
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
 
     // TODO: Add inheritance of page attributes
@@ -71,10 +77,19 @@ fn resolve_pages<'a>(
     Some(())
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Rotation {
+    None,
+    Horizontal,
+    Flipped,
+    FlippedHorizontal
+}
+
 pub struct Page<'a> {
     inner: Dict<'a>,
     media_box: kurbo::Rect,
     crop_box: kurbo::Rect,
+    rotation: Rotation,
     page_streams: OnceCell<Option<Vec<u8>>>,
 }
 
@@ -90,6 +105,14 @@ impl<'a> Page<'a> {
             .get::<Rect>(CROP_BOX)
             .or_else(|| ctx.crop_box)
             .unwrap_or(media_box);
+        
+        let rotation = match dict.get::<u32>(ROTATE).or_else(|| ctx.rotate).unwrap_or(0) % 360 {
+            0 => Rotation::None,
+            90 => Rotation::Horizontal,
+            180 => Rotation::Flipped,
+            270 => Rotation::FlippedHorizontal,
+            _ => Rotation::None,
+        };
 
         let crop_box = crop_box.get().intersect(media_box.get());
 
@@ -97,6 +120,7 @@ impl<'a> Page<'a> {
             inner: dict,
             media_box: media_box.get(),
             crop_box,
+            rotation,
             page_streams: OnceCell::new(),
         }
     }
@@ -145,6 +169,10 @@ impl<'a> Page<'a> {
 
     pub fn media_box(&self) -> kurbo::Rect {
         self.media_box
+    }
+    
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
     }
 
     pub fn crop_box(&self) -> kurbo::Rect {

@@ -2,7 +2,7 @@ use hayro_interpret::color::Color;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
 use hayro_interpret::{FillProps, StrokeProps, interpret};
-use hayro_syntax::document::page::Page;
+use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
@@ -10,7 +10,7 @@ use std::io::Cursor;
 use std::ops::RangeInclusive;
 use vello_api::color::palette::css::WHITE;
 use vello_api::kurbo;
-use vello_api::kurbo::{Affine, BezPath, Rect};
+use vello_api::kurbo::{Affine, BezPath, Point, Rect, Vec2};
 use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
 
@@ -60,12 +60,34 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     let crop_box = page.crop_box();
 
     let (unscaled_width, unscaled_height) = (crop_box.width(), crop_box.height());
-    let initial_transform = Affine::scale(scale as f64)
+    let (mut pix_width, mut pix_height) = (unscaled_width, unscaled_height);
+ 
+    let mut rotation_transform = Affine::scale(scale as f64) * match page.rotation() {
+        Rotation::None => Affine::IDENTITY,
+        Rotation::Horizontal => {
+            let t = Affine::rotate(90.0f64.to_radians()) * Affine::translate((0.0, -unscaled_height));
+            std::mem::swap(&mut pix_width, &mut pix_height);
+            
+            t
+        }
+        Rotation::Flipped => {
+            Affine::scale(-1.0) * Affine::translate((-unscaled_width, -unscaled_height))
+        }
+        Rotation::FlippedHorizontal => {
+            let t = Affine::translate((0.0, unscaled_width)) * Affine::rotate(-90.0f64.to_radians());
+            std::mem::swap(&mut pix_width, &mut pix_height);
+            
+            t
+        }
+    };
+    
+    let initial_transform = rotation_transform
         * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height])
         * Affine::translate((-crop_box.x0, -crop_box.y0));
+    
     let (scaled_width, scaled_height) = (
-        (unscaled_width as f32 * scale) as f64,
-        (unscaled_height as f32 * scale) as f64,
+        (pix_width as f32 * scale) as f64,
+        (pix_height as f32 * scale) as f64,
     );
     let (pix_width, pix_height) = (scaled_width.floor() as u16, scaled_height.floor() as u16);
     let mut state = Context::new(initial_transform);

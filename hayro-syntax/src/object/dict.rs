@@ -372,6 +372,7 @@ pub mod keys {
     key!(PREV, b"Prev");
     key!(RANGE, b"Range");
     key!(RESOURCES, b"Resources");
+    key!(ROTATE, b"Rotate");
     key!(ROOT, b"Root");
     key!(SIZE, b"Size");
     key!(SUBTYPE, b"Subtype");
