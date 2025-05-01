@@ -9,7 +9,6 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
 use smallvec::SmallVec;
-use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 
