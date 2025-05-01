@@ -1,5 +1,5 @@
 use crate::font::blob::OpenTypeFontBlob;
-use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_ROMAN};
+use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_ROMAN, STANDARD};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::read_encoding;
 use crate::font::{Encoding, OutlinePath, UNITS_PER_EM};
@@ -45,7 +45,7 @@ impl Type1Font {
             bf.name_to_unicode(entry.as_str())
         } else {
             match self.encoding {
-                Encoding::Standard => bf.code_to_unicode(code),
+                Encoding::Standard => STANDARD.get(&code).and_then(|v| bf.name_to_unicode(v)),
                 Encoding::MacRoman => MAC_ROMAN.get(&code).and_then(|v| bf.name_to_unicode(v)),
                 Encoding::WinAnsi => win_ansi::get(code).and_then(|v| bf.name_to_unicode(v)),
                 Encoding::MacExpert => MAC_EXPERT.get(&code).and_then(|v| bf.name_to_unicode(v)),
