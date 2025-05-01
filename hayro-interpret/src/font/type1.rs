@@ -1,5 +1,5 @@
 use crate::font::blob::FontBlob;
-use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, WIN_ANSI};
+use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_ROMAN};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::read_encoding;
 use crate::font::{Encoding, OutlinePath, UNITS_PER_EM};
@@ -23,7 +23,9 @@ pub(crate) struct Type1Font {
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Type1Font {
-        let base_font = select_standard_font(dict).unwrap_or(StandardFont::Courier);
+        let base_font = select_standard_font(dict)
+            .warn_none("embedded type 1 fonts not supported yet")
+            .unwrap_or(StandardFont::Courier);
         let blob = base_font.get_blob();
 
         let (encoding, encoding_map) = read_encoding(dict);
@@ -45,7 +47,7 @@ impl Type1Font {
             match self.encoding {
                 Encoding::Standard => bf.code_to_unicode(code),
                 Encoding::MacRoman => MAC_ROMAN.get(&code).and_then(|v| bf.name_to_unicode(v)),
-                Encoding::WinAnsi => WIN_ANSI.get(&code).and_then(|v| bf.name_to_unicode(v)),
+                Encoding::WinAnsi => win_ansi::get(code).and_then(|v| bf.name_to_unicode(v)),
                 Encoding::MacExpert => MAC_EXPERT.get(&code).and_then(|v| bf.name_to_unicode(v)),
                 Encoding::BuiltIn => bf.code_to_unicode(code),
             }

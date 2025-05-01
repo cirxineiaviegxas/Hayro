@@ -47,7 +47,7 @@ pub(crate) struct TrueTypeFont {
 
 impl TrueTypeFont {
     pub fn new(dict: &Dict) -> TrueTypeFont {
-        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
+        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap_or_default();
 
         let font_flags = descriptor
             .get::<u32>(FLAGS)

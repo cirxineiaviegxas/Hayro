@@ -8,7 +8,8 @@ output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 ignore_list = ["pdftc_010k_0083"]
 
 lengths = {
-    "pdftc_100k_0279": "0..=0"
+    "pdftc_100k_0279": "0..=0",
+    "pdftc_100k_2660": "1..=1"
 }
 
 def generate_rust_function(file_stem):

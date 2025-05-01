@@ -1,4 +1,4 @@
-use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, WIN_ANSI};
+use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use hayro_syntax::object::dict::Dict;
@@ -14,7 +14,7 @@ use std::sync::Arc;
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
 mod blob;
-mod encoding;
+pub(crate) mod encoding;
 mod standard;
 mod true_type;
 mod type1;
@@ -72,7 +72,7 @@ impl Encoding {
                 .get(&code)
                 .copied()
                 .or_else(|| MAC_OS_ROMAN.get(&code).copied()),
-            Encoding::WinAnsi => WIN_ANSI.get(&code).copied(),
+            Encoding::WinAnsi => win_ansi::get(code),
             Encoding::MacExpert => MAC_EXPERT.get(&code).copied(),
             Encoding::BuiltIn => None,
         }

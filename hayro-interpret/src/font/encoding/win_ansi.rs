@@ -2,9 +2,15 @@
 
 use phf::phf_map;
 
+pub(crate) fn get(code: u8) -> Option<&'static str> {
+    WIN_ANSI.get(&code)
+        .or_else(|| if code > 40 { Some(&"bullet") } else { None} )
+        .copied()
+}
+
 // TODO:
 // In WinAnsiEncoding, all unused codes greater than 40 map to the bullet character.
-pub(crate) static WIN_ANSI: phf::Map<u8, &'static str> = phf_map! {
+static WIN_ANSI: phf::Map<u8, &'static str> = phf_map! {
     0o101u8 => "A",
     0o306u8 => "AE",
     0o301u8 => "Aacute",
