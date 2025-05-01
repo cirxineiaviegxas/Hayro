@@ -8,10 +8,7 @@ use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR,
-    FONT_FILE2, MISSING_WIDTH, WIDTHS,
-};
+use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2, LAST_CHAR, MISSING_WIDTH, WIDTHS};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -41,7 +38,7 @@ impl InnerFont {
 #[derive(Debug)]
 pub(crate) struct TrueTypeFont {
     base_font: InnerFont,
-    widths: HashMap<u8, f32>,
+    widths: Vec<f32>,
     font_flags: FontFlags,
     encoding: Encoding,
 }
@@ -86,6 +83,7 @@ impl TrueTypeFont {
         }
     }
 
+    // TODO: Cache this
     pub fn map_code(&self, code: u8) -> GlyphId {
         let mut glyph = None;
 
@@ -161,8 +159,10 @@ impl TrueTypeFont {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
+        println!("looking up code {}", code);
+        println!("{:?}", self.widths);
         self.widths
-            .get(&code)
+            .get(code as usize)
             .copied()
             .or_else(|| {
                 self.base_font
@@ -191,37 +191,37 @@ bitflags! {
     }
 }
 
-fn read_widths(dict: &Dict, descriptor: &Dict) -> HashMap<u8, f32> {
-    let mut widths = HashMap::new();
+fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
+    let mut widths = Vec::new();
 
     let first_char = dict.get::<u8>(FIRST_CHAR);
-    let last_char = dict.get::<u8>(FIRST_CHAR);
+    let last_char = dict.get::<u8>(LAST_CHAR);
     let widths_arr = dict.get::<Array>(WIDTHS);
     let missing_width = descriptor.get::<f32>(MISSING_WIDTH).unwrap_or(0.0);
 
     match (first_char, last_char, widths_arr) {
-        (Some(fc), Some(_), Some(w)) => {
-            let mut iter = w.iter::<f32>();
+        (Some(fc), Some(lc), Some(w)) => {
+            let mut iter = w.iter::<f32>().take((lc - fc + 1) as usize);
             let mut idx = 0;
 
             while idx < fc {
-                widths.insert(idx, missing_width);
+                widths.push(missing_width);
                 idx += 1;
             }
 
             while let Some(w) = iter.next() {
-                widths.insert(idx, w);
+                widths.push(w);
                 idx += 1;
             }
 
-            while idx <= u8::MAX {
-                widths.insert(idx, missing_width);
+            while idx < u8::MAX {
+                widths.push(missing_width);
                 idx += 1;
             }
         }
         _ => {}
     }
-
+    
     widths
 }
 

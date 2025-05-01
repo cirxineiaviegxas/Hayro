@@ -36,7 +36,7 @@ impl Font {
     pub fn map_code(&self, code: u8) -> GlyphId {
         match self.0.as_ref() {
             FontType::Type1(f) => f.map_code(code),
-            FontType::TrueType(_) => todo!(),
+            FontType::TrueType(t) => t.map_code(code),
         }
     }
 
@@ -50,7 +50,7 @@ impl Font {
     pub fn glyph_width(&self, code: u8) -> f32 {
         match self.0.as_ref() {
             FontType::Type1(t) => t.glyph_width(code),
-            FontType::TrueType(_) => todo!(),
+            FontType::TrueType(t) => t.glyph_width(code),
         }
     }
 }
