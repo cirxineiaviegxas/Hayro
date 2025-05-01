@@ -40,6 +40,7 @@ use crate::run_test;
 #[test] fn pdftc_100k_0643() { run_test("pdftc_100k_0643", None); }
 #[test] fn pdftc_100k_1189() { run_test("pdftc_100k_1189", None); }
 #[test] fn pdftc_100k_2660() { run_test("pdftc_100k_2660", Some(1..=1)); }
+#[test] fn pdftc_100k_2702() { run_test("pdftc_100k_2702", None); }
 #[test] fn resvg_masking_clipPath_clip_rule_evenodd() { run_test("resvg_masking_clipPath_clip_rule_evenodd", None); }
 #[test] fn resvg_masking_clipPath_nested_clip_path() { run_test("resvg_masking_clipPath_nested_clip_path", None); }
 #[test] fn rotation_180() { run_test("rotation_180", None); }
