@@ -84,6 +84,7 @@ pub(crate) fn select_standard_font(dict: &Dict) -> Option<StandardFont> {
         b"Helvetica-Bold"
         | b"Arial-BoldMT"
         | b"Arial-Bold"
+        | b"Arial,Bold"
         | b"LiberationSans-Bold"
         | b"NimbusSanL-Bold" => Some(StandardFont::HelveticaBold),
         b"Helvetica-Oblique"

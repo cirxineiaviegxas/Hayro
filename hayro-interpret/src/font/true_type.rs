@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use crate::font::Encoding;
 use crate::font::blob::FontBlob;
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN, MAC_ROMAN_INVERSE};
@@ -14,7 +15,7 @@ use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
 use log::warn;
-use skrifa::GlyphId;
+use skrifa::{GlyphId, GlyphId16};
 use skrifa::raw::TableProvider;
 use skrifa::raw::tables::cmap::{CmapSubtable, PlatformId};
 use std::collections::HashMap;
@@ -41,6 +42,7 @@ pub(crate) struct TrueTypeFont {
     widths: Vec<f32>,
     font_flags: FontFlags,
     encoding: Encoding,
+    cached_mappings: RefCell<HashMap<u8, GlyphId>>
 }
 
 impl TrueTypeFont {
@@ -73,6 +75,7 @@ impl TrueTypeFont {
             widths,
             font_flags,
             encoding,
+            cached_mappings: RefCell::new(HashMap::new())
         }
     }
 
@@ -85,6 +88,10 @@ impl TrueTypeFont {
 
     // TODO: Cache this
     pub fn map_code(&self, code: u8) -> GlyphId {
+        if let Some(glyph) = self.cached_mappings.borrow().get(&code) {
+            return *glyph;
+        }
+        
         let mut glyph = None;
 
         if self.font_flags.contains(FontFlags::NON_SYMBOLIC)
@@ -127,6 +134,16 @@ impl TrueTypeFont {
                     }
                 }
             }
+            
+            if glyph.is_none() {
+                if let Ok(post) = self.base_font.blob().font_ref().post() {
+                    for i in 0..self.base_font.blob().num_glyphs() {
+                        if post.glyph_name(GlyphId16::new(i)) == Some(lookup) {
+                            glyph = Some(GlyphId::new(i as u32));
+                        }
+                    }
+                }
+            }
 
             // TODO: Search post table if nothing found
         } else {
@@ -155,12 +172,13 @@ impl TrueTypeFont {
             }
         }
 
-        glyph.unwrap_or(GlyphId::NOTDEF)
+        let glyph = glyph.unwrap_or(GlyphId::NOTDEF);
+        self.cached_mappings.borrow_mut().insert(code, glyph);
+        
+        glyph
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        println!("looking up code {}", code);
-        println!("{:?}", self.widths);
         self.widths
             .get(code as usize)
             .copied()
@@ -202,21 +220,17 @@ fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
     match (first_char, last_char, widths_arr) {
         (Some(fc), Some(lc), Some(w)) => {
             let mut iter = w.iter::<f32>().take((lc - fc + 1) as usize);
-            let mut idx = 0;
 
-            while idx < fc {
+            for _ in 0..fc {
                 widths.push(missing_width);
-                idx += 1;
             }
 
             while let Some(w) = iter.next() {
                 widths.push(w);
-                idx += 1;
             }
 
-            while idx < u8::MAX {
+            while widths.len() < u8::MAX as usize {
                 widths.push(missing_width);
-                idx += 1;
             }
         }
         _ => {}

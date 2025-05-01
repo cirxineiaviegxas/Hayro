@@ -8,6 +8,7 @@ use skrifa::outline::DrawSettings;
 use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use skrifa::raw::TableProvider;
 use yoke::{Yoke, Yokeable};
 
 pub(crate) static HELVETICA_REGULAR: Lazy<FontBlob> = Lazy::new(|| {
@@ -176,6 +177,10 @@ impl FontBlob {
 
         let _ = outline.draw(draw_settings, &mut path);
         path.0
+    }
+    
+    pub fn num_glyphs(&self) -> u16 {
+        self.font_ref().maxp().map(|m| m.num_glyphs()).unwrap_or(0)
     }
 
     pub fn charmap(&self) -> &Charmap {
