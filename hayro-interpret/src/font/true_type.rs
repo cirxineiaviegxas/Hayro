@@ -144,18 +144,18 @@ impl TrueTypeFont {
                     }
                 }
             }
-
-            // TODO: Search post table if nothing found
         } else {
             if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
                 for record in cmap.encoding_records() {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
-                            glyph = glyph.or_else(|| match subtable {
-                                CmapSubtable::Format4(f4) => f4.map_codepoint(code),
-                                CmapSubtable::Format12(f12) => f12.map_codepoint(code),
-                                _ => None,
-                            })
+                            for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
+                                glyph = glyph.or_else(|| match &subtable {
+                                    CmapSubtable::Format4(f4) => f4.map_codepoint(code as u32 + offset),
+                                    CmapSubtable::Format12(f12) => f12.map_codepoint(code as u32 + offset),
+                                    _ => None,
+                                })
+                            }
                         }
                     } else if record.platform_id() == PlatformId::Macintosh
                         && record.encoding_id() == 0
