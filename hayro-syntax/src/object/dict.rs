@@ -285,22 +285,13 @@ mod tests {
         assert_eq!(dict.len(), 6);
         assert!(dict.get::<Name>(&Name::new(b"Type")).is_some());
         assert!(dict.get::<Name>(&Name::new(b"Subtype")).is_some());
-        assert!(
-            dict.get::<Number>(&Name::new(b"Version"))
-                .is_some()
-        );
-        assert!(
-            dict.get::<i32>(&Name::new(b"IntegerItem"))
-                .is_some()
-        );
+        assert!(dict.get::<Number>(&Name::new(b"Version")).is_some());
+        assert!(dict.get::<i32>(&Name::new(b"IntegerItem")).is_some());
         assert!(
             dict.get::<string::String>(&Name::new(b"StringItem"))
                 .is_some()
         );
-        assert!(
-            dict.get::<Dict>(&Name::new(b"Subdictionary"))
-                .is_some()
-        );
+        assert!(dict.get::<Dict>(&Name::new(b"Subdictionary")).is_some());
     }
 
     #[test]

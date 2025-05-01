@@ -9,6 +9,7 @@ mod zapf_dings;
 
 pub(crate) use glyph_names::*;
 pub(crate) use mac_expert::*;
+pub(crate) use mac_os_roman::*;
 pub(crate) use mac_roman::*;
 pub(crate) use standard::*;
 pub(crate) use symbol::*;

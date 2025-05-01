@@ -1,21 +1,27 @@
 use crate::font::Encoding;
 use crate::font::blob::FontBlob;
+use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN, MAC_ROMAN_INVERSE};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::type1::Type1Font;
+use crate::util::OptionLog;
+use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2, MISSING_WIDTH, WIDTHS};
+use hayro_syntax::object::dict::keys::{
+    BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR,
+    FONT_FILE2, MISSING_WIDTH, WIDTHS,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
-use log::warn;
-use std::collections::HashMap;
-use std::sync::Arc;
-use bitflags::bitflags;
 use kurbo::BezPath;
+use log::warn;
 use skrifa::GlyphId;
 use skrifa::raw::TableProvider;
+use skrifa::raw::tables::cmap::{CmapSubtable, PlatformId};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Debug)]
 enum InnerFont {
@@ -27,7 +33,7 @@ impl InnerFont {
     fn blob(&self) -> FontBlob {
         match self {
             InnerFont::Standard(s) => s.get_blob().clone(),
-            InnerFont::Custom(c) => c.clone()
+            InnerFont::Custom(c) => c.clone(),
         }
     }
 }
@@ -36,6 +42,7 @@ impl InnerFont {
 pub(crate) struct TrueTypeFont {
     base_font: InnerFont,
     widths: HashMap<u8, f32>,
+    font_flags: FontFlags,
     encoding: Encoding,
 }
 
@@ -43,9 +50,11 @@ impl TrueTypeFont {
     pub fn new(dict: &Dict) -> TrueTypeFont {
         let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
 
-        let flags = descriptor.get::<u32>(FLAGS).and_then(|n| FontFlags::from_bits(n))
+        let font_flags = descriptor
+            .get::<u32>(FLAGS)
+            .and_then(|n| FontFlags::from_bits(n))
             .unwrap_or(FontFlags::empty());
-        
+
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
         let base_font = select_standard_font(dict)
@@ -65,10 +74,11 @@ impl TrueTypeFont {
         Self {
             base_font,
             widths,
+            font_flags,
             encoding,
         }
     }
-    
+
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         match &self.base_font {
             InnerFont::Standard(s) => s.get_blob().outline_glyph(glyph),
@@ -76,17 +86,98 @@ impl TrueTypeFont {
         }
     }
 
-    pub fn glyph_width(&self, glyph: GlyphId) -> f32 {
-        todo!();
-        // self.blob
-        //     .glyph_metrics()
-        //     .advance_width(glyph)
-        //     .unwrap_or(0.0)
+    pub fn map_code(&self, code: u8) -> GlyphId {
+        let mut glyph = None;
+
+        if self.font_flags.contains(FontFlags::NON_SYMBOLIC)
+            && matches!(self.encoding, Encoding::MacRoman | Encoding::WinAnsi)
+        {
+            let Some(lookup) = self.encoding.lookup(code) else {
+                return GlyphId::NOTDEF;
+            };
+
+            if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
+                for record in cmap.encoding_records() {
+                    if record.platform_id() == PlatformId::Windows && record.encoding_id() == 1 {
+                        if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                            glyph = glyph.or_else(|| {
+                                GLYPH_NAMES
+                                    .get(lookup)
+                                    .and_then(|n| n.chars().next())
+                                    .and_then(|c| match subtable {
+                                        CmapSubtable::Format4(f4) => f4.map_codepoint(c),
+                                        CmapSubtable::Format12(f12) => f12.map_codepoint(c),
+                                        _ => None,
+                                    })
+                            })
+                        }
+                    } else if record.platform_id() == PlatformId::Macintosh
+                        && record.encoding_id() == 0
+                    {
+                        if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                            glyph = glyph.or_else(|| {
+                                MAC_OS_ROMAN_INVERSE
+                                    .get(lookup)
+                                    .or_else(|| MAC_ROMAN_INVERSE.get(lookup))
+                                    .and_then(|c| match subtable {
+                                        CmapSubtable::Format4(f4) => f4.map_codepoint(*c),
+                                        CmapSubtable::Format12(f12) => f12.map_codepoint(*c),
+                                        _ => None,
+                                    })
+                            })
+                        }
+                    }
+                }
+            }
+
+            // TODO: Search post table if nothing found
+        } else {
+            if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
+                for record in cmap.encoding_records() {
+                    if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
+                        if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                            glyph = glyph.or_else(|| match subtable {
+                                CmapSubtable::Format4(f4) => f4.map_codepoint(code),
+                                CmapSubtable::Format12(f12) => f12.map_codepoint(code),
+                                _ => None,
+                            })
+                        }
+                    } else if record.platform_id() == PlatformId::Macintosh
+                        && record.encoding_id() == 0
+                    {
+                        if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                            glyph = glyph.or_else(|| match subtable {
+                                CmapSubtable::Format4(f4) => f4.map_codepoint(code),
+                                CmapSubtable::Format12(f12) => f12.map_codepoint(code),
+                                _ => None,
+                            })
+                        }
+                    }
+                }
+            }
+        }
+
+        glyph.unwrap_or(GlyphId::NOTDEF)
+    }
+
+    pub fn glyph_width(&self, code: u8) -> f32 {
+        self.widths
+            .get(&code)
+            .copied()
+            .or_else(|| {
+                self.base_font
+                    .blob()
+                    .glyph_metrics()
+                    .advance_width(self.map_code(code))
+            })
+            .warn_none(&format!("failed to find advance width for code {code}"))
+            .unwrap_or(0.0)
     }
 }
 
 bitflags! {
     /// Bitflags describing various characteristics of fonts.
+    #[derive(Debug)]
     pub struct FontFlags: u32 {
         const FIXED_PITCH = 1 << 0;
         const SERIF = 1 << 1;

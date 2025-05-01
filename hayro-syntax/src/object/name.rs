@@ -57,18 +57,17 @@ impl<'a> Name<'a> {
 
             Cow::Owned(cleaned)
         };
-        
+
         Self(data)
     }
-    
+
     pub const fn from_unescaped(data: &'a [u8]) -> Name<'a> {
         Self(Cow::Borrowed(data))
     }
 
     /// Return a string representation of the name.
     pub fn as_str(&self) -> &str {
-        std::str::from_utf8(&self.deref())
-            .unwrap_or("{non-ascii key}")
+        std::str::from_utf8(&self.deref()).unwrap_or("{non-ascii key}")
     }
 }
 
@@ -141,22 +140,24 @@ pub mod names {
     name!(PAGE, b"Page");
     name!(PAGES, b"Pages");
     name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
+    name!(TYPE1, b"Type1");
+    name!(TRUE_TYPE, b"TrueType");
     name!(WIN_ANSI_ENCODING, b"WinAnsiEncoding");
 }
 
-
 #[cfg(test)]
 mod tests {
-    use std::ops::Deref;
     use crate::object::name::Name;
     use crate::reader::Reader;
+    use std::ops::Deref;
 
     #[test]
     fn name_1() {
         assert_eq!(
             Reader::new("/".as_bytes())
                 .read_without_xref::<Name>()
-            .unwrap().deref(),
+                .unwrap()
+                .deref(),
             b""
         );
     }

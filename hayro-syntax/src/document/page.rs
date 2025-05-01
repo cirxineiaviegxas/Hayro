@@ -71,7 +71,6 @@ fn resolve_pages<'a>(
     Some(())
 }
 
-
 pub struct Page<'a> {
     inner: Dict<'a>,
     media_box: kurbo::Rect,

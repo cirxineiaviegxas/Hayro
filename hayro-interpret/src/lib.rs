@@ -483,7 +483,9 @@ fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()
     match key.as_str() {
         "LW" => context.get_mut().line_width = dict.get::<f32>(&key)?,
         "LC" => context.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(&key)?)),
-        "LJ" => context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(&key)?)),
+        "LJ" => {
+            context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(&key)?))
+        }
         "ML" => context.get_mut().miter_limit = dict.get::<f32>(&key)?,
         "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(&key)?,
         "ca" => context.get_mut().fill_alpha = dict.get::<f32>(&key)?,
