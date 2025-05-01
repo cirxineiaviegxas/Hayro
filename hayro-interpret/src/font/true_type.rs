@@ -4,7 +4,7 @@ use crate::font::blob::FontBlob;
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN, MAC_ROMAN_INVERSE};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::type1::Type1Font;
-use crate::util::OptionLog;
+use crate::util::{CodeMapExt, OptionLog};
 use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
@@ -109,11 +109,7 @@ impl TrueTypeFont {
                                 GLYPH_NAMES
                                     .get(lookup)
                                     .and_then(|n| n.chars().next())
-                                    .and_then(|c| match subtable {
-                                        CmapSubtable::Format4(f4) => f4.map_codepoint(c),
-                                        CmapSubtable::Format12(f12) => f12.map_codepoint(c),
-                                        _ => None,
-                                    })
+                                    .and_then(|c| subtable.map_codepoint(c))
                             })
                         }
                     } else if record.platform_id() == PlatformId::Macintosh
@@ -124,11 +120,7 @@ impl TrueTypeFont {
                                 MAC_OS_ROMAN_INVERSE
                                     .get(lookup)
                                     .or_else(|| MAC_ROMAN_INVERSE.get(lookup))
-                                    .and_then(|c| match subtable {
-                                        CmapSubtable::Format4(f4) => f4.map_codepoint(*c),
-                                        CmapSubtable::Format12(f12) => f12.map_codepoint(*c),
-                                        _ => None,
-                                    })
+                                    .and_then(|c| subtable.map_codepoint(*c))
                             })
                         }
                     }
@@ -150,27 +142,14 @@ impl TrueTypeFont {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
-                                glyph = glyph.or_else(|| match &subtable {
-                                    CmapSubtable::Format4(f4) => f4.map_codepoint(code as u32 + offset),
-                                    CmapSubtable::Format12(f12) => f12.map_codepoint(code as u32 + offset),
-                                    _ => None,
-                                })
+                                glyph = glyph.or_else(|| subtable.map_codepoint(code as u32 + offset))
                             }
                         }
                     } else if record.platform_id() == PlatformId::Macintosh
                         && record.encoding_id() == 0
                     {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
-                            glyph = glyph.or_else(|| match subtable {
-                                CmapSubtable::Format0(f0) => f0.map_codepoint(code),
-                                CmapSubtable::Format4(f4) => f4.map_codepoint(code),
-                                CmapSubtable::Format12(f12) => f12.map_codepoint(code),
-                                _ => {
-                                    warn!("encountered cmap with format {:?}", subtable);
-                                    
-                                    None
-                                },
-                            })
+                            glyph = glyph.or_else(|| subtable.map_codepoint(code))
                         }
                     }
                 }
@@ -240,8 +219,6 @@ fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
         }
         _ => {}
     }
-    
-    println!("{:?}", widths);
     
     widths
 }

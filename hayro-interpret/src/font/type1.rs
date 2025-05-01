@@ -23,7 +23,7 @@ pub(crate) struct Type1Font {
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Type1Font {
-        let base_font = select_standard_font(dict).unwrap();
+        let base_font = select_standard_font(dict).unwrap_or(StandardFont::Courier);
         let blob = base_font.get_blob();
 
         let (encoding, encoding_map) = read_encoding(dict);
