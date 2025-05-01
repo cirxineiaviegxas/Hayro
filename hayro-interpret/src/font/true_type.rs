@@ -217,14 +217,14 @@ bitflags! {
 fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
     let mut widths = Vec::new();
 
-    let first_char = dict.get::<u8>(FIRST_CHAR);
-    let last_char = dict.get::<u8>(LAST_CHAR);
+    let first_char = dict.get::<usize>(FIRST_CHAR);
+    let last_char = dict.get::<usize>(LAST_CHAR);
     let widths_arr = dict.get::<Array>(WIDTHS);
     let missing_width = descriptor.get::<f32>(MISSING_WIDTH).unwrap_or(0.0);
 
     match (first_char, last_char, widths_arr) {
         (Some(fc), Some(lc), Some(w)) => {
-            let mut iter = w.iter::<f32>().take((lc - fc + 1) as usize);
+            let mut iter = w.iter::<f32>().take(lc - fc + 1);
 
             for _ in 0..fc {
                 widths.push(missing_width);
@@ -234,12 +234,14 @@ fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
                 widths.push(w);
             }
 
-            while widths.len() < u8::MAX as usize {
+            while widths.len() <= (u8::MAX as usize) + 1 {
                 widths.push(missing_width);
             }
         }
         _ => {}
     }
+    
+    println!("{:?}", widths);
     
     widths
 }
