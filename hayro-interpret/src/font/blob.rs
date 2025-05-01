@@ -8,7 +8,7 @@ use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use skrifa::raw::TableProvider;
-use ttf_parser::cff;
+use pdf_font_parser::cff;
 use yoke::{Yoke, Yokeable};
 
 pub(crate) static HELVETICA_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -158,7 +158,7 @@ impl CffFontBlob {
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
         
-        let Ok(_) = self.table().outline(ttf_parser::GlyphId(glyph.to_u32() as u16), &mut path) else {
+        let Ok(_) = self.table().outline(pdf_font_parser::GlyphId(glyph.to_u32() as u16), &mut path) else {
             return BezPath::new();
         };
         
@@ -220,7 +220,7 @@ impl OpenTypeFontBlob {
     }
 }
 
-fn convert_matrix(matrix: ttf_parser::cff::Matrix) -> Affine {
+fn convert_matrix(matrix: cff::Matrix) -> Affine {
     Affine::new([matrix.sx as f64, matrix.kx as f64, matrix.ky as f64, matrix.sy as f64, matrix.tx as f64, matrix.ty as f64])
 }
 

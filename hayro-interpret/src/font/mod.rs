@@ -10,7 +10,7 @@ use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::sync::Arc;
-use ttf_parser::OutlineBuilder;
+use pdf_font_parser::OutlineBuilder;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 

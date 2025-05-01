@@ -25,5 +25,5 @@ qcms = "0.3.0"
 phf = { version = "0.11.3" }
 skrifa = { path = "../fontations/skrifa" }
 yoke = { version = "0.8.0" }
-ttf-parser = { version = "0.25.1" }
+pdf-font-parser = { path = "../pdf-font-parser" }
 walkdir = "2.5.0"

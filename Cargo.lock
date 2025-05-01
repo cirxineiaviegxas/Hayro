@@ -540,12 +540,12 @@ dependencies = [
  "kurbo",
  "log",
  "once_cell",
+ "pdf-font-parser",
  "peniko",
  "phf",
  "qcms",
  "skrifa 0.30.0",
  "smallvec",
- "ttf-parser",
  "yoke",
 ]
 
@@ -946,6 +946,10 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
+name = "pdf-font-parser"
+version = "0.1.0"
 
 [[package]]
 name = "pdf-writer"
@@ -1659,12 +1663,6 @@ dependencies = [
  "toml_datetime",
  "winnow",
 ]
-
-[[package]]
-name = "ttf-parser"
-version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 
 [[package]]
 name = "unicode-ident"

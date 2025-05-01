@@ -11,7 +11,7 @@ fn main() {
         log::set_max_level(log::LevelFilter::Warn);
     }
 
-    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/text/truetype");
+    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/text/type1_cff");
 
     let mut entries = WalkDir::new(&root_dir)
         .into_iter()
