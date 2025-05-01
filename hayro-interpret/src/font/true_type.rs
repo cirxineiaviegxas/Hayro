@@ -1,15 +1,14 @@
 use std::cell::RefCell;
 use crate::font::Encoding;
 use crate::font::blob::OpenTypeFontBlob;
-use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN, MAC_ROMAN_INVERSE};
+use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN_INVERSE};
 use crate::font::standard::{StandardFont, select_standard_font};
-use crate::font::type1::Type1Font;
 use crate::util::{CodeMapExt, OptionLog};
 use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2, LAST_CHAR, MISSING_WIDTH, WIDTHS};
+use hayro_syntax::object::dict::keys::{BASE_ENCODING, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2, LAST_CHAR, MISSING_WIDTH, WIDTHS};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -17,7 +16,7 @@ use kurbo::BezPath;
 use log::warn;
 use skrifa::{GlyphId, GlyphId16};
 use skrifa::raw::TableProvider;
-use skrifa::raw::tables::cmap::{CmapSubtable, PlatformId};
+use skrifa::raw::tables::cmap::PlatformId;
 use std::collections::HashMap;
 use std::sync::Arc;
 

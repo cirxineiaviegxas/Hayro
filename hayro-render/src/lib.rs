@@ -10,7 +10,7 @@ use std::io::Cursor;
 use std::ops::RangeInclusive;
 use vello_api::color::palette::css::WHITE;
 use vello_api::kurbo;
-use vello_api::kurbo::{Affine, BezPath, Point, Rect, Vec2};
+use vello_api::kurbo::{Affine, BezPath, Rect};
 use vello_api::peniko::Fill;
 use vello_cpu::{Pixmap, RenderContext};
 
@@ -62,7 +62,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     let (unscaled_width, unscaled_height) = (crop_box.width(), crop_box.height());
     let (mut pix_width, mut pix_height) = (unscaled_width, unscaled_height);
  
-    let mut rotation_transform = Affine::scale(scale as f64) * match page.rotation() {
+    let rotation_transform = Affine::scale(scale as f64) * match page.rotation() {
         Rotation::None => Affine::IDENTITY,
         Rotation::Horizontal => {
             let t = Affine::rotate(90.0f64.to_radians()) * Affine::translate((0.0, -unscaled_height));

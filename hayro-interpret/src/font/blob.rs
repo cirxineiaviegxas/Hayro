@@ -206,10 +206,6 @@ impl OpenTypeFontBlob {
     pub fn num_glyphs(&self) -> u16 {
         self.font_ref().maxp().map(|m| m.num_glyphs()).unwrap_or(0)
     }
-
-    pub fn charmap(&self) -> &Charmap {
-        &self.0.as_ref().get().charmap
-    }
 }
 
 #[derive(Yokeable, Clone)]
@@ -222,5 +218,5 @@ struct OTFYoke<'a> {
 
 #[derive(Yokeable, Clone)]
 struct T1Yoke<'a> {
-    pub table: ttf_parser::cff::Table<'a>
+    pub table: cff::Table<'a>
 }

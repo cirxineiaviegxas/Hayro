@@ -9,30 +9,33 @@ use skrifa::{GlyphId, MetadataProvider};
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub(crate) enum Type1Font {
-    Standard(Standard),
+enum Kind {
+    Standard(Standard)
 }
+
+#[derive(Debug)]
+pub(crate) struct Type1Font(Kind);
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Self {
-        Self::Standard(Standard::new(dict))
+        Self(Kind::Standard(Standard::new(dict)))
     }
 
     pub fn map_code(&self, code: u8) -> GlyphId {
-        match self {
-            Type1Font::Standard(s) => s.map_code(code),
+        match &self.0 {
+            Kind::Standard(s) => s.map_code(code),
         }
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
-        match self {
-            Type1Font::Standard(s) => s.outline_glyph(glyph),
+        match &self.0 {
+            Kind::Standard(s) => s.outline_glyph(glyph),
         }
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        match self {
-            Type1Font::Standard(s) => s.glyph_width(code),
+        match &self.0 {
+            Kind::Standard(s) => s.glyph_width(code),
         }
     }
 }

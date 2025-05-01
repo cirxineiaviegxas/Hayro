@@ -10,7 +10,6 @@ use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::BASE_FONT;
 use hayro_syntax::object::name::Name;
-use log::warn;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum StandardFont {

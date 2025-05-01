@@ -96,8 +96,6 @@ impl<'a> Readable<'a> for Name<'a> {
 // This method is shared by `Name` and the parser for content stream operators (which behave like
 // names, except that they aren't preceded by a solidus.
 pub(crate) fn skip_name_like(r: &mut Reader, solidus: bool) -> Option<()> {
-    let mut has_escape = false;
-
     if solidus {
         r.forward_tag(b"/")?;
     }
@@ -107,7 +105,6 @@ pub(crate) fn skip_name_like(r: &mut Reader, solidus: bool) -> Option<()> {
             b'#' => {
                 r.eat(|n| n.is_ascii_hexdigit())?;
                 r.eat(|n| n.is_ascii_hexdigit())?;
-                has_escape = true;
             }
             _ => {}
         }
