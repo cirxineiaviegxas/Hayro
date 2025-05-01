@@ -117,6 +117,7 @@ pub(crate) fn select_standard_font(dict: &Dict) -> Option<StandardFont> {
         | b"LiberationMono-BoldItalic"
         | b"NimbusMonL-BoldObli" => Some(StandardFont::CourierBoldOblique),
         b"Times-Roman"
+        | b"Times New Roman"
         | b"TimesNewRomanPSMT"
         | b"TimesNewRoman"
         | b"TimesNewRomanPS"
