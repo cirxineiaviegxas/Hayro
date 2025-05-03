@@ -1,10 +1,10 @@
 use crate::font::blob;
 use crate::font::blob::{
-    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, OpenTypeFontBlob, HELVETICA_BOLD,
-    HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD, TIMES_ITALIC,
-    TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
+    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, HELVETICA_BOLD,
+    HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, OpenTypeFontBlob, TIMES_BOLD,
+    TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
-use crate::font::encoding::{GLYPH_NAMES, ZAPF_DINGS_NAMES};
+use crate::font::encoding::{GLYPH_NAMES, ZAPF_DINGS_NAMES, metrics};
 use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
@@ -70,6 +70,27 @@ impl StandardFont {
             StandardFont::TimesBoldItalic => TIMES_ROMAN_BOLD_ITALIC.clone(),
             StandardFont::ZapfDingBats => ZAPF_DINGS_BAT.clone(),
             StandardFont::Symbol => blob::SYMBOL.clone(),
+        }
+    }
+
+    pub fn get_width(&self, name: &str) -> Option<f32> {
+        match self {
+            StandardFont::Helvetica => metrics::HELVETICA.get(name).copied(),
+            StandardFont::HelveticaBold => metrics::HELVETICA_BOLD.get(name).copied(),
+            StandardFont::HelveticaOblique => metrics::HELVETICA_OBLIQUE.get(name).copied(),
+            StandardFont::HelveticaBoldOblique => {
+                metrics::HELVETICA_BOLD_OBLIQUE.get(name).copied()
+            }
+            StandardFont::Courier => metrics::COURIER.get(name).copied(),
+            StandardFont::CourierBold => metrics::COURIER_BOLD.get(name).copied(),
+            StandardFont::CourierOblique => metrics::COURIER_OBLIQUE.get(name).copied(),
+            StandardFont::CourierBoldOblique => metrics::COURIER_BOLD_OBLIQUE.get(name).copied(),
+            StandardFont::TimesRoman => metrics::TIMES_ROMAN.get(name).copied(),
+            StandardFont::TimesBold => metrics::TIMES_BOLD.get(name).copied(),
+            StandardFont::TimesItalic => metrics::TIMES_ITALIC.get(name).copied(),
+            StandardFont::TimesBoldItalic => metrics::TIMES_BOLD_ITALIC.get(name).copied(),
+            StandardFont::ZapfDingBats => metrics::ZAPF_DING_BATS.get(name).copied(),
+            StandardFont::Symbol => metrics::SYMBOL.get(name).copied(),
         }
     }
 }

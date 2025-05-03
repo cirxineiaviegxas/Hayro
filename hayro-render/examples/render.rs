@@ -4,11 +4,12 @@ use hayro_syntax::pdf::Pdf;
 
 fn main() {
     if let Ok(()) = log::set_logger(&LOGGER) {
-        log::set_max_level(log::LevelFilter::Warn);
+        log::set_max_level(log::LevelFilter::Trace);
     }
 
     let file =
-        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/pdftc_100k_0435.pdf").unwrap();
+        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/pdftc_010k_1080_backup.pdf")
+            .unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 

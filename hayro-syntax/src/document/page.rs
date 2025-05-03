@@ -18,7 +18,7 @@ pub struct Pages<'a> {
 struct PagesContext {
     media_box: Option<Rect>,
     crop_box: Option<Rect>,
-    rotate: Option<u32>
+    rotate: Option<u32>,
 }
 
 impl PagesContext {
@@ -26,7 +26,7 @@ impl PagesContext {
         Self {
             media_box: None,
             crop_box: None,
-            rotate: None
+            rotate: None,
         }
     }
 }
@@ -82,7 +82,7 @@ pub enum Rotation {
     None,
     Horizontal,
     Flipped,
-    FlippedHorizontal
+    FlippedHorizontal,
 }
 
 pub struct Page<'a> {
@@ -105,7 +105,7 @@ impl<'a> Page<'a> {
             .get::<Rect>(CROP_BOX)
             .or_else(|| ctx.crop_box)
             .unwrap_or(media_box);
-        
+
         let rotation = match dict.get::<u32>(ROTATE).or_else(|| ctx.rotate).unwrap_or(0) % 360 {
             0 => Rotation::None,
             90 => Rotation::Horizontal,
@@ -170,7 +170,7 @@ impl<'a> Page<'a> {
     pub fn media_box(&self) -> kurbo::Rect {
         self.media_box
     }
-    
+
     pub fn rotation(&self) -> Rotation {
         self.rotation
     }

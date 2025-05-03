@@ -1,14 +1,14 @@
 use crate::font::{OutlinePath, UNITS_PER_EM};
 use kurbo::{Affine, BezPath};
 use once_cell::sync::Lazy;
+use pdf_font_parser::{Matrix, cff, type1};
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
 use skrifa::outline::DrawSettings;
+use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use skrifa::raw::TableProvider;
-use pdf_font_parser::{cff, type1, Matrix};
 use yoke::{Yoke, Yokeable};
 
 pub(crate) static HELVETICA_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -141,13 +141,10 @@ impl Debug for Type1FontBlob {
 
 impl Type1FontBlob {
     pub fn new(data: FontData) -> Self {
-        let yoke =
-            Yoke::<Type1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
-                let table = type1::Table::parse(data.as_ref().as_ref()).unwrap();
-                Type1Yoke {
-                    table,
-                }
-            });
+        let yoke = Yoke::<Type1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
+            let table = type1::Table::parse(data.as_ref().as_ref()).unwrap();
+            Type1Yoke { table }
+        });
 
         Self(Arc::new(yoke))
     }
@@ -176,28 +173,28 @@ impl Debug for CffFontBlob {
 
 impl CffFontBlob {
     pub fn new(data: FontData) -> Self {
-        let yoke =
-            Yoke::<CFFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
-                let table = cff::Table::parse(data.as_ref().as_ref()).unwrap();
-                CFFYoke {
-                    table,
-                }
-            });
+        let yoke = Yoke::<CFFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
+            let table = cff::Table::parse(data.as_ref().as_ref()).unwrap();
+            CFFYoke { table }
+        });
 
         Self(Arc::new(yoke))
     }
-    
+
     pub(crate) fn table(&self) -> &cff::Table {
         &self.0.as_ref().get().table
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
-        
-        let Ok(_) = self.table().outline(pdf_font_parser::GlyphId(glyph.to_u32() as u16), &mut path) else {
+
+        let Ok(_) = self
+            .table()
+            .outline(pdf_font_parser::GlyphId(glyph.to_u32() as u16), &mut path)
+        else {
             return BezPath::new();
         };
-        
+
         Affine::scale(UNITS_PER_EM as f64) * convert_matrix(self.table().matrix()) * path.0
     }
 }
@@ -250,14 +247,21 @@ impl OpenTypeFontBlob {
         let _ = outline.draw(draw_settings, &mut path);
         path.0
     }
-    
+
     pub fn num_glyphs(&self) -> u16 {
         self.font_ref().maxp().map(|m| m.num_glyphs()).unwrap_or(0)
     }
 }
 
 fn convert_matrix(matrix: Matrix) -> Affine {
-    Affine::new([matrix.sx as f64, matrix.kx as f64, matrix.ky as f64, matrix.sy as f64, matrix.tx as f64, matrix.ty as f64])
+    Affine::new([
+        matrix.sx as f64,
+        matrix.kx as f64,
+        matrix.ky as f64,
+        matrix.sy as f64,
+        matrix.tx as f64,
+        matrix.ty as f64,
+    ])
 }
 
 #[derive(Yokeable, Clone)]
@@ -269,10 +273,10 @@ struct OTFYoke<'a> {
 
 #[derive(Yokeable, Clone)]
 struct CFFYoke<'a> {
-    pub table: cff::Table<'a>
+    pub table: cff::Table<'a>,
 }
 
 #[derive(Yokeable, Clone)]
 struct Type1Yoke<'a> {
-    pub table: type1::Table<'a>
+    pub table: type1::Table<'a>,
 }

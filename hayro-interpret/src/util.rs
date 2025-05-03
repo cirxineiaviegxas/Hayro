@@ -30,7 +30,7 @@ impl CodeMapExt for CmapSubtable<'_> {
             CmapSubtable::Format12(f) => f.map_codepoint(code),
             _ => {
                 warn!("unsupported cmap table {:?}", self);
-                
+
                 None
             }
         }

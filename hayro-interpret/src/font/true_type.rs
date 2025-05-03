@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use crate::font::Encoding;
 use crate::font::blob::OpenTypeFontBlob;
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN_INVERSE};
@@ -8,15 +7,19 @@ use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_ENCODING, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2, LAST_CHAR, MISSING_WIDTH, WIDTHS};
+use hayro_syntax::object::dict::keys::{
+    BASE_ENCODING, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESCRIPTOR, FONT_FILE2,
+    LAST_CHAR, MISSING_WIDTH, WIDTHS,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
 use log::warn;
-use skrifa::{GlyphId, GlyphId16};
 use skrifa::raw::TableProvider;
 use skrifa::raw::tables::cmap::PlatformId;
+use skrifa::{GlyphId, GlyphId16};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -41,7 +44,7 @@ pub(crate) struct TrueTypeFont {
     widths: Vec<f32>,
     font_flags: FontFlags,
     encoding: Encoding,
-    cached_mappings: RefCell<HashMap<u8, GlyphId>>
+    cached_mappings: RefCell<HashMap<u8, GlyphId>>,
 }
 
 impl TrueTypeFont {
@@ -74,7 +77,7 @@ impl TrueTypeFont {
             widths,
             font_flags,
             encoding,
-            cached_mappings: RefCell::new(HashMap::new())
+            cached_mappings: RefCell::new(HashMap::new()),
         }
     }
 
@@ -90,7 +93,7 @@ impl TrueTypeFont {
         if let Some(glyph) = self.cached_mappings.borrow().get(&code) {
             return *glyph;
         }
-        
+
         let mut glyph = None;
 
         if self.font_flags.contains(FontFlags::NON_SYMBOLIC)
@@ -125,7 +128,7 @@ impl TrueTypeFont {
                     }
                 }
             }
-            
+
             if glyph.is_none() {
                 if let Ok(post) = self.base_font.blob().font_ref().post() {
                     for i in 0..self.base_font.blob().num_glyphs() {
@@ -141,7 +144,8 @@ impl TrueTypeFont {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
-                                glyph = glyph.or_else(|| subtable.map_codepoint(code as u32 + offset))
+                                glyph =
+                                    glyph.or_else(|| subtable.map_codepoint(code as u32 + offset))
                             }
                         }
                     } else if record.platform_id() == PlatformId::Macintosh
@@ -157,7 +161,7 @@ impl TrueTypeFont {
 
         let glyph = glyph.unwrap_or(GlyphId::NOTDEF);
         self.cached_mappings.borrow_mut().insert(code, glyph);
-        
+
         glyph
     }
 
@@ -218,7 +222,7 @@ pub(crate) fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
         }
         _ => {}
     }
-    
+
     widths
 }
 

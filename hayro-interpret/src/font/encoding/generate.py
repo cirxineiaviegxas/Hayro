@@ -8,6 +8,7 @@ GLYPH_LIST_RS = pathlib.Path(__file__).parent / "glyph_names.rs"
 STANDARD_RS = pathlib.Path(__file__).parent / "standard.rs"
 SYMBOL_RS = pathlib.Path(__file__).parent / "symbol.rs"
 ZAPF_DINGS_RS = pathlib.Path(__file__).parent / "zapf_dings.rs"
+METRICS_RS = pathlib.Path(__file__).parent / "metrics.rs"
 
 def generate_glyph_list():
     start = """// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
@@ -76,6 +77,49 @@ pub(crate) static {font}: phf::Map<u8, &'static str> = phf_map! {{
         with open(out, 'w') as file:
             file.write(start)
 
-            
+def generate_metrics():
+    fonts = [
+        ("COURIER", "Courier"),
+        ("COURIER_BOLD", "Courier-Bold"),
+        ("COURIER_BOLD_OBLIQUE", "Courier-BoldOblique"),
+        ("COURIER_OBLIQUE", "Courier-Oblique"),
+        ("HELVETICA", "Helvetica"),
+        ("HELVETICA_BOLD", "Helvetica-Bold"),
+        ("HELVETICA_BOLD_OBLIQUE", "Helvetica-BoldOblique"),
+        ("HELVETICA_OBLIQUE", "Helvetica-Oblique"),
+        ("SYMBOL", "Symbol"),
+        ("TIMES_BOLD", "Times-Bold"),
+        ("TIMES_BOLD_ITALIC", "Times-BoldItalic"),
+        ("TIMES_ITALIC", "Times-Italic"),
+        ("TIMES_ROMAN", "Times-Roman"),
+        ("ZAPF_DING_BATS", "ZapfDingbats"),
+    ]
+
+    start = """// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
+use phf::phf_map;"""
+
+    for (font, file) in fonts:
+        with open(ASSETS_DIR / "font_metrics" / f"{file}.afm") as file:
+            start += f"""\n
+pub(crate) static {font}: phf::Map<&'static str, f32> = phf_map! {{
+"""
+
+            lines = [l for l in file.read().splitlines() if l.startswith("C ")]
+    
+            for line in lines:
+                split = line.split(";")
+                temp = split[1].split(" ")
+                width = temp[2]
+                temp = split[2].split(" ")
+                name = temp[2]
+    
+                start += f"    \"{name}\" => {width}f32,\n"
+    
+            start += "};"
+
+    with open(METRICS_RS, 'w') as file:
+        file.write(start)
+
 generate_glyph_list()
 generate_encodings()
+generate_metrics()

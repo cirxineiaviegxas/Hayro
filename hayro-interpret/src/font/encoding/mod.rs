@@ -2,6 +2,7 @@ mod glyph_names;
 mod mac_expert;
 mod mac_os_roman;
 mod mac_roman;
+pub(crate) mod metrics;
 mod standard;
 mod symbol;
 pub(crate) mod win_ansi;

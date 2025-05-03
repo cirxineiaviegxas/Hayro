@@ -32,44 +32,19 @@ pub fn check_render(name: &str, document: RenderedDocument) {
 
     let mut ref_created = false;
     let mut test_replaced = false;
+    let mut failed = false;
 
-    let mut check_single = |name: String, page: &RenderedPage, page_num: usize| {
-        let suffix = if document.len() == 1 {
-            format!("{name}.png")
-        } else {
-            format!("{name}_{page_num}.png")
-        };
+    let mut check_single =
+        |name: String, page: &RenderedPage, page_num: usize, failed: &mut bool| {
+            let suffix = if document.len() == 1 {
+                format!("{name}.png")
+            } else {
+                format!("{name}_{page_num}.png")
+            };
 
-        let ref_path = refs_path.join(&suffix);
+            let ref_path = refs_path.join(&suffix);
 
-        if !ref_path.exists() {
-            eprintln!("{:?}", ref_path);
-            std::fs::write(&ref_path, page).unwrap();
-            oxipng::optimize(
-                &oxipng::InFile::Path(ref_path.clone()),
-                &oxipng::OutFile::from_path(ref_path),
-                &oxipng::Options::max_compression(),
-            )
-            .unwrap();
-            ref_created = true;
-
-            return;
-        }
-
-        let reference = load_from_memory(&std::fs::read(&ref_path).unwrap())
-            .unwrap()
-            .into_rgba8();
-        let actual = load_from_memory(&document[page_num]).unwrap().into_rgba8();
-
-        let (diff_image, pixel_diff) = get_diff(&reference, &actual);
-
-        if pixel_diff > 0 {
-            let diff_path = DIFFS_PATH.join(&suffix);
-            diff_image
-                .save_with_format(&diff_path, ::image::ImageFormat::Png)
-                .unwrap();
-
-            if REPLACE.is_some() {
+            if !ref_path.exists() {
                 std::fs::write(&ref_path, page).unwrap();
                 oxipng::optimize(
                     &oxipng::InFile::Path(ref_path.clone()),
@@ -77,22 +52,52 @@ pub fn check_render(name: &str, document: RenderedDocument) {
                     &oxipng::Options::max_compression(),
                 )
                 .unwrap();
-                test_replaced = true;
+                ref_created = true;
+
+                return;
             }
 
-            panic!("pixel diff was {pixel_diff}");
-        }
-    };
+            let reference = load_from_memory(&std::fs::read(&ref_path).unwrap())
+                .unwrap()
+                .into_rgba8();
+            let actual = load_from_memory(&document[page_num]).unwrap().into_rgba8();
+
+            let (diff_image, pixel_diff) = get_diff(&reference, &actual);
+
+            if pixel_diff > 0 {
+                *failed = true;
+
+                let diff_path = DIFFS_PATH.join(&suffix);
+                diff_image
+                    .save_with_format(&diff_path, ::image::ImageFormat::Png)
+                    .unwrap();
+
+                if REPLACE.is_some() {
+                    std::fs::write(&ref_path, page).unwrap();
+                    oxipng::optimize(
+                        &oxipng::InFile::Path(ref_path.clone()),
+                        &oxipng::OutFile::from_path(ref_path),
+                        &oxipng::Options::max_compression(),
+                    )
+                    .unwrap();
+                    test_replaced = true;
+                }
+
+                eprintln!("pixel diff was {pixel_diff}");
+            }
+        };
 
     if document.is_empty() {
         panic!("empty document");
     } else {
         for (index, page) in document.iter().enumerate() {
-            check_single(name.to_string(), page, index);
+            check_single(name.to_string(), page, index, &mut failed);
         }
 
         if test_replaced {
             panic!("test was replaced");
+        } else if failed {
+            panic!("at least one page had a pixel diff");
         }
 
         if ref_created {

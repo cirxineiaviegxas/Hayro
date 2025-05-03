@@ -1,4 +1,4 @@
-use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD};
+use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use hayro_syntax::object::dict::Dict;
@@ -6,11 +6,11 @@ use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use kurbo::BezPath;
+use pdf_font_parser::OutlineBuilder;
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::sync::Arc;
-use pdf_font_parser::OutlineBuilder;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 

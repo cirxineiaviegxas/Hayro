@@ -61,30 +61,33 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
 
     let (unscaled_width, unscaled_height) = (crop_box.width(), crop_box.height());
     let (mut pix_width, mut pix_height) = (unscaled_width, unscaled_height);
- 
-    let rotation_transform = Affine::scale(scale as f64) * match page.rotation() {
-        Rotation::None => Affine::IDENTITY,
-        Rotation::Horizontal => {
-            let t = Affine::rotate(90.0f64.to_radians()) * Affine::translate((0.0, -unscaled_height));
-            std::mem::swap(&mut pix_width, &mut pix_height);
-            
-            t
-        }
-        Rotation::Flipped => {
-            Affine::scale(-1.0) * Affine::translate((-unscaled_width, -unscaled_height))
-        }
-        Rotation::FlippedHorizontal => {
-            let t = Affine::translate((0.0, unscaled_width)) * Affine::rotate(-90.0f64.to_radians());
-            std::mem::swap(&mut pix_width, &mut pix_height);
-            
-            t
-        }
-    };
-    
+
+    let rotation_transform = Affine::scale(scale as f64)
+        * match page.rotation() {
+            Rotation::None => Affine::IDENTITY,
+            Rotation::Horizontal => {
+                let t = Affine::rotate(90.0f64.to_radians())
+                    * Affine::translate((0.0, -unscaled_height));
+                std::mem::swap(&mut pix_width, &mut pix_height);
+
+                t
+            }
+            Rotation::Flipped => {
+                Affine::scale(-1.0) * Affine::translate((-unscaled_width, -unscaled_height))
+            }
+            Rotation::FlippedHorizontal => {
+                let t = Affine::translate((0.0, unscaled_width))
+                    * Affine::rotate(-90.0f64.to_radians());
+                std::mem::swap(&mut pix_width, &mut pix_height);
+
+                t
+            }
+        };
+
     let initial_transform = rotation_transform
         * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height])
         * Affine::translate((-crop_box.x0, -crop_box.y0));
-    
+
     let (scaled_width, scaled_height) = (
         (pix_width as f32 * scale) as f64,
         (pix_height as f32 * scale) as f64,
