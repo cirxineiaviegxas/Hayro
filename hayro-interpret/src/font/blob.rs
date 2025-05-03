@@ -8,7 +8,7 @@ use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use skrifa::raw::TableProvider;
-use pdf_font_parser::cff;
+use pdf_font_parser::{cff, type1, Matrix};
 use yoke::{Yoke, Yokeable};
 
 pub(crate) static HELVETICA_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -128,6 +128,42 @@ pub(crate) static SYMBOL: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 type OpenTypeFontYoke = Yoke<OTFYoke<'static>, FontData>;
 type CffFontYoke = Yoke<CFFYoke<'static>, FontData>;
+type Type1FontYoke = Yoke<Type1Yoke<'static>, FontData>;
+
+#[derive(Clone)]
+pub struct Type1FontBlob(Arc<Type1FontYoke>);
+
+impl Debug for Type1FontBlob {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Type1 Font {{ .. }}")
+    }
+}
+
+impl Type1FontBlob {
+    pub fn new(data: FontData) -> Self {
+        let yoke =
+            Yoke::<Type1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
+                let table = type1::Table::parse(data.as_ref().as_ref()).unwrap();
+                Type1Yoke {
+                    table,
+                }
+            });
+
+        Self(Arc::new(yoke))
+    }
+
+    pub(crate) fn table(&self) -> &type1::Table {
+        &self.0.as_ref().get().table
+    }
+
+    pub fn outline_glyph(&self, name: &str) -> BezPath {
+        let mut path = OutlinePath(BezPath::new());
+
+        self.table().outline(name, &mut path).unwrap();
+
+        Affine::scale(UNITS_PER_EM as f64) * convert_matrix(self.table().matrix()) * path.0
+    }
+}
 
 #[derive(Clone)]
 pub struct CffFontBlob(Arc<CffFontYoke>);
@@ -220,7 +256,7 @@ impl OpenTypeFontBlob {
     }
 }
 
-fn convert_matrix(matrix: cff::Matrix) -> Affine {
+fn convert_matrix(matrix: Matrix) -> Affine {
     Affine::new([matrix.sx as f64, matrix.kx as f64, matrix.ky as f64, matrix.sy as f64, matrix.tx as f64, matrix.ty as f64])
 }
 
@@ -234,4 +270,9 @@ struct OTFYoke<'a> {
 #[derive(Yokeable, Clone)]
 struct CFFYoke<'a> {
     pub table: cff::Table<'a>
+}
+
+#[derive(Yokeable, Clone)]
+struct Type1Yoke<'a> {
+    pub table: type1::Table<'a>
 }

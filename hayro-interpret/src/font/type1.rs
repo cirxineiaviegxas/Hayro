@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use crate::font::encoding::{win_ansi, MAC_EXPERT, MAC_ROMAN, STANDARD};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
@@ -8,9 +9,9 @@ use kurbo::BezPath;
 use skrifa::{GlyphId, MetadataProvider};
 use std::collections::HashMap;
 use std::sync::Arc;
-use hayro_syntax::object::dict::keys::{FONT_DESCRIPTOR, FONT_FILE3};
+use hayro_syntax::object::dict::keys::{FONT_DESCRIPTOR, FONT_FILE, FONT_FILE3};
 use hayro_syntax::object::stream::Stream;
-use crate::font::blob::CffFontBlob;
+use crate::font::blob::{CffFontBlob, Type1FontBlob};
 
 #[derive(Debug)]
 pub(crate) struct Type1Font(Kind);
@@ -19,7 +20,9 @@ impl Type1Font {
     pub fn new(dict: &Dict) -> Self {
         if is_cff(dict) {
             Self(Kind::Cff(Cff::new(dict)))
-        }   else {
+        } else if is_type1(dict) {
+            Self(Kind::Type1(Type1::new(dict)))
+        }  else {
             Self(Kind::Standard(Standard::new(dict)))
         }
     }
@@ -27,6 +30,7 @@ impl Type1Font {
     pub fn map_code(&self, code: u8) -> GlyphId {
         match &self.0 {
             Kind::Standard(s) => s.map_code(code),
+            Kind::Type1(s) => s.map_code(code),
             Kind::Cff(c) => c.map_code(code),
         }
     }
@@ -35,6 +39,7 @@ impl Type1Font {
         match &self.0 {
             Kind::Standard(s) => s.outline_glyph(glyph),
             Kind::Cff(c) => c.outline_glyph(glyph),
+            Kind::Type1(t) => t.outline_glyph(glyph),
         }
     }
 
@@ -42,6 +47,7 @@ impl Type1Font {
         match &self.0 {
             Kind::Standard(s) => s.glyph_width(code),
             Kind::Cff(c) => c.glyph_width(code),
+            Kind::Type1(t) => t.glyph_width(code),
         }
     }
 }
@@ -50,6 +56,7 @@ impl Type1Font {
 enum Kind {
     Standard(Standard),
     Cff(Cff),
+    Type1(Type1),
 }
 
 
@@ -63,7 +70,7 @@ struct Standard {
 impl Standard {
     pub fn new(dict: &Dict) -> Standard {
         let base_font = select_standard_font(dict)
-            .warn_none("embedded type 1 fonts not supported yet")
+            .warn_none("couldnt find appropriate font")
             .unwrap_or(StandardFont::Courier);
 
         let (encoding, encoding_map) = read_encoding(dict);
@@ -119,6 +126,94 @@ fn is_cff(dict: &Dict) -> bool {
         .map(|dict| dict.contains_key(FONT_FILE3))
         .unwrap_or(false)
 }
+
+fn is_type1(dict: &Dict) -> bool {
+    dict.get::<Dict>(FONT_DESCRIPTOR)
+        .map(|dict| dict.contains_key(FONT_FILE))
+        .unwrap_or(false)
+}
+
+
+#[derive(Debug)]
+struct Type1 {
+    font: Type1FontBlob,
+    encoding: Encoding,
+    widths: Vec<f32>,
+    encodings: HashMap<u8, String>,
+    // We simulate that Type1 glyphs have glyph IDs so we can handle them transparently
+    // to OpenType fonts.
+    glyph_to_string: RefCell<HashMap<GlyphId, String>>,
+    string_to_glyph: RefCell<HashMap<String, GlyphId>>,
+    glyph_counter: RefCell<u32>,
+}
+
+impl Type1 {
+    pub fn new(dict: &Dict) -> Self {
+        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
+        let data = descriptor.get::<Stream>(FONT_FILE).unwrap();
+        let font = Type1FontBlob::new(Arc::new(data.decoded().unwrap().to_vec()));
+
+        let (encoding, encodings) = read_encoding(dict);
+        let widths = read_widths(dict, &descriptor);
+        
+        let mut glyph_to_string = HashMap::new();
+        glyph_to_string.insert(GlyphId::NOTDEF, "notdef".to_string());
+        
+        let mut string_to_glyph = HashMap::new();
+        string_to_glyph.insert("notdef".to_string(), GlyphId::NOTDEF);
+
+        Self {
+            font,
+            encoding,
+            glyph_to_string: RefCell::new(glyph_to_string),
+            string_to_glyph: RefCell::new(string_to_glyph),
+            glyph_counter: RefCell::new(1),
+            widths,
+            encodings,
+        }
+    }
+    
+    fn string_to_glyph(&self, string: &str) -> GlyphId {
+        if let Some(g) = self.string_to_glyph.borrow().get(string) {
+            *g
+        }   else {
+            let gid = GlyphId::new(*self.glyph_counter.borrow());
+            self.string_to_glyph.borrow_mut().insert(string.to_string(), gid);
+            self.glyph_to_string.borrow_mut().insert(gid, string.to_string());
+            
+            *self.glyph_counter.borrow_mut() += 1;
+            
+            gid
+        }
+    }
+
+    pub fn map_code(&self, code: u8) -> GlyphId {
+        let table = self.font.table();
+
+        let get_glyph = |entry: &str| self.string_to_glyph(entry);
+
+        if let Some(entry) = self.encodings.get(&code) {
+            Some(get_glyph(entry))
+        } else {
+            match self.encoding {
+                Encoding::Standard => STANDARD.get(&code).map(|v| get_glyph(*v)),
+                Encoding::MacRoman => MAC_ROMAN.get(&code).map(|v| get_glyph(*v)),
+                Encoding::WinAnsi => win_ansi::get(code).map(|v| get_glyph(v)),
+                Encoding::MacExpert => MAC_EXPERT.get(&code).map(|v| get_glyph(*v)),
+                Encoding::BuiltIn => table.code_to_string(code).map(|g| get_glyph(g)),
+            }
+        }.unwrap_or(GlyphId::NOTDEF)
+    }
+
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        self.font.outline_glyph(self.glyph_to_string.borrow().get(&glyph).unwrap())
+    }
+
+    pub fn glyph_width(&self, code: u8) -> f32 {
+        *self.widths.get(code as usize).unwrap()
+    }
+}
+
 
 #[derive(Debug)]
 struct Cff {
