@@ -132,6 +132,10 @@ fn pdftc_010k_1055() {
     run_test("pdftc_010k_1055", None);
 }
 #[test]
+fn pdftc_010k_1080() {
+    run_test("pdftc_010k_1080", None);
+}
+#[test]
 fn pdftc_010k_1445() {
     run_test("pdftc_010k_1445", None);
 }
