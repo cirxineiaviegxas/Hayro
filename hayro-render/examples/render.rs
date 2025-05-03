@@ -8,12 +8,12 @@ fn main() {
     }
 
     let file =
-        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/pdftc_010k_1080_backup.pdf")
+        std::fs::read("/Users/lstampfl/Downloads/symbols-a4.pdf")
             .unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 
-    let pixmaps = render_png(&pdf, 1.0, None);
+    let pixmaps = render_png(&pdf, 1.0, Some(0..=1));
 
     std::fs::write("out.png", &pixmaps[0]).unwrap();
 }

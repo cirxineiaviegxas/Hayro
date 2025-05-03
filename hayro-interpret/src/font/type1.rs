@@ -64,19 +64,23 @@ enum Kind {
 struct Standard {
     base_font: StandardFont,
     encoding: Encoding,
+    widths: Vec<f32>,
     encodings: HashMap<u8, String>,
 }
 
 impl Standard {
     pub fn new(dict: &Dict) -> Standard {
+        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap_or_default();
         let base_font = select_standard_font(dict)
             .warn_none("couldnt find appropriate font")
-            .unwrap_or(StandardFont::Courier);
+            .unwrap_or(StandardFont::TimesRoman);
+        let widths = read_widths(dict, &descriptor);
 
         let (encoding, encoding_map) = read_encoding(dict);
 
         Self {
             base_font,
+            widths,
             encodings: encoding_map,
             encoding,
         }
@@ -123,9 +127,12 @@ impl Standard {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        self.code_to_ps_name(code)
-            .and_then(|c| self.base_font.get_width(c))
-            .unwrap()
+        self.widths.get(code as usize).copied()
+            .or_else(|| {
+                self.code_to_ps_name(code)
+                    .and_then(|c| self.base_font.get_width(c))
+            })
+            .unwrap_or(0.0)
     }
 }
 
