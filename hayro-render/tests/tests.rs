@@ -56,6 +56,7 @@ use crate::run_test;
 #[test] fn pdftc_100k_0791() { run_test("pdftc_100k_0791", Some(0..=1)); }
 #[test] fn pdftc_100k_1189() { run_test("pdftc_100k_1189", None); }
 #[test] fn pdftc_100k_1217() { run_test("pdftc_100k_1217", None); }
+#[test] fn pdftc_100k_1469() { run_test("pdftc_100k_1469", None); }
 #[test] fn pdftc_100k_2660() { run_test("pdftc_100k_2660", Some(1..=1)); }
 #[test] fn pdftc_100k_2702() { run_test("pdftc_100k_2702", None); }
 #[test] fn resvg_masking_clipPath_clip_rule_evenodd() { run_test("resvg_masking_clipPath_clip_rule_evenodd", None); }
@@ -67,3 +68,4 @@ use crate::run_test;
 #[test] fn text_rendering_clipping() { run_test("text_rendering_clipping", None); }
 #[test] fn text_rendering_glyph_scaled() { run_test("text_rendering_glyph_scaled", None); }
 #[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping", None); }
+#[test] fn type1_fonts() { run_test("type1_fonts", None); }
