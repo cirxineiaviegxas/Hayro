@@ -37,7 +37,9 @@ use crate::run_test;
 #[test] fn pdftc_010k_1491() { run_test("pdftc_010k_1491", None); }
 #[test] fn pdftc_010k_1686() { run_test("pdftc_010k_1686", None); }
 #[test] fn pdftc_010k_1969() { run_test("pdftc_010k_1969", None); }
+#[test] fn pdftc_010k_2088() { run_test("pdftc_010k_2088", None); }
 #[test] fn pdftc_100k_0027() { run_test("pdftc_100k_0027", None); }
+#[test] fn pdftc_100k_0068() { run_test("pdftc_100k_0068", None); }
 #[test] fn pdftc_100k_0079() { run_test("pdftc_100k_0079", None); }
 #[test] fn pdftc_100k_0082() { run_test("pdftc_100k_0082", None); }
 #[test] fn pdftc_100k_0173() { run_test("pdftc_100k_0173", None); }
