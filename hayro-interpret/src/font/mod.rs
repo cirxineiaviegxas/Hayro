@@ -6,7 +6,7 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
-use kurbo::BezPath;
+use kurbo::{BezPath, Vec2};
 use pdf_font_parser::OutlineBuilder;
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
@@ -61,19 +61,19 @@ impl Font {
         }
     }
 
-    pub fn code_width(&self, code: u16) -> f32 {
+    pub fn code_advance(&self, code: u16) -> Vec2 {
         match self.0.as_ref() {
             FontType::Type1(t) => {
                 debug_assert!(code <= u8::MAX as u16);
 
-                t.glyph_width(code as u8)
+                Vec2::new(t.glyph_width(code as u8) as f64, 0.0)
             }
             FontType::TrueType(t) => {
                 debug_assert!(code <= u8::MAX as u16);
 
-                t.glyph_width(code as u8)
+                Vec2::new(t.glyph_width(code as u8) as f64, 0.0)
             }
-            FontType::Type0(t) => t.code_width(code),
+            FontType::Type0(t) => t.code_advance(code),
         }
     }
 
@@ -84,7 +84,7 @@ impl Font {
             FontType::Type0(t) => t.code_len(),
         }
     }
-    
+
     pub fn is_horizontal(&self) -> bool {
         match self.0.as_ref() {
             FontType::Type1(_) => true,

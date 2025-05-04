@@ -1,20 +1,23 @@
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
+use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3, SUBTYPE, W};
+use hayro_syntax::object::dict::keys::{
+    CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3,
+    SUBTYPE, W,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::{
     CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, IDENTITY_V, OPEN_TYPE,
 };
 use hayro_syntax::object::stream::Stream;
-use kurbo::BezPath;
+use kurbo::{BezPath, Vec2};
 use log::warn;
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::util::OptionLog;
 
 #[derive(Debug)]
 pub(crate) struct Type0Font {
@@ -32,7 +35,7 @@ impl Type0Font {
         let encoding = dict
             .get::<Name>(ENCODING)
             .warn_none("CID fonts with custom encoding are currently unsupported")?;
-        
+
         let horizontal = encoding.as_ref() == IDENTITY_H;
 
         let descendant_font = dict.get::<Array>(DESCENDANT_FONTS)?.iter::<Dict>().next()?;
@@ -40,20 +43,21 @@ impl Type0Font {
         let font_type = FontType::new(&font_descriptor)?;
 
         let default_width = descendant_font.get::<f32>(DW).unwrap_or(1000.0);
-        let dw2 = descendant_font.get::<Array>(DW2)
+        let dw2 = descendant_font
+            .get::<Array>(DW2)
             .and_then(|a| {
                 let mut iter = a.iter::<f32>();
-                
+
                 if let Some(first) = iter.next() {
                     if let Some(second) = iter.next() {
-                        return Some((first, second))
+                        return Some((first, second));
                     }
                 }
-                
+
                 None
             })
             .unwrap_or((880.0, -1000.0));
-        
+
         let widths = descendant_font
             .get::<Array>(W)
             .and_then(|a| read_widths(&a))
@@ -96,10 +100,13 @@ impl Type0Font {
         }
     }
 
-    pub fn code_width(&self, code: u16) -> f32 {
-        self.widths.get(&code).copied().unwrap_or(self.dw)
+    pub fn code_advance(&self, code: u16) -> Vec2 {
+        Vec2::new(
+            self.widths.get(&code).copied().unwrap_or(self.dw) as f64,
+            0.0,
+        )
     }
-    
+
     pub fn is_horizontal(&self) -> bool {
         self.horizontal
     }
