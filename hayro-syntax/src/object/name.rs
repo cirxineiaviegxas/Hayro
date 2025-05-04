@@ -122,6 +122,7 @@ pub mod names {
 
     name!(ASCII85_DECODE, b"ASCII85Decode");
     name!(ASCII_HEX_DECODE, b"ASCIIHexDecode");
+    name!(CAL_CMYK, b"CalCMYK");
     name!(CCITTFAX_DECODE, b"CCITTFaxDecode");
     name!(CID_FONT_TYPE_0C, b"CIDFontType0C");
     name!(CRYPT, b"Crypt");

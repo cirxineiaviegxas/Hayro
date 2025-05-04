@@ -48,6 +48,7 @@ impl ColorSpace {
                     // TODO: How to handle range?
                     // TODO: Handle alternate.
                 }
+                CAL_CMYK => return Some(ColorSpace::DeviceCmyk),
                 _ => return None,
             }
         }
@@ -60,6 +61,7 @@ impl ColorSpace {
             DEVICE_RGB => Some(ColorSpace::DeviceRgb),
             DEVICE_GRAY => Some(ColorSpace::DeviceGray),
             DEVICE_CMYK => Some(ColorSpace::DeviceCmyk),
+            CAL_CMYK => Some(ColorSpace::DeviceCmyk),
             _ => None,
         }
     }
