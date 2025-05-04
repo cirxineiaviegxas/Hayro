@@ -419,11 +419,13 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
     for b in text.get().chunks(code_len) {
         let code = match code_len {
             1 => b[0] as u16,
-            2 => u16::from_le_bytes([b[0], b[1]]),
+            2 => u16::from_be_bytes([b[0], b[1]]),
             _ => unimplemented!(),
         };
 
         let glyph = font.map_code(code);
+        println!("mapped code {} to {}", code, glyph);
+        println!("code has width {}", font.code_width(code));
         show_glyph(ctx, device, glyph, &font);
 
         ctx.get_mut()

@@ -11,12 +11,12 @@ use hayro_syntax::object::name::names::{
     CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, IDENTITY_V, OPEN_TYPE,
 };
 use hayro_syntax::object::stream::Stream;
+use kurbo::BezPath;
 use log::warn;
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use kurbo::BezPath;
 
 #[derive(Debug)]
 pub(crate) struct Type0Font {
@@ -41,12 +41,13 @@ impl Type0Font {
         let font_descriptor = descendant_font.get::<Dict>(FONT_DESCRIPTOR)?;
         let font_type = FontType::new(&font_descriptor)?;
 
-        let default_width = dict.get::<f32>(DW).unwrap_or(1000.0);
-        let widths = dict
+        let default_width = descendant_font.get::<f32>(DW).unwrap_or(1000.0);
+        let widths = descendant_font
             .get::<Array>(W)
             .and_then(|a| read_widths(&a))
             .unwrap_or_default();
-        let cid_to_gid_map = CidToGIdMap::new(dict).unwrap_or_default();
+        println!("Widths: {:?}", widths);
+        let cid_to_gid_map = CidToGIdMap::new(&descendant_font).unwrap_or_default();
 
         Some(Self {
             font_type,
@@ -58,16 +59,16 @@ impl Type0Font {
 
     pub fn map_code(&self, code: u16) -> GlyphId {
         match &self.font_type {
-            FontType::TrueType(_) => {
-                self.cid_to_gid_map.map(code)
-            }
+            FontType::TrueType(_) => self.cid_to_gid_map.map(code),
             FontType::Cff(c) => {
                 let table = c.table();
-                
+
                 if table.is_cid() {
-                    table.glyph_index_by_cid(code).map(|g| GlyphId::new(g.0 as u32))
+                    table
+                        .glyph_index_by_cid(code)
+                        .map(|g| GlyphId::new(g.0 as u32))
                         .unwrap_or(GlyphId::NOTDEF)
-                }   else {
+                } else {
                     GlyphId::new(code as u32)
                 }
             }
@@ -197,7 +198,7 @@ fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
         } else if let Some(range) = second.cast::<Array>().ok() {
             for width in range.iter::<f32>() {
                 map.insert(first, width);
-                first.checked_add(1)?;
+                first = first.checked_add(1)?;
             }
         }
     }

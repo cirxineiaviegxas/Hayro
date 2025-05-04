@@ -11,7 +11,7 @@ fn main() {
         log::set_max_level(log::LevelFilter::Warn);
     }
 
-    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/text/type1_embedded");
+    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/text/type0");
 
     let mut entries = WalkDir::new(&root_dir)
         .into_iter()
@@ -27,7 +27,7 @@ fn main() {
 
     entries.sort();
 
-    let entries = &entries[0..200];
+    let entries = &entries[0..20];
 
     render_pdfium(&entries);
     render_hayro(&entries);

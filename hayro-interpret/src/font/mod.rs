@@ -1,3 +1,4 @@
+use crate::font::cid::Type0Font;
 use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
@@ -11,7 +12,6 @@ use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::sync::Arc;
-use crate::font::cid::Type0Font;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
@@ -49,9 +49,7 @@ impl Font {
 
                 t.map_code(code as u8)
             }
-            FontType::Type0(t) => {
-                t.map_code(code)
-            }
+            FontType::Type0(t) => t.map_code(code),
         }
     }
 
