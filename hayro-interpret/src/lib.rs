@@ -29,25 +29,6 @@ use crate::context::Context;
 use crate::font::{Font, TextRenderingMode};
 use crate::util::OptionLog;
 
-static CMYK_TRANSFORM: Lazy<Transform> = Lazy::new(|| {
-    let input = qcms::Profile::new_from_slice(
-        include_bytes!("../../assets/CGATS001Compat-v2-micro.icc"),
-        false,
-    )
-    .unwrap();
-    let mut output = qcms::Profile::new_sRGB();
-    output.precache_output_transform();
-
-    Transform::new_to(
-        &input,
-        &output,
-        qcms::DataType::CMYK,
-        qcms::DataType::RGB8,
-        qcms::Intent::default(),
-    )
-    .unwrap()
-});
-
 pub struct StrokeProps {
     pub line_width: f32,
     pub line_cap: Cap,
@@ -549,7 +530,7 @@ fn fill_path_impl(
     transform: Option<Affine>,
 ) {
     let color = Color::from_pdf(
-        context.get().fill_cs,
+        context.get().fill_cs.clone(),
         &context.get().fill_color,
         context.get().fill_alpha,
     );
@@ -566,7 +547,7 @@ fn stroke_path_impl(
     transform: Option<Affine>,
 ) {
     let color = Color::from_pdf(
-        context.get().stroke_cs,
+        context.get().stroke_cs.clone(),
         &context.get().stroke_color,
         context.get().stroke_alpha,
     );
