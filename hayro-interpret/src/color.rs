@@ -1,3 +1,6 @@
+use hayro_syntax::object::Object;
+use hayro_syntax::object::name::Name;
+use hayro_syntax::object::name::names::{DEVICE_CMYK, DEVICE_GRAY, DEVICE_RGB};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::{AlphaColor, Srgb};
@@ -6,9 +9,6 @@ use qcms::Transform;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::{DEVICE_CMYK, DEVICE_GRAY, DEVICE_RGB};
-use hayro_syntax::object::Object;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
@@ -25,12 +25,12 @@ impl ColorSpace {
         if let Ok(name) = object.clone().cast::<Name>() {
             return Self::new_from_name(name);
         }
-        
+
         warn!("unsupported color space");
-        
+
         ColorSpace::DeviceGray
     }
-    
+
     pub fn new_from_name(name: Name) -> ColorSpace {
         match name.as_ref() {
             DEVICE_RGB => ColorSpace::DeviceRgb,
@@ -41,6 +41,22 @@ impl ColorSpace {
 
                 ColorSpace::DeviceGray
             }
+        }
+    }
+
+    pub fn set_initial_color(&self, components: &mut ColorComponents) {
+        components.truncate(0);
+
+        match self {
+            ColorSpace::DeviceCmyk => components.extend([0.0, 0.0, 0.0, 1.0]),
+            ColorSpace::DeviceGray => components.push(0.0),
+            ColorSpace::DeviceRgb => components.extend([0.0, 0.0, 0.0]),
+            ColorSpace::ICCColor(icc) => match icc.0.number_components {
+                1 => components.push(0.0),
+                3 => components.extend([0.0, 0.0, 0.0]),
+                4 => components.extend([0.0, 0.0, 0.0, 1.0]),
+                _ => unreachable!(),
+            },
         }
     }
 }

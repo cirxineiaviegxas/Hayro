@@ -246,10 +246,14 @@ pub fn interpret<'a>(
                 // Ignore for now.
             }
             TypedOperation::ColorSpaceStroke(c) => {
-                context.get_mut().stroke_cs = ColorSpace::new_from_name(c.0);
+                let cs = ColorSpace::new_from_name(c.0);
+                cs.set_initial_color(&mut context.get_mut().stroke_color);
+                context.get_mut().stroke_cs = cs;
             }
             TypedOperation::ColorSpaceNonStroke(c) => {
-                context.get_mut().fill_cs = ColorSpace::new_from_name(c.0);
+                let cs = ColorSpace::new_from_name(c.0);
+                cs.set_initial_color(&mut context.get_mut().fill_color);
+                context.get_mut().fill_cs = cs;
             }
             TypedOperation::DashPattern(p) => {
                 context.get_mut().dash_offset = p.1.as_f32();

@@ -4,6 +4,7 @@ use crate::font::Font;
 use crate::state::{State, TextState};
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
+use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::r#ref::ObjRef;
@@ -11,7 +12,6 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
-use hayro_syntax::object::Object;
 
 pub struct Context {
     states: Vec<State>,
@@ -123,15 +123,15 @@ impl Context {
             })
             .clone()
     }
-    
+
     pub(crate) fn get_color_space(&mut self, dict: &Dict, name: Name) -> ColorSpace {
         let cs_ref = dict.get_ref(&name).unwrap();
-        
+
         self.color_space_cache
             .entry(cs_ref)
             .or_insert_with(|| {
                 let obj = dict.get::<Object>(&name).unwrap();
-                
+
                 ColorSpace::new(obj)
             })
             .clone()
