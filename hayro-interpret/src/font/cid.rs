@@ -75,7 +75,8 @@ impl Type0Font {
     }
 
     pub fn map_code(&self, code: u16) -> GlyphId {
-        match &self.font_type {
+        
+        let res = match &self.font_type {
             FontType::TrueType(_) => self.cid_to_gid_map.map(code),
             FontType::Cff(c) => {
                 let table = c.table();
@@ -89,7 +90,9 @@ impl Type0Font {
                     GlyphId::new(code as u32)
                 }
             }
-        }
+        };
+        
+        res
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
