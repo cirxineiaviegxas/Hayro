@@ -62,7 +62,6 @@ impl Type0Font {
             .get::<Array>(W)
             .and_then(|a| read_widths(&a))
             .unwrap_or_default();
-        println!("Widths: {:?}", widths);
         let cid_to_gid_map = CidToGIdMap::new(&descendant_font).unwrap_or_default();
 
         Some(Self {
