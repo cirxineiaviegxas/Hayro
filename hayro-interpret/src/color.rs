@@ -6,6 +6,9 @@ use qcms::Transform;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use hayro_syntax::object::name::Name;
+use hayro_syntax::object::name::names::{DEVICE_CMYK, DEVICE_GRAY, DEVICE_RGB};
+use hayro_syntax::object::Object;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
@@ -15,6 +18,31 @@ pub(crate) enum ColorSpace {
     DeviceGray,
     DeviceRgb,
     ICCColor(ICCProfile),
+}
+
+impl ColorSpace {
+    pub fn new(object: Object) -> ColorSpace {
+        if let Ok(name) = object.clone().cast::<Name>() {
+            return Self::new_from_name(name);
+        }
+        
+        warn!("unsupported color space");
+        
+        ColorSpace::DeviceGray
+    }
+    
+    pub fn new_from_name(name: Name) -> ColorSpace {
+        match name.as_ref() {
+            DEVICE_RGB => ColorSpace::DeviceRgb,
+            DEVICE_GRAY => ColorSpace::DeviceGray,
+            DEVICE_CMYK => ColorSpace::DeviceCmyk,
+            _ => {
+                warn!("unsupported named color space {}", name.as_str());
+
+                ColorSpace::DeviceGray
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

@@ -246,10 +246,10 @@ pub fn interpret<'a>(
                 // Ignore for now.
             }
             TypedOperation::ColorSpaceStroke(c) => {
-                context.get_mut().stroke_cs = handle_cs(c.0);
+                context.get_mut().stroke_cs = ColorSpace::new_from_name(c.0);
             }
             TypedOperation::ColorSpaceNonStroke(c) => {
-                context.get_mut().fill_cs = handle_cs(c.0);
+                context.get_mut().fill_cs = ColorSpace::new_from_name(c.0);
             }
             TypedOperation::DashPattern(p) => {
                 context.get_mut().dash_offset = p.1.as_f32();
@@ -454,19 +454,6 @@ fn show_glyph(
             clip_impl(ctx, &outline);
             fill_path_impl(ctx, device, Some(&outline), None);
             stroke_path_impl(ctx, device, Some(&outline), None);
-        }
-    }
-}
-
-fn handle_cs(key: Name) -> ColorSpace {
-    match key.as_ref() {
-        DEVICE_RGB => ColorSpace::DeviceRgb,
-        DEVICE_GRAY => ColorSpace::DeviceGray,
-        DEVICE_CMYK => ColorSpace::DeviceCmyk,
-        _ => {
-            warn!("unsupported color space {}", key.as_str());
-
-            ColorSpace::DeviceGray
         }
     }
 }

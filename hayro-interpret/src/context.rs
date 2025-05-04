@@ -11,6 +11,7 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
+use hayro_syntax::object::Object;
 
 pub struct Context {
     states: Vec<State>,
@@ -19,6 +20,7 @@ pub struct Context {
     last_point: Point,
     clip: Option<Fill>,
     font_cache: HashMap<ObjRef, Font>,
+    color_space_cache: HashMap<ObjRef, ColorSpace>,
 }
 
 impl Context {
@@ -52,6 +54,7 @@ impl Context {
             clip: None,
             path: BezPath::new(),
             font_cache: HashMap::new(),
+            color_space_cache: HashMap::new(),
         }
     }
 
@@ -117,6 +120,19 @@ impl Context {
                 let font_dict = dict.get::<Dict>(&name).unwrap();
 
                 Font::new(&font_dict).unwrap()
+            })
+            .clone()
+    }
+    
+    pub(crate) fn get_color_space(&mut self, dict: &Dict, name: Name) -> ColorSpace {
+        let cs_ref = dict.get_ref(&name).unwrap();
+        
+        self.color_space_cache
+            .entry(cs_ref)
+            .or_insert_with(|| {
+                let obj = dict.get::<Object>(&name).unwrap();
+                
+                ColorSpace::new(obj)
             })
             .clone()
     }
