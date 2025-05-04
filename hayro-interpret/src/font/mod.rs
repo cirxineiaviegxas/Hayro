@@ -11,6 +11,7 @@ use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::font::cid::Type0Font;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
@@ -29,6 +30,7 @@ impl Font {
         let f_type = match dict.get::<Name>(SUBTYPE)?.as_ref() {
             TYPE1 => FontType::Type1(Type1Font::new(dict)?),
             TRUE_TYPE => FontType::TrueType(TrueTypeFont::new(dict)?),
+            TYPE0 => FontType::Type0(Type0Font::new(dict)?),
             _ => unimplemented!(),
         };
 
@@ -47,6 +49,9 @@ impl Font {
 
                 t.map_code(code as u8)
             }
+            FontType::Type0(t) => {
+                t.map_code(code)
+            }
         }
     }
 
@@ -54,6 +59,7 @@ impl Font {
         match self.0.as_ref() {
             FontType::Type1(t) => t.outline_glyph(glyph),
             FontType::TrueType(t) => t.outline_glyph(glyph),
+            FontType::Type0(t) => t.outline_glyph(glyph),
         }
     }
 
@@ -69,6 +75,7 @@ impl Font {
 
                 t.glyph_width(code as u8)
             }
+            FontType::Type0(t) => t.code_width(code),
         }
     }
 
@@ -76,6 +83,7 @@ impl Font {
         match self.0.as_ref() {
             FontType::Type1(_) => 1,
             FontType::TrueType(_) => 1,
+            FontType::Type0(t) => t.code_len(),
         }
     }
 }
@@ -108,6 +116,7 @@ impl Encoding {
 enum FontType {
     Type1(Type1Font),
     TrueType(TrueTypeFont),
+    Type0(Type0Font),
 }
 
 #[derive(Debug, Clone, Copy, Default)]

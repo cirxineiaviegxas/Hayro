@@ -16,15 +16,17 @@ use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
 use std::sync::Arc;
+use kurbo::BezPath;
 
-pub(crate) struct CidFont {
+#[derive(Debug)]
+pub(crate) struct Type0Font {
     font_type: FontType,
     dw: f32,
     widths: HashMap<u16, f32>,
     cid_to_gid_map: CidToGIdMap,
 }
 
-impl CidFont {
+impl Type0Font {
     pub fn new(dict: &Dict) -> Option<Self> {
         if !dict
             .get::<Name>(ENCODING)
@@ -52,6 +54,39 @@ impl CidFont {
             widths,
             cid_to_gid_map,
         })
+    }
+
+    pub fn map_code(&self, code: u16) -> GlyphId {
+        match &self.font_type {
+            FontType::TrueType(_) => {
+                self.cid_to_gid_map.map(code)
+            }
+            FontType::Cff(c) => {
+                let table = c.table();
+                
+                if table.is_cid() {
+                    table.glyph_index_by_cid(code).map(|g| GlyphId::new(g.0 as u32))
+                        .unwrap_or(GlyphId::NOTDEF)
+                }   else {
+                    GlyphId::new(code as u32)
+                }
+            }
+        }
+    }
+
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        match &self.font_type {
+            FontType::TrueType(t) => t.outline_glyph(glyph),
+            FontType::Cff(c) => c.outline_glyph(glyph),
+        }
+    }
+
+    pub fn code_width(&self, code: u16) -> f32 {
+        self.widths.get(&code).copied().unwrap_or(self.dw)
+    }
+
+    pub fn code_len(&self) -> usize {
+        2
     }
 }
 
