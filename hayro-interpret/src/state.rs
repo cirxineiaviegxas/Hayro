@@ -42,22 +42,47 @@ impl TextState {
         self.font.as_ref().map(|f| f.0.clone()).unwrap()
     }
 
-    pub(crate) fn apply_adjustment(&mut self, adjustment: f32) {
-        let tx = -adjustment / UNITS_PER_EM * self.font_size() * self.horizontal_scaling();
-        self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
+    pub(crate) fn apply_adjustment(&mut self, adjustment: f32, horizontal: bool,) {
+        let horizontal_scaling = if horizontal {
+            self.horizontal_scaling()
+        }   else {
+            1.0
+        };
+        
+        let scaled_adjustment = -adjustment / UNITS_PER_EM * self.font_size() * horizontal_scaling;
+        
+        let (tx, ty) = if horizontal {
+            (scaled_adjustment, 0.0)
+        }   else {
+            (0.0, scaled_adjustment)
+        };
+        
+        self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
     }
 
-    pub(crate) fn apply_glyph_width(&mut self, glyph_width: f32, char_code: u16, code_len: usize) {
+    pub(crate) fn apply_glyph_width(&mut self, glyph_width: f32, char_code: u16, code_len: usize, horizontal: bool) {
         let word_space = if char_code == 32 && code_len == 1 {
             self.word_space
         } else {
             0.0
         };
 
-        // TODO: Vertical writing
-        let tx = (glyph_width / UNITS_PER_EM * self.font_size() + self.char_space + word_space)
-            * self.horizontal_scaling();
-        self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, 0.0]);
+        let horizontal_scaling = if horizontal {
+            self.horizontal_scaling()
+        }   else {
+            1.0
+        };
+
+        let advance = (glyph_width / UNITS_PER_EM * self.font_size() + self.char_space + word_space)
+            * horizontal_scaling;
+        
+        let (tx, ty) = if horizontal {
+            (advance, 0.0)
+        }   else {
+            (0.0, advance)
+        };
+        
+        self.text_matrix = self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
     }
 }
 

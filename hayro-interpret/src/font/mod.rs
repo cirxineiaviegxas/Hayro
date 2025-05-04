@@ -84,6 +84,14 @@ impl Font {
             FontType::Type0(t) => t.code_len(),
         }
     }
+    
+    pub fn is_horizontal(&self) -> bool {
+        match self.0.as_ref() {
+            FontType::Type1(_) => true,
+            FontType::TrueType(_) => true,
+            FontType::Type0(t) => t.is_horizontal(),
+        }
+    }
 }
 
 #[derive(Debug)]

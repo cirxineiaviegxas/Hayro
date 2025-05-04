@@ -342,7 +342,7 @@ pub fn interpret<'a>(
 
                 for obj in s.0.iter::<Object>() {
                     if let Ok(adjustment) = obj.clone().cast::<f32>() {
-                        context.get_mut().text_state.apply_adjustment(adjustment);
+                        context.get_mut().text_state.apply_adjustment(adjustment, font.is_horizontal());
                     } else if let Ok(text) = obj.cast::<String>() {
                         show_text_string(context, device, text, &font);
                     }
@@ -424,13 +424,11 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
         };
 
         let glyph = font.map_code(code);
-        println!("mapped code {} to {}", code, glyph);
-        println!("code has width {}", font.code_width(code));
         show_glyph(ctx, device, glyph, &font);
 
         ctx.get_mut()
             .text_state
-            .apply_glyph_width(font.code_width(code), code, code_len);
+            .apply_glyph_width(font.code_width(code), code, code_len, font.is_horizontal());
     }
 }
 
