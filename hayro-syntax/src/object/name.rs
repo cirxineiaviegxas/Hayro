@@ -130,6 +130,7 @@ pub mod names {
     name!(DEVICE_GRAY, b"DeviceGray");
     name!(DEVICE_RGB, b"DeviceRGB");
     name!(FLATE_DECODE, b"FlateDecode");
+    name!(ICC_BASED, b"ICCBased");
     name!(IDENTITY, b"Identity");
     name!(IDENTITY_H, b"Identity-H");
     name!(IDENTITY_V, b"Identity-V");

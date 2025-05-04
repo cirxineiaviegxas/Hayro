@@ -1,6 +1,10 @@
+use crate::util::OptionLog;
 use hayro_syntax::object::Object;
+use hayro_syntax::object::array::Array;
+use hayro_syntax::object::dict::keys::N;
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::{DEVICE_CMYK, DEVICE_GRAY, DEVICE_RGB};
+use hayro_syntax::object::name::names::*;
+use hayro_syntax::object::stream::Stream;
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::{AlphaColor, Srgb};
@@ -22,25 +26,41 @@ pub(crate) enum ColorSpace {
 
 impl ColorSpace {
     pub fn new(object: Object) -> ColorSpace {
-        if let Ok(name) = object.clone().cast::<Name>() {
-            return Self::new_from_name(name);
-        }
-
-        warn!("unsupported color space");
-
-        ColorSpace::DeviceGray
+        Self::new_inner(object)
+            .warn_none("unsupported color space or failed to process it")
+            .unwrap_or(ColorSpace::DeviceGray)
     }
 
-    pub fn new_from_name(name: Name) -> ColorSpace {
-        match name.as_ref() {
-            DEVICE_RGB => ColorSpace::DeviceRgb,
-            DEVICE_GRAY => ColorSpace::DeviceGray,
-            DEVICE_CMYK => ColorSpace::DeviceCmyk,
-            _ => {
-                warn!("unsupported named color space {}", name.as_str());
+    fn new_inner(object: Object) -> Option<ColorSpace> {
+        if let Ok(name) = object.clone().cast::<Name>() {
+            return Self::new_from_name(name.clone());
+        } else if let Ok(color_array) = object.clone().cast::<Array>() {
+            let mut iter = color_array.iter::<Object>();
+            let name = iter.next()?.cast::<Name>().ok()?;
 
-                ColorSpace::DeviceGray
+            match name.as_ref() {
+                ICC_BASED => {
+                    let icc_stream = iter.next()?.cast::<Stream>().ok()?;
+                    let num_components = icc_stream.dict().get::<usize>(N)?;
+                    let profile =
+                        ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)?;
+                    return Some(ColorSpace::ICCColor(profile));
+                    // TODO: How to handle range?
+                    // TODO: Handle alternate.
+                }
+                _ => return None,
             }
+        }
+
+        None
+    }
+
+    pub fn new_from_name(name: Name) -> Option<ColorSpace> {
+        match name.as_ref() {
+            DEVICE_RGB => Some(ColorSpace::DeviceRgb),
+            DEVICE_GRAY => Some(ColorSpace::DeviceGray),
+            DEVICE_CMYK => Some(ColorSpace::DeviceCmyk),
+            _ => None,
         }
     }
 

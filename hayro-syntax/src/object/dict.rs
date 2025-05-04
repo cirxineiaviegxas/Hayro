@@ -339,9 +339,10 @@ pub mod keys {
     key!(C1, b"C1");
     key!(COLORS, b"Colors");
     key!(CID_TO_GID_MAP, b"CIDToGIDMap");
+    key!(COLOR_SPACE, b"ColorSpace");
     key!(COLUMNS, b"Columns");
-    key!(COUNT, b"Count");
     key!(CONTENTS, b"Contents");
+    key!(COUNT, b"Count");
     key!(CROP_BOX, b"CropBox");
     key!(DECODE_PARMS, b"DecodeParms");
     key!(DESCENDANT_FONTS, b"DescendantFonts");

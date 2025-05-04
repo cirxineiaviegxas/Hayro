@@ -3,7 +3,7 @@ use crate::device::Device;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{EXT_G_STATE, FONT};
+use hayro_syntax::object::dict::keys::{COLOR_SPACE, EXT_G_STATE, FONT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::number::Number;
@@ -50,6 +50,7 @@ pub fn interpret<'a>(
 ) {
     let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
     let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
+    let color_spaces = resources.get::<Dict>(COLOR_SPACE).unwrap_or_default();
 
     for op in ops {
         match op {
@@ -246,12 +247,22 @@ pub fn interpret<'a>(
                 // Ignore for now.
             }
             TypedOperation::ColorSpaceStroke(c) => {
-                let cs = ColorSpace::new_from_name(c.0);
+                let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
+                    named
+                } else {
+                    context.get_color_space(&color_spaces, c.0)
+                };
+
                 cs.set_initial_color(&mut context.get_mut().stroke_color);
                 context.get_mut().stroke_cs = cs;
             }
             TypedOperation::ColorSpaceNonStroke(c) => {
-                let cs = ColorSpace::new_from_name(c.0);
+                let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
+                    named
+                } else {
+                    context.get_color_space(&color_spaces, c.0)
+                };
+
                 cs.set_initial_color(&mut context.get_mut().fill_color);
                 context.get_mut().fill_cs = cs;
             }

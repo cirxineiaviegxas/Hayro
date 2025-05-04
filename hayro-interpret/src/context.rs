@@ -111,26 +111,26 @@ impl Context {
         self.get_mut().affine *= convert_transform(transform);
     }
 
-    pub(crate) fn get_font(&mut self, dict: &Dict, name: Name) -> Font {
-        let font_ref = dict.get_ref(&name).unwrap();
+    pub(crate) fn get_font(&mut self, resources: &Dict, name: Name) -> Font {
+        let font_ref = resources.get_ref(&name).unwrap();
 
         self.font_cache
             .entry(font_ref)
             .or_insert_with(|| {
-                let font_dict = dict.get::<Dict>(&name).unwrap();
+                let font_dict = resources.get::<Dict>(&name).unwrap();
 
                 Font::new(&font_dict).unwrap()
             })
             .clone()
     }
 
-    pub(crate) fn get_color_space(&mut self, dict: &Dict, name: Name) -> ColorSpace {
-        let cs_ref = dict.get_ref(&name).unwrap();
+    pub(crate) fn get_color_space(&mut self, resources: &Dict, name: Name) -> ColorSpace {
+        let cs_ref = resources.get_ref(&name).unwrap();
 
         self.color_space_cache
             .entry(cs_ref)
             .or_insert_with(|| {
-                let obj = dict.get::<Object>(&name).unwrap();
+                let obj = resources.get::<Object>(&name).unwrap();
 
                 ColorSpace::new(obj)
             })

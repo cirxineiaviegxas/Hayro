@@ -9,6 +9,14 @@ fn clip_path_nested() {
     run_test("clip_path_nested", None);
 }
 #[test]
+fn color_space_icc_gray() {
+    run_test("color_space_icc_gray", None);
+}
+#[test]
+fn color_space_icc_srgb() {
+    run_test("color_space_icc_srgb", None);
+}
+#[test]
 fn font_cid_1() {
     run_test("font_cid_1", None);
 }
