@@ -77,6 +77,14 @@ impl Font {
         }
     }
 
+    pub fn origin_displacement(&self, code: u16) -> Vec2 {
+        match self.0.as_ref() {
+            FontType::Type1(_) => Vec2::default(),
+            FontType::TrueType(_) => Vec2::default(),
+            FontType::Type0(t) => t.origin_displacement(code),
+        }
+    }
+
     pub fn code_len(&self) -> usize {
         match self.0.as_ref() {
             FontType::Type1(_) => 1,

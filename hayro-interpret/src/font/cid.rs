@@ -101,10 +101,15 @@ impl Type0Font {
     }
 
     pub fn code_advance(&self, code: u16) -> Vec2 {
-        Vec2::new(
-            self.widths.get(&code).copied().unwrap_or(self.dw) as f64,
-            0.0,
-        )
+        if self.horizontal {
+            Vec2::new(self.horizontal_width(code) as f64, 0.0)
+        } else {
+            Vec2::new(0.0, self.dw2.1 as f64)
+        }
+    }
+
+    fn horizontal_width(&self, code: u16) -> f32 {
+        self.widths.get(&code).copied().unwrap_or(self.dw)
     }
 
     pub fn is_horizontal(&self) -> bool {
@@ -113,6 +118,17 @@ impl Type0Font {
 
     pub fn code_len(&self) -> usize {
         2
+    }
+
+    pub fn origin_displacement(&self, code: u16) -> Vec2 {
+        if self.is_horizontal() {
+            Vec2::default()
+        } else {
+            Vec2::new(
+                -self.horizontal_width(code) as f64 / 2.0,
+                -self.dw2.0 as f64,
+            )
+        }
     }
 }
 

@@ -8,7 +8,7 @@ use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::string::String;
-use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape};
+use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Vec2};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::Fill;
@@ -427,7 +427,7 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
         };
 
         let glyph = font.map_code(code);
-        show_glyph(ctx, device, glyph, &font);
+        show_glyph(ctx, device, glyph, &font, font.origin_displacement(code));
 
         ctx.get_mut().text_state.apply_glyph_width(
             font.code_advance(code),
@@ -438,8 +438,16 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
     }
 }
 
-fn show_glyph(ctx: &mut Context, device: &mut impl Device, glyph: GlyphId, font: &Font) {
-    let t = ctx.get().text_transform() * Affine::scale(1.0 / 1000.0);
+fn show_glyph(
+    ctx: &mut Context,
+    device: &mut impl Device,
+    glyph: GlyphId,
+    font: &Font,
+    origin_displacement: Vec2,
+) {
+    let t = ctx.get().text_transform()
+        * Affine::scale(1.0 / 1000.0)
+        * Affine::translate(origin_displacement);
     let outline = t * font.outline_glyph(glyph);
 
     match ctx.get().text_state.render_mode {
