@@ -39,6 +39,7 @@ static_impl!(i32);
 static_impl!(u32);
 static_impl!(usize);
 static_impl!(u8);
+static_impl!(u16);
 static_impl!(bool);
 static_impl!(Number);
 static_impl!(Filter);

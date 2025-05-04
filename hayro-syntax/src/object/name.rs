@@ -123,21 +123,28 @@ pub mod names {
     name!(ASCII85_DECODE, b"ASCII85Decode");
     name!(ASCII_HEX_DECODE, b"ASCIIHexDecode");
     name!(CCITTFAX_DECODE, b"CCITTFaxDecode");
+    name!(CID_FONT_TYPE_0C, b"CIDFontType0C");
     name!(CRYPT, b"Crypt");
     name!(DCT_DECODE, b"DCTDecode");
     name!(DEVICE_CMYK, b"DeviceCMYK");
     name!(DEVICE_GRAY, b"DeviceGray");
     name!(DEVICE_RGB, b"DeviceRGB");
     name!(FLATE_DECODE, b"FlateDecode");
+    name!(IDENTITY, b"Identity");
+    name!(IDENTITY_H, b"Identity-H");
+    name!(IDENTITY_V, b"Identity-V");
     name!(JBIG2_DECODE, b"JBIG2Decode");
     name!(JPX_DECODE, b"JPXDecode");
     name!(LZW_DECODE, b"LZWDecode");
     name!(MAC_EXPERT_ENCODING, b"MacExpertEncoding");
     name!(MAC_ROMAN_ENCODING, b"MacRomanEncoding");
+    name!(OPEN_TYPE, b"OpenType");
     name!(PAGE, b"Page");
     name!(PAGES, b"Pages");
     name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
     name!(TYPE1, b"Type1");
+    name!(TYPE0, b"Type0");
+    name!(TYPE1_C, b"Type1C");
     name!(TRUE_TYPE, b"TrueType");
     name!(WIN_ANSI_ENCODING, b"WinAnsiEncoding");
 }

@@ -1,71 +1,281 @@
 use crate::run_test;
 
-#[test] fn custom_integration_drawio_diagram1() { run_test("custom_integration_drawio_diagram1", None); }
-#[test] fn custom_integration_matplotlib_bar_label() { run_test("custom_integration_matplotlib_bar_label", None); }
-#[test] fn custom_integration_wikimedia_coat_of_the_arms_of_edinburgh_city_council() { run_test("custom_integration_wikimedia_coat_of_the_arms_of_edinburgh_city_council", None); }
-#[test] fn page_media_box_bottom_left() { run_test("page_media_box_bottom_left", None); }
-#[test] fn page_media_box_bottom_right() { run_test("page_media_box_bottom_right", None); }
-#[test] fn page_media_box_top_left() { run_test("page_media_box_top_left", None); }
-#[test] fn page_media_box_top_right() { run_test("page_media_box_top_right", None); }
-#[test] fn page_media_box_zoomed_out() { run_test("page_media_box_zoomed_out", None); }
-#[test] fn pdftc_010k_0022() { run_test("pdftc_010k_0022", None); }
-#[test] fn pdftc_010k_0023() { run_test("pdftc_010k_0023", None); }
-#[test] fn pdftc_010k_0026() { run_test("pdftc_010k_0026", None); }
-#[test] fn pdftc_010k_0027() { run_test("pdftc_010k_0027", None); }
-#[test] fn pdftc_010k_0035() { run_test("pdftc_010k_0035", None); }
-#[test] fn pdftc_010k_0054() { run_test("pdftc_010k_0054", None); }
-#[test] fn pdftc_010k_0077() { run_test("pdftc_010k_0077", None); }
-#[test] fn pdftc_010k_0078() { run_test("pdftc_010k_0078", None); }
-#[test] fn pdftc_010k_0105() { run_test("pdftc_010k_0105", None); }
-#[test] fn pdftc_010k_0129() { run_test("pdftc_010k_0129", None); }
-#[test] fn pdftc_010k_0131() { run_test("pdftc_010k_0131", None); }
-#[test] fn pdftc_010k_0137() { run_test("pdftc_010k_0137", None); }
-#[test] fn pdftc_010k_0150() { run_test("pdftc_010k_0150", None); }
-#[test] fn pdftc_010k_0160() { run_test("pdftc_010k_0160", None); }
-#[test] fn pdftc_010k_0175() { run_test("pdftc_010k_0175", None); }
-#[test] fn pdftc_010k_0192() { run_test("pdftc_010k_0192", None); }
-#[test] fn pdftc_010k_0207() { run_test("pdftc_010k_0207", None); }
-#[test] fn pdftc_010k_0211() { run_test("pdftc_010k_0211", None); }
-#[test] fn pdftc_010k_0400() { run_test("pdftc_010k_0400", None); }
-#[test] fn pdftc_010k_0625() { run_test("pdftc_010k_0625", None); }
-#[test] fn pdftc_010k_0956() { run_test("pdftc_010k_0956", None); }
-#[test] fn pdftc_010k_1008() { run_test("pdftc_010k_1008", None); }
-#[test] fn pdftc_010k_1037() { run_test("pdftc_010k_1037", None); }
-#[test] fn pdftc_010k_1055() { run_test("pdftc_010k_1055", None); }
-#[test] fn pdftc_010k_1080() { run_test("pdftc_010k_1080", None); }
-#[test] fn pdftc_010k_1445() { run_test("pdftc_010k_1445", None); }
-#[test] fn pdftc_010k_1491() { run_test("pdftc_010k_1491", None); }
-#[test] fn pdftc_010k_1686() { run_test("pdftc_010k_1686", None); }
-#[test] fn pdftc_010k_1969() { run_test("pdftc_010k_1969", None); }
-#[test] fn pdftc_010k_2088() { run_test("pdftc_010k_2088", None); }
-#[test] fn pdftc_100k_0027() { run_test("pdftc_100k_0027", None); }
-#[test] fn pdftc_100k_0068() { run_test("pdftc_100k_0068", None); }
-#[test] fn pdftc_100k_0079() { run_test("pdftc_100k_0079", None); }
-#[test] fn pdftc_100k_0082() { run_test("pdftc_100k_0082", None); }
-#[test] fn pdftc_100k_0145() { run_test("pdftc_100k_0145", None); }
-#[test] fn pdftc_100k_0173() { run_test("pdftc_100k_0173", None); }
-#[test] fn pdftc_100k_0190() { run_test("pdftc_100k_0190", None); }
-#[test] fn pdftc_100k_0234() { run_test("pdftc_100k_0234", None); }
-#[test] fn pdftc_100k_0279() { run_test("pdftc_100k_0279", Some(0..=0)); }
-#[test] fn pdftc_100k_0318() { run_test("pdftc_100k_0318", None); }
-#[test] fn pdftc_100k_0355() { run_test("pdftc_100k_0355", None); }
-#[test] fn pdftc_100k_0435() { run_test("pdftc_100k_0435", None); }
-#[test] fn pdftc_100k_0643() { run_test("pdftc_100k_0643", None); }
-#[test] fn pdftc_100k_0663() { run_test("pdftc_100k_0663", None); }
-#[test] fn pdftc_100k_0788() { run_test("pdftc_100k_0788", None); }
-#[test] fn pdftc_100k_0791() { run_test("pdftc_100k_0791", Some(0..=1)); }
-#[test] fn pdftc_100k_1189() { run_test("pdftc_100k_1189", None); }
-#[test] fn pdftc_100k_1217() { run_test("pdftc_100k_1217", None); }
-#[test] fn pdftc_100k_1469() { run_test("pdftc_100k_1469", None); }
-#[test] fn pdftc_100k_2660() { run_test("pdftc_100k_2660", Some(1..=1)); }
-#[test] fn pdftc_100k_2702() { run_test("pdftc_100k_2702", None); }
-#[test] fn resvg_masking_clipPath_clip_rule_evenodd() { run_test("resvg_masking_clipPath_clip_rule_evenodd", None); }
-#[test] fn resvg_masking_clipPath_nested_clip_path() { run_test("resvg_masking_clipPath_nested_clip_path", None); }
-#[test] fn rotation_180() { run_test("rotation_180", None); }
-#[test] fn rotation_270() { run_test("rotation_270", None); }
-#[test] fn rotation_90() { run_test("rotation_90", None); }
-#[test] fn rotation_none() { run_test("rotation_none", None); }
-#[test] fn text_rendering_clipping() { run_test("text_rendering_clipping", None); }
-#[test] fn text_rendering_glyph_scaled() { run_test("text_rendering_glyph_scaled", None); }
-#[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping", None); }
-#[test] fn type1_fonts() { run_test("type1_fonts", None); }
+#[test]
+fn custom_integration_drawio_diagram1() {
+    run_test("custom_integration_drawio_diagram1", None);
+}
+#[test]
+fn custom_integration_matplotlib_bar_label() {
+    run_test("custom_integration_matplotlib_bar_label", None);
+}
+#[test]
+fn custom_integration_wikimedia_coat_of_the_arms_of_edinburgh_city_council() {
+    run_test(
+        "custom_integration_wikimedia_coat_of_the_arms_of_edinburgh_city_council",
+        None,
+    );
+}
+#[test]
+fn page_media_box_bottom_left() {
+    run_test("page_media_box_bottom_left", None);
+}
+#[test]
+fn page_media_box_bottom_right() {
+    run_test("page_media_box_bottom_right", None);
+}
+#[test]
+fn page_media_box_top_left() {
+    run_test("page_media_box_top_left", None);
+}
+#[test]
+fn page_media_box_top_right() {
+    run_test("page_media_box_top_right", None);
+}
+#[test]
+fn page_media_box_zoomed_out() {
+    run_test("page_media_box_zoomed_out", None);
+}
+#[test]
+fn pdftc_010k_0022() {
+    run_test("pdftc_010k_0022", None);
+}
+#[test]
+fn pdftc_010k_0023() {
+    run_test("pdftc_010k_0023", None);
+}
+#[test]
+fn pdftc_010k_0026() {
+    run_test("pdftc_010k_0026", None);
+}
+#[test]
+fn pdftc_010k_0027() {
+    run_test("pdftc_010k_0027", None);
+}
+#[test]
+fn pdftc_010k_0035() {
+    run_test("pdftc_010k_0035", None);
+}
+#[test]
+fn pdftc_010k_0054() {
+    run_test("pdftc_010k_0054", None);
+}
+#[test]
+fn pdftc_010k_0077() {
+    run_test("pdftc_010k_0077", None);
+}
+#[test]
+fn pdftc_010k_0078() {
+    run_test("pdftc_010k_0078", None);
+}
+#[test]
+fn pdftc_010k_0105() {
+    run_test("pdftc_010k_0105", None);
+}
+#[test]
+fn pdftc_010k_0129() {
+    run_test("pdftc_010k_0129", None);
+}
+#[test]
+fn pdftc_010k_0131() {
+    run_test("pdftc_010k_0131", None);
+}
+#[test]
+fn pdftc_010k_0137() {
+    run_test("pdftc_010k_0137", None);
+}
+#[test]
+fn pdftc_010k_0150() {
+    run_test("pdftc_010k_0150", None);
+}
+#[test]
+fn pdftc_010k_0160() {
+    run_test("pdftc_010k_0160", None);
+}
+#[test]
+fn pdftc_010k_0175() {
+    run_test("pdftc_010k_0175", None);
+}
+#[test]
+fn pdftc_010k_0192() {
+    run_test("pdftc_010k_0192", None);
+}
+#[test]
+fn pdftc_010k_0207() {
+    run_test("pdftc_010k_0207", None);
+}
+#[test]
+fn pdftc_010k_0211() {
+    run_test("pdftc_010k_0211", None);
+}
+#[test]
+fn pdftc_010k_0400() {
+    run_test("pdftc_010k_0400", None);
+}
+#[test]
+fn pdftc_010k_0625() {
+    run_test("pdftc_010k_0625", None);
+}
+#[test]
+fn pdftc_010k_0956() {
+    run_test("pdftc_010k_0956", None);
+}
+#[test]
+fn pdftc_010k_1008() {
+    run_test("pdftc_010k_1008", None);
+}
+#[test]
+fn pdftc_010k_1037() {
+    run_test("pdftc_010k_1037", None);
+}
+#[test]
+fn pdftc_010k_1055() {
+    run_test("pdftc_010k_1055", None);
+}
+#[test]
+fn pdftc_010k_1080() {
+    run_test("pdftc_010k_1080", None);
+}
+#[test]
+fn pdftc_010k_1445() {
+    run_test("pdftc_010k_1445", None);
+}
+#[test]
+fn pdftc_010k_1491() {
+    run_test("pdftc_010k_1491", None);
+}
+#[test]
+fn pdftc_010k_1686() {
+    run_test("pdftc_010k_1686", None);
+}
+#[test]
+fn pdftc_010k_1969() {
+    run_test("pdftc_010k_1969", None);
+}
+#[test]
+fn pdftc_010k_2088() {
+    run_test("pdftc_010k_2088", None);
+}
+#[test]
+fn pdftc_100k_0027() {
+    run_test("pdftc_100k_0027", None);
+}
+#[test]
+fn pdftc_100k_0068() {
+    run_test("pdftc_100k_0068", None);
+}
+#[test]
+fn pdftc_100k_0079() {
+    run_test("pdftc_100k_0079", None);
+}
+#[test]
+fn pdftc_100k_0082() {
+    run_test("pdftc_100k_0082", None);
+}
+#[test]
+fn pdftc_100k_0145() {
+    run_test("pdftc_100k_0145", None);
+}
+#[test]
+fn pdftc_100k_0173() {
+    run_test("pdftc_100k_0173", None);
+}
+#[test]
+fn pdftc_100k_0190() {
+    run_test("pdftc_100k_0190", None);
+}
+#[test]
+fn pdftc_100k_0234() {
+    run_test("pdftc_100k_0234", None);
+}
+#[test]
+fn pdftc_100k_0279() {
+    run_test("pdftc_100k_0279", Some(0..=0));
+}
+#[test]
+fn pdftc_100k_0318() {
+    run_test("pdftc_100k_0318", None);
+}
+#[test]
+fn pdftc_100k_0355() {
+    run_test("pdftc_100k_0355", None);
+}
+#[test]
+fn pdftc_100k_0435() {
+    run_test("pdftc_100k_0435", None);
+}
+#[test]
+fn pdftc_100k_0643() {
+    run_test("pdftc_100k_0643", None);
+}
+#[test]
+fn pdftc_100k_0663() {
+    run_test("pdftc_100k_0663", None);
+}
+#[test]
+fn pdftc_100k_0788() {
+    run_test("pdftc_100k_0788", None);
+}
+#[test]
+fn pdftc_100k_0791() {
+    run_test("pdftc_100k_0791", Some(0..=1));
+}
+#[test]
+fn pdftc_100k_1189() {
+    run_test("pdftc_100k_1189", None);
+}
+#[test]
+fn pdftc_100k_1217() {
+    run_test("pdftc_100k_1217", None);
+}
+#[test]
+fn pdftc_100k_1469() {
+    run_test("pdftc_100k_1469", None);
+}
+#[test]
+fn pdftc_100k_2660() {
+    run_test("pdftc_100k_2660", Some(1..=1));
+}
+#[test]
+fn pdftc_100k_2702() {
+    run_test("pdftc_100k_2702", None);
+}
+#[test]
+fn resvg_masking_clipPath_clip_rule_evenodd() {
+    run_test("resvg_masking_clipPath_clip_rule_evenodd", None);
+}
+#[test]
+fn resvg_masking_clipPath_nested_clip_path() {
+    run_test("resvg_masking_clipPath_nested_clip_path", None);
+}
+#[test]
+fn rotation_180() {
+    run_test("rotation_180", None);
+}
+#[test]
+fn rotation_270() {
+    run_test("rotation_270", None);
+}
+#[test]
+fn rotation_90() {
+    run_test("rotation_90", None);
+}
+#[test]
+fn rotation_none() {
+    run_test("rotation_none", None);
+}
+#[test]
+fn text_rendering_clipping() {
+    run_test("text_rendering_clipping", None);
+}
+#[test]
+fn text_rendering_glyph_scaled() {
+    run_test("text_rendering_glyph_scaled", None);
+}
+#[test]
+fn text_rendering_stroking_clipping() {
+    run_test("text_rendering_stroking_clipping", None);
+}
+#[test]
+fn type1_fonts() {
+    run_test("type1_fonts", None);
+}

@@ -16,6 +16,7 @@ pub(crate) static HELVETICA_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static HELVETICA_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -23,6 +24,7 @@ pub(crate) static HELVETICA_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         1,
     )
+    .unwrap()
 });
 
 pub(crate) static HELVETICA_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -30,6 +32,7 @@ pub(crate) static HELVETICA_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         2,
     )
+    .unwrap()
 });
 
 pub(crate) static HELVETICA_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -37,6 +40,7 @@ pub(crate) static HELVETICA_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         Arc::new(include_bytes!("/System/Library/Fonts/HelveticaNeue.ttc")),
         3,
     )
+    .unwrap()
 });
 
 pub(crate) static COURIER_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -46,6 +50,7 @@ pub(crate) static COURIER_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static COURIER_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -55,6 +60,7 @@ pub(crate) static COURIER_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static COURIER_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -64,6 +70,7 @@ pub(crate) static COURIER_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static COURIER_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -73,6 +80,7 @@ pub(crate) static COURIER_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static TIMES_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -82,6 +90,7 @@ pub(crate) static TIMES_REGULAR: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static TIMES_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -91,6 +100,7 @@ pub(crate) static TIMES_BOLD: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static TIMES_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -100,6 +110,7 @@ pub(crate) static TIMES_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -109,6 +120,7 @@ pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<OpenTypeFontBlob> = Lazy::new(||
         )),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static ZAPF_DINGS_BAT: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -116,6 +128,7 @@ pub(crate) static ZAPF_DINGS_BAT: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         Arc::new(include_bytes!("/System/Library/Fonts/ZapfDingbats.ttf")),
         0,
     )
+    .unwrap()
 });
 
 pub(crate) static SYMBOL: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
@@ -123,6 +136,7 @@ pub(crate) static SYMBOL: Lazy<OpenTypeFontBlob> = Lazy::new(|| {
         Arc::new(include_bytes!("/System/Library/Fonts/Symbol.ttf")),
         0,
     )
+    .unwrap()
 });
 
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
@@ -172,13 +186,15 @@ impl Debug for CffFontBlob {
 }
 
 impl CffFontBlob {
-    pub fn new(data: FontData) -> Self {
+    pub fn new(data: FontData) -> Option<Self> {
+        let _ = cff::Table::parse(data.as_ref().as_ref())?;
+
         let yoke = Yoke::<CFFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
             let table = cff::Table::parse(data.as_ref().as_ref()).unwrap();
             CFFYoke { table }
         });
 
-        Self(Arc::new(yoke))
+        Some(Self(Arc::new(yoke)))
     }
 
     pub(crate) fn table(&self) -> &cff::Table {
@@ -209,7 +225,10 @@ impl Debug for OpenTypeFontBlob {
 }
 
 impl OpenTypeFontBlob {
-    pub fn new(data: FontData, index: u32) -> Self {
+    pub fn new(data: FontData, index: u32) -> Option<Self> {
+        // Check first whether the font is valid so we can unwrap in the closure.
+        let _ = FontRef::from_index(data.as_ref().as_ref(), index).ok()?;
+
         let font_ref_yoke =
             Yoke::<OTFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
                 let font_ref = FontRef::from_index(data.as_ref(), index).unwrap();
@@ -221,7 +240,7 @@ impl OpenTypeFontBlob {
                 }
             });
 
-        Self(Arc::new(font_ref_yoke))
+        Some(Self(Arc::new(font_ref_yoke)))
     }
 
     pub fn font_ref(&self) -> &FontRef {

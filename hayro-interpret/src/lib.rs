@@ -415,13 +415,20 @@ fn next_line(ctx: &mut Context, tx: f64, ty: f64) {
 }
 
 fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, font: &Font) {
-    for b in text.get().as_ref() {
-        let glyph = font.map_code(*b);
+    let code_len = font.code_len();
+    for b in text.get().chunks(code_len) {
+        let code = match code_len {
+            1 => b[0] as u16,
+            2 => u16::from_le_bytes([b[0], b[1]]),
+            _ => unimplemented!(),
+        };
+
+        let glyph = font.map_code(code);
         show_glyph(ctx, device, glyph, &font);
 
         ctx.get_mut()
             .text_state
-            .apply_glyph_width(font.glyph_width(*b), *b);
+            .apply_glyph_width(font.code_width(code), code, code_len);
     }
 }
 

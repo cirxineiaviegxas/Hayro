@@ -8,7 +8,6 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{FONT_DESCRIPTOR, FONT_FILE, FONT_FILE3};
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
-use skrifa::raw::tables::glyf::Glyph;
 use skrifa::{GlyphId, MetadataProvider};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,14 +17,16 @@ use std::sync::Arc;
 pub(crate) struct Type1Font(Kind);
 
 impl Type1Font {
-    pub fn new(dict: &Dict) -> Self {
-        if is_cff(dict) {
-            Self(Kind::Cff(Cff::new(dict)))
+    pub fn new(dict: &Dict) -> Option<Self> {
+        let inner = if is_cff(dict) {
+            Self(Kind::Cff(Cff::new(dict)?))
         } else if is_type1(dict) {
             Self(Kind::Type1(Type1::new(dict)))
         } else {
             Self(Kind::Standard(Standard::new(dict)))
-        }
+        };
+
+        Some(inner)
     }
 
     pub fn map_code(&self, code: u8) -> GlyphId {
@@ -127,7 +128,9 @@ impl Standard {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        self.widths.get(code as usize).copied()
+        self.widths
+            .get(code as usize)
+            .copied()
             .or_else(|| {
                 self.code_to_ps_name(code)
                     .and_then(|c| self.base_font.get_width(c))
@@ -243,20 +246,20 @@ struct Cff {
 }
 
 impl Cff {
-    pub fn new(dict: &Dict) -> Self {
+    pub fn new(dict: &Dict) -> Option<Self> {
         let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
         let data = descriptor.get::<Stream>(FONT_FILE3).unwrap();
-        let font = CffFontBlob::new(Arc::new(data.decoded().unwrap().to_vec()));
+        let font = CffFontBlob::new(Arc::new(data.decoded().unwrap().to_vec()))?;
 
         let (encoding, encodings) = read_encoding(dict);
         let widths = read_widths(dict, &descriptor);
 
-        Self {
+        Some(Self {
             font,
             encoding,
             widths,
             encodings,
-        }
+        })
     }
 
     pub fn map_code(&self, code: u8) -> GlyphId {

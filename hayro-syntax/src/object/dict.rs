@@ -338,11 +338,15 @@ pub mod keys {
     key!(C0, b"C0");
     key!(C1, b"C1");
     key!(COLORS, b"Colors");
+    key!(CID_TO_GID_MAP, b"CIDToGIDMap");
     key!(COLUMNS, b"Columns");
     key!(COUNT, b"Count");
     key!(CONTENTS, b"Contents");
     key!(CROP_BOX, b"CropBox");
     key!(DECODE_PARMS, b"DecodeParms");
+    key!(DESCENDANT_FONTS, b"DescendantFonts");
+    key!(DW, b"DW");
+    key!(DW2, b"DW2");
     key!(DIFFERENCES, b"Differences");
     key!(DOMAIN, b"Domain");
     key!(EARLY_CHANGE, b"EarlyChange");
@@ -379,5 +383,6 @@ pub mod keys {
     key!(TYPE, b"Type");
     key!(XREFSTM, b"XRefStm");
     key!(W, b"W");
+    key!(W2, b"W2");
     key!(WIDTHS, b"Widths");
 }

@@ -1439,7 +1439,6 @@ dependencies = [
  "hayro-syntax",
  "image 0.24.9",
  "imagesize",
- "log",
  "rayon",
  "regex",
  "tempdir",

@@ -15,6 +15,7 @@ use std::sync::Arc;
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
 mod blob;
+mod cid;
 pub(crate) mod encoding;
 mod standard;
 mod true_type;
@@ -26,18 +27,26 @@ pub struct Font(Arc<FontType>);
 impl Font {
     pub fn new(dict: &Dict) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)?.as_ref() {
-            TYPE1 => FontType::Type1(Type1Font::new(dict)),
-            TRUE_TYPE => FontType::TrueType(TrueTypeFont::new(dict)),
+            TYPE1 => FontType::Type1(Type1Font::new(dict)?),
+            TRUE_TYPE => FontType::TrueType(TrueTypeFont::new(dict)?),
             _ => unimplemented!(),
         };
 
         Some(Self(Arc::new(f_type)))
     }
 
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    pub fn map_code(&self, code: u16) -> GlyphId {
         match self.0.as_ref() {
-            FontType::Type1(f) => f.map_code(code),
-            FontType::TrueType(t) => t.map_code(code),
+            FontType::Type1(f) => {
+                debug_assert!(code <= u8::MAX as u16);
+
+                f.map_code(code as u8)
+            }
+            FontType::TrueType(t) => {
+                debug_assert!(code <= u8::MAX as u16);
+
+                t.map_code(code as u8)
+            }
         }
     }
 
@@ -48,10 +57,25 @@ impl Font {
         }
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
+    pub fn code_width(&self, code: u16) -> f32 {
         match self.0.as_ref() {
-            FontType::Type1(t) => t.glyph_width(code),
-            FontType::TrueType(t) => t.glyph_width(code),
+            FontType::Type1(t) => {
+                debug_assert!(code <= u8::MAX as u16);
+
+                t.glyph_width(code as u8)
+            }
+            FontType::TrueType(t) => {
+                debug_assert!(code <= u8::MAX as u16);
+
+                t.glyph_width(code as u8)
+            }
+        }
+    }
+
+    pub fn code_len(&self) -> usize {
+        match self.0.as_ref() {
+            FontType::Type1(_) => 1,
+            FontType::TrueType(_) => 1,
         }
     }
 }

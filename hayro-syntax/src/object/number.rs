@@ -150,6 +150,7 @@ macro_rules! int_num {
 
 int_num!(i32);
 int_num!(u32);
+int_num!(u16);
 int_num!(usize);
 int_num!(u8);
 

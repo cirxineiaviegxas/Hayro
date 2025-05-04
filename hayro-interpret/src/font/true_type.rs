@@ -48,7 +48,7 @@ pub(crate) struct TrueTypeFont {
 }
 
 impl TrueTypeFont {
-    pub fn new(dict: &Dict) -> TrueTypeFont {
+    pub fn new(dict: &Dict) -> Option<TrueTypeFont> {
         let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap_or_default();
 
         let font_flags = descriptor
@@ -64,7 +64,10 @@ impl TrueTypeFont {
                 descriptor
                     .get::<Stream>(FONT_FILE2)
                     .and_then(|s| s.decoded().ok())
-                    .map(|d| OpenTypeFont::Custom(OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)))
+                    .and_then(|d| {
+                        OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)
+                            .map(|b| OpenTypeFont::Custom(b))
+                    })
             })
             .unwrap_or_else(|| {
                 warn!("failed to extract base font. falling back to Times New Roman.");
@@ -72,13 +75,13 @@ impl TrueTypeFont {
                 OpenTypeFont::Standard(StandardFont::TimesRoman)
             });
 
-        Self {
+        Some(Self {
             base_font,
             widths,
             font_flags,
             encoding,
             cached_mappings: RefCell::new(HashMap::new()),
-        }
+        })
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
