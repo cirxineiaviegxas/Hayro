@@ -1,4 +1,3 @@
-use crate::cache::Static;
 use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::{Object, ObjectLike};
@@ -54,10 +53,6 @@ impl From<Rect> for Object<'_> {
     fn from(_: Rect) -> Self {
         unimplemented!()
     }
-}
-
-impl Static for Rect {
-    type STATIC = Rect;
 }
 
 impl ObjectLike<'_> for Rect {

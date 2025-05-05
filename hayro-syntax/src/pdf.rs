@@ -1,5 +1,4 @@
 use crate::Data;
-use crate::cache::Cache;
 use crate::document::page::Pages;
 use crate::file::xref::{XRef, root_trailer, root_xref};
 use crate::object::Object;
@@ -21,8 +20,7 @@ pub enum PdfError {
 
 impl<'a> Pdf<'a> {
     pub fn new(data: &'a Data<'a>) -> Result<Self, PdfError> {
-        let cache = Cache::new(&data);
-        let xref = root_xref(data, cache).ok_or(OtherError)?;
+        let xref = root_xref(data).ok_or(OtherError)?;
         let trailer = root_trailer(data.get(), &xref).ok_or(OtherError)?;
 
         if trailer.contains_key(ENCRYPT) {

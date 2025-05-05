@@ -1,4 +1,3 @@
-use crate::cache::Cache;
 use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
@@ -19,12 +18,12 @@ use std::sync::Arc;
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
 /// Parse the "root" xref from the PDF.
-pub(crate) fn root_xref<'a>(data: &'a Data<'a>, cache: Cache<'a>) -> Option<XRef<'a>> {
+pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
     let mut xref_map = FxHashMap::default();
     let pos = find_last_xref_pos(data.get())?;
     populate_xref_impl(data.get(), pos, &mut xref_map)?;
 
-    let xref = XRef::new(data, cache, xref_map);
+    let xref = XRef::new(data, xref_map);
 
     Some(xref)
 }
@@ -41,10 +40,9 @@ pub(crate) fn root_trailer<'a>(data: &'a [u8], xref: &XRef<'a>) -> Option<Dict<'
 pub struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
-    fn new(data: &'a Data<'a>, cache: Cache<'a>, xref_map: XrefMap) -> Self {
+    fn new(data: &'a Data<'a>, xref_map: XrefMap) -> Self {
         Self(Inner::Some(Arc::new(SomeRepr {
             data,
-            _cache: cache,
             xref_map,
         })))
     }
@@ -151,7 +149,6 @@ type XrefMap = FxHashMap<ObjectIdentifier, EntryType>;
 /// Representation of a proper xref table.
 struct SomeRepr<'a> {
     xref_map: XrefMap,
-    _cache: Cache<'a>,
     data: &'a Data<'a>,
 }
 
@@ -484,7 +481,6 @@ impl<'a> ObjectStream<'a> {
 #[cfg(test)]
 mod tests {
     use crate::Data;
-    use crate::cache::Cache;
     use crate::file::xref::{EntryType, Inner, root_xref};
     use crate::object::ObjectIdentifier;
 
@@ -511,7 +507,7 @@ startxref
 %%EOF",
         );
 
-        let Inner::Some(s) = &root_xref(&data, Cache::new(&data)).unwrap().0 else {
+        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
         let map = &s.xref_map;
@@ -569,7 +565,7 @@ startxref
 0",
         );
 
-        let Inner::Some(s) = &root_xref(&data, Cache::new(&data)).unwrap().0 else {
+        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
         let map = &s.xref_map;
@@ -615,7 +611,7 @@ startxref
 %%EOF",
         );
 
-        let Inner::Some(s) = &root_xref(&data, Cache::new(&data)).unwrap().0 else {
+        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
         let map = &s.xref_map;
@@ -655,7 +651,7 @@ startxref
 0",
         );
 
-        let Inner::Some(s) = &root_xref(&data, Cache::new(&data)).unwrap().0 else {
+        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
         let map = &s.xref_map;
@@ -707,7 +703,7 @@ startxref
 %%EOF",
         );
 
-        let Inner::Some(s) = &root_xref(&data, Cache::new(&data)).unwrap().0 else {
+        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
         let map = &s.xref_map;

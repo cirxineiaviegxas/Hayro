@@ -9,7 +9,6 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
-mod cache;
 pub mod content;
 pub mod document;
 pub mod file;

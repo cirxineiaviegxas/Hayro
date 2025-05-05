@@ -1,5 +1,4 @@
 use crate::Result;
-use crate::cache::Static;
 use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
@@ -24,7 +23,7 @@ pub mod stream;
 pub mod string;
 
 /// A trait for PDF objects.
-pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Static + Clone {
+pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {
     /// The static name of the object.
     const STATIC_NAME: &'static str;
 
