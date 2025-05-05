@@ -1,5 +1,6 @@
-- Certain parts of the implementation (like for example font encodings and fallback) have been adapted
-from the PDFBox library, available under the Apache 2.0 license.
+The following points have been adapted/translated from the PDFBox library, available 
+under the Apache 2.0 license.
+ - The encoding maps for some of the standard fonts.
 
 
                                  Apache License
