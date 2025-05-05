@@ -1,7 +1,8 @@
 use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
-use hayro_syntax::object::dict::keys::N;
+use hayro_syntax::object::dict::Dict;
+use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, N, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -16,7 +17,7 @@ use std::sync::Arc;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum ColorSpace {
     DeviceCmyk,
     DeviceGray,
@@ -80,6 +81,42 @@ impl ColorSpace {
                 _ => unreachable!(),
             },
         }
+    }
+}
+
+#[derive(Debug)]
+struct CalGrayRepr {
+    white_point: [f32; 3],
+    black_point: [f32; 3],
+    gamma: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct CalGray(Arc<CalGrayRepr>);
+
+impl CalGray {
+    pub fn new(dict: &Dict) -> Option<Self> {
+        let white_point = dict
+            .get::<Array>(WHITE_POINT)
+            .and_then(|w| {
+                let mut iter = w.iter::<f32>();
+                Some([iter.next()?, iter.next()?, iter.next()?])
+            })
+            .unwrap_or([0.0, 0.0, 0.0]);
+        let black_point = dict
+            .get::<Array>(BLACK_POINT)
+            .and_then(|w| {
+                let mut iter = w.iter::<f32>();
+                Some([iter.next()?, iter.next()?, iter.next()?])
+            })
+            .unwrap_or([0.0, 0.0, 0.0]);
+        let gamma = dict.get::<f32>(GAMMA)?;
+
+        Some(Self(Arc::new(CalGrayRepr {
+            white_point,
+            black_point,
+            gamma,
+        })))
     }
 }
 

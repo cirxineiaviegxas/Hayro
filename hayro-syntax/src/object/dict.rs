@@ -364,6 +364,7 @@ pub mod keys {
     key!(FONT_FILE, b"FontFile");
     key!(FONT_FILE2, b"FontFile2");
     key!(FONT_FILE3, b"FontFile3");
+    key!(GAMMA, b"Gamma");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
     key!(LAST_CHAR, b"LastChar");
@@ -386,4 +387,6 @@ pub mod keys {
     key!(W, b"W");
     key!(W2, b"W2");
     key!(WIDTHS, b"Widths");
+    key!(WHITE_POINT, b"WhitePoint");
+    key!(BLACK_POINT, b"BlackPoint");
 }
