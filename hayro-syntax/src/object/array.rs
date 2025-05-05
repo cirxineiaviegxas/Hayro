@@ -171,17 +171,17 @@ impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> TryFrom<Array<'a>> 
 
     fn try_from(value: Array<'a>) -> Result<Self, Self::Error> {
         let mut iter = value.iter::<T>();
-        
+
         let mut val = [T::default(); C];
-        
+
         for i in 0..C {
             val[i] = iter.next().ok_or(())?;
         }
-        
+
         if iter.next().is_some() {
             warn!("found excess elements in array");
         }
-        
+
         Ok(val)
     }
 }
@@ -195,7 +195,7 @@ where
     fn try_from(value: Object<'a>) -> Result<Self, Self::Error> {
         match value {
             Object::Array(a) => a.try_into(),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }

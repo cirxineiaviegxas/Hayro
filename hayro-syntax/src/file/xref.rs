@@ -41,10 +41,7 @@ pub struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
     fn new(data: &'a Data<'a>, xref_map: XrefMap) -> Self {
-        Self(Inner::Some(Arc::new(SomeRepr {
-            data,
-            xref_map,
-        })))
+        Self(Inner::Some(Arc::new(SomeRepr { data, xref_map })))
     }
 
     pub(crate) fn dummy() -> Self {

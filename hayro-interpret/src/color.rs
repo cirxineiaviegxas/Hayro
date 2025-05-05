@@ -2,7 +2,7 @@ use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, N, WHITE_POINT};
+use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -23,7 +23,8 @@ pub(crate) enum ColorSpace {
     DeviceGray,
     DeviceRgb,
     ICCColor(ICCProfile),
-    CalGray(CalGray)
+    CalGray(CalGray),
+    CalRgb(CalRgb),
 }
 
 impl ColorSpace {
@@ -53,8 +54,12 @@ impl ColorSpace {
                 CAL_CMYK => return Some(ColorSpace::DeviceCmyk),
                 CAL_GRAY => {
                     let cal_dict = iter.next()?.cast::<Dict>().ok()?;
-                    return Some(ColorSpace::CalGray(CalGray::new(&cal_dict)?))
-                },
+                    return Some(ColorSpace::CalGray(CalGray::new(&cal_dict)?));
+                }
+                CAL_RGB => {
+                    let cal_dict = iter.next()?.cast::<Dict>().ok()?;
+                    return Some(ColorSpace::CalRgb(CalRgb::new(&cal_dict)?));
+                }
                 _ => return None,
             }
         }
@@ -85,7 +90,8 @@ impl ColorSpace {
                 4 => components.extend([0.0, 0.0, 0.0, 1.0]),
                 _ => unreachable!(),
             },
-            ColorSpace::CalGray(_) => components.push(0.0)
+            ColorSpace::CalGray(_) => components.push(0.0),
+            ColorSpace::CalRgb(_) => components.extend([0.0, 0.0, 0.0]),
         }
     }
 }
@@ -100,14 +106,11 @@ struct CalGrayRepr {
 #[derive(Debug, Clone)]
 pub struct CalGray(Arc<CalGrayRepr>);
 
+// See <https://github.com/mozilla/pdf.js/blob/06f44916c8936b92f464d337fe3a0a6b2b78d5b4/src/core/colorspace.js#L752>
 impl CalGray {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let white_point = dict
-            .get::<[f32; 3]>(WHITE_POINT)
-            .unwrap_or([0.0, 0.0, 0.0]);
-        let black_point = dict
-            .get::<[f32; 3]>(BLACK_POINT)
-            .unwrap_or([0.0, 0.0, 0.0]);
+        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([0.0, 0.0, 0.0]);
+        let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let gamma = dict.get::<f32>(GAMMA).unwrap_or(1.0);
 
         Some(Self(Arc::new(CalGrayRepr {
@@ -117,7 +120,6 @@ impl CalGray {
         })))
     }
 
-    // See <https://github.com/mozilla/pdf.js/blob/06f44916c8936b92f464d337fe3a0a6b2b78d5b4/src/core/colorspace.js#L752>
     pub(crate) fn to_srgb(&self, c: f32) -> [u8; 3] {
         let g = self.0.gamma;
         let (_xw, yw, _zw) = {
@@ -128,13 +130,183 @@ impl CalGray {
             let bp = self.0.black_point;
             (bp[0], bp[1], bp[2])
         };
-        
+
         let a = c;
         let ag = a.powf(g);
         let l = yw * ag;
         let val = (0.0f32.max(295.8 * l.powf(0.3333333333333333) - 40.8) + 0.5) as u8;
-        
+
         [val, val, val]
+    }
+}
+
+#[derive(Debug)]
+struct CalRgbRepr {
+    white_point: [f32; 3],
+    black_point: [f32; 3],
+    matrix: [f32; 9],
+    gamma: [f32; 3],
+}
+
+#[derive(Debug, Clone)]
+pub struct CalRgb(Arc<CalRgbRepr>);
+
+// See <https://github.com/mozilla/pdf.js/blob/06f44916c8936b92f464d337fe3a0a6b2b78d5b4/src/core/colorspace.js#L846>
+// Completely copied from there without really understanding the logic, but we get the same results as Firefox
+// which should be good enough (and by viewing the `calrgb.pdf` test file in different viewers you will
+// see that in many cases each viewer does whatever it wants, even Acrobat), so this is good enough for us.
+impl CalRgb {
+    pub fn new(dict: &Dict) -> Option<Self> {
+        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([0.0, 0.0, 0.0]);
+        let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
+        let matrix = dict
+            .get::<[f32; 9]>(MATRIX)
+            .unwrap_or([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
+        let gamma = dict.get::<[f32; 3]>(GAMMA).unwrap_or([1.0, 1.0, 1.0]);
+
+        Some(Self(Arc::new(CalRgbRepr {
+            white_point,
+            black_point,
+            matrix,
+            gamma,
+        })))
+    }
+
+    const BRADFORD_SCALE_MATRIX: [f32; 9] = [
+        0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296,
+    ];
+
+    const BRADFORD_SCALE_INVERSE_MATRIX: [f32; 9] = [
+        0.9869929, -0.1470543, 0.1599627, 0.4323053, 0.5183603, 0.0492912, -0.0085287, 0.0400428,
+        0.9684867,
+    ];
+
+    const SRGB_D65_XYZ_TO_RGB_MATRIX: [f32; 9] = [
+        3.2404542, -1.5371385, -0.4985314, -0.9692660, 1.8760108, 0.0415560, 0.0556434, -0.2040259,
+        1.0572252,
+    ];
+
+    const FLAT_WHITEPOINT: [f32; 3] = [1.0, 1.0, 1.0];
+    const D65_WHITEPOINT: [f32; 3] = [0.95047, 1.0, 1.08883];
+
+    fn decode_l_constant() -> f32 {
+        ((8.0f32 + 16.0) / 116.0).powi(3) / 8.0
+    }
+
+    fn srgb_transfer_function(color: f32) -> f32 {
+        if color <= 0.0031308 {
+            (12.92 * color).clamp(0.0, 1.0)
+        } else if color >= 0.99554525 {
+            1.0
+        } else {
+            ((1.0 + 0.055) * color.powf(1.0 / 2.4) - 0.055).clamp(0.0, 1.0)
+        }
+    }
+
+    fn matrix_product(a: &[f32; 9], b: &[f32; 3]) -> [f32; 3] {
+        [
+            a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+            a[3] * b[0] + a[4] * b[1] + a[5] * b[2],
+            a[6] * b[0] + a[7] * b[1] + a[8] * b[2],
+        ]
+    }
+
+    fn to_flat(source_white_point: &[f32; 3], lms: &[f32; 3]) -> [f32; 3] {
+        [
+            lms[0] / source_white_point[0],
+            lms[1] / source_white_point[1],
+            lms[2] / source_white_point[2],
+        ]
+    }
+
+    fn to_d65(source_white_point: &[f32; 3], lms: &[f32; 3]) -> [f32; 3] {
+        [
+            lms[0] * Self::D65_WHITEPOINT[0] / source_white_point[0],
+            lms[1] * Self::D65_WHITEPOINT[1] / source_white_point[1],
+            lms[2] * Self::D65_WHITEPOINT[2] / source_white_point[2],
+        ]
+    }
+
+    fn decode_l(l: f32) -> f32 {
+        if l < 0.0 {
+            -Self::decode_l(-l)
+        } else if l > 8.0 {
+            ((l + 16.0) / 116.0).powi(3)
+        } else {
+            l * Self::decode_l_constant()
+        }
+    }
+
+    fn compensate_black_point(source_bp: &[f32; 3], xyz_flat: &[f32; 3]) -> [f32; 3] {
+        if source_bp == &[0.0, 0.0, 0.0] {
+            return *xyz_flat;
+        }
+
+        let zero_decode_l = Self::decode_l(0.0);
+
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            let src = Self::decode_l(source_bp[i]);
+            let scale = (1.0 - zero_decode_l) / (1.0 - src);
+            let offset = 1.0 - scale;
+            out[i] = xyz_flat[i] * scale + offset;
+        }
+
+        out
+    }
+
+    fn normalize_white_point_to_flat(
+        &self,
+        source_white_point: &[f32; 3],
+        xyz: &[f32; 3],
+    ) -> [f32; 3] {
+        if source_white_point[0] == 1.0 && source_white_point[2] == 1.0 {
+            return *xyz;
+        }
+        let lms = Self::matrix_product(&Self::BRADFORD_SCALE_MATRIX, xyz);
+        let lms_flat = Self::to_flat(source_white_point, &lms);
+        Self::matrix_product(&Self::BRADFORD_SCALE_INVERSE_MATRIX, &lms_flat)
+    }
+
+    fn normalize_white_point_to_d65(
+        &self,
+        source_white_point: &[f32; 3],
+        xyz: &[f32; 3],
+    ) -> [f32; 3] {
+        let lms = Self::matrix_product(&Self::BRADFORD_SCALE_MATRIX, xyz);
+        let lms_d65 = Self::to_d65(source_white_point, &lms);
+        Self::matrix_product(&Self::BRADFORD_SCALE_INVERSE_MATRIX, &lms_d65)
+    }
+
+    pub(crate) fn to_srgb(&self, mut c: [f32; 3]) -> [u8; 3] {
+        for i in &mut c {
+            *i = i.clamp(0.0, 1.0);
+        }
+
+        let [r, g, b] = c;
+        let [gr, gg, gb] = self.0.gamma;
+        let [agr, bgg, cgb] = [
+            if r == 1.0 { 1.0 } else { r.powf(gr) },
+            if g == 1.0 { 1.0 } else { g.powf(gg) },
+            if b == 1.0 { 1.0 } else { b.powf(gb) },
+        ];
+
+        let m = &self.0.matrix;
+        let x = m[0] * agr + m[3] * bgg + m[6] * cgb;
+        let y = m[1] * agr + m[4] * bgg + m[7] * cgb;
+        let z = m[2] * agr + m[5] * bgg + m[8] * cgb;
+        let xyz = [x, y, z];
+
+        let xyz_flat = self.normalize_white_point_to_flat(&self.0.white_point, &xyz);
+        let xyz_black = Self::compensate_black_point(&self.0.black_point, &xyz_flat);
+        let xyz_d65 = self.normalize_white_point_to_d65(&Self::FLAT_WHITEPOINT, &xyz_black);
+        let srgb_xyz = Self::matrix_product(&Self::SRGB_D65_XYZ_TO_RGB_MATRIX, &xyz_d65);
+
+        [
+            (Self::srgb_transfer_function(srgb_xyz[0]) * 255.0 + 0.5) as u8,
+            (Self::srgb_transfer_function(srgb_xyz[1]) * 255.0 + 0.5) as u8,
+            (Self::srgb_transfer_function(srgb_xyz[2]) * 255.0 + 0.5) as u8,
+        ]
     }
 }
 
@@ -145,6 +317,7 @@ pub enum ColorType {
     DeviceCmyk([f32; 4]),
     Icc(ICCProfile, ColorComponents),
     CalGray(CalGray, f32),
+    CalRgb(CalRgb, [f32; 3]),
 }
 
 struct ICCColorRepr {
@@ -237,7 +410,8 @@ impl Color {
             ColorSpace::DeviceGray => ColorType::DeviceGray(c[0]),
             ColorSpace::DeviceRgb => ColorType::DeviceRgb([c[0], c[1], c[2]]),
             ColorSpace::ICCColor(icc) => ColorType::Icc(icc, c.clone()),
-            ColorSpace::CalGray(cal) => ColorType::CalGray(cal, c[0])
+            ColorSpace::CalGray(cal) => ColorType::CalGray(cal, c[0]),
+            ColorSpace::CalRgb(cal) => ColorType::CalRgb(cal, [c[0], c[1], c[2]]),
         };
 
         Self {
@@ -268,6 +442,12 @@ impl Color {
                 res
             }
             ColorType::CalGray(cal, c) => {
+                let opacity = u8_to_f32(self.opacity);
+                let srgb = cal.to_srgb(*c);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
+            ColorType::CalRgb(cal, c) => {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = cal.to_srgb(*c);
 

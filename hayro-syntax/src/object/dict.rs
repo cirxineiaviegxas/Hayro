@@ -369,6 +369,7 @@ pub mod keys {
     key!(KIDS, b"Kids");
     key!(LAST_CHAR, b"LastChar");
     key!(LENGTH, b"Length");
+    key!(MATRIX, b"Matrix");
     key!(MEDIA_BOX, b"MediaBox");
     key!(MISSING_WIDTH, b"MissingWidth");
     key!(N, b"N");
