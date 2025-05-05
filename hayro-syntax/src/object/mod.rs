@@ -36,12 +36,6 @@ pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {
 #[macro_export]
 macro_rules! object {
     ($t:ident $(<$l:lifetime>),*, $s:ident) => {
-        impl<'a> From<$t$(<$l>),*> for Object<'a> {
-            fn from(value: $t$(<$l>),*) -> Self {
-                Object::$s(value)
-            }
-        }
-
         impl<'a> TryFrom<Object<'a>> for $t$(<$l>),* {
             type Error = ();
 

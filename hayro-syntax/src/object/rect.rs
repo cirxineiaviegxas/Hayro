@@ -49,12 +49,6 @@ impl TryFrom<Object<'_>> for Rect {
     }
 }
 
-impl From<Rect> for Object<'_> {
-    fn from(_: Rect) -> Self {
-        unimplemented!()
-    }
-}
-
 impl ObjectLike<'_> for Rect {
     const STATIC_NAME: &'static str = "Rect";
 }
