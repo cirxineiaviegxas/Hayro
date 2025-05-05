@@ -166,6 +166,51 @@ where
     }
 }
 
+impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> TryFrom<Array<'a>> for [T; C] {
+    type Error = ();
+
+    fn try_from(value: Array<'a>) -> Result<Self, Self::Error> {
+        let mut iter = value.iter::<T>();
+        
+        let mut val = [T::default(); C];
+        
+        for i in 0..C {
+            val[i] = iter.next().ok_or(())?;
+        }
+        
+        if iter.next().is_some() {
+            warn!("found excess elements in array");
+        }
+        
+        Ok(val)
+    }
+}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> TryFrom<Object<'a>> for [T; C]
+where
+    [T; C]: TryFrom<Array<'a>, Error = ()>,
+{
+    type Error = ();
+
+    fn try_from(value: Object<'a>) -> Result<Self, Self::Error> {
+        match value {
+            Object::Array(a) => a.try_into(),
+            _ => Err(())
+        }
+    }
+}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> Readable<'a> for [T; C] {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        let array = Array::read::<PLAIN>(r, xref)?;
+        array.try_into().ok()
+    }
+}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> ObjectLike<'a> for [T; C] {
+    const STATIC_NAME: &'static str = "Slice";
+}
+
 #[cfg(test)]
 mod tests {
     use crate::file::xref::XRef;

@@ -23,6 +23,7 @@ pub(crate) enum ColorSpace {
     DeviceGray,
     DeviceRgb,
     ICCColor(ICCProfile),
+    CalGray(CalGray)
 }
 
 impl ColorSpace {
@@ -50,6 +51,10 @@ impl ColorSpace {
                     // TODO: Handle alternate.
                 }
                 CAL_CMYK => return Some(ColorSpace::DeviceCmyk),
+                CAL_GRAY => {
+                    let cal_dict = iter.next()?.cast::<Dict>().ok()?;
+                    return Some(ColorSpace::CalGray(CalGray::new(&cal_dict)?))
+                },
                 _ => return None,
             }
         }
@@ -80,6 +85,7 @@ impl ColorSpace {
                 4 => components.extend([0.0, 0.0, 0.0, 1.0]),
                 _ => unreachable!(),
             },
+            ColorSpace::CalGray(_) => components.push(0.0)
         }
     }
 }
@@ -97,26 +103,38 @@ pub struct CalGray(Arc<CalGrayRepr>);
 impl CalGray {
     pub fn new(dict: &Dict) -> Option<Self> {
         let white_point = dict
-            .get::<Array>(WHITE_POINT)
-            .and_then(|w| {
-                let mut iter = w.iter::<f32>();
-                Some([iter.next()?, iter.next()?, iter.next()?])
-            })
+            .get::<[f32; 3]>(WHITE_POINT)
             .unwrap_or([0.0, 0.0, 0.0]);
         let black_point = dict
-            .get::<Array>(BLACK_POINT)
-            .and_then(|w| {
-                let mut iter = w.iter::<f32>();
-                Some([iter.next()?, iter.next()?, iter.next()?])
-            })
+            .get::<[f32; 3]>(BLACK_POINT)
             .unwrap_or([0.0, 0.0, 0.0]);
-        let gamma = dict.get::<f32>(GAMMA)?;
+        let gamma = dict.get::<f32>(GAMMA).unwrap_or(1.0);
 
         Some(Self(Arc::new(CalGrayRepr {
             white_point,
             black_point,
             gamma,
         })))
+    }
+
+    // See <https://github.com/mozilla/pdf.js/blob/06f44916c8936b92f464d337fe3a0a6b2b78d5b4/src/core/colorspace.js#L752>
+    pub(crate) fn to_srgb(&self, c: f32) -> [u8; 3] {
+        let g = self.0.gamma;
+        let (_xw, yw, _zw) = {
+            let wp = self.0.white_point;
+            (wp[0], wp[1], wp[2])
+        };
+        let (_xb, _yb, _zb) = {
+            let bp = self.0.black_point;
+            (bp[0], bp[1], bp[2])
+        };
+        
+        let a = c;
+        let ag = a.powf(g);
+        let l = yw * ag;
+        let val = (0.0f32.max(295.8 * l.powf(0.3333333333333333) - 40.8) + 0.5) as u8;
+        
+        [val, val, val]
     }
 }
 
@@ -126,6 +144,7 @@ pub enum ColorType {
     DeviceGray(f32),
     DeviceCmyk([f32; 4]),
     Icc(ICCProfile, ColorComponents),
+    CalGray(CalGray, f32),
 }
 
 struct ICCColorRepr {
@@ -218,6 +237,7 @@ impl Color {
             ColorSpace::DeviceGray => ColorType::DeviceGray(c[0]),
             ColorSpace::DeviceRgb => ColorType::DeviceRgb([c[0], c[1], c[2]]),
             ColorSpace::ICCColor(icc) => ColorType::Icc(icc, c.clone()),
+            ColorSpace::CalGray(cal) => ColorType::CalGray(cal, c[0])
         };
 
         Self {
@@ -233,7 +253,7 @@ impl Color {
             ColorType::DeviceGray(g) => AlphaColor::new([*g, *g, *g, self.opacity]),
             ColorType::DeviceCmyk(c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let mut srgb = CMYK_TRANSFORM.to_srgb(&c[..]);
+                let srgb = CMYK_TRANSFORM.to_srgb(&c[..]);
 
                 let res = AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity);
 
@@ -241,11 +261,17 @@ impl Color {
             }
             ColorType::Icc(icc, c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let mut srgb = icc.to_srgb(&c[..]);
+                let srgb = icc.to_srgb(&c[..]);
 
                 let res = AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity);
 
                 res
+            }
+            ColorType::CalGray(cal, c) => {
+                let opacity = u8_to_f32(self.opacity);
+                let srgb = cal.to_srgb(*c);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
         }
     }
