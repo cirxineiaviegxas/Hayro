@@ -1,7 +1,10 @@
+use crate::context::Context;
+use crate::device::Device;
 use crate::font::cid::Type0Font;
 use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
+use crate::font::type3::Type3GlyphDescription;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
@@ -21,7 +24,7 @@ pub(crate) mod encoding;
 mod standard;
 mod true_type;
 mod type1;
-mod type3;
+pub(crate) mod type3;
 
 #[derive(Clone, Debug)]
 pub struct Font(Arc<FontType>);
@@ -54,11 +57,11 @@ impl Font {
         }
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    pub fn render_glyph(&self, glyph: GlyphId, ctx: &mut Context) -> GlyphDescription {
         match self.0.as_ref() {
-            FontType::Type1(t) => t.outline_glyph(glyph),
-            FontType::TrueType(t) => t.outline_glyph(glyph),
-            FontType::Type0(t) => t.outline_glyph(glyph),
+            FontType::Type1(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
+            FontType::TrueType(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
+            FontType::Type0(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
         }
     }
 
@@ -101,6 +104,11 @@ impl Font {
             FontType::Type0(t) => t.is_horizontal(),
         }
     }
+}
+
+pub enum GlyphDescription {
+    Path(BezPath),
+    Type3(Type3GlyphDescription),
 }
 
 #[derive(Debug)]

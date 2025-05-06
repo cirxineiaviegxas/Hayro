@@ -11,3 +11,25 @@ pub trait Device {
     fn push_clip(&mut self, clip: &BezPath, fill: Fill);
     fn pop_clip(&mut self);
 }
+
+pub(crate) enum ReplayInstruction {
+    SetTransform {
+        affine: Affine,
+    },
+    SetPaint {
+        color: Color,
+    },
+    StrokePath {
+        path: BezPath,
+        stroke_props: StrokeProps,
+    },
+    FillPath {
+        path: BezPath,
+        fill_props: FillProps,
+    },
+    PushClip {
+        clip: BezPath,
+        fill: Fill,
+    },
+    PopClip,
+}

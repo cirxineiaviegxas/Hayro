@@ -71,6 +71,12 @@ impl Skippable for Array<'_> {
     }
 }
 
+impl Default for Array<'_> {
+    fn default() -> Self {
+        Self::from_bytes(b"[]").unwrap()
+    }
+}
+
 impl<'a> Readable<'a> for Array<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
         let bytes = r.skip::<PLAIN, Array>()?;

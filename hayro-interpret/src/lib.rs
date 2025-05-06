@@ -1,5 +1,5 @@
 use crate::convert::{convert_line_cap, convert_line_join};
-use crate::device::Device;
+use crate::device::{Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
@@ -26,9 +26,11 @@ mod util;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
-use crate::font::{Font, TextRenderingMode};
+use crate::font::type3::Type3GlyphDescription;
+use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::util::OptionLog;
 
+#[derive(Clone, Debug)]
 pub struct StrokeProps {
     pub line_width: f32,
     pub line_cap: Cap,
@@ -38,6 +40,7 @@ pub struct StrokeProps {
     pub dash_offset: f32,
 }
 
+#[derive(Clone, Debug)]
 pub struct FillProps {
     pub fill_rule: Fill,
 }
@@ -444,31 +447,34 @@ fn show_glyph(
     let t = ctx.get().text_transform()
         * Affine::scale(1.0 / 1000.0)
         * Affine::translate(origin_displacement);
-    let outline = t * font.outline_glyph(glyph);
+    let glyph_description = match font.render_glyph(glyph, ctx) {
+        GlyphDescription::Path(path) => GlyphDescription::Path(t * path),
+        GlyphDescription::Type3(_) => unimplemented!(),
+    };
 
     match ctx.get().text_state.render_mode {
-        TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&outline), None),
-        TextRenderingMode::Stroke => stroke_path_impl(ctx, device, Some(&outline), None),
+        TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&glyph_description), None),
+        TextRenderingMode::Stroke => stroke_path_impl(ctx, device, Some(&glyph_description), None),
         TextRenderingMode::FillStroke => {
-            fill_path_impl(ctx, device, Some(&outline), None);
-            stroke_path_impl(ctx, device, Some(&outline), None);
+            fill_path_impl(ctx, device, Some(&glyph_description), None);
+            stroke_path_impl(ctx, device, Some(&glyph_description), None);
         }
         TextRenderingMode::Invisible => {}
         TextRenderingMode::Clip => {
-            clip_impl(ctx, &outline);
+            clip_impl(ctx, &glyph_description);
         }
         TextRenderingMode::FillAndClip => {
-            clip_impl(ctx, &outline);
-            fill_path_impl(ctx, device, Some(&outline), None);
+            clip_impl(ctx, &glyph_description);
+            fill_path_impl(ctx, device, Some(&glyph_description), None);
         }
         TextRenderingMode::StrokeAndClip => {
-            clip_impl(ctx, &outline);
-            stroke_path_impl(ctx, device, Some(&outline), None);
+            clip_impl(ctx, &glyph_description);
+            stroke_path_impl(ctx, device, Some(&glyph_description), None);
         }
         TextRenderingMode::FillAndStrokeAndClip => {
-            clip_impl(ctx, &outline);
-            fill_path_impl(ctx, device, Some(&outline), None);
-            stroke_path_impl(ctx, device, Some(&outline), None);
+            clip_impl(ctx, &glyph_description);
+            fill_path_impl(ctx, device, Some(&glyph_description), None);
+            stroke_path_impl(ctx, device, Some(&glyph_description), None);
         }
     }
 }
@@ -517,18 +523,25 @@ fn fill_stroke_path(context: &mut Context, device: &mut impl Device) {
     context.path_mut().truncate(0);
 }
 
-fn clip_impl(context: &mut Context, outline: &BezPath) {
-    let has_outline = outline.segments().next().is_some();
+fn clip_impl(context: &mut Context, outline: &GlyphDescription) {
+    match outline {
+        GlyphDescription::Path(p) => {
+            let has_outline = p.segments().next().is_some();
 
-    if has_outline {
-        context.get_mut().text_state.clip_paths.extend(outline);
+            if has_outline {
+                context.get_mut().text_state.clip_paths.extend(p);
+            }
+        }
+        GlyphDescription::Type3(_) => {
+            warn!("text rendering mode clip is currently not supported with Type3 glyphs")
+        }
     }
 }
 
 fn fill_path_impl(
     context: &mut Context,
     device: &mut impl Device,
-    path: Option<&BezPath>,
+    path: Option<&GlyphDescription>,
     transform: Option<Affine>,
 ) {
     let color = Color::from_pdf(
@@ -537,15 +550,22 @@ fn fill_path_impl(
         context.get().fill_alpha,
     );
 
+    let base_transform = transform.unwrap_or(context.get().affine);
+
     device.set_paint(color);
-    device.set_transform(transform.unwrap_or(context.get().affine));
-    device.fill_path(path.unwrap_or(context.path()), &context.fill_props());
+    device.set_transform(base_transform);
+
+    match path {
+        None => device.fill_path(context.path(), &context.fill_props()),
+        Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
+        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform),
+    };
 }
 
 fn stroke_path_impl(
     context: &mut Context,
     device: &mut impl Device,
-    path: Option<&BezPath>,
+    path: Option<&GlyphDescription>,
     transform: Option<Affine>,
 ) {
     let color = Color::from_pdf(
@@ -553,7 +573,39 @@ fn stroke_path_impl(
         &context.get().stroke_color,
         context.get().stroke_alpha,
     );
+
+    let base_transform = transform.unwrap_or(context.get().affine);
+
     device.set_paint(color);
-    device.set_transform(transform.unwrap_or(context.get().affine));
-    device.stroke_path(path.unwrap_or(context.path()), &context.stroke_props());
+    device.set_transform(base_transform);
+
+    match path {
+        None => device.stroke_path(context.path(), &context.stroke_props()),
+        Some(GlyphDescription::Path(path)) => device.stroke_path(path, &context.stroke_props()),
+        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform),
+    };
+}
+
+fn run_t3_instructions(
+    device: &mut impl Device,
+    description: &Type3GlyphDescription,
+    initial_transform: Affine,
+) {
+    for instruction in &description.0 {
+        match instruction {
+            ReplayInstruction::SetTransform { affine } => {
+                // TODO: Paint transforms shouldnt be affected by this!
+                device.set_transform(initial_transform * *affine);
+            }
+            ReplayInstruction::SetPaint { .. } => {}
+            ReplayInstruction::StrokePath { path, stroke_props } => {
+                device.stroke_path(path, stroke_props);
+            }
+            ReplayInstruction::FillPath { path, fill_props } => {
+                device.fill_path(path, fill_props);
+            }
+            ReplayInstruction::PushClip { clip, fill } => device.push_clip(clip, *fill),
+            ReplayInstruction::PopClip => device.pop_clip(),
+        }
+    }
 }

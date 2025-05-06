@@ -337,8 +337,9 @@ pub mod keys {
     key!(BITS_PER_COMPONENT, b"BitsPerComponent");
     key!(C0, b"C0");
     key!(C1, b"C1");
-    key!(COLORS, b"Colors");
     key!(CID_TO_GID_MAP, b"CIDToGIDMap");
+    key!(CHAR_PROCS, b"CharProcs");
+    key!(COLORS, b"Colors");
     key!(COLOR_SPACE, b"ColorSpace");
     key!(COLUMNS, b"Columns");
     key!(CONTENTS, b"Contents");
