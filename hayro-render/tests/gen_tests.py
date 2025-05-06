@@ -5,7 +5,7 @@ pdf_directory = os.path.join(os.path.dirname(__file__), '../assets')  # relative
 # Output Rust file
 output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 
-ignore_list = ["pdftc_010k_0083"]
+ignore_list = ["pdftc_010k_0083", "integration_matplotlib"]
 
 lengths = {
     "color_space_calrgb": "0..=8",

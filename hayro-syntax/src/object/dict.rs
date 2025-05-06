@@ -334,6 +334,7 @@ pub mod keys {
 
     key!(BASE_FONT, b"BaseFont");
     key!(BASE_ENCODING, b"BaseEncoding");
+    key!(BBOX, b"BBox");
     key!(BITS_PER_COMPONENT, b"BitsPerComponent");
     key!(C0, b"C0");
     key!(C1, b"C1");
@@ -367,6 +368,7 @@ pub mod keys {
     key!(FONT_FILE3, b"FontFile3");
     key!(FONT_MATRIX, b"FontMatrix");
     key!(GAMMA, b"Gamma");
+    key!(GROUP, b"Group");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");
     key!(LAST_CHAR, b"LastChar");
@@ -391,5 +393,6 @@ pub mod keys {
     key!(W2, b"W2");
     key!(WIDTHS, b"Widths");
     key!(WHITE_POINT, b"WhitePoint");
+    key!(X_OBJECT, b"XObject");
     key!(BLACK_POINT, b"BlackPoint");
 }

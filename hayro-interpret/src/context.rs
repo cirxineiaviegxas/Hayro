@@ -108,7 +108,11 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn pre_concat_transform(&mut self, transform: Transform) {
-        self.get_mut().affine *= convert_transform(transform);
+        self.pre_concat_affine(convert_transform(transform))
+    }
+
+    pub(crate) fn pre_concat_affine(&mut self, transform: Affine) {
+        self.get_mut().affine *= transform;
     }
 
     pub(crate) fn get_font(&mut self, resources: &Dict<'a>, name: Name) -> Font<'a> {
