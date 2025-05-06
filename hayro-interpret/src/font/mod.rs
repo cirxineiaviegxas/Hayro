@@ -4,7 +4,7 @@ use crate::font::cid::Type0Font;
 use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
-use crate::font::type3::Type3GlyphDescription;
+use crate::font::type3::{Type3, Type3GlyphDescription};
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
@@ -27,14 +27,15 @@ mod type1;
 pub(crate) mod type3;
 
 #[derive(Clone, Debug)]
-pub struct Font(Arc<FontType>);
+pub struct Font<'a>(Arc<FontType<'a>>);
 
-impl Font {
-    pub fn new(dict: &Dict) -> Option<Self> {
+impl<'a> Font<'a> {
+    pub fn new(dict: &Dict<'a>) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)?.as_ref() {
             TYPE1 => FontType::Type1(Type1Font::new(dict)?),
             TRUE_TYPE => FontType::TrueType(TrueTypeFont::new(dict)?),
             TYPE0 => FontType::Type0(Type0Font::new(dict)?),
+            TYPE3 => FontType::Type3(Type3::new(dict)),
             _ => unimplemented!(),
         };
 
@@ -54,14 +55,20 @@ impl Font {
                 t.map_code(code as u8)
             }
             FontType::Type0(t) => t.map_code(code),
+            FontType::Type3(t) => {
+                debug_assert!(code <= u8::MAX as u16);
+
+                t.map_code(code as u8)
+            }
         }
     }
 
-    pub fn render_glyph(&self, glyph: GlyphId, ctx: &mut Context) -> GlyphDescription {
+    pub fn render_glyph(&self, glyph: GlyphId, ctx: &mut Context<'a>) -> GlyphDescription {
         match self.0.as_ref() {
             FontType::Type1(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
             FontType::TrueType(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
             FontType::Type0(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
+            FontType::Type3(t) => GlyphDescription::Type3(t.render_glyph(glyph, ctx)),
         }
     }
 
@@ -78,6 +85,11 @@ impl Font {
                 Vec2::new(t.glyph_width(code as u8) as f64, 0.0)
             }
             FontType::Type0(t) => t.code_advance(code),
+            FontType::Type3(t) => {
+                debug_assert!(code <= u8::MAX as u16);
+
+                Vec2::new(t.glyph_width(code as u8) as f64, 0.0)
+            }
         }
     }
 
@@ -86,6 +98,7 @@ impl Font {
             FontType::Type1(_) => Vec2::default(),
             FontType::TrueType(_) => Vec2::default(),
             FontType::Type0(t) => t.origin_displacement(code),
+            FontType::Type3(_) => Vec2::default(),
         }
     }
 
@@ -94,6 +107,7 @@ impl Font {
             FontType::Type1(_) => 1,
             FontType::TrueType(_) => 1,
             FontType::Type0(t) => t.code_len(),
+            FontType::Type3(_) => 1,
         }
     }
 
@@ -102,6 +116,7 @@ impl Font {
             FontType::Type1(_) => true,
             FontType::TrueType(_) => true,
             FontType::Type0(t) => t.is_horizontal(),
+            FontType::Type3(_) => true,
         }
     }
 }
@@ -136,10 +151,11 @@ impl Encoding {
 }
 
 #[derive(Debug)]
-enum FontType {
+enum FontType<'a> {
     Type1(Type1Font),
     TrueType(TrueTypeFont),
     Type0(Type0Font),
+    Type3(Type3<'a>),
 }
 
 #[derive(Debug, Clone, Copy, Default)]

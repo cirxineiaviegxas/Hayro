@@ -147,9 +147,10 @@ pub mod names {
     name!(PAGE, b"Page");
     name!(PAGES, b"Pages");
     name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
-    name!(TYPE1, b"Type1");
     name!(TYPE0, b"Type0");
+    name!(TYPE1, b"Type1");
     name!(TYPE1_C, b"Type1C");
+    name!(TYPE3, b"Type3");
     name!(TRUE_TYPE, b"TrueType");
     name!(WIN_ANSI_ENCODING, b"WinAnsiEncoding");
 }

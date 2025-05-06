@@ -1,10 +1,12 @@
 use crate::color::Color;
+use crate::context::Context;
 use crate::device::{Device, ReplayInstruction};
 use crate::font::true_type::{read_encoding, read_widths};
-use crate::{FillProps, StrokeProps};
+use crate::{FillProps, StrokeProps, interpret};
+use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX};
+use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
 use peniko::Fill;
@@ -12,7 +14,13 @@ use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>);
+pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
+
+impl Type3GlyphDescription {
+    pub fn new(affine: Affine) -> Self {
+        Type3GlyphDescription(Vec::new(), affine)
+    }
+}
 
 impl Device for Type3GlyphDescription {
     fn set_transform(&mut self, affine: Affine) {
@@ -48,12 +56,12 @@ impl Device for Type3GlyphDescription {
 }
 
 #[derive(Debug)]
-struct Type3<'a> {
+pub struct Type3<'a> {
     widths: Vec<f32>,
     encodings: HashMap<u8, String>,
     dict: Dict<'a>,
     // TODO: Don't automatically resolve glyph streams?
-    char_procs: Vec<Stream<'a>>,
+    char_procs: HashMap<String, Stream<'a>>,
     // Similarly to Type1 fonts, we simulate that Type3 glyphs have glyph IDs
     // so we can handle them transparently to OpenType fonts.
     glyph_to_string: RefCell<HashMap<GlyphId, String>>,
@@ -72,11 +80,18 @@ impl<'a> Type3<'a> {
                 .unwrap_or([0.001, 0.0, 0.0, 0.001, 0.0, 0.0]),
         );
 
-        let char_procs = dict
-            .get::<Array>(CHAR_PROCS)
-            .unwrap_or_default()
-            .iter::<Stream>()
-            .collect::<Vec<_>>();
+        let char_procs = {
+            let mut procs = HashMap::new();
+            let dict = dict.get::<Dict>(CHAR_PROCS).unwrap_or_default();
+
+            for name in dict.keys() {
+                let prog = dict.get::<Stream>(name).unwrap();
+
+                procs.insert(name.as_str().to_string(), prog.clone());
+            }
+
+            procs
+        };
 
         let glyph_to_string = HashMap::new();
         let string_to_glyph = HashMap::new();
@@ -120,5 +135,24 @@ impl<'a> Type3<'a> {
 
     pub fn glyph_width(&self, code: u8) -> f32 {
         *self.widths.get(code as usize).unwrap()
+    }
+
+    pub fn render_glyph(&self, glyph: GlyphId, context: &mut Context<'a>) -> Type3GlyphDescription {
+        let mut t3 =
+            Type3GlyphDescription::new(self.matrix * Affine::scale_non_uniform(1000.0, -1000.0));
+
+        let borrowed = self.glyph_to_string.borrow();
+        let name = borrowed.get(&glyph).unwrap();
+        let program = self.char_procs.get(name).unwrap();
+        let decoded = program.decoded().unwrap();
+        let resources = self.dict.get(RESOURCES).unwrap_or_default();
+
+        let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
+
+        context.save_state();
+        interpret(iter, resources, context, &mut t3);
+        context.restore_state();
+
+        t3
     }
 }

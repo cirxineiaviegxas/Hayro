@@ -5,12 +5,12 @@ use peniko::Fill;
 use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
-pub(crate) struct TextState {
+pub(crate) struct TextState<'a> {
     pub(crate) char_space: f32,
     pub(crate) word_space: f32,
     pub(crate) horizontal_scaling: f32,
     pub(crate) leading: f32,
-    pub(crate) font: Option<(Font, f32)>,
+    pub(crate) font: Option<(Font<'a>, f32)>,
     pub(crate) render_mode: TextRenderingMode,
     pub(crate) text_matrix: Affine,
     pub(crate) text_line_matrix: Affine,
@@ -18,7 +18,7 @@ pub(crate) struct TextState {
     pub(crate) rise: f32,
 }
 
-impl TextState {
+impl<'a> TextState<'a> {
     fn temp_transform(&self) -> Affine {
         Affine::new([
             self.font_size() as f64 * self.horizontal_scaling() as f64,
@@ -38,7 +38,7 @@ impl TextState {
         self.font.as_ref().map(|f| f.1).unwrap_or(1.0)
     }
 
-    pub(crate) fn font(&self) -> Font {
+    pub(crate) fn font(&self) -> Font<'a> {
         self.font.as_ref().map(|f| f.0.clone()).unwrap()
     }
 
@@ -79,7 +79,7 @@ impl TextState {
     }
 }
 
-impl Default for TextState {
+impl Default for TextState<'_> {
     fn default() -> Self {
         Self {
             char_space: 0.0,
@@ -97,7 +97,7 @@ impl Default for TextState {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct State {
+pub(crate) struct State<'a> {
     pub(crate) line_width: f32,
     pub(crate) line_cap: Cap,
     pub(crate) line_join: Join,
@@ -111,14 +111,14 @@ pub(crate) struct State {
     pub(crate) fill_color: ColorComponents,
     pub(crate) fill_cs: ColorSpace,
     pub(crate) fill_alpha: f32,
-    pub(crate) text_state: TextState,
+    pub(crate) text_state: TextState<'a>,
     // Strictly speaking not part of the graphics state, but we keep it there for
     // consistency.
     pub(crate) fill: Fill,
     pub(crate) n_clips: u32,
 }
 
-impl State {
+impl State<'_> {
     pub(crate) fn text_transform(&self) -> Affine {
         self.text_state.text_matrix * self.text_state.temp_transform()
     }

@@ -45,10 +45,10 @@ pub struct FillProps {
     pub fill_rule: Fill,
 }
 
-pub fn interpret<'a>(
-    ops: impl Iterator<Item = TypedOperation<'a>>,
-    resources: Dict,
-    context: &mut Context,
+pub fn interpret<'a, 'b>(
+    ops: impl Iterator<Item = TypedOperation<'b>>,
+    resources: Dict<'a>,
+    context: &mut Context<'a>,
     device: &mut impl Device,
 ) {
     let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
@@ -416,7 +416,12 @@ fn next_line(ctx: &mut Context, tx: f64, ty: f64) {
     ctx.get_mut().text_state.text_matrix = new_matrix;
 }
 
-fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, font: &Font) {
+fn show_text_string<'a>(
+    ctx: &mut Context<'a>,
+    device: &mut impl Device,
+    text: String,
+    font: &Font<'a>,
+) {
     let code_len = font.code_len();
     for b in text.get().chunks(code_len) {
         let code = match code_len {
@@ -437,19 +442,22 @@ fn show_text_string(ctx: &mut Context, device: &mut impl Device, text: String, f
     }
 }
 
-fn show_glyph(
-    ctx: &mut Context,
+fn show_glyph<'a>(
+    ctx: &mut Context<'a>,
     device: &mut impl Device,
     glyph: GlyphId,
-    font: &Font,
+    font: &Font<'a>,
     origin_displacement: Vec2,
 ) {
-    let t = ctx.get().text_transform()
+    let mut t = ctx.get().text_transform()
         * Affine::scale(1.0 / 1000.0)
         * Affine::translate(origin_displacement);
     let glyph_description = match font.render_glyph(glyph, ctx) {
         GlyphDescription::Path(path) => GlyphDescription::Path(t * path),
-        GlyphDescription::Type3(_) => unimplemented!(),
+        GlyphDescription::Type3(mut desc) => {
+            desc.1 = t * desc.1;
+            GlyphDescription::Type3(desc)
+        }
     };
 
     match ctx.get().text_state.render_mode {
@@ -558,7 +566,7 @@ fn fill_path_impl(
     match path {
         None => device.fill_path(context.path(), &context.fill_props()),
         Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform),
+        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
 }
 
@@ -582,7 +590,7 @@ fn stroke_path_impl(
     match path {
         None => device.stroke_path(context.path(), &context.stroke_props()),
         Some(GlyphDescription::Path(path)) => device.stroke_path(path, &context.stroke_props()),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform),
+        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
 }
 

@@ -13,17 +13,17 @@ use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
 
-pub struct Context {
-    states: Vec<State>,
+pub struct Context<'a> {
+    states: Vec<State<'a>>,
     path: BezPath,
     sub_path_start: Point,
     last_point: Point,
     clip: Option<Fill>,
-    font_cache: HashMap<ObjRef, Font>,
+    font_cache: HashMap<ObjRef, Font<'a>>,
     color_space_cache: HashMap<ObjRef, ColorSpace>,
 }
 
-impl Context {
+impl<'a> Context<'a> {
     pub fn new(initial_transform: Affine) -> Self {
         let line_width = 1.0;
         let line_cap = Cap::Butt;
@@ -99,11 +99,11 @@ impl Context {
         &mut self.clip
     }
 
-    pub(crate) fn get(&self) -> &State {
+    pub(crate) fn get(&self) -> &State<'a> {
         self.states.last().unwrap()
     }
 
-    pub(crate) fn get_mut(&mut self) -> &mut State {
+    pub(crate) fn get_mut(&mut self) -> &mut State<'a> {
         self.states.last_mut().unwrap()
     }
 
@@ -111,7 +111,7 @@ impl Context {
         self.get_mut().affine *= convert_transform(transform);
     }
 
-    pub(crate) fn get_font(&mut self, resources: &Dict, name: Name) -> Font {
+    pub(crate) fn get_font(&mut self, resources: &Dict<'a>, name: Name) -> Font<'a> {
         let font_ref = resources.get_ref(&name).unwrap();
 
         self.font_cache
