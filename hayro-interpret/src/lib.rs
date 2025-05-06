@@ -399,6 +399,7 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.leading = -ty as f32;
                 next_line(context, tx, ty)
             }
+            TypedOperation::ShapeGlyph(_) => {}
             _ => {
                 println!("{:?}", op);
             }

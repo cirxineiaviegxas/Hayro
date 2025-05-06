@@ -139,7 +139,7 @@ impl<'a> Type3<'a> {
 
     pub fn render_glyph(&self, glyph: GlyphId, context: &mut Context<'a>) -> Type3GlyphDescription {
         let mut t3 =
-            Type3GlyphDescription::new(self.matrix * Affine::scale_non_uniform(1000.0, -1000.0));
+            Type3GlyphDescription::new(self.matrix * Affine::scale_non_uniform(1000.0, 1000.0));
 
         let borrowed = self.glyph_to_string.borrow();
         let name = borrowed.get(&glyph).unwrap();
@@ -150,6 +150,7 @@ impl<'a> Type3<'a> {
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
 
         context.save_state();
+        context.get_mut().affine = Affine::IDENTITY;
         interpret(iter, resources, context, &mut t3);
         context.restore_state();
 
