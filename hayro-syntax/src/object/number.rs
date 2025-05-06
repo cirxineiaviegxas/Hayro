@@ -181,6 +181,33 @@ impl ObjectLike<'_> for f32 {
     const STATIC_NAME: &'static str = "f32";
 }
 
+impl Skippable for f64 {
+    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+        r.skip::<PLAIN, Number>().map(|_| {})
+    }
+}
+
+impl Readable<'_> for f64 {
+    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef<'_>) -> Option<Self> {
+        r.read_without_xref::<Number>().map(|n| n.as_f64())
+    }
+}
+
+impl TryFrom<Object<'_>> for f64 {
+    type Error = ();
+
+    fn try_from(value: Object<'_>) -> Result<Self, Self::Error> {
+        match value {
+            Object::Number(n) => Ok(n.as_f64()),
+            _ => Err(()),
+        }
+    }
+}
+
+impl ObjectLike<'_> for f64 {
+    const STATIC_NAME: &'static str = "f64";
+}
+
 pub(crate) fn is_digit(byte: u8) -> bool {
     byte >= b'0' && byte <= b'9'
 }

@@ -249,7 +249,7 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
     let mut map = HashMap::new();
 
     if let Some(encoding_dict) = dict.get::<Dict>(ENCODING) {
-        // Note that those only exist for Type1 fonts, not for TrueType fonts.
+        // Note that those only exist for Type1 and Type3 fonts, not for TrueType fonts.
         if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
             let mut entries = differences.iter::<Object>();
 

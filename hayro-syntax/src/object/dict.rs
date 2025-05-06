@@ -364,6 +364,7 @@ pub mod keys {
     key!(FONT_FILE, b"FontFile");
     key!(FONT_FILE2, b"FontFile2");
     key!(FONT_FILE3, b"FontFile3");
+    key!(FONT_MATRIX, b"FontMatrix");
     key!(GAMMA, b"Gamma");
     key!(INDEX, b"Index");
     key!(KIDS, b"Kids");

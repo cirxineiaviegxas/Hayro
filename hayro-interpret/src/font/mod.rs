@@ -21,6 +21,7 @@ pub(crate) mod encoding;
 mod standard;
 mod true_type;
 mod type1;
+mod type3;
 
 #[derive(Clone, Debug)]
 pub struct Font(Arc<FontType>);
