@@ -2,7 +2,7 @@ use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, WHITE_POINT};
+use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -25,6 +25,7 @@ pub(crate) enum ColorSpace {
     ICCColor(ICCProfile),
     CalGray(CalGray),
     CalRgb(CalRgb),
+    Lab(Lab),
 }
 
 impl ColorSpace {
@@ -60,6 +61,10 @@ impl ColorSpace {
                     let cal_dict = iter.next()?.cast::<Dict>().ok()?;
                     return Some(ColorSpace::CalRgb(CalRgb::new(&cal_dict)?));
                 }
+                LAB => {
+                    let lab_dict = iter.next()?.cast::<Dict>().ok()?;
+                    return Some(ColorSpace::Lab(Lab::new(&lab_dict)?));
+                }
                 _ => return None,
             }
         }
@@ -92,6 +97,7 @@ impl ColorSpace {
             },
             ColorSpace::CalGray(_) => components.push(0.0),
             ColorSpace::CalRgb(_) => components.extend([0.0, 0.0, 0.0]),
+            ColorSpace::Lab(_) => components.extend([0.0, 0.0, 0.0]),
         }
     }
 }
@@ -109,7 +115,7 @@ pub struct CalGray(Arc<CalGrayRepr>);
 // See <https://github.com/mozilla/pdf.js/blob/06f44916c8936b92f464d337fe3a0a6b2b78d5b4/src/core/colorspace.js#L752>
 impl CalGray {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([0.0, 0.0, 0.0]);
+        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([1.0, 1.0, 1.0]);
         let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let gamma = dict.get::<f32>(GAMMA).unwrap_or(1.0);
 
@@ -157,7 +163,7 @@ pub struct CalRgb(Arc<CalRgbRepr>);
 // see that in many cases each viewer does whatever it wants, even Acrobat), so this is good enough for us.
 impl CalRgb {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([0.0, 0.0, 0.0]);
+        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([1.0, 1.0, 1.0]);
         let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let matrix = dict
             .get::<[f32; 9]>(MATRIX)
@@ -310,6 +316,75 @@ impl CalRgb {
     }
 }
 
+#[derive(Debug)]
+struct LabRepr {
+    white_point: [f32; 3],
+    black_point: [f32; 3],
+    range: [f32; 4],
+}
+
+#[derive(Debug, Clone)]
+pub struct Lab(Arc<LabRepr>);
+
+impl Lab {
+    pub fn new(dict: &Dict) -> Option<Self> {
+        let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([1.0, 1.0, 1.0]);
+        let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
+        let range = dict
+            .get::<[f32; 4]>(RANGE)
+            .unwrap_or([-100.0, 100.0, -100.0, 100.0]);
+
+        Some(Self(Arc::new(LabRepr {
+            white_point,
+            black_point,
+            range,
+        })))
+    }
+    fn decode(value: f32, high1: f32, low2: f32, high2: f32) -> f32 {
+        low2 + (value * (high2 - low2)) / high1
+    }
+
+    fn fn_g(x: f32) -> f32 {
+        if x >= 6.0 / 29.0 {
+            x.powi(3)
+        } else {
+            (108.0 / 841.0) * (x - 4.0 / 29.0)
+        }
+    }
+
+    pub(crate) fn to_srgb(&self, c: [f32; 3]) -> [u8; 3] {
+        let LabRepr { white_point, .. } = &*self.0;
+
+        let (l, a, b) = (c[0], c[1], c[2]);
+
+        let m = (l + 16.0) / 116.0;
+        let l = m + a / 500.0;
+        let n = m - b / 200.0;
+
+        let x = white_point[0] * Self::fn_g(l);
+        let y = white_point[1] * Self::fn_g(m);
+        let z = white_point[2] * Self::fn_g(n);
+
+        let (r, g, b) = if white_point[2] < 1.0 {
+            (
+                x * 3.1339 + y * -1.617 + z * -0.4906,
+                x * -0.9785 + y * 1.916 + z * 0.0333,
+                x * 0.072 + y * -0.229 + z * 1.4057,
+            )
+        } else {
+            (
+                x * 3.2406 + y * -1.5372 + z * -0.4986,
+                x * -0.9689 + y * 1.8758 + z * 0.0415,
+                x * 0.0557 + y * -0.204 + z * 1.057,
+            )
+        };
+
+        let conv = |v: f32| (v.max(0.0).sqrt() * 255.0).clamp(0.0, 255.0) as u8;
+
+        [conv(r), conv(g), conv(b)]
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum ColorType {
     DeviceRgb([f32; 3]),
@@ -318,6 +393,7 @@ pub enum ColorType {
     Icc(ICCProfile, ColorComponents),
     CalGray(CalGray, f32),
     CalRgb(CalRgb, [f32; 3]),
+    Lab(Lab, [f32; 3]),
 }
 
 struct ICCColorRepr {
@@ -412,6 +488,7 @@ impl Color {
             ColorSpace::ICCColor(icc) => ColorType::Icc(icc, c.clone()),
             ColorSpace::CalGray(cal) => ColorType::CalGray(cal, c[0]),
             ColorSpace::CalRgb(cal) => ColorType::CalRgb(cal, [c[0], c[1], c[2]]),
+            ColorSpace::Lab(lab) => ColorType::Lab(lab, [c[0], c[1], c[2]]),
         };
 
         Self {
@@ -450,6 +527,12 @@ impl Color {
             ColorType::CalRgb(cal, c) => {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = cal.to_srgb(*c);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
+            ColorType::Lab(lab, c) => {
+                let opacity = u8_to_f32(self.opacity);
+                let srgb = lab.to_srgb(*c);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }

@@ -139,6 +139,7 @@ pub mod names {
     name!(IDENTITY_V, b"Identity-V");
     name!(JBIG2_DECODE, b"JBIG2Decode");
     name!(JPX_DECODE, b"JPXDecode");
+    name!(LAB, b"Lab");
     name!(LZW_DECODE, b"LZWDecode");
     name!(MAC_EXPERT_ENCODING, b"MacExpertEncoding");
     name!(MAC_ROMAN_ENCODING, b"MacRomanEncoding");

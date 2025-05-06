@@ -8,6 +8,7 @@ output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 ignore_list = ["pdftc_010k_0083"]
 
 lengths = {
+    "color_space_calrgb": "0..=8",
     "font_standard_2": "0..=0",
     "font_truetype_7": "1..=1",
     "font_type1_10": "0..=1",
