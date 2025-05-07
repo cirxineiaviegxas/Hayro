@@ -4,7 +4,7 @@ use crate::interpret;
 use hayro_syntax::content::ops::XObject;
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BBOX, FONT_MATRIX, GROUP, RESOURCES, SUBTYPE};
+use hayro_syntax::object::dict::keys::{BBOX, FONT_MATRIX, GROUP, REF, RESOURCES, SUBTYPE};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
@@ -26,9 +26,9 @@ impl<'a> FormXObject<'a> {
         if dict.get::<Name>(SUBTYPE).unwrap().as_str() != "Form" {
             panic!("only form x object are currently supported.")
         }
-
-        if dict.contains_key(GROUP) {
-            warn!("transparency groups are currently not supported.")
+        
+        if dict.contains_key(REF) {
+            warn!("reference xobjects are not supported.");
         }
 
         let decoded = stream.decoded().unwrap();

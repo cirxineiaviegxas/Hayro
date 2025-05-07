@@ -382,6 +382,7 @@ pub mod keys {
     key!(PREDICTOR, b"Predictor");
     key!(PREV, b"Prev");
     key!(RANGE, b"Range");
+    key!(REF, b"Ref");
     key!(RESOURCES, b"Resources");
     key!(ROTATE, b"Rotate");
     key!(ROOT, b"Root");
