@@ -24,7 +24,7 @@ pub mod device;
 mod font;
 mod state;
 mod util;
-mod x_object;
+pub mod x_object;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;

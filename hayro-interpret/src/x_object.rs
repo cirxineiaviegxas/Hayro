@@ -13,7 +13,7 @@ use peniko::Fill;
 use std::borrow::Cow;
 
 pub struct FormXObject<'a> {
-    decoded: Cow<'a, [u8]>,
+    pub decoded: Cow<'a, [u8]>,
     matrix: Affine,
     bbox: [f32; 4],
     resources: Dict<'a>,
