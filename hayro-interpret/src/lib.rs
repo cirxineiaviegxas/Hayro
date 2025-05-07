@@ -58,10 +58,12 @@ pub fn interpret<'a, 'b>(
     let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
     let color_spaces = resources.get::<Dict>(COLOR_SPACE).unwrap_or_default();
     let x_objects = resources.get::<Dict>(X_OBJECT).unwrap_or_default();
+    
+    save_sate(context);
 
     for op in ops {
         match op {
-            TypedOperation::SaveState(_) => context.save_state(),
+            TypedOperation::SaveState(_) => save_sate(context),
             TypedOperation::StrokeColorDeviceRgb(s) => {
                 context.get_mut().stroke_cs = ColorSpace::DeviceRgb;
                 context.get_mut().stroke_color =
@@ -240,16 +242,7 @@ pub fn interpret<'a, 'b>(
             TypedOperation::ClipEvenOdd(_) => {
                 *(context.clip_mut()) = Some(Fill::EvenOdd);
             }
-            TypedOperation::RestoreState(_) => {
-                let mut num_clips = context.get().n_clips;
-                context.restore_state();
-                let target_clips = context.get().n_clips;
-
-                while num_clips > target_clips {
-                    device.pop_clip();
-                    num_clips -= 1;
-                }
-            }
+            TypedOperation::RestoreState(_) => restore_state(context, device),
             TypedOperation::FlatnessTolerance(_) => {
                 // Ignore for now.
             }
@@ -414,8 +407,21 @@ pub fn interpret<'a, 'b>(
         }
     }
 
-    for _ in 0..context.get().n_clips {
+    restore_state(context, device);
+}
+
+fn save_sate(ctx: &mut Context) {
+    ctx.save_state();
+}
+
+fn restore_state(ctx: &mut Context, device: &mut impl Device) {
+    let mut num_clips = ctx.get().n_clips;
+    ctx.restore_state();
+    let target_clips = ctx.get().n_clips;
+
+    while num_clips > target_clips {
         device.pop_clip();
+        num_clips -= 1;
     }
 }
 
