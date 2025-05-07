@@ -31,7 +31,7 @@ use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::util::OptionLog;
-use crate::x_object::draw_xobject;
+use crate::x_object::{FormXObject, draw_xobject};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -50,7 +50,7 @@ pub struct FillProps {
 
 pub fn interpret<'a, 'b>(
     ops: impl Iterator<Item = TypedOperation<'b>>,
-    resources: Dict<'a>,
+    resources: &Dict<'a>,
     context: &mut Context<'a>,
     device: &mut impl Device,
 ) {
@@ -405,7 +405,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
-                let x_object = x_objects.get::<Stream>(&x.0).unwrap();
+                let x_object = FormXObject::new(&x_objects.get::<Stream>(&x.0).unwrap());
                 draw_xobject(&x_object, context, device);
             }
             _ => {

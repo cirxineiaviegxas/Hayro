@@ -103,7 +103,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
 
     interpret(
         page.typed_operations(),
-        page.resources(),
+        &page.resources(),
         &mut state,
         &mut device,
     );

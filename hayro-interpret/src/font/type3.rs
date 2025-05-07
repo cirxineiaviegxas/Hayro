@@ -151,7 +151,7 @@ impl<'a> Type3<'a> {
 
         context.save_state();
         context.get_mut().affine = Affine::IDENTITY;
-        interpret(iter, resources, context, &mut t3);
+        interpret(iter, &resources, context, &mut t3);
         context.restore_state();
 
         t3
