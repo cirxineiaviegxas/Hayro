@@ -1,12 +1,9 @@
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::util::OptionLog;
-use hayro_syntax::object::Object;
+use hayro_syntax::object::{Object, ObjectLike};
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3,
-    SUBTYPE, W,
-};
+use hayro_syntax::object::dict::keys::{CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3, SUBTYPE, W, W2};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::{
     CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, IDENTITY_V, OPEN_TYPE,
@@ -18,6 +15,7 @@ use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
 use std::sync::Arc;
+use hayro_syntax::reader::Readable;
 
 #[derive(Debug)]
 pub(crate) struct Type0Font {
@@ -26,6 +24,7 @@ pub(crate) struct Type0Font {
     dw: f32,
     dw2: (f32, f32),
     widths: HashMap<u16, f32>,
+    widths2: HashMap<u16, [f32; 3]>,
     // TODO: Add widths2
     cid_to_gid_map: CidToGIdMap,
 }
@@ -62,6 +61,10 @@ impl Type0Font {
             .get::<Array>(W)
             .and_then(|a| read_widths(&a))
             .unwrap_or_default();
+        let widths2 = descendant_font
+            .get::<Array>(W2)
+            .and_then(|a| read_widths2(&a))
+            .unwrap_or_default();
         let cid_to_gid_map = CidToGIdMap::new(&descendant_font).unwrap_or_default();
 
         Some(Self {
@@ -70,6 +73,7 @@ impl Type0Font {
             dw: default_width,
             dw2,
             widths,
+            widths2,
             cid_to_gid_map,
         })
     }
@@ -105,7 +109,11 @@ impl Type0Font {
         if self.horizontal {
             Vec2::new(self.horizontal_width(code) as f64, 0.0)
         } else {
-            Vec2::new(0.0, self.dw2.1 as f64)
+            if let Some([w, _, _]) = self.widths2.get(&code) {
+                Vec2::new(0.0, *w as f64)
+            }   else {
+                Vec2::new(0.0, self.dw2.1 as f64)
+            }
         }
     }
 
@@ -125,10 +133,14 @@ impl Type0Font {
         if self.is_horizontal() {
             Vec2::default()
         } else {
-            Vec2::new(
-                -self.horizontal_width(code) as f64 / 2.0,
-                -self.dw2.0 as f64,
-            )
+            if let Some([_, v1, v2]) = self.widths2.get(&code) {
+                Vec2::new(-*v1 as f64, -*v2 as f64)
+            }   else {
+                Vec2::new(
+                    -self.horizontal_width(code) as f64 / 2.0,
+                    -self.dw2.0 as f64,
+                )
+            }
         }
     }
 }
@@ -247,3 +259,34 @@ fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
 
     Some(map)
 }
+
+fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
+    let mut map = HashMap::new();
+    let mut iter = arr.iter::<Object>();
+
+    while let Some(mut first) = iter.next().and_then(|o| o.cast::<u16>().ok()) {
+        let second = iter.next()?;
+
+        if let Some(second) = second.clone().cast::<u16>().ok() {
+            let w = iter.next().and_then(|o| o.cast::<f32>().ok())?;
+            let v1 = iter.next().and_then(|o| o.cast::<f32>().ok())?;
+            let v2 = iter.next().and_then(|o| o.cast::<f32>().ok())?;
+
+            for i in first..=second {
+                map.insert(i, [w, v1, v2]);
+            }
+        } else if let Some(range) = second.cast::<Array>().ok() {
+            let mut iter = range.iter::<f32>();
+            
+            while let Some(w) = iter.next() {
+                let v1 = iter.next()?;
+                let v2 = iter.next()?;
+                map.insert(first, [w, v1, v2]);
+                first = first.checked_add(1)?;
+            }
+        }
+    }
+
+    Some(map)
+}
+
