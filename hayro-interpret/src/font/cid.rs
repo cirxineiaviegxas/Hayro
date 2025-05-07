@@ -1,21 +1,24 @@
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::util::OptionLog;
-use hayro_syntax::object::{Object, ObjectLike};
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3, SUBTYPE, W, W2};
+use hayro_syntax::object::dict::keys::{
+    CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3,
+    SUBTYPE, W, W2,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::{
     CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, IDENTITY_V, OPEN_TYPE,
 };
 use hayro_syntax::object::stream::Stream;
+use hayro_syntax::object::{Object, ObjectLike};
+use hayro_syntax::reader::Readable;
 use kurbo::{BezPath, Vec2};
 use log::warn;
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use hayro_syntax::reader::Readable;
 
 #[derive(Debug)]
 pub(crate) struct Type0Font {
@@ -111,7 +114,7 @@ impl Type0Font {
         } else {
             if let Some([w, _, _]) = self.widths2.get(&code) {
                 Vec2::new(0.0, *w as f64)
-            }   else {
+            } else {
                 Vec2::new(0.0, self.dw2.1 as f64)
             }
         }
@@ -135,7 +138,7 @@ impl Type0Font {
         } else {
             if let Some([_, v1, v2]) = self.widths2.get(&code) {
                 Vec2::new(-*v1 as f64, -*v2 as f64)
-            }   else {
+            } else {
                 Vec2::new(
                     -self.horizontal_width(code) as f64 / 2.0,
                     -self.dw2.0 as f64,
@@ -277,7 +280,7 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
             }
         } else if let Some(range) = second.cast::<Array>().ok() {
             let mut iter = range.iter::<f32>();
-            
+
             while let Some(w) = iter.next() {
                 let v1 = iter.next()?;
                 let v2 = iter.next()?;
@@ -289,4 +292,3 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
 
     Some(map)
 }
-

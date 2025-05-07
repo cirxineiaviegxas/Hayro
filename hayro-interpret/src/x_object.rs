@@ -4,7 +4,7 @@ use crate::interpret;
 use hayro_syntax::content::ops::XObject;
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BBOX, FONT_MATRIX, GROUP, REF, RESOURCES, SUBTYPE};
+use hayro_syntax::object::dict::keys::{BBOX, FONT_MATRIX, GROUP, MATRIX, REF, RESOURCES, SUBTYPE};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
@@ -35,7 +35,7 @@ impl<'a> FormXObject<'a> {
         let resources = dict.get::<Dict>(RESOURCES).unwrap_or_default();
 
         let matrix = Affine::new(
-            dict.get::<[f64; 6]>(FONT_MATRIX)
+            dict.get::<[f64; 6]>(MATRIX)
                 .unwrap_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
         );
         let bbox = dict.get::<[f32; 4]>(BBOX).unwrap();

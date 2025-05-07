@@ -78,6 +78,11 @@ impl ColorSpace {
             DEVICE_GRAY => Some(ColorSpace::DeviceGray),
             DEVICE_CMYK => Some(ColorSpace::DeviceCmyk),
             CAL_CMYK => Some(ColorSpace::DeviceCmyk),
+            PATTERN => {
+                warn!("pattern color spaces are not supported yet");
+
+                Some(ColorSpace::DeviceGray)
+            }
             _ => None,
         }
     }

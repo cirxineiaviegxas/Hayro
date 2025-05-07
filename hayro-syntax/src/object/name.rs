@@ -146,6 +146,7 @@ pub mod names {
     name!(OPEN_TYPE, b"OpenType");
     name!(PAGE, b"Page");
     name!(PAGES, b"Pages");
+    name!(PATTERN, b"Pattern");
     name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
     name!(TYPE0, b"Type0");
     name!(TYPE1, b"Type1");
