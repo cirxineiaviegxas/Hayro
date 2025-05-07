@@ -46,12 +46,12 @@ impl Device for Renderer {
         self.0.fill_path(path);
     }
 
-    fn push_clip(&mut self, clip: &BezPath, fill: Fill) {
+    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: u8) {
         self.0.set_fill_rule(fill);
-        self.0.push_clip_layer(clip);
+        self.0.push_layer(Some(clip), None, Some(opacity), None)
     }
 
-    fn pop_clip(&mut self) {
+    fn pop(&mut self) {
         self.0.pop_layer();
     }
 }

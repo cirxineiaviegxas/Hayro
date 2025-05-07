@@ -26,7 +26,7 @@ impl<'a> FormXObject<'a> {
         if dict.get::<Name>(SUBTYPE).unwrap().as_str() != "Form" {
             panic!("only form x object are currently supported.")
         }
-        
+
         if dict.contains_key(REF) {
             warn!("reference xobjects are not supported.");
         }
@@ -59,7 +59,7 @@ pub(crate) fn draw_xobject<'a>(
     context.save_state();
     context.pre_concat_affine(x_object.matrix);
     device.set_transform(context.get().affine);
-    device.push_clip(
+    device.push_layer(
         &Rect::new(
             x_object.bbox[0] as f64,
             x_object.bbox[1] as f64,
@@ -68,8 +68,9 @@ pub(crate) fn draw_xobject<'a>(
         )
         .to_path(0.1),
         Fill::NonZero,
+        (context.get().fill_alpha * 255.0 + 0.5) as u8,
     );
     interpret(iter, &x_object.resources, context, device);
-    device.pop_clip();
+    device.pop();
     context.restore_state();
 }

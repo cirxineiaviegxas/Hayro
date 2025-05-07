@@ -8,8 +8,7 @@ fn main() {
     }
 
     let file =
-        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/integration_matplotlib.pdf")
-            .unwrap();
+        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/pdftc_010k_1495.pdf").unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 

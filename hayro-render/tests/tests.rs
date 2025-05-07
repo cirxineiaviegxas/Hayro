@@ -324,3 +324,11 @@ fn text_rendering_clipping() {
 fn text_rendering_stroking_clipping() {
     run_test("text_rendering_stroking_clipping", None);
 }
+#[test]
+fn xobject_1() {
+    run_test("xobject_1", None);
+}
+#[test]
+fn xobject_with_fill_opacity() {
+    run_test("xobject_with_fill_opacity", None);
+}

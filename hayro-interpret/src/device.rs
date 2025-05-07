@@ -8,8 +8,8 @@ pub trait Device {
     fn set_paint(&mut self, color: Color);
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps);
     fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps);
-    fn push_clip(&mut self, clip: &BezPath, fill: Fill);
-    fn pop_clip(&mut self);
+    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opactity: u8);
+    fn pop(&mut self);
 }
 
 pub(crate) enum ReplayInstruction {
@@ -27,9 +27,10 @@ pub(crate) enum ReplayInstruction {
         path: BezPath,
         fill_props: FillProps,
     },
-    PushClip {
+    PushLayer {
         clip: BezPath,
         fill: Fill,
+        opacity: u8,
     },
     PopClip,
 }

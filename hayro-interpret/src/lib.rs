@@ -58,7 +58,7 @@ pub fn interpret<'a, 'b>(
     let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
     let color_spaces = resources.get::<Dict>(COLOR_SPACE).unwrap_or_default();
     let x_objects = resources.get::<Dict>(X_OBJECT).unwrap_or_default();
-    
+
     save_sate(context);
 
     for op in ops {
@@ -212,7 +212,7 @@ pub fn interpret<'a, 'b>(
             TypedOperation::EndPath(_) => {
                 if let Some(clip) = *context.clip() {
                     device.set_transform(context.get().affine);
-                    device.push_clip(context.path(), clip);
+                    device.push_layer(context.path(), clip, 255);
 
                     *(context.clip_mut()) = None;
                     context.get_mut().n_clips += 1;
@@ -319,7 +319,7 @@ pub fn interpret<'a, 'b>(
 
                 if has_outline {
                     device.set_transform(context.get().affine);
-                    device.push_clip(&context.get().text_state.clip_paths, Fill::NonZero);
+                    device.push_layer(&context.get().text_state.clip_paths, Fill::NonZero, 255);
                     context.get_mut().n_clips += 1;
                 }
 
@@ -420,7 +420,7 @@ fn restore_state(ctx: &mut Context, device: &mut impl Device) {
     let target_clips = ctx.get().n_clips;
 
     while num_clips > target_clips {
-        device.pop_clip();
+        device.pop();
         num_clips -= 1;
     }
 }
@@ -627,8 +627,12 @@ fn run_t3_instructions(
             ReplayInstruction::FillPath { path, fill_props } => {
                 device.fill_path(path, fill_props);
             }
-            ReplayInstruction::PushClip { clip, fill } => device.push_clip(clip, *fill),
-            ReplayInstruction::PopClip => device.pop_clip(),
+            ReplayInstruction::PushLayer {
+                clip,
+                fill,
+                opacity,
+            } => device.push_layer(clip, *fill, *opacity),
+            ReplayInstruction::PopClip => device.pop(),
         }
     }
 }
