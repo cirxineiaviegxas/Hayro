@@ -56,11 +56,15 @@ use crate::run_test;
 #[test] fn image_rgb8_icc() { run_test("image_rgb8_icc", None); }
 #[test] fn image_rgb8_icc_jpg() { run_test("image_rgb8_icc_jpg", None); }
 #[test] fn image_rgb8_jpg() { run_test("image_rgb8_jpg", None); }
+#[test] fn image_rgba16() { run_test("image_rgba16", None); }
+#[test] fn image_rgba8() { run_test("image_rgba8", None); }
+#[test] fn image_rgba8_icc() { run_test("image_rgba8_icc", None); }
 #[test] fn integration_coat_of_arms() { run_test("integration_coat_of_arms", None); }
 #[test] fn integration_diagram() { run_test("integration_diagram", None); }
 #[test] fn integration_matplotlib_2() { run_test("integration_matplotlib_2", None); }
 #[test] fn issue_clipping_panic() { run_test("issue_clipping_panic", None); }
 #[test] fn issue_cubic_start_end() { run_test("issue_cubic_start_end", None); }
+#[test] fn issue_predictor_with_null() { run_test("issue_predictor_with_null", None); }
 #[test] fn issue_scaled_glyph() { run_test("issue_scaled_glyph", None); }
 #[test] fn page_media_box_bottom_left() { run_test("page_media_box_bottom_left", None); }
 #[test] fn page_media_box_bottom_right() { run_test("page_media_box_bottom_right", None); }

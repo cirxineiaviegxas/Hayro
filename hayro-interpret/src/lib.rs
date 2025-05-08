@@ -212,7 +212,7 @@ pub fn interpret<'a, 'b>(
             TypedOperation::EndPath(_) => {
                 if let Some(clip) = *context.clip() {
                     device.set_transform(context.get().affine);
-                    device.push_layer(context.path(), clip, 255);
+                    device.push_layer(context.path(), clip, 1.0);
 
                     *(context.clip_mut()) = None;
                     context.get_mut().n_clips += 1;
@@ -319,7 +319,7 @@ pub fn interpret<'a, 'b>(
 
                 if has_outline {
                     device.set_transform(context.get().affine);
-                    device.push_layer(&context.get().text_state.clip_paths, Fill::NonZero, 255);
+                    device.push_layer(&context.get().text_state.clip_paths, Fill::NonZero, 1.0);
                     context.get_mut().n_clips += 1;
                 }
 

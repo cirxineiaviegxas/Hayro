@@ -43,7 +43,7 @@ impl Device for Type3GlyphDescription {
         })
     }
 
-    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: u8) {
+    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: f32) {
         self.0.push(ReplayInstruction::PushLayer {
             clip: clip.clone(),
             fill,

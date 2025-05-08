@@ -8,8 +8,8 @@ use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, INTERPOLATE, MATRIX, RESOURCES, SUBTYPE,
-    WIDTH,
+    BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, INTERPOLATE, MATRIX, RESOURCES, SMASK,
+    SUBTYPE, WIDTH,
 };
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
@@ -94,7 +94,7 @@ pub(crate) fn draw_form_xobject<'a>(
         )
         .to_path(0.1),
         Fill::NonZero,
-        (context.get().fill_alpha * 255.0 + 0.5) as u8,
+        context.get().fill_alpha,
     );
     interpret(iter, &x_object.resources, context, device);
     device.pop();
@@ -131,6 +131,7 @@ pub struct ImageXObject<'a> {
     color_space: ColorSpace,
     interpolate: bool,
     decode: Vec<(f32, f32)>,
+    dict: Dict<'a>,
     bits_per_component: u8,
 }
 
@@ -159,11 +160,26 @@ impl<'a> ImageXObject<'a> {
             color_space,
             interpolate,
             decode,
+            dict: dict.clone(),
             bits_per_component,
         }
     }
 
     pub fn as_rgba8(&self) -> Vec<u8> {
+        let s_mask = self
+            .dict
+            .get::<Stream>(SMASK)
+            .map(|s| ImageXObject::new(&s).decode_raw())
+            .unwrap_or(vec![1.0; self.width as usize * self.height as usize]);
+
+        self.decode_raw()
+            .chunks(self.color_space.components() as usize)
+            .zip(s_mask)
+            .flat_map(|(v, alpha)| self.color_space.to_rgba(v, alpha).to_rgba8().to_u8_array())
+            .collect::<Vec<_>>()
+    }
+
+    pub fn decode_raw(&self) -> Vec<f32> {
         let interpolate =
             |n: f32, d_min: f32, d_max: f32| d_min + (n * (d_max - d_min) / (2.0f32.powi(8) - 1.0));
 
@@ -195,8 +211,5 @@ impl<'a> ImageXObject<'a> {
         }
 
         decoded_arr
-            .chunks(self.color_space.components() as usize)
-            .flat_map(|v| self.color_space.to_rgba(v, 1.0).to_rgba8().to_u8_array())
-            .collect::<Vec<_>>()
     }
 }

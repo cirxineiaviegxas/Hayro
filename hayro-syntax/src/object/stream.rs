@@ -54,7 +54,14 @@ impl<'a> Stream<'a> {
             let mut current = Cow::Borrowed(self.data);
 
             for i in 0..filters.len() {
-                let new = apply_filter(current.as_ref(), filters[i], params.get(i).and_then(|p| p.clone().cast::<Dict>().ok()).as_ref())?;
+                let new = apply_filter(
+                    current.as_ref(),
+                    filters[i],
+                    params
+                        .get(i)
+                        .and_then(|p| p.clone().cast::<Dict>().ok())
+                        .as_ref(),
+                )?;
                 current = Cow::Owned(new);
             }
 

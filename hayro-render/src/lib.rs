@@ -10,11 +10,12 @@ use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 use vello_api::color::palette::css::WHITE;
+use vello_api::color::{AlphaColor, PremulRgba8, Rgba8, Srgb};
 use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Rect};
 use vello_api::paint::Image;
 use vello_api::peniko::{Fill, ImageQuality};
-use vello_cpu::{Pixmap, RenderContext};
+use vello_cpu::{Pixmap, RenderContext, RenderMode};
 
 struct Renderer(RenderContext);
 
@@ -48,21 +49,27 @@ impl Device for Renderer {
         self.0.fill_path(path);
     }
 
-    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: u8) {
+    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: f32) {
         self.0.set_fill_rule(fill);
         self.0.push_layer(Some(clip), None, Some(opacity), None)
     }
 
     fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32) {
-        let mut pixmap = Pixmap::new(width as u16, height as u16);
-        pixmap.buf = image_data;
+        let premul = image_data
+            .chunks_exact(4)
+            .map(|d| {
+                AlphaColor::<Srgb>::from_rgba8(d[0], d[1], d[2], d[3])
+                    .premultiply()
+                    .to_rgba8()
+            })
+            .collect();
+        let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
 
         let image = Image {
             pixmap: Arc::new(pixmap),
             x_extend: Default::default(),
             y_extend: Default::default(),
             quality: ImageQuality::Low,
-            transform: Default::default(),
         };
 
         self.0.set_paint(image);
@@ -128,7 +135,9 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     );
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
-    device.0.render_to_pixmap(&mut pixmap);
+    device
+        .0
+        .render_to_pixmap(&mut pixmap, RenderMode::OptimizeSpeed);
     pixmap
 }
 
@@ -150,7 +159,7 @@ pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -
             let encoder = PngEncoder::new(cursor);
             encoder
                 .write_image(
-                    pixmap.data(),
+                    pixmap.data_as_u8_slice(),
                     pixmap.width() as u32,
                     pixmap.height() as u32,
                     ExtendedColorType::Rgba8,
