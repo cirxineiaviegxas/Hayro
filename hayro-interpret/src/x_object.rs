@@ -164,9 +164,8 @@ impl<'a> ImageXObject<'a> {
     }
 
     pub fn as_rgba8(&self) -> Vec<u8> {
-        let interpolate = |n: f32, d_min: f32, d_max: f32| {
-            d_min + (n * (d_max - d_min) / (2.0f32.powi(8) - 1.0))
-        };
+        let interpolate =
+            |n: f32, d_min: f32, d_max: f32| d_min + (n * (d_max - d_min) / (2.0f32.powi(8) - 1.0));
 
         let adjusted_components = match self.bits_per_component {
             1 | 2 | 4 => {

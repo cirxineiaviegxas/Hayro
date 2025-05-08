@@ -15,6 +15,7 @@ zune-jpeg = { workspace = true }
 miniz_oxide = { workspace = true }
 snafu = { workspace = true }
 itertools = { workspace = true }
+jpeg-decoder = "0.3.1"
 
 [dev-dependencies]
 walkdir = "2.5.0"

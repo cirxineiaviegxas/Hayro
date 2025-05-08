@@ -1,8 +1,34 @@
 use crate::object::dict::Dict;
+use zune_jpeg::zune_core::colorspace::ColorSpace;
+use zune_jpeg::zune_core::options::DecoderOptions;
 
 pub fn decode(data: &[u8], _: Option<&Dict>) -> Option<Vec<u8>> {
     // TODO: Handle the color transform attribute (also in JPEG data)
     let mut decoder = zune_jpeg::JpegDecoder::new(data);
     decoder.decode_headers().ok()?;
-    decoder.decode().ok()
+
+    let out_colorspace = match decoder.get_input_colorspace().unwrap() {
+        ColorSpace::RGB | ColorSpace::RGBA | ColorSpace::YCbCr => ColorSpace::RGB,
+        ColorSpace::Luma | ColorSpace::LumaA => ColorSpace::Luma,
+        ColorSpace::CMYK => ColorSpace::CMYK,
+        ColorSpace::YCCK => ColorSpace::YCCK,
+        _ => ColorSpace::RGB,
+    };
+
+    decoder.set_options(DecoderOptions::default().jpeg_set_out_colorspace(out_colorspace));
+    let mut decoded = decoder.decode().unwrap();
+
+    if out_colorspace == ColorSpace::YCCK {
+        // See <https://github.com/mozilla/pdf.js/blob/69595a29192b7704733404a42a2ebb537601117b/src/core/jpg.js#L1331>
+        for c in decoded.chunks_mut(4) {
+            let y = c[0] as f32;
+            let cb = c[1] as f32;
+            let cr = c[2] as f32;
+            c[0] = (434.456 - y - 1.402 * cr) as u8;
+            c[1] = (119.541 - y + 0.344 * cb + 0.714 * cr) as u8;
+            c[2] = (481.816 - y - 1.772 * cb) as u8;
+        }
+    }
+
+    Some(decoded)
 }

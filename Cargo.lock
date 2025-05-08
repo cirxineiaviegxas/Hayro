@@ -578,6 +578,7 @@ dependencies = [
  "bitreader",
  "hex",
  "itertools 0.14.0",
+ "jpeg-decoder",
  "kurbo",
  "log",
  "miniz_oxide",
