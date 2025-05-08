@@ -6,6 +6,7 @@ use std::cmp::max;
 use std::ops::RangeInclusive;
 use std::path::PathBuf;
 
+#[rustfmt::skip]
 mod tests;
 
 const REPLACE: Option<&str> = option_env!("REPLACE");
