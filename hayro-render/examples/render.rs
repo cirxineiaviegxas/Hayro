@@ -8,7 +8,7 @@ fn main() {
     }
 
     let file =
-        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/image_rgb8.pdf").unwrap();
+        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/image_rgb16_png.pdf").unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 
