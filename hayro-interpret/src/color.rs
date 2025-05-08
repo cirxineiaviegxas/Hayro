@@ -1,11 +1,11 @@
 use crate::util::OptionLog;
-use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, P, RANGE, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
+use hayro_syntax::object::{Object, string};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::{AlphaColor, Srgb};
@@ -22,6 +22,7 @@ pub(crate) enum ColorSpace {
     DeviceCmyk,
     DeviceGray,
     DeviceRgb,
+    Indexed(Indexed),
     ICCColor(ICCProfile),
     CalGray(CalGray),
     CalRgb(CalRgb),
@@ -39,7 +40,7 @@ impl ColorSpace {
         if let Ok(name) = object.clone().cast::<Name>() {
             return Self::new_from_name(name.clone());
         } else if let Ok(color_array) = object.clone().cast::<Array>() {
-            let mut iter = color_array.iter::<Object>();
+            let mut iter = color_array.clone().iter::<Object>();
             let name = iter.next()?.cast::<Name>().ok()?;
 
             match name.as_ref() {
@@ -65,6 +66,7 @@ impl ColorSpace {
                     let lab_dict = iter.next()?.cast::<Dict>().ok()?;
                     return Some(ColorSpace::Lab(Lab::new(&lab_dict)?));
                 }
+                INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
                 _ => return None,
             }
         }
@@ -100,6 +102,7 @@ impl ColorSpace {
                 (l.0.range[0], l.0.range[1]),
                 (l.0.range[2], l.0.range[3]),
             ],
+            ColorSpace::Indexed(_) => vec![(0.0, 255.0)],
         }
     }
 
@@ -119,6 +122,7 @@ impl ColorSpace {
             ColorSpace::CalGray(_) => components.push(0.0),
             ColorSpace::CalRgb(_) => components.extend([0.0, 0.0, 0.0]),
             ColorSpace::Lab(_) => components.extend([0.0, 0.0, 0.0]),
+            ColorSpace::Indexed(_) => components.push(0.0),
         }
     }
 
@@ -131,6 +135,7 @@ impl ColorSpace {
             ColorSpace::CalGray(_) => 1,
             ColorSpace::CalRgb(_) => 3,
             ColorSpace::Lab(_) => 3,
+            ColorSpace::Indexed(_) => 1,
         }
     }
 
@@ -168,6 +173,7 @@ impl ColorSpace {
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
+            ColorSpace::Indexed(i) => i.to_rgb(c[0], opacity),
         }
     }
 }
@@ -455,6 +461,67 @@ impl Lab {
     }
 }
 
+#[derive(Debug)]
+struct IndexedRepr {
+    values: Vec<Vec<f32>>,
+    hival: u8,
+    base: Box<ColorSpace>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Indexed(Arc<IndexedRepr>);
+
+impl Indexed {
+    pub fn new(array: &Array) -> Option<Self> {
+        let mut iter = array.iter::<Object>();
+        // Skip name
+        let _ = iter.next()?;
+        let base_color_space = ColorSpace::new(iter.next()?);
+        let hival = iter.next()?.cast::<u8>().ok()?;
+
+        let values = {
+            let next = iter.next()?;
+
+            let data = next
+                .clone()
+                .cast::<Stream>()
+                .ok()
+                .and_then(|s| s.decoded().ok())
+                .or_else(|| next.clone().cast::<string::String>().ok().map(|s| s.get()))
+                .unwrap();
+
+            let num_components = base_color_space.components();
+
+            let mut byte_iter = data.iter().copied();
+
+            let mut vals = vec![];
+            for _ in 0..=hival {
+                let mut temp = vec![];
+
+                for _ in 0..num_components {
+                    // TODO: That's probably not the proper way to scale
+                    temp.push(byte_iter.next()? as f32 / 255.0)
+                }
+
+                vals.push(temp);
+            }
+
+            vals
+        };
+
+        Some(Self(Arc::new(IndexedRepr {
+            values,
+            hival,
+            base: Box::new(base_color_space),
+        })))
+    }
+
+    pub fn to_rgb(&self, val: f32, opacity: f32) -> AlphaColor<Srgb> {
+        let idx = (val.clamp(0.0, self.0.hival as f32) + 0.5) as usize;
+        self.0.base.to_rgba(self.0.values[idx].as_slice(), opacity)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum ColorType {
     DeviceRgb([f32; 3]),
@@ -464,6 +531,7 @@ pub enum ColorType {
     CalGray(CalGray, f32),
     CalRgb(CalRgb, [f32; 3]),
     Lab(Lab, [f32; 3]),
+    Indexed(Indexed, f32),
 }
 
 struct ICCColorRepr {
@@ -559,6 +627,7 @@ impl Color {
             ColorSpace::CalGray(cal) => ColorType::CalGray(cal, c[0]),
             ColorSpace::CalRgb(cal) => ColorType::CalRgb(cal, [c[0], c[1], c[2]]),
             ColorSpace::Lab(lab) => ColorType::Lab(lab, [c[0], c[1], c[2]]),
+            ColorSpace::Indexed(i) => ColorType::Indexed(i, c[0]),
         };
 
         Self {
@@ -606,6 +675,7 @@ impl Color {
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
+            ColorType::Indexed(i, c) => i.to_rgb(*c, self.opacity),
         }
     }
 }

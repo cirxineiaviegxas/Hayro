@@ -6,6 +6,7 @@ use crate::run_test;
 #[test] fn color_space_calrgb() { run_test("color_space_calrgb", Some(0..=8)); }
 #[test] fn color_space_icc_gray() { run_test("color_space_icc_gray", None); }
 #[test] fn color_space_icc_srgb() { run_test("color_space_icc_srgb", None); }
+#[test] fn color_space_indexed() { run_test("color_space_indexed", None); }
 #[test] fn color_space_lab() { run_test("color_space_lab", None); }
 #[test] fn font_cid_1() { run_test("font_cid_1", None); }
 #[test] fn font_cid_2() { run_test("font_cid_2", Some(0..=0)); }
