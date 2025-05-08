@@ -48,13 +48,13 @@ impl<'a> Stream<'a> {
             let params = self
                 .dict
                 .get::<Array>(DECODE_PARMS)
-                .map(|a| a.iter::<Dict>().collect())
+                .map(|a| a.iter::<Object>().collect())
                 .unwrap_or(vec![]);
 
             let mut current = Cow::Borrowed(self.data);
 
             for i in 0..filters.len() {
-                let new = apply_filter(current.as_ref(), filters[i], params.get(i))?;
+                let new = apply_filter(current.as_ref(), filters[i], params.get(i).and_then(|p| p.clone().cast::<Dict>().ok()).as_ref())?;
                 current = Cow::Owned(new);
             }
 
