@@ -1,16 +1,36 @@
+use crate::color::ColorSpace;
 use crate::context::Context;
 use crate::device::Device;
 use crate::interpret;
-use hayro_syntax::content::ops::XObject;
 use hayro_syntax::content::{TypedIter, UntypedIter};
+use hayro_syntax::object::Object;
+use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BBOX, FONT_MATRIX, GROUP, MATRIX, REF, RESOURCES, SUBTYPE};
+use hayro_syntax::object::dict::keys::{
+    BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, INTERPOLATE, MATRIX, RESOURCES, SUBTYPE,
+    WIDTH,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
-use log::warn;
 use peniko::Fill;
 use std::borrow::Cow;
+
+pub enum XObject<'a> {
+    FormXObject(FormXObject<'a>),
+    ImageXObject(ImageXObject<'a>),
+}
+
+impl<'a> XObject<'a> {
+    pub fn new(stream: &Stream<'a>) -> Self {
+        let dict = stream.dict();
+        match dict.get::<Name>(SUBTYPE).unwrap().as_ref() {
+            b"Image" => Self::ImageXObject(ImageXObject::new(stream)),
+            b"Form" => Self::FormXObject(FormXObject::new(stream)),
+            _ => unimplemented!(),
+        }
+    }
+}
 
 pub struct FormXObject<'a> {
     pub decoded: Cow<'a, [u8]>,
@@ -20,16 +40,8 @@ pub struct FormXObject<'a> {
 }
 
 impl<'a> FormXObject<'a> {
-    pub fn new(stream: &Stream<'a>) -> Self {
+    fn new(stream: &Stream<'a>) -> Self {
         let dict = stream.dict();
-
-        if dict.get::<Name>(SUBTYPE).unwrap().as_str() != "Form" {
-            panic!("only form x object are currently supported.")
-        }
-
-        if dict.contains_key(REF) {
-            warn!("reference xobjects are not supported.");
-        }
 
         let decoded = stream.decoded().unwrap();
         let resources = dict.get::<Dict>(RESOURCES).unwrap_or_default();
@@ -50,6 +62,19 @@ impl<'a> FormXObject<'a> {
 }
 
 pub(crate) fn draw_xobject<'a>(
+    x_object: &XObject<'a>,
+    context: &mut Context<'a>,
+    device: &mut impl Device,
+) {
+    match x_object {
+        XObject::FormXObject(f) => draw_form_xobject(f, context, device),
+        XObject::ImageXObject(i) => {
+            println!("reached")
+        }
+    }
+}
+
+pub(crate) fn draw_form_xobject<'a>(
     x_object: &FormXObject<'a>,
     context: &mut Context<'a>,
     device: &mut impl Device,
@@ -73,4 +98,43 @@ pub(crate) fn draw_xobject<'a>(
     interpret(iter, &x_object.resources, context, device);
     device.pop();
     context.restore_state();
+}
+
+pub struct ImageXObject<'a> {
+    pub decoded: Cow<'a, [u8]>,
+    width: f32,
+    height: f32,
+    color_space: ColorSpace,
+    interpolate: bool,
+    decode: Vec<(f32, f32)>,
+    bits_per_component: u8,
+}
+
+impl<'a> ImageXObject<'a> {
+    fn new(stream: &Stream<'a>) -> Self {
+        let dict = stream.dict();
+
+        let decoded = stream.decoded().unwrap();
+        let interpolate = dict.get::<bool>(INTERPOLATE).unwrap_or(false);
+        let bits_per_component = dict.get::<u8>(BITS_PER_COMPONENT).unwrap();
+        let decode = {
+            let arr = dict.get::<Array>(DECODE).unwrap_or_default();
+
+            let mut vals = arr.iter::<f32>().collect::<Vec<_>>();
+            vals.chunks(2).map(|v| (v[0], v[1])).collect::<Vec<_>>()
+        };
+        let color_space = ColorSpace::new(dict.get::<Object>(COLORSPACE).unwrap());
+        let width = dict.get::<f32>(WIDTH).unwrap();
+        let height = dict.get::<f32>(HEIGHT).unwrap();
+
+        Self {
+            decoded,
+            width,
+            height,
+            color_space,
+            interpolate,
+            decode,
+            bits_per_component,
+        }
+    }
 }
