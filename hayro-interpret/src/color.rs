@@ -2,7 +2,7 @@ use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
+use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, P, RANGE, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -87,6 +87,22 @@ impl ColorSpace {
         }
     }
 
+    pub fn default_decode_arr(&self) -> Vec<(f32, f32)> {
+        match self {
+            ColorSpace::DeviceCmyk => vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
+            ColorSpace::DeviceGray => vec![(0.0, 1.0)],
+            ColorSpace::DeviceRgb => vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
+            ColorSpace::ICCColor(i) => vec![(0.0, 1.0); i.0.number_components],
+            ColorSpace::CalGray(_) => vec![(0.0, 1.0)],
+            ColorSpace::CalRgb(_) => vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
+            ColorSpace::Lab(l) => vec![
+                (0.0, 100.0),
+                (l.0.range[0], l.0.range[1]),
+                (l.0.range[2], l.0.range[3]),
+            ],
+        }
+    }
+
     pub fn set_initial_color(&self, components: &mut ColorComponents) {
         components.truncate(0);
 
@@ -103,6 +119,55 @@ impl ColorSpace {
             ColorSpace::CalGray(_) => components.push(0.0),
             ColorSpace::CalRgb(_) => components.extend([0.0, 0.0, 0.0]),
             ColorSpace::Lab(_) => components.extend([0.0, 0.0, 0.0]),
+        }
+    }
+
+    pub fn components(&self) -> u8 {
+        match self {
+            ColorSpace::DeviceCmyk => 4,
+            ColorSpace::DeviceGray => 1,
+            ColorSpace::DeviceRgb => 3,
+            ColorSpace::ICCColor(icc) => icc.0.number_components as u8,
+            ColorSpace::CalGray(_) => 1,
+            ColorSpace::CalRgb(_) => 3,
+            ColorSpace::Lab(_) => 3,
+        }
+    }
+
+    pub fn to_rgba(&self, c: &[f32], opacity: f32) -> AlphaColor<Srgb> {
+        match &self {
+            ColorSpace::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], opacity]),
+            ColorSpace::DeviceGray => AlphaColor::new([c[0], c[0], c[0], opacity]),
+            ColorSpace::DeviceCmyk => {
+                let opacity = u8_to_f32(opacity);
+                let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
+            ColorSpace::ICCColor(icc) => {
+                let opacity = u8_to_f32(opacity);
+                let srgb = icc.to_rgba(&c[..]);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
+            ColorSpace::CalGray(cal) => {
+                let opacity = u8_to_f32(opacity);
+                let srgb = cal.to_rgb(c[0]);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
+            ColorSpace::CalRgb(cal) => {
+                let opacity = u8_to_f32(opacity);
+                let srgb = cal.to_rgb([c[0], c[1], c[2]]);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
+            ColorSpace::Lab(lab) => {
+                let opacity = u8_to_f32(opacity);
+                let srgb = lab.to_rgb([c[0], c[1], c[2]]);
+
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
+            }
         }
     }
 }
@@ -131,7 +196,7 @@ impl CalGray {
         })))
     }
 
-    pub(crate) fn to_srgb(&self, c: f32) -> [u8; 3] {
+    pub(crate) fn to_rgb(&self, c: f32) -> [u8; 3] {
         let g = self.0.gamma;
         let (_xw, yw, _zw) = {
             let wp = self.0.white_point;
@@ -289,7 +354,7 @@ impl CalRgb {
         Self::matrix_product(&Self::BRADFORD_SCALE_INVERSE_MATRIX, &lms_d65)
     }
 
-    pub(crate) fn to_srgb(&self, mut c: [f32; 3]) -> [u8; 3] {
+    pub(crate) fn to_rgb(&self, mut c: [f32; 3]) -> [u8; 3] {
         for i in &mut c {
             *i = i.clamp(0.0, 1.0);
         }
@@ -357,7 +422,7 @@ impl Lab {
         }
     }
 
-    pub(crate) fn to_srgb(&self, c: [f32; 3]) -> [u8; 3] {
+    pub(crate) fn to_rgb(&self, c: [f32; 3]) -> [u8; 3] {
         let LabRepr { white_point, .. } = &*self.0;
 
         let (l, a, b) = (c[0], c[1], c[2]);
@@ -449,7 +514,7 @@ impl ICCProfile {
         })))
     }
 
-    pub(crate) fn to_srgb(&self, c: &[f32]) -> [u8; 3] {
+    pub(crate) fn to_rgba(&self, c: &[f32]) -> [u8; 3] {
         let mut srgb = [0, 0, 0];
 
         match self.0.number_components {
@@ -503,13 +568,13 @@ impl Color {
     }
 
     pub fn to_rgba(&self) -> AlphaColor<Srgb> {
-        // Conversions according to section 10.4 in the spec.
         match &self.color_type {
+            // TODO: Deduplicate
             ColorType::DeviceRgb(r) => AlphaColor::new([r[0], r[1], r[2], self.opacity]),
             ColorType::DeviceGray(g) => AlphaColor::new([*g, *g, *g, self.opacity]),
             ColorType::DeviceCmyk(c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = CMYK_TRANSFORM.to_srgb(&c[..]);
+                let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
 
                 let res = AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity);
 
@@ -517,7 +582,7 @@ impl Color {
             }
             ColorType::Icc(icc, c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = icc.to_srgb(&c[..]);
+                let srgb = icc.to_rgba(&c[..]);
 
                 let res = AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity);
 
@@ -525,19 +590,19 @@ impl Color {
             }
             ColorType::CalGray(cal, c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = cal.to_srgb(*c);
+                let srgb = cal.to_rgb(*c);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorType::CalRgb(cal, c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = cal.to_srgb(*c);
+                let srgb = cal.to_rgb(*c);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorType::Lab(lab, c) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = lab.to_srgb(*c);
+                let srgb = lab.to_rgb(*c);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }

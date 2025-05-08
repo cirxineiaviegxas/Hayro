@@ -8,10 +8,12 @@ use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
+use std::sync::Arc;
 use vello_api::color::palette::css::WHITE;
 use vello_api::kurbo;
 use vello_api::kurbo::{Affine, BezPath, Rect};
-use vello_api::peniko::Fill;
+use vello_api::paint::Image;
+use vello_api::peniko::{Fill, ImageQuality};
 use vello_cpu::{Pixmap, RenderContext};
 
 struct Renderer(RenderContext);
@@ -49,6 +51,23 @@ impl Device for Renderer {
     fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: u8) {
         self.0.set_fill_rule(fill);
         self.0.push_layer(Some(clip), None, Some(opacity), None)
+    }
+
+    fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32) {
+        let mut pixmap = Pixmap::new(width as u16, height as u16);
+        pixmap.buf = image_data;
+
+        let image = Image {
+            pixmap: Arc::new(pixmap),
+            x_extend: Default::default(),
+            y_extend: Default::default(),
+            quality: ImageQuality::Low,
+            transform: Default::default(),
+        };
+
+        self.0.set_paint(image);
+        self.0
+            .fill_rect(&Rect::new(0.0, 0.0, width as f64, height as f64));
     }
 
     fn pop(&mut self) {

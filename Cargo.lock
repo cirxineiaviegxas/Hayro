@@ -542,6 +542,7 @@ name = "hayro-interpret"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.9.0",
+ "bitreader",
  "hayro-syntax",
  "kurbo",
  "log",

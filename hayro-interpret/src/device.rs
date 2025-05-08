@@ -9,6 +9,7 @@ pub trait Device {
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps);
     fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps);
     fn push_layer(&mut self, clip: &BezPath, fill: Fill, opactity: u8);
+    fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32);
     fn pop(&mut self);
 }
 
