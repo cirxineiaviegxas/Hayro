@@ -5,7 +5,7 @@ use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{FONT_DESCRIPTOR, FONT_FILE, FONT_FILE3};
+use hayro_syntax::object::dict::keys::{FONT_DESC, FONT_FILE, FONT_FILE3};
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
 use skrifa::{GlyphId, MetadataProvider};
@@ -71,7 +71,7 @@ struct Standard {
 
 impl Standard {
     pub fn new(dict: &Dict) -> Standard {
-        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap_or_default();
+        let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
         let base_font = select_standard_font(dict)
             .warn_none("couldnt find appropriate font")
             .unwrap_or(StandardFont::TimesRoman);
@@ -140,13 +140,13 @@ impl Standard {
 }
 
 fn is_cff(dict: &Dict) -> bool {
-    dict.get::<Dict>(FONT_DESCRIPTOR)
+    dict.get::<Dict>(FONT_DESC)
         .map(|dict| dict.contains_key(FONT_FILE3))
         .unwrap_or(false)
 }
 
 fn is_type1(dict: &Dict) -> bool {
-    dict.get::<Dict>(FONT_DESCRIPTOR)
+    dict.get::<Dict>(FONT_DESC)
         .map(|dict| dict.contains_key(FONT_FILE))
         .unwrap_or(false)
 }
@@ -166,7 +166,7 @@ struct Type1 {
 
 impl Type1 {
     pub fn new(dict: &Dict) -> Self {
-        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
+        let descriptor = dict.get::<Dict>(FONT_DESC).unwrap();
         let data = descriptor.get::<Stream>(FONT_FILE).unwrap();
         let font = Type1FontBlob::new(Arc::new(data.decoded().unwrap().to_vec()));
 
@@ -247,7 +247,7 @@ struct Cff {
 
 impl Cff {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let descriptor = dict.get::<Dict>(FONT_DESCRIPTOR).unwrap();
+        let descriptor = dict.get::<Dict>(FONT_DESC).unwrap();
         let data = descriptor.get::<Stream>(FONT_FILE3).unwrap();
         let font = CffFontBlob::new(Arc::new(data.decoded().unwrap().to_vec()))?;
 

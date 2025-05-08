@@ -3,7 +3,7 @@ use crate::util::OptionLog;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESCRIPTOR, FONT_FILE2, FONT_FILE3,
+    CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESC, FONT_FILE2, FONT_FILE3,
     SUBTYPE, W, W2,
 };
 use hayro_syntax::object::name::Name;
@@ -41,7 +41,7 @@ impl Type0Font {
         let horizontal = encoding.as_ref() == IDENTITY_H;
 
         let descendant_font = dict.get::<Array>(DESCENDANT_FONTS)?.iter::<Dict>().next()?;
-        let font_descriptor = descendant_font.get::<Dict>(FONT_DESCRIPTOR)?;
+        let font_descriptor = descendant_font.get::<Dict>(FONT_DESC)?;
         let font_type = FontType::new(&font_descriptor)?;
 
         let default_width = descendant_font.get::<f32>(DW).unwrap_or(1000.0);

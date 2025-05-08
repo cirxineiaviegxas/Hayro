@@ -3,7 +3,7 @@ use crate::device::{Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{COLOR_SPACE, EXT_G_STATE, FONT, X_OBJECT};
+use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, XOBJECT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::number::Number;
@@ -31,7 +31,7 @@ use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::util::OptionLog;
-use crate::x_object::{FormXObject, draw_xobject};
+use crate::x_object::{FormXObject, XObject, draw_xobject};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -56,8 +56,8 @@ pub fn interpret<'a, 'b>(
 ) {
     let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
     let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
-    let color_spaces = resources.get::<Dict>(COLOR_SPACE).unwrap_or_default();
-    let x_objects = resources.get::<Dict>(X_OBJECT).unwrap_or_default();
+    let color_spaces = resources.get::<Dict>(COLORSPACE).unwrap_or_default();
+    let x_objects = resources.get::<Dict>(XOBJECT).unwrap_or_default();
 
     save_sate(context);
 
@@ -398,7 +398,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
-                let x_object = FormXObject::new(&x_objects.get::<Stream>(&x.0).unwrap());
+                let x_object = XObject::new(&x_objects.get::<Stream>(&x.0).unwrap());
                 draw_xobject(&x_object, context, device);
             }
             _ => {
