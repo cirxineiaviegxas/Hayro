@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::context::Context;
-use crate::device::{Device, ReplayInstruction};
+use crate::device::{ClipPath, Device, Mask, ReplayInstruction};
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::{FillProps, StrokeProps, interpret};
 use hayro_syntax::content::{TypedIter, UntypedIter};
@@ -43,12 +43,15 @@ impl Device for Type3GlyphDescription {
         })
     }
 
-    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: f32) {
+    fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32) {
         self.0.push(ReplayInstruction::PushLayer {
-            clip: clip.clone(),
-            fill,
+            clip: clip_path.cloned(),
             opacity,
         });
+    }
+
+    fn apply_mask(&mut self, mask: &Mask) {
+        todo!()
     }
 
     fn draw_rgba_image(&mut self, _: Vec<u8>, _: u32, _: u32) {}

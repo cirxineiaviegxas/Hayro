@@ -1,5 +1,5 @@
 use crate::convert::{convert_line_cap, convert_line_join};
-use crate::device::{Device, ReplayInstruction};
+use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
@@ -212,7 +212,13 @@ pub fn interpret<'a, 'b>(
             TypedOperation::EndPath(_) => {
                 if let Some(clip) = *context.clip() {
                     device.set_transform(context.get().affine);
-                    device.push_layer(context.path(), clip, 1.0);
+                    device.push_layer(
+                        Some(&ClipPath {
+                            path: context.path().clone(),
+                            fill: clip,
+                        }),
+                        1.0,
+                    );
 
                     *(context.clip_mut()) = None;
                     context.get_mut().n_clips += 1;
@@ -319,7 +325,13 @@ pub fn interpret<'a, 'b>(
 
                 if has_outline {
                     device.set_transform(context.get().affine);
-                    device.push_layer(&context.get().text_state.clip_paths, Fill::NonZero, 1.0);
+                    device.push_layer(
+                        Some(&ClipPath {
+                            path: context.get().text_state.clip_paths.clone(),
+                            fill: Fill::NonZero,
+                        }),
+                        1.0,
+                    );
                     context.get_mut().n_clips += 1;
                 }
 
@@ -627,12 +639,13 @@ fn run_t3_instructions(
             ReplayInstruction::FillPath { path, fill_props } => {
                 device.fill_path(path, fill_props);
             }
-            ReplayInstruction::PushLayer {
-                clip,
-                fill,
-                opacity,
-            } => device.push_layer(clip, *fill, *opacity),
+            ReplayInstruction::PushLayer { clip, opacity } => {
+                device.push_layer(clip.as_ref(), *opacity)
+            }
             ReplayInstruction::PopClip => device.pop(),
+            ReplayInstruction::ApplyMask { mask } => {
+                device.apply_mask(mask);
+            }
         }
     }
 }

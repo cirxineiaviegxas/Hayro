@@ -1,7 +1,7 @@
 mod ascii_85;
 mod ascii_hex;
-mod ccitt;
 mod ccit_stream;
+mod ccitt;
 mod dct;
 mod lzw_flate;
 mod run_length;

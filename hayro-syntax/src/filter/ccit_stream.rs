@@ -19,34 +19,86 @@ use std::io::{self, Read};
 
 use crate::filter::ccitt::{CCITTFaxDecoder, CCITTFaxDecoderOptions, CcittFaxSource};
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{BLACK_IS_1, COLUMNS, ENCODED_BYTE_ALIGN, END_OF_BLOCK, END_OF_LINE, K, ROWS};
+use crate::object::dict::keys::{
+    BLACK_IS_1, COLUMNS, ENCODED_BYTE_ALIGN, END_OF_BLOCK, END_OF_LINE, K, ROWS,
+};
 
 pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
-    
-        let params = CCITTFaxDecoderOptions {
-            k: params.get::<i32>(K),
-            end_of_line: params.get::<bool>(END_OF_LINE),
-            encoded_byte_align: params.get::<bool>(ENCODED_BYTE_ALIGN),
-            columns: params.get::<usize>(COLUMNS),
-            rows: params.get::<usize>(ROWS),
-            eoblock: params.get::<bool>(END_OF_BLOCK),
-            black_is_1: params.get::<bool>(BLACK_IS_1),
+    let dp = CCITTFaxDecoderOptions::default();
+
+    let params = CCITTFaxDecoderOptions {
+        k: params.get::<i32>(K).unwrap_or(dp.k),
+        end_of_line: params.get::<bool>(END_OF_LINE).unwrap_or(dp.end_of_line),
+        encoded_byte_align: params
+            .get::<bool>(ENCODED_BYTE_ALIGN)
+            .unwrap_or(dp.encoded_byte_align),
+        columns: params.get::<usize>(COLUMNS).unwrap_or(dp.columns),
+        rows: params.get::<usize>(ROWS).unwrap_or(dp.rows),
+        eoblock: params.get::<bool>(END_OF_BLOCK).unwrap_or(dp.eoblock),
+        black_is_1: params.get::<bool>(BLACK_IS_1).unwrap_or(dp.black_is_1),
+    };
+
+    use fax::{
+        Color,
+        decoder::{decode_g4, pels},
+    };
+
+    if params.k < 0 {
+        let columns = params.columns as usize;
+        let rows = params.rows as usize;
+
+        let height = if params.rows == 0 {
+            None
+        } else {
+            Some(params.rows as u16)
         };
-    
-        let mut stream = CCITTFaxStream::new(io::Cursor::new(data), params);
+        let mut buf = Vec::with_capacity(columns * rows);
+        decode_g4(data.iter().cloned(), columns as u16, height, |line| {
+            buf.extend(pels(line, columns as u16).map(|c| match c {
+                Color::Black => 0,
+                Color::White => 255,
+            }));
+            assert_eq!(
+                buf.len() % columns,
+                0,
+                "len={}, columns={}",
+                buf.len(),
+                columns
+            );
+        })?;
+        assert_eq!(
+            buf.len() % columns,
+            0,
+            "len={}, columns={}",
+            buf.len(),
+            columns
+        );
 
-        let mut out = vec![];
-    
-        loop {
-            let byte = stream.decoder.read_next_char();
-            if byte == -1 {
-                break;
-            }
-
-            out.push(byte as u8);
+        if rows != 0 && buf.len() != columns * rows {
+            panic!(
+                "decoded length does not match (expected {rows}∙{columns}, got {})",
+                buf.len()
+            );
         }
-    
-        Some(out)
+        Some(buf)
+    } else {
+        unimplemented!()
+    }
+
+    // let mut stream = CCITTFaxStream::new(io::Cursor::new(data), params);
+    //
+    // let mut out = vec![];
+    //
+    // loop {
+    //     let byte = stream.decoder.read_next_char();
+    //     if byte == -1 {
+    //         break;
+    //     }
+    //
+    //     out.push(byte as u8);
+    // }
+    //
+    // Some(out)
 }
 
 /// A stream that reads CCITT fax encoded data and decodes it into bytes.
@@ -82,4 +134,4 @@ impl<R: Read> CcittFaxSource for CCITTFaxSourceImpl<R> {
             _ => None,
         }
     }
-} 
+}

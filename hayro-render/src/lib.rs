@@ -1,6 +1,6 @@
 use hayro_interpret::color::Color;
 use hayro_interpret::context::Context;
-use hayro_interpret::device::Device;
+use hayro_interpret::device::{ClipPath, Device, Mask};
 use hayro_interpret::{FillProps, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
@@ -49,9 +49,15 @@ impl Device for Renderer {
         self.0.fill_path(path);
     }
 
-    fn push_layer(&mut self, clip: &BezPath, fill: Fill, opacity: f32) {
-        self.0.set_fill_rule(fill);
-        self.0.push_layer(Some(clip), None, Some(opacity), None)
+    fn push_layer(&mut self, clip: Option<&ClipPath>, opacity: f32) {
+        self.0
+            .set_fill_rule(clip.map(|c| c.fill).unwrap_or(Fill::NonZero));
+        self.0
+            .push_layer(clip.map(|c| &c.path), None, Some(opacity), None)
+    }
+
+    fn apply_mask(&mut self, mask: &Mask) {
+        todo!()
     }
 
     fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32) {

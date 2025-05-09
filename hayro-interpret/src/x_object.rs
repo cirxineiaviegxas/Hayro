@@ -1,6 +1,6 @@
 use crate::color::ColorSpace;
 use crate::context::Context;
-use crate::device::Device;
+use crate::device::{ClipPath, Device};
 use crate::interpret;
 use bitreader::BitReader;
 use hayro_syntax::content::{TypedIter, UntypedIter};
@@ -86,14 +86,16 @@ pub(crate) fn draw_form_xobject<'a>(
     context.pre_concat_affine(x_object.matrix);
     device.set_transform(context.get().affine);
     device.push_layer(
-        &Rect::new(
-            x_object.bbox[0] as f64,
-            x_object.bbox[1] as f64,
-            x_object.bbox[2] as f64,
-            x_object.bbox[3] as f64,
-        )
-        .to_path(0.1),
-        Fill::NonZero,
+        Some(&ClipPath {
+            path: Rect::new(
+                x_object.bbox[0] as f64,
+                x_object.bbox[1] as f64,
+                x_object.bbox[2] as f64,
+                x_object.bbox[3] as f64,
+            )
+            .to_path(0.1),
+            fill: Fill::NonZero,
+        }),
         context.get().fill_alpha,
     );
     interpret(iter, &x_object.resources, context, device);

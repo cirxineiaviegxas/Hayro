@@ -16,6 +16,7 @@ miniz_oxide = { workspace = true }
 snafu = { workspace = true }
 itertools = { workspace = true }
 jpeg-decoder = "0.3.1"
+fax = "0.2.4"
 
 [dev-dependencies]
 walkdir = "2.5.0"
