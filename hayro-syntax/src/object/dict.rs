@@ -543,6 +543,7 @@ pub mod keys {
     key!(ENCRYPT, b"Encrypt");
     key!(ENCRYPT_META_DATA, b"EncryptMetadata");
     key!(ENCRYPTED_PAYLOAD, b"EncryptedPayload");
+    key!(END_OF_BLOCK, b"EndOfBlock");
     key!(END_OF_LINE, b"EndOfLine");
     key!(ENTRUST_PPKEF, b"Entrust.PPKEF");
     key!(EXCLUSION, b"Exclusion");

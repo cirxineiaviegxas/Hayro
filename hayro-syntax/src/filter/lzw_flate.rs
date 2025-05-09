@@ -55,11 +55,9 @@ pub mod flate {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
     use crate::object::dict::Dict;
 
-    pub fn decode(data: &[u8], params: Option<&Dict>) -> Option<Vec<u8>> {
+    pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
         let decoded = zlib(data).or_else(|| deflate(data))?;
-        let params = params
-            .map(|p| PredictorParams::from_params(p))
-            .unwrap_or_default();
+        let params = PredictorParams::from_params(&params);
         apply_predictor(decoded, &params)
     }
 
@@ -78,10 +76,8 @@ pub mod lzw {
     use crate::object::dict::Dict;
     use bitreader::BitReader;
 
-    pub fn decode(data: &[u8], params: Option<&Dict>) -> Option<Vec<u8>> {
-        let params = params
-            .map(|p| PredictorParams::from_params(p))
-            .unwrap_or_default();
+    pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
+        let params = PredictorParams::from_params(&params);
 
         let decoded = decode_impl(data, params.early_change)?;
 
@@ -326,11 +322,12 @@ impl Predictor for Paeth {
 #[rustfmt::skip]
 mod tests {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor, flate, lzw};
+use crate::object::dict::Dict;
 
-    #[test]
+#[test]
     fn decode_lzw() {
         let input = [0x80, 0x0B, 0x60, 0x50, 0x22, 0x0C, 0x0C, 0x85, 0x01];
-        let decoded = lzw::decode(&input, None).unwrap();
+        let decoded = lzw::decode(&input, Dict::default()).unwrap();
 
         assert_eq!(decoded, vec![45, 45, 45, 45, 45, 65, 45, 45, 45, 66]);
     }
@@ -341,7 +338,7 @@ mod tests {
             0x78, 0x9c, 0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0, 0x5, 0x8c, 0x1, 0xf5,
         ];
 
-        let decoded = flate::decode(&input, None).unwrap();
+        let decoded = flate::decode(&input, Dict::default()).unwrap();
         assert_eq!(decoded, b"Hello");
     }
 
@@ -349,7 +346,7 @@ mod tests {
     fn decode_flate() {
         let input = [0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0x7, 0x0];
 
-        let decoded = flate::decode(&input, None).unwrap();
+        let decoded = flate::decode(&input, Dict::default()).unwrap();
         assert_eq!(decoded, b"Hello");
     }
     

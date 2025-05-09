@@ -1,5 +1,7 @@
 mod ascii_85;
 mod ascii_hex;
+mod ccitt;
+mod ccit_stream;
 mod dct;
 mod lzw_flate;
 mod run_length;
@@ -14,7 +16,7 @@ use crate::reader::{Readable, Reader};
 use snafu::{OptionExt, whatever};
 
 pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<Vec<u8>> {
-    filter.apply(data, params)
+    filter.apply(data, params.cloned().unwrap_or_default())
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -47,7 +49,7 @@ impl Filter {
         }
     }
 
-    pub fn apply(&self, data: &[u8], params: Option<&Dict>) -> Result<Vec<u8>> {
+    pub fn apply(&self, data: &[u8], params: Dict) -> Result<Vec<u8>> {
         let applied = match self {
             Filter::AsciiHexDecode => ascii_hex::decode(data),
             Filter::Ascii85Decode => ascii_85::decode(data),
