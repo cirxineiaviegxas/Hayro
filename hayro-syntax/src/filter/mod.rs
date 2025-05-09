@@ -57,6 +57,7 @@ impl Filter {
             Filter::LzwDecode => lzw_flate::lzw::decode(data, params),
             Filter::DctDecode => dct::decode(data, params),
             Filter::FlateDecode => lzw_flate::flate::decode(data, params),
+            Filter::CcittFaxDecode => ccit_stream::decode(data, params),
             _ => {
                 whatever!("the {} filter is not supported", self.debug_name());
             }

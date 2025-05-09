@@ -563,52 +563,38 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
     }
 
     fn add_pixels(&mut self, a1: u32, black_pixels: bool) {
-        let coding_line = &mut self.coding_line;
-        let mut coding_pos = self.coding_pos;
-
-        if a1 > coding_line[coding_pos] {
+        if a1 > self.coding_line[self.coding_pos] {
             if a1 > self.columns as u32 {
                 println!("row is wrong length");
                 self.err = true;
-                // a1 = self.columns;
             }
-            if ((coding_pos & 1) != 0) ^ black_pixels {
-                coding_pos += 1;
+            if ((self.coding_pos & 1) != 0) ^ black_pixels {
+                self.coding_pos += 1;
             }
-
-            coding_line[coding_pos] = a1;
+            self.coding_line[self.coding_pos] = a1;
         }
-        self.coding_pos = coding_pos;
     }
 
     fn add_pixels_neg(&mut self, a1: u32, black_pixels: bool) {
-        let coding_line = &mut self.coding_line;
-        let mut coding_pos = self.coding_pos;
-
-        if a1 > coding_line[coding_pos] {
+        if a1 > self.coding_line[self.coding_pos] {
             if a1 > self.columns as u32 {
                 println!("row is wrong length");
                 self.err = true;
-                // a1 = self.columns;
             }
-            if ((coding_pos & 1) != 0) ^ black_pixels {
-                coding_pos += 1;
+            if ((self.coding_pos & 1) != 0) ^ black_pixels {
+                self.coding_pos += 1;
             }
-
-            coding_line[coding_pos] = a1;
-        } else if a1 < coding_line[coding_pos] {
+            self.coding_line[self.coding_pos] = a1;
+        } else if a1 < self.coding_line[self.coding_pos] {
             if a1 < 0 {
                 println!("invalid code");
                 self.err = true;
-                // a1 = 0;
             }
-            while coding_pos > 0 && a1 < coding_line[coding_pos - 1] {
-                coding_pos -= 1;
+            while self.coding_pos > 0 && a1 < self.coding_line[self.coding_pos - 1] {
+                self.coding_pos -= 1;
             }
-            coding_line[coding_pos] = a1;
+            self.coding_line[self.coding_pos] = a1;
         }
-
-        self.coding_pos = coding_pos;
     }
 
     fn find_table_code(&mut self, start: usize, end: usize, table: &[[i32; 2]], limit: Option<usize>) -> (bool, i32, bool) {
@@ -670,10 +656,8 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
         if self.eof {
             return -1;
         }
-        let ref_line = &mut self.ref_line;
-        let coding_line = &mut self.coding_line;
-        let columns = self.columns;
 
+        let columns = self.columns;
         let mut ref_pos;
         let mut black_pixels;
         let mut bits;
@@ -693,27 +677,27 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
             let mut code3;
             if self.next_line_2d {
                 loop {
-                    if coding_line[i] >= columns as u32 {
+                    if self.coding_line[i] >= columns as u32 {
                         break;
                     }
-                    
-                    ref_line[i] = coding_line[i];
+                    self.ref_line[i] = self.coding_line[i];
                     i += 1;
                 }
                 
-                ref_line[i] = columns as u32;
-                ref_line[i + 1] = columns as u32;
-                coding_line[0] = 0;
+                self.ref_line[i] = columns as u32;
+                self.ref_line[i + 1] = columns as u32;
+                self.coding_line[0] = 0;
                 self.coding_pos = 0;
                 ref_pos = 0;
                 black_pixels = false;
 
-                while coding_line[self.coding_pos] < columns as u32 {
+                while self.coding_line[self.coding_pos] < columns as u32 {
                     code1 = self.get_two_dim_code();
                     match code1 {
                         x if x == twoDimPass => {
-                            self.add_pixels(ref_line[ref_pos + 1], black_pixels);
-                            if ref_line[ref_pos + 1] < columns as u32 {
+                            let next_pos = ref_pos + 1;
+                            self.add_pixels(self.ref_line[next_pos], black_pixels);
+                            if self.ref_line[next_pos] < columns as u32 {
                                 ref_pos += 2;
                             }
                         }
@@ -751,92 +735,93 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
                                     }
                                 }
                             }
-                            self.add_pixels(coding_line[self.coding_pos] + code1 as u32, black_pixels);
-                            if coding_line[self.coding_pos] < columns as u32 {
-                                self.add_pixels(coding_line[self.coding_pos] + code2 as u32, black_pixels ^ true);
+                            let current_pos = self.coding_pos;
+                            self.add_pixels(self.coding_line[current_pos] + code1 as u32, black_pixels);
+                            if self.coding_line[current_pos] < columns as u32 {
+                                self.add_pixels(self.coding_line[current_pos] + code2 as u32, black_pixels ^ true);
                             }
-                            while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                            while self.ref_line[ref_pos] <= self.coding_line[current_pos] && self.ref_line[ref_pos] < columns as u32 {
                                 ref_pos += 2;
                             }
                         }
                         x if x == twoDimVertR3 => {
-                            self.add_pixels(ref_line[ref_pos] + 3, black_pixels);
+                            self.add_pixels(self.ref_line[ref_pos] + 3, black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 ref_pos += 1;
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
                         }
                         x if x == twoDimVertR2 => {
-                            self.add_pixels(ref_line[ref_pos] + 2, black_pixels);
+                            self.add_pixels(self.ref_line[ref_pos] + 2, black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 ref_pos += 1;
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
                         }
                         x if x == twoDimVertR1 => {
-                            self.add_pixels(ref_line[ref_pos] + 1, black_pixels);
+                            self.add_pixels(self.ref_line[ref_pos] + 1, black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 ref_pos += 1;
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
                         }
                         x if x == twoDimVert0 => {
-                            self.add_pixels(ref_line[ref_pos], black_pixels);
+                            self.add_pixels(self.ref_line[ref_pos], black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 ref_pos += 1;
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
                         }
                         x if x == twoDimVertL3 => {
-                            self.add_pixels_neg(ref_line[ref_pos] - 3, black_pixels);
+                            self.add_pixels_neg(self.ref_line[ref_pos] - 3, black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 if ref_pos > 0 {
                                     ref_pos -= 1;
                                 } else {
                                     ref_pos += 1;
                                 }
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
                         }
                         x if x == twoDimVertL2 => {
-                            self.add_pixels_neg(ref_line[ref_pos] - 2, black_pixels);
+                            self.add_pixels_neg(self.ref_line[ref_pos] - 2, black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 if ref_pos > 0 {
                                     ref_pos -= 1;
                                 } else {
                                     ref_pos += 1;
                                 }
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
                         }
                         x if x == twoDimVertL1 => {
-                            self.add_pixels_neg(ref_line[ref_pos] - 1, black_pixels);
+                            self.add_pixels_neg(self.ref_line[ref_pos] - 1, black_pixels);
                             black_pixels ^= true;
-                            if coding_line[self.coding_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 if ref_pos > 0 {
                                     ref_pos -= 1;
                                 } else {
                                     ref_pos += 1;
                                 }
-                                while ref_line[ref_pos] <= coding_line[self.coding_pos] && ref_line[ref_pos] < columns as u32 {
+                                while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos] && self.ref_line[ref_pos] < columns as u32 {
                                     ref_pos += 2;
                                 }
                             }
@@ -853,10 +838,10 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
                     }
                 }
             } else {
-                coding_line[0] = 0;
+                self.coding_line[0] = 0;
                 self.coding_pos = 0;
                 black_pixels = false;
-                while coding_line[self.coding_pos] < columns as u32 {
+                while self.coding_line[self.coding_pos] < columns as u32 {
                     code1 = 0;
                     if black_pixels {
                         loop {
@@ -875,7 +860,8 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
                             }
                         }
                     }
-                    self.add_pixels(coding_line[self.coding_pos] + code1 as u32, black_pixels);
+                    let current_pos = self.coding_pos;
+                    self.add_pixels(self.coding_line[current_pos] + code1 as u32, black_pixels);
                     black_pixels ^= true;
                 }
             }
@@ -956,12 +942,12 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
                 }
             }
 
-            self.output_bits = if coding_line[0] > 0 {
+            self.output_bits = if self.coding_line[0] > 0 {
                 self.coding_pos = 0;
-                coding_line[0]
+                self.coding_line[0]
             } else {
                 self.coding_pos = 1;
-                coding_line[1]
+                self.coding_line[1]
             } as usize;
             self.row += 1;
         }
@@ -970,9 +956,9 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
         if self.output_bits >= 8 {
             c = if self.coding_pos & 1 != 0 { 0 } else { 0xff };
             self.output_bits -= 8;
-            if self.output_bits == 0 && coding_line[self.coding_pos] < columns as u32 {
+            if self.output_bits == 0 && self.coding_line[self.coding_pos] < columns as u32 {
                 self.coding_pos += 1;
-                self.output_bits = (coding_line[self.coding_pos] - coding_line[self.coding_pos - 1]) as usize;
+                self.output_bits = (self.coding_line[self.coding_pos] - self.coding_line[self.coding_pos - 1]) as usize;
             }
         } else {
             bits = 8;
@@ -992,9 +978,9 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
                     }
                     bits -= self.output_bits;
                     self.output_bits = 0;
-                    if coding_line[self.coding_pos] < columns as u32 {
+                    if self.coding_line[self.coding_pos] < columns as u32 {
                         self.coding_pos += 1;
-                        self.output_bits = (coding_line[self.coding_pos] - coding_line[self.coding_pos - 1]) as usize;
+                        self.output_bits = (self.coding_line[self.coding_pos] - self.coding_line[self.coding_pos - 1]) as usize;
                     } else if bits > 0 {
                         c <<= bits;
                         bits = 0;
