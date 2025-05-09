@@ -6,6 +6,7 @@ mod dct;
 mod lzw_flate;
 mod run_length;
 
+use log::warn;
 use crate::Result;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
@@ -94,17 +95,21 @@ impl TryFrom<Name<'_>> for Filter {
 
     fn try_from(value: Name) -> std::result::Result<Self, Self::Error> {
         match value.as_ref() {
-            ASCII_HEX_DECODE => Ok(Filter::AsciiHexDecode),
-            ASCII85_DECODE => Ok(Filter::Ascii85Decode),
-            LZW_DECODE => Ok(Filter::LzwDecode),
-            FLATE_DECODE => Ok(Filter::FlateDecode),
-            RUN_LENGTH_DECODE => Ok(Filter::RunLengthDecode),
-            CCITTFAX_DECODE => Ok(Filter::CcittFaxDecode),
+            ASCII_HEX_DECODE | b"AHx" => Ok(Filter::AsciiHexDecode),
+            ASCII85_DECODE | b"A85"=> Ok(Filter::Ascii85Decode),
+            LZW_DECODE | b"LZW" => Ok(Filter::LzwDecode),
+            FLATE_DECODE | b"Fl" => Ok(Filter::FlateDecode),
+            RUN_LENGTH_DECODE | b"RL" => Ok(Filter::RunLengthDecode),
+            CCITTFAX_DECODE | b"CCF" => Ok(Filter::CcittFaxDecode),
             JBIG2_DECODE => Ok(Filter::Jbig2Decode),
-            DCT_DECODE => Ok(Filter::DctDecode),
+            DCT_DECODE | b"DCT" => Ok(Filter::DctDecode),
             JPX_DECODE => Ok(Filter::JpxDecode),
             CRYPT => Ok(Filter::Crypt),
-            _ => Err(()),
+            _ => {
+                warn!("unknown filter: {}", value.as_str());
+
+                Err(())
+            }
         }
     }
 }

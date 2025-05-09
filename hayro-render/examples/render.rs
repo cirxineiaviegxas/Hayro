@@ -8,7 +8,7 @@ fn main() {
     }
 
     let file =
-        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/issue_cmap_lookup.pdf").unwrap();
+        std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/in.pdf").unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 

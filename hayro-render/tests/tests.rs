@@ -69,6 +69,7 @@ use crate::run_test;
 #[test] fn issue_cubic_start_end() { run_test("issue_cubic_start_end", None); }
 #[test] fn issue_predictor_with_null() { run_test("issue_predictor_with_null", None); }
 #[test] fn issue_scaled_glyph() { run_test("issue_scaled_glyph", None); }
+#[test] fn issue_stream_abbreviations() { run_test("issue_stream_abbreviations", Some(0..=0)); }
 #[test] fn page_media_box_bottom_left() { run_test("page_media_box_bottom_left", None); }
 #[test] fn page_media_box_bottom_right() { run_test("page_media_box_bottom_right", None); }
 #[test] fn page_media_box_top_left() { run_test("page_media_box_top_left", None); }
