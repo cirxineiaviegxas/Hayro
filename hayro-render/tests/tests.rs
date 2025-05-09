@@ -44,6 +44,7 @@ use crate::run_test;
 #[test] fn font_type1_cff_6() { run_test("font_type1_cff_6", None); }
 #[test] fn font_vertical() { run_test("font_vertical", None); }
 #[test] fn fonts_type1_latex() { run_test("fonts_type1_latex", None); }
+#[test] fn image_1_bit_per_component() { run_test("image_1_bit_per_component", None); }
 #[test] fn image_cmyk_icc_jpg() { run_test("image_cmyk_icc_jpg", None); }
 #[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", None); }
 #[test] fn image_lab() { run_test("image_lab", None); }
