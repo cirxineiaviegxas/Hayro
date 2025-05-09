@@ -410,8 +410,9 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
-                let x_object = XObject::new(&x_objects.get::<Stream>(&x.0).unwrap());
-                draw_xobject(&x_object, context, device);
+                if let Some(x_object) = XObject::new(&x_objects.get::<Stream>(&x.0).unwrap()) {
+                    draw_xobject(&x_object, context, device);
+                }
             }
             _ => {
                 println!("{:?}", op);

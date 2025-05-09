@@ -1,6 +1,7 @@
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
 use itertools::izip;
+use log::warn;
 
 struct PredictorParams {
     predictor: u8,
@@ -239,7 +240,10 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
             Some(out)
         }
-        _ => unimplemented!(),
+        i => {
+            warn!("predictor {} is not supported", i);
+            None
+        },
     }
 }
 

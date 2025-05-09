@@ -7,15 +7,13 @@ use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, INTERPOLATE, MATRIX, RESOURCES, SMASK,
-    SUBTYPE, WIDTH,
-};
+use hayro_syntax::object::dict::keys::{BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, IMAGE_MASK, INTERPOLATE, MATRIX, RESOURCES, SMASK, SUBTYPE, WIDTH};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::Fill;
 use std::borrow::Cow;
+use log::warn;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -23,11 +21,11 @@ pub enum XObject<'a> {
 }
 
 impl<'a> XObject<'a> {
-    pub fn new(stream: &Stream<'a>) -> Self {
+    pub fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
         match dict.get::<Name>(SUBTYPE).unwrap().as_ref() {
-            b"Image" => Self::ImageXObject(ImageXObject::new(stream)),
-            b"Form" => Self::FormXObject(FormXObject::new(stream)),
+            b"Image" => Some(Self::ImageXObject(ImageXObject::new(stream)?)),
+            b"Form" =>Some(Self::FormXObject(FormXObject::new(stream))),
             _ => unimplemented!(),
         }
     }
@@ -133,13 +131,19 @@ pub struct ImageXObject<'a> {
     color_space: ColorSpace,
     interpolate: bool,
     decode: Vec<(f32, f32)>,
-    dict: Dict<'a>,
+    pub dict: Dict<'a>,
     bits_per_component: u8,
 }
 
 impl<'a> ImageXObject<'a> {
-    fn new(stream: &Stream<'a>) -> Self {
+    fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
+        
+        if dict.contains_key(IMAGE_MASK) {
+            warn!("Image mask is not supported yet");
+            
+            return None;
+        }
 
         let decoded = stream.decoded().unwrap();
         let interpolate = dict.get::<bool>(INTERPOLATE).unwrap_or(false);
@@ -155,7 +159,7 @@ impl<'a> ImageXObject<'a> {
         let width = dict.get::<u32>(WIDTH).unwrap();
         let height = dict.get::<u32>(HEIGHT).unwrap();
 
-        Self {
+        Some(Self {
             decoded,
             width,
             height,
@@ -164,14 +168,14 @@ impl<'a> ImageXObject<'a> {
             decode,
             dict: dict.clone(),
             bits_per_component,
-        }
+        })
     }
 
     pub fn as_rgba8(&self) -> Vec<u8> {
         let s_mask = self
             .dict
             .get::<Stream>(SMASK)
-            .map(|s| ImageXObject::new(&s).decode_raw())
+            .and_then(|s| ImageXObject::new(&s).map(|s| s.decode_raw()))
             .unwrap_or(vec![1.0; self.width as usize * self.height as usize]);
 
         self.decode_raw()
@@ -190,8 +194,12 @@ impl<'a> ImageXObject<'a> {
                 let mut buf = vec![];
                 let mut reader = BitReader::new(self.decoded.as_ref());
                 while let Ok(next) = reader.read_u8(self.bits_per_component) {
-                    buf.push(next);
+                    let mapped = next as u16 * 255 / ((1 << self.bits_per_component) - 1);
+                    buf.push(mapped as u8);
                 }
+                
+                // Remove padding bits.
+                buf.truncate(self.width as usize * self.height as usize);
 
                 buf
             }
@@ -199,7 +207,7 @@ impl<'a> ImageXObject<'a> {
             16 => self
                 .decoded
                 .chunks(2)
-                .map(|v| (u16::from_be_bytes([v[0], v[1]]) / 256) as u8)
+                .map(|v| (u16::from_be_bytes([v[0], v[1]]) >> 8) as u8)
                 .collect(),
             _ => unimplemented!(),
         };
