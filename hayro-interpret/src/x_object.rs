@@ -14,7 +14,7 @@ use hayro_syntax::object::dict::keys::{
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
-use peniko::Fill;
+use peniko::{Fill, ImageQuality};
 use std::borrow::Cow;
 
 pub enum XObject<'a> {
@@ -118,6 +118,14 @@ pub(crate) fn draw_image_xobject<'a>(
     );
 
     let data = x_object.as_rgba8(color);
+    
+    // TODO: image_ccit test cases look pretty bad, we need support for mipmaps to improve 
+    // them.
+    let quality = if x_object.interpolate {
+        ImageQuality::Medium
+    }   else {
+        ImageQuality::Low
+    };
 
     context.save_state();
     context.pre_concat_affine(Affine::new([
@@ -129,7 +137,7 @@ pub(crate) fn draw_image_xobject<'a>(
         1.0,
     ]));
     device.set_transform(context.get().affine);
-    device.draw_rgba_image(data, x_object.width, x_object.height);
+    device.draw_rgba_image(data, x_object.width, x_object.height, quality);
     context.restore_state();
 }
 
@@ -152,7 +160,11 @@ impl<'a> ImageXObject<'a> {
         let decoded = stream.decoded().unwrap();
         let interpolate = dict.get::<bool>(INTERPOLATE).unwrap_or(false);
         let image_mask = dict.get::<bool>(IMAGE_MASK).unwrap_or(false);
-        let bits_per_component = dict.get::<u8>(BITS_PER_COMPONENT).unwrap();
+        let bits_per_component = if image_mask {
+            1
+        }   else {
+            dict.get::<u8>(BITS_PER_COMPONENT).unwrap()
+        };
         let color_space = if image_mask {
             ColorSpace::DeviceGray
         } else {

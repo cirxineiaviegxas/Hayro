@@ -46,6 +46,10 @@ use crate::run_test;
 #[test] fn font_vertical() { run_test("font_vertical", None); }
 #[test] fn fonts_type1_latex() { run_test("fonts_type1_latex", None); }
 #[test] fn image_1_bit_per_component() { run_test("image_1_bit_per_component", None); }
+#[test] fn image_ccit_1() { run_test("image_ccit_1", None); }
+#[test] fn image_ccit_2() { run_test("image_ccit_2", None); }
+#[test] fn image_ccit_3() { run_test("image_ccit_3", None); }
+#[test] fn image_ccit_4() { run_test("image_ccit_4", None); }
 #[test] fn image_cmyk_icc_jpg() { run_test("image_cmyk_icc_jpg", None); }
 #[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", None); }
 #[test] fn image_lab() { run_test("image_lab", None); }
@@ -54,6 +58,7 @@ use crate::run_test;
 #[test] fn image_luma8_icc() { run_test("image_luma8_icc", None); }
 #[test] fn image_luma8_jpg() { run_test("image_luma8_jpg", None); }
 #[test] fn image_mask() { run_test("image_mask", None); }
+#[test] fn image_mask_missing_bpc() { run_test("image_mask_missing_bpc", None); }
 #[test] fn image_rgb16() { run_test("image_rgb16", None); }
 #[test] fn image_rgb8() { run_test("image_rgb8", None); }
 #[test] fn image_rgb8_decode() { run_test("image_rgb8_decode", None); }
