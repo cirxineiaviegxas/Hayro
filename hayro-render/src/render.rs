@@ -241,7 +241,7 @@ impl RenderContext {
             buffer.len(),
         );
 
-        let mut fine = Fine::<u8>::new(width, height);
+        let mut fine = Fine::<f32>::new(width, height);
         self.do_fine(buffer, &mut fine);
     }
 
