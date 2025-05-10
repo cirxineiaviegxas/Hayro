@@ -205,7 +205,7 @@ impl<'a> InlineImageDict<'a> {
 
 impl<'a> Readable<'a> for InlineImageDict<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        Some(Self(read_inner::<true>(r, xref, None, b"ID")?))
+        Some(Self(read_inner::<true>(r, xref, None, b"ID ")?))
     }
 }
 
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn inline_dict() {
-        let dict_data = b"/W 17 /H 17 /CS /RGB /BPC 8 /F [ /A85 /LZW ] ID";
+        let dict_data = b"/W 17 /H 17 /CS /RGB /BPC 8 /F [ /A85 /LZW ] ID ";
 
         let dict = Reader::new(&dict_data[..])
             .read_with_xref::<InlineImageDict>(&XRef::dummy())
