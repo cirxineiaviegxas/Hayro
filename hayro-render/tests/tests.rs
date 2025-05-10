@@ -43,6 +43,7 @@ use crate::run_test;
 #[test] fn font_type1_cff_4() { run_test("font_type1_cff_4", None); }
 #[test] fn font_type1_cff_5() { run_test("font_type1_cff_5", None); }
 #[test] fn font_type1_cff_6() { run_test("font_type1_cff_6", None); }
+#[test] fn font_type3_widths_with_matrix() { run_test("font_type3_widths_with_matrix", None); }
 #[test] fn font_vertical() { run_test("font_vertical", None); }
 #[test] fn fonts_type1_latex() { run_test("fonts_type1_latex", None); }
 #[test] fn image_1_bit_per_component() { run_test("image_1_bit_per_component", None); }
@@ -53,12 +54,16 @@ use crate::run_test;
 #[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", None); }
 #[test] fn image_inline() { run_test("image_inline", None); }
 #[test] fn image_inline_2() { run_test("image_inline_2", None); }
+#[test] fn image_inline_3() { run_test("image_inline_3", None); }
+#[test] fn image_inline_4() { run_test("image_inline_4", None); }
+#[test] fn image_inline_5() { run_test("image_inline_5", None); }
 #[test] fn image_lab() { run_test("image_lab", None); }
 #[test] fn image_luma16() { run_test("image_luma16", None); }
 #[test] fn image_luma8() { run_test("image_luma8", None); }
 #[test] fn image_luma8_icc() { run_test("image_luma8_icc", None); }
 #[test] fn image_luma8_jpg() { run_test("image_luma8_jpg", None); }
 #[test] fn image_mask() { run_test("image_mask", None); }
+#[test] fn image_mask_4() { run_test("image_mask_4", None); }
 #[test] fn image_mask_hairline() { run_test("image_mask_hairline", None); }
 #[test] fn image_mask_missing_bpc() { run_test("image_mask_missing_bpc", None); }
 #[test] fn image_rgb16() { run_test("image_rgb16", None); }
