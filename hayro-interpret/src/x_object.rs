@@ -118,12 +118,12 @@ pub(crate) fn draw_image_xobject<'a>(
     );
 
     let data = x_object.as_rgba8(color);
-    
-    // TODO: image_ccit test cases look pretty bad, we need support for mipmaps to improve 
+
+    // TODO: image_ccit test cases look pretty bad, we need support for mipmaps to improve
     // them.
     let quality = if x_object.interpolate {
         ImageQuality::Medium
-    }   else {
+    } else {
         ImageQuality::Low
     };
 
@@ -137,7 +137,13 @@ pub(crate) fn draw_image_xobject<'a>(
         1.0,
     ]));
     device.set_transform(context.get().affine);
-    device.draw_rgba_image(data, x_object.width, x_object.height, quality);
+    device.draw_rgba_image(
+        data,
+        x_object.width,
+        x_object.height,
+        x_object.is_mask,
+        quality,
+    );
     context.restore_state();
 }
 
@@ -162,7 +168,7 @@ impl<'a> ImageXObject<'a> {
         let image_mask = dict.get::<bool>(IMAGE_MASK).unwrap_or(false);
         let bits_per_component = if image_mask {
             1
-        }   else {
+        } else {
             dict.get::<u8>(BITS_PER_COMPONENT).unwrap()
         };
         let color_space = if image_mask {
@@ -234,7 +240,7 @@ impl<'a> ImageXObject<'a> {
                     let mapped = next as u16 * 255 / ((1 << self.bits_per_component) - 1);
                     buf.push(mapped as u8);
                     counter += 1;
-                    
+
                     if counter % self.width as usize == 0 {
                         reader.align(1).unwrap();
                     }

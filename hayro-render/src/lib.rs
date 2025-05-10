@@ -38,7 +38,14 @@ pub enum RenderMode {
 struct Renderer(RenderContext);
 
 impl Renderer {
-    fn draw_image(&mut self, image_data: Vec<u8>, width: u32, height: u32, is_stencil: bool, quality: ImageQuality) {
+    fn draw_image(
+        &mut self,
+        image_data: Vec<u8>,
+        width: u32,
+        height: u32,
+        is_stencil: bool,
+        quality: ImageQuality,
+    ) {
         let premul = image_data
             .chunks_exact(4)
             .map(|d| {
@@ -104,8 +111,15 @@ impl Device for Renderer {
         todo!()
     }
 
-    fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32, quality: ImageQuality) {
-        self.draw_image(image_data, width, height, false, quality);
+    fn draw_rgba_image(
+        &mut self,
+        image_data: Vec<u8>,
+        width: u32,
+        height: u32,
+        is_stencil: bool,
+        quality: ImageQuality,
+    ) {
+        self.draw_image(image_data, width, height, is_stencil, quality);
     }
 
     fn pop(&mut self) {

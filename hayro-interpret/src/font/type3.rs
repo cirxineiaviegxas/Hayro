@@ -8,10 +8,10 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
+use peniko::{ImageFormat, ImageQuality};
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use peniko::{ImageFormat, ImageQuality};
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -53,8 +53,7 @@ impl Device for Type3GlyphDescription {
         todo!()
     }
 
-    fn draw_rgba_image(&mut self, _: Vec<u8>, _: u32, _: u32, _: ImageQuality) {}
-
+    fn draw_rgba_image(&mut self, _: Vec<u8>, _: u32, _: u32, _: bool, _: ImageQuality) {}
 
     fn pop(&mut self) {
         self.0.push(ReplayInstruction::PopClip)

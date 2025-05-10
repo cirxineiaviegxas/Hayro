@@ -23,7 +23,14 @@ pub trait Device {
     fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps);
     fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32);
     fn apply_mask(&mut self, mask: &Mask);
-    fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32, quality: ImageQuality);
+    fn draw_rgba_image(
+        &mut self,
+        image_data: Vec<u8>,
+        width: u32,
+        height: u32,
+        is_stencil: bool,
+        quality: ImageQuality,
+    );
     fn pop(&mut self);
 }
 

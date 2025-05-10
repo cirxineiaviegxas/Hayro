@@ -232,22 +232,7 @@ impl<F: FineType> Fine<F> {
                 match encoded_paint {
                     EncodedPaint::Image(i) => {
                         let filler = ImageFiller::new(i, start_x, start_y);
-                        if i.is_stencil {
-                            filler.paint(color_buf);
-                            for el in blend_buf.chunks(16) {
-                                println!("blend_buf{:?}", &el[0..4]);
-                            }
-                            for el in color_buf.chunks(16) {
-                                println!("color_buf{:?}", &el[0..4]);
-                            }
-                            fill::mask(blend_buf, color_buf);
-                            for el in blend_buf.chunks(16) {
-                                println!("{:?}", &el[0..4]);
-                            }
-                            println!("end");
-                        } else {
-                            fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
-                        }
+                        fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                 }
             }
@@ -277,22 +262,6 @@ impl<F: FineType> Fine<F> {
         let start_x = self.wide_coords.0 * WideTile::WIDTH + x as u16;
         let start_y = self.wide_coords.1 * Tile::HEIGHT;
 
-        fn strip_complex_paint<F: FineType>(
-            color_buf: &mut [F],
-            blend_buf: &mut [F],
-            blend_mode: BlendMode,
-            filler: impl Painter,
-            alphas: &[u8],
-        ) {
-            filler.paint(color_buf);
-            strip::blend(
-                blend_buf,
-                color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                blend_mode,
-                alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-            );
-        }
-
         match fill {
             Paint::Solid(color) => {
                 strip::blend(
@@ -308,16 +277,26 @@ impl<F: FineType> Fine<F> {
                 match encoded_paint {
                     EncodedPaint::Image(i) => {
                         let filler = ImageFiller::new(i, start_x, start_y);
+                        filler.paint(color_buf);
 
                         if i.is_stencil {
-                            filler.paint(color_buf);
-                            strip::mask(
+                            strip::blend(
                                 blend_buf,
-                                color_buf,
-                                alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                                color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                                blend_mode,
+                                // We don't want anti-aliasing for stencil images, so we quantize.
+                                alphas.chunks_exact(4).map(|e| {
+                                    let m = |val: u8| if val == 0 { 0 } else { 255 };
+                                    [m(e[0]), m(e[1]), m(e[2]), m(e[3])]
+                                }),
                             );
                         } else {
-                            strip_complex_paint(color_buf, blend_buf, blend_mode, filler, alphas);
+                            strip::blend(
+                                blend_buf,
+                                color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                                blend_mode,
+                                alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                            );
                         }
                     }
                 }

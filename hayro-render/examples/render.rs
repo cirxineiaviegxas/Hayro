@@ -7,7 +7,7 @@ fn main() {
         log::set_max_level(log::LevelFilter::Trace);
     }
 
-    let file = std::fs::read("/Users/lstampfl/Downloads/map.pdf").unwrap();
+    let file = std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/in.pdf").unwrap();
     let data = Data::new(&file);
     let pdf = Pdf::new(&data).unwrap();
 
