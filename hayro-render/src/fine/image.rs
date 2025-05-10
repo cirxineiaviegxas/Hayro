@@ -3,7 +3,6 @@
 
 use crate::encode::EncodedImage;
 use crate::fine::{COLOR_COMPONENTS, FineType, Painter, TILE_HEIGHT_COMPONENTS};
-use crate::tile::Tile;
 use kurbo::{Point, Vec2};
 use peniko::ImageQuality;
 
@@ -26,82 +25,13 @@ impl<'a> ImageFiller<'a> {
     }
 
     pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
-        // We currently have two branches for filling images: The first case is used for
-        // nearest neighbor filtering and for images with no skewing-transform (this is checked
-        // by the first two conditions), which allows us to take a faster path.
-        // The second version is the general case for any other image.
-        // Once we get to performance optimizations, it's possible that there will be further
-        // paths (e.g. one for no scaling transform and only integer translation offsets).
-        if self.image.y_advance.x != 0.0
-            || self.image.x_advance.y != 0.0
-            || self.image.quality != ImageQuality::Low
-        {
-            // Fallback path.
-            target
-                .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
-                .for_each(|column| {
-                    self.run_complex_column(column);
-                    self.cur_pos += self.image.x_advance;
-                });
-        } else {
-            // Fast path. Each step in the x/y direction only updates x/y component of the
-            // current position, since we have no skewing.
-            // Most importantly, the y position is the same across each column, allowing us
-            // to precompute it (as well as it's extend).
-            let mut x_pos = self.cur_pos.x;
-            let x_advance = self.image.x_advance.x;
-            let y_advance = self.image.y_advance.y;
-
-            let mut y_positions = [0.0; Tile::HEIGHT as usize];
-
-            for (idx, pos) in y_positions.iter_mut().enumerate() {
-                *pos = extend(
-                    // Since we already added a 0.5 offset to sample at the center of the pixel,
-                    // we always floor to get the target pixel.
-                    (self.cur_pos.y + y_advance * idx as f64).floor() as f32,
-                    self.image.extends.1,
-                    f32::from(self.image.pixmap.height()),
-                );
-            }
-
-            target
-                .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
-                .for_each(|column| {
-                    let extended_x_pos = extend(
-                        // As above, always floor.
-                        x_pos.floor() as f32,
-                        self.image.extends.0,
-                        f32::from(self.image.pixmap.width()),
-                    );
-                    self.run_simple_column(column, extended_x_pos, &y_positions);
-                    x_pos += x_advance;
-                });
-        }
-    }
-
-    fn run_simple_column<F: FineType>(
-        &mut self,
-        col: &mut [F],
-        x_pos: f32,
-        y_positions: &[f32; Tile::HEIGHT as usize],
-    ) {
-        for (pixel, y_pos) in col
-            .chunks_exact_mut(COLOR_COMPONENTS)
-            .zip(y_positions.iter())
-        {
-            let sample = match self.image.quality {
-                ImageQuality::Low => F::from_rgba8(
-                    &self
-                        .image
-                        .pixmap
-                        .sample(x_pos as u16, *y_pos as u16)
-                        .to_u8_array()[..],
-                ),
-                ImageQuality::Medium | ImageQuality::High => unimplemented!(),
-            };
-
-            pixel.copy_from_slice(&sample);
-        }
+        // Fallback path.
+        target
+            .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
+            .for_each(|column| {
+                self.run_complex_column(column);
+                self.cur_pos += self.image.x_advance;
+            });
     }
 
     fn run_complex_column<F: FineType>(&mut self, col: &mut [F]) {
