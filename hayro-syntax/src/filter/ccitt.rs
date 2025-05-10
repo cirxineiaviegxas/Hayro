@@ -1462,18 +1462,20 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
                                     }
                                 }
                             }
-                            let current_pos = self.coding_pos;
+                            if self.counter >= 1800 {
+                                println!("1800: {:?}", &self.coding_line[0..20])
+                            }
                             self.add_pixels(
-                                self.coding_line[current_pos] + code1 as u32,
+                                self.coding_line[self.coding_pos] + code1 as u32,
                                 black_pixels,
                             );
-                            if self.coding_line[current_pos] < columns as u32 {
+                            if self.coding_line[self.coding_pos] < columns as u32 {
                                 self.add_pixels(
-                                    self.coding_line[current_pos] + code2 as u32,
+                                    self.coding_line[self.coding_pos] + code2 as u32,
                                     black_pixels ^ true,
                                 );
                             }
-                            while self.ref_line[ref_pos] <= self.coding_line[current_pos]
+                            while self.ref_line[ref_pos] <= self.coding_line[self.coding_pos]
                                 && self.ref_line[ref_pos] < columns as u32
                             {
                                 ref_pos += 2;
@@ -1750,7 +1752,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
 
         self.counter += 1;
 
-        println!("{}, {:?}", self.counter, &self.coding_line[0..3]);
+        println!("{}, {:?}", self.counter, &self.coding_line[0..20]);
 
         c
     }
