@@ -217,9 +217,15 @@ impl<'a> ImageXObject<'a> {
             1 | 2 | 4 => {
                 let mut buf = vec![];
                 let mut reader = BitReader::new(self.decoded.as_ref());
+                let mut counter = 0;
                 while let Ok(next) = reader.read_u8(self.bits_per_component) {
                     let mapped = next as u16 * 255 / ((1 << self.bits_per_component) - 1);
                     buf.push(mapped as u8);
+                    counter += 1;
+                    
+                    if counter % self.width as usize == 0 {
+                        reader.align(1).unwrap();
+                    }
                 }
 
                 // Remove padding bits.
