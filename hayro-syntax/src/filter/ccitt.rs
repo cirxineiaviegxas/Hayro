@@ -1150,7 +1150,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
         let eoblock = options.eoblock;
         let black = options.black_is_1;
 
-        let mut ref_line = vec![0; columns + 2];
+        let ref_line = vec![0; columns + 2];
         let mut coding_line = vec![0; columns + 1];
         coding_line[0] = columns as u32;
 

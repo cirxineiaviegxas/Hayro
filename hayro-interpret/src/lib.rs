@@ -5,15 +5,12 @@ use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, XOBJECT};
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::stream::Stream;
 use hayro_syntax::object::string::String;
-use kurbo::{Affine, BezPath, Cap, Join, Point, Rect, Shape, Vec2};
+use kurbo::{Affine, Cap, Join, Point, Rect, Shape, Vec2};
 use log::warn;
-use once_cell::sync::Lazy;
 use peniko::Fill;
-use qcms::Transform;
 use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
 
@@ -31,7 +28,7 @@ use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::util::OptionLog;
-use crate::x_object::{FormXObject, XObject, draw_xobject};
+use crate::x_object::{XObject, draw_xobject};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -477,7 +474,7 @@ fn show_glyph<'a>(
     font: &Font<'a>,
     origin_displacement: Vec2,
 ) {
-    let mut t = ctx.get().text_transform()
+    let t = ctx.get().text_transform()
         * Affine::scale(1.0 / 1000.0)
         * Affine::translate(origin_displacement);
     let glyph_description = match font.render_glyph(glyph, ctx) {

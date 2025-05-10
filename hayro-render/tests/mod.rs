@@ -10,7 +10,6 @@ use std::path::PathBuf;
 mod tests;
 
 const REPLACE: Option<&str> = option_env!("REPLACE");
-const STORE: Option<&str> = option_env!("STORE");
 
 pub(crate) static WORKSPACE_PATH: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(""));

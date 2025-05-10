@@ -12,7 +12,7 @@ use crate::paint::{Paint, PaintType};
 use crate::pixmap::Pixmap;
 use crate::strip::Strip;
 use crate::tile::Tiles;
-use crate::{RenderMode, flatten, strip};
+use crate::{flatten, strip};
 use kurbo::{Affine, BezPath, Cap, Join, Rect, Shape, Stroke};
 use peniko::color::palette::css::BLACK;
 use peniko::{BlendMode, Compose, Fill, Mix};
@@ -107,11 +107,6 @@ impl RenderContext {
         self.fill_path(&rect.to_path(DEFAULT_TOLERANCE));
     }
 
-    /// Stroke a rectangle.
-    pub fn stroke_rect(&mut self, rect: &Rect) {
-        self.stroke_path(&rect.to_path(DEFAULT_TOLERANCE));
-    }
-
     /// Push a new layer with the given properties.
     ///
     /// Note that the mask, if provided, needs to have the same size as the render context. Otherwise,
@@ -146,16 +141,6 @@ impl RenderContext {
             mask,
             opacity.unwrap_or(1.0),
         );
-    }
-
-    /// Push a new clip layer.
-    pub fn push_clip_layer(&mut self, path: &BezPath) {
-        self.push_layer(Some(path), None, None, None);
-    }
-
-    /// Push a new blend layer.
-    pub fn push_blend_layer(&mut self, blend_mode: BlendMode) {
-        self.push_layer(None, Some(blend_mode), None, None);
     }
 
     /// Push a new opacity layer.

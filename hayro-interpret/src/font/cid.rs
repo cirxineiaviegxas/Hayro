@@ -8,11 +8,10 @@ use hayro_syntax::object::dict::keys::{
 };
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::{
-    CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, IDENTITY_V, OPEN_TYPE,
+    CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, OPEN_TYPE,
 };
 use hayro_syntax::object::stream::Stream;
-use hayro_syntax::object::{Object, ObjectLike};
-use hayro_syntax::reader::Readable;
+use hayro_syntax::object::Object;
 use kurbo::{BezPath, Vec2};
 use log::warn;
 use skrifa::raw::TableProvider;

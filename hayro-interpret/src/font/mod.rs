@@ -1,5 +1,4 @@
 use crate::context::Context;
-use crate::device::Device;
 use crate::font::cid::Type0Font;
 use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::true_type::TrueTypeFont;

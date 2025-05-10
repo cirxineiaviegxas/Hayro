@@ -5,7 +5,7 @@
 
 use crate::pixmap::Pixmap;
 use peniko::{
-    Gradient, ImageQuality,
+    ImageQuality,
     color::{AlphaColor, PremulRgba8, Srgb},
 };
 use std::sync::Arc;

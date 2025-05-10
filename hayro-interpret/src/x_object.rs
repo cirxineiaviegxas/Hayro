@@ -1,4 +1,3 @@
-use crate::color::ColorSpace::DeviceRgb;
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::{ClipPath, Device};
@@ -15,7 +14,6 @@ use hayro_syntax::object::dict::keys::{
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
-use log::warn;
 use peniko::Fill;
 use std::borrow::Cow;
 
@@ -165,7 +163,7 @@ impl<'a> ImageXObject<'a> {
         let decode = dict
             .get::<Array>(DECODE)
             .map(|a| {
-                let mut vals = a.iter::<f32>().collect::<Vec<_>>();
+                let vals = a.iter::<f32>().collect::<Vec<_>>();
                 vals.chunks(2).map(|v| (v[0], v[1])).collect::<Vec<_>>()
             })
             .unwrap_or(color_space.default_decode_arr());

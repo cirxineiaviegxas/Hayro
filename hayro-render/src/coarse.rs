@@ -7,7 +7,7 @@ use crate::mask::Mask;
 use crate::paint::{Paint, PremulColor};
 use crate::{strip::Strip, tile::Tile};
 use peniko::color::palette::css::TRANSPARENT;
-use peniko::{BlendMode, Compose, Fill, Mix};
+use peniko::{BlendMode, Compose, Fill};
 use std::vec;
 use std::{boxed::Box, vec::Vec};
 

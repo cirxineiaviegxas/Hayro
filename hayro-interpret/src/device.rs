@@ -2,7 +2,6 @@ use crate::color::Color;
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
 use peniko::Fill;
-use skrifa::raw::tables::colr::Clip;
 
 #[derive(Debug, Clone)]
 pub struct ClipPath {

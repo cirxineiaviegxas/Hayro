@@ -15,7 +15,7 @@
 
 // See <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt_stream.js>
 
-use std::io::{self, Read};
+use std::io::{Read};
 
 use crate::filter::ccitt::{CCITTFaxDecoder, CCITTFaxDecoderOptions, CcittFaxSource};
 use crate::object::dict::Dict;

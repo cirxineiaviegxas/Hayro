@@ -1,7 +1,7 @@
 use crate::util::OptionLog;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, P, RANGE, WHITE_POINT};
+use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -9,7 +9,6 @@ use hayro_syntax::object::{Object, string};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::{AlphaColor, Srgb};
-use qcms::DataType::CMYK;
 use qcms::Transform;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};
