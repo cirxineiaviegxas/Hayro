@@ -138,7 +138,7 @@ impl<'a> ImageFiller<'a> {
                     );
                     pixel.copy_from_slice(&sample);
                 }
-                ImageQuality::Medium | ImageQuality::High => {
+                ImageQuality::Medium => {
                     // We have two versions of filtering: `Medium` (bilinear filtering) and
                     // `High` (bicubic filtering).
 
@@ -185,46 +185,23 @@ impl<'a> ImageFiller<'a> {
                         [c(s.r), c(s.g), c(s.b), c(s.a)]
                     };
 
-                    if self.image.quality == ImageQuality::Medium {
-                        let cx = [1.0 - x_fract, x_fract];
-                        let cy = [1.0 - y_fract, y_fract];
+                    let cx = [1.0 - x_fract, x_fract];
+                    let cy = [1.0 - y_fract, y_fract];
 
-                        // Note that the sum of all cx*cy combinations also yields 1.0 again
-                        // (modulo some floating point number impreciseness), ensuring the
-                        // colors stay in range.
+                    // Note that the sum of all cx*cy combinations also yields 1.0 again
+                    // (modulo some floating point number impreciseness), ensuring the
+                    // colors stay in range.
 
-                        // We sample the corners rectangle that covers our current position.
-                        for (x_idx, x) in [-0.5, 0.5].into_iter().enumerate() {
-                            for (y_idx, y) in [-0.5, 0.5].into_iter().enumerate() {
-                                let color_sample = sample(extend_point(pos + Vec2::new(x, y)));
-                                let w = cx[x_idx] * cy[y_idx];
+                    // We sample the corners rectangle that covers our current position.
+                    for (x_idx, x) in [-0.5, 0.5].into_iter().enumerate() {
+                        for (y_idx, y) in [-0.5, 0.5].into_iter().enumerate() {
+                            let color_sample = sample(extend_point(pos + Vec2::new(x, y)));
+                            let w = cx[x_idx] * cy[y_idx];
 
-                                for (component, component_sample) in
-                                    interpolated_color.iter_mut().zip(color_sample)
-                                {
-                                    *component += w * component_sample;
-                                }
-                            }
-                        }
-                    } else {
-                        // Compare to https://github.com/google/skia/blob/84ff153b0093fc83f6c77cd10b025c06a12c5604/src/opts/SkRasterPipeline_opts.h#L5030-L5075.
-                        let cx = weights(x_fract);
-                        let cy = weights(y_fract);
-
-                        // Note in particular that it is guaranteed that, similarly to bilinear filtering,
-                        // the sum of all cx*cy is 1.
-
-                        // We sample the 4x4 grid around the position we are currently looking at.
-                        for (x_idx, x) in [-1.5, -0.5, 0.5, 1.5].into_iter().enumerate() {
-                            for (y_idx, y) in [-1.5, -0.5, 0.5, 1.5].into_iter().enumerate() {
-                                let color_sample = sample(extend_point(pos + Vec2::new(x, y)));
-                                let c = cx[x_idx] * cy[y_idx];
-
-                                for (component, component_sample) in
-                                    interpolated_color.iter_mut().zip(color_sample)
-                                {
-                                    *component += c * component_sample;
-                                }
+                            for (component, component_sample) in
+                                interpolated_color.iter_mut().zip(color_sample)
+                            {
+                                *component += w * component_sample;
                             }
                         }
                     }
@@ -244,6 +221,7 @@ impl<'a> ImageFiller<'a> {
 
                     pixel.copy_from_slice(&F::from_rgbaf32(&interpolated_color[..]));
                 }
+                _ => unimplemented!(),
             };
 
             pos += self.image.y_advance;
@@ -274,60 +252,4 @@ impl Painter for ImageFiller<'_> {
     fn paint<F: FineType>(self, target: &mut [F]) {
         self.run(target);
     }
-}
-
-/// Calculate the weights for a single fractional value.
-const fn weights(fract: f32) -> [f32; 4] {
-    const MF: [[f32; 4]; 4] = mf_resampler();
-
-    [
-        single_weight(fract, MF[0][0], MF[0][1], MF[0][2], MF[0][3]),
-        single_weight(fract, MF[1][0], MF[1][1], MF[1][2], MF[1][3]),
-        single_weight(fract, MF[2][0], MF[2][1], MF[2][2], MF[2][3]),
-        single_weight(fract, MF[3][0], MF[3][1], MF[3][2], MF[3][3]),
-    ]
-}
-
-/// Calculate a weight based on the fractional value t and the cubic coefficients.
-const fn single_weight(t: f32, a: f32, b: f32, c: f32, d: f32) -> f32 {
-    t * (t * (t * d + c) + b) + a
-}
-
-/// Mitchell filter with the variables B = 1/3 and C = 1/3.
-const fn mf_resampler() -> [[f32; 4]; 4] {
-    cubic_resampler(1.0 / 3.0, 1.0 / 3.0)
-}
-
-/// Cubic resampling logic is borrowed from Skia. See
-/// <https://github.com/google/skia/blob/220fef664978643a47d4559ae9e762b91aba534a/include/core/SkSamplingOptions.h#L33-L50>
-/// for some links to understand how this works. In principle, this macro allows us to define a
-/// resampler kernel based on two variables B and C which can be between 0 and 1, allowing to
-/// change some properties of the cubic interpolation kernel.
-///
-/// As mentioned above, cubic resampling consists of sampling the 16 surrounding pixels of the
-/// target point and interpolating them with a cubic filter.
-/// The generated matrix is 4x4 and represent the coefficients of the cubic function used to
-/// calculate weights based on the `x_fract` and `y_fract` of the location we are looking at.
-const fn cubic_resampler(b: f32, c: f32) -> [[f32; 4]; 4] {
-    [
-        [
-            (1.0 / 6.0) * b,
-            -(3.0 / 6.0) * b - c,
-            (3.0 / 6.0) * b + 2.0 * c,
-            -(1.0 / 6.0) * b - c,
-        ],
-        [
-            1.0 - (2.0 / 6.0) * b,
-            0.0,
-            -3.0 + (12.0 / 6.0) * b + c,
-            2.0 - (9.0 / 6.0) * b - c,
-        ],
-        [
-            (1.0 / 6.0) * b,
-            (3.0 / 6.0) * b + c,
-            3.0 - (15.0 / 6.0) * b - 2.0 * c,
-            -2.0 + (9.0 / 6.0) * b + c,
-        ],
-        [0.0, 0.0, -c, (1.0 / 6.0) * b + c],
-    ]
 }
