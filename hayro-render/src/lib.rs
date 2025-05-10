@@ -1,3 +1,6 @@
+use crate::paint::Image;
+use crate::pixmap::Pixmap;
+use crate::render::RenderContext;
 use hayro_interpret::color::Color;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::{ClipPath, Device, Mask};
@@ -6,16 +9,31 @@ use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
+use kurbo::{Affine, BezPath, Rect};
+use peniko::color::palette::css::WHITE;
+use peniko::color::{AlphaColor, Srgb};
+use peniko::{Fill, ImageQuality};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use vello_api::color::palette::css::WHITE;
-use vello_api::color::{AlphaColor, PremulRgba8, Rgba8, Srgb};
-use vello_api::kurbo;
-use vello_api::kurbo::{Affine, BezPath, Rect};
-use vello_api::paint::Image;
-use vello_api::peniko::{Fill, ImageQuality};
-use vello_cpu::{Pixmap, RenderContext, RenderMode};
+
+mod coarse;
+mod encode;
+mod fine;
+mod flatten;
+mod mask;
+mod paint;
+mod pixmap;
+mod render;
+mod strip;
+mod tile;
+mod util;
+
+#[derive(Debug, Copy, Clone)]
+pub enum RenderMode {
+    OptimizeQuality,
+    OptimizeSpeed,
+}
 
 struct Renderer(RenderContext);
 
@@ -141,9 +159,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     );
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
-    device
-        .0
-        .render_to_pixmap(&mut pixmap, RenderMode::OptimizeSpeed);
+    device.0.render_to_pixmap(&mut pixmap);
     pixmap
 }
 

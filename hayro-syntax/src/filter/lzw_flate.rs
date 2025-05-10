@@ -195,7 +195,7 @@ pub mod lzw {
 fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     if params.bits_per_component != 8 {
         warn!("Predictor only supports 8 bits per component");
-        
+
         return None;
     }
 
@@ -203,11 +203,14 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
         1 | 10 => Some(data),
         i => {
             let is_png_predictor = i >= 10;
-            
-            
+
             let row_len = params.row_length_in_bytes();
             // + 1 Because each row must start with the predictor that is used for PNG predictors.
-            let total_row_len = if is_png_predictor { row_len + 1 } else { row_len };
+            let total_row_len = if is_png_predictor {
+                row_len + 1
+            } else {
+                row_len
+            };
             let num_rows = data.len() / total_row_len;
 
             // Sanity check.
@@ -231,18 +234,24 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 if is_png_predictor {
                     let predictor = in_row[0];
                     let in_data = &in_row[1..];
-                    
+
                     match predictor {
                         0 => out_row.copy_from_slice(in_data),
-                        1 => apply::<Sub>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
+                        1 => {
+                            apply::<Sub>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors)
+                        }
                         2 => apply::<Up>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
-                        3 => apply::<Avg>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
-                        4 => apply::<Paeth>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
+                        3 => {
+                            apply::<Avg>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors)
+                        }
+                        4 => apply::<Paeth>(
+                            &prev_row, &zero_col, &zero_col, in_data, out_row, colors,
+                        ),
                         _ => unreachable!(),
                     }
-                }   else if i == 2 {
+                } else if i == 2 {
                     apply::<Sub>(&prev_row, &zero_col, &zero_col, in_row, out_row, colors);
-                }   else {
+                } else {
                     warn!("unknown predictor {}", i);
                 }
 
@@ -254,7 +263,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
         i => {
             warn!("predictor {} is not supported", i);
             None
-        },
+        }
     }
 }
 

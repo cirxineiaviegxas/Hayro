@@ -8,10 +8,11 @@ autotests = false
 [dependencies]
 hayro-syntax = { workspace = true }
 hayro-interpret = { workspace = true }
+kurbo = { workspace = true }
+peniko = { workspace = true }
 image = "0.25.6"
-vello_cpu = { workspace = true }
-vello_api = { workspace = true }
 once_cell = "1.21.3"
+bytemuck = "1.23.0"
 
 
 [[test]]

@@ -7,13 +7,16 @@ use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, IMAGE_MASK, INTERPOLATE, MATRIX, RESOURCES, SMASK, SUBTYPE, WIDTH};
+use hayro_syntax::object::dict::keys::{
+    BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, IMAGE_MASK, INTERPOLATE, MATRIX,
+    RESOURCES, SMASK, SUBTYPE, WIDTH,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
+use log::warn;
 use peniko::Fill;
 use std::borrow::Cow;
-use log::warn;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -25,7 +28,7 @@ impl<'a> XObject<'a> {
         let dict = stream.dict();
         match dict.get::<Name>(SUBTYPE).unwrap().as_ref() {
             b"Image" => Some(Self::ImageXObject(ImageXObject::new(stream)?)),
-            b"Form" =>Some(Self::FormXObject(FormXObject::new(stream))),
+            b"Form" => Some(Self::FormXObject(FormXObject::new(stream))),
             _ => unimplemented!(),
         }
     }
@@ -138,10 +141,10 @@ pub struct ImageXObject<'a> {
 impl<'a> ImageXObject<'a> {
     fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
-        
+
         if dict.contains_key(IMAGE_MASK) {
             warn!("Image mask is not supported yet");
-            
+
             return None;
         }
 
@@ -197,7 +200,7 @@ impl<'a> ImageXObject<'a> {
                     let mapped = next as u16 * 255 / ((1 << self.bits_per_component) - 1);
                     buf.push(mapped as u8);
                 }
-                
+
                 // Remove padding bits.
                 buf.truncate(self.width as usize * self.height as usize);
 

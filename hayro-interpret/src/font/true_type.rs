@@ -120,19 +120,15 @@ impl TrueTypeFont {
                         }
                     }
                 }
-                
+
                 for record in cmap.encoding_records() {
-                    if record.platform_id() == PlatformId::Macintosh
-                        && record.encoding_id() == 0
-                    {
+                    if record.platform_id() == PlatformId::Macintosh && record.encoding_id() == 0 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             glyph = glyph.or_else(|| {
                                 MAC_OS_ROMAN_INVERSE
                                     .get(lookup)
                                     .or_else(|| MAC_ROMAN_INVERSE.get(lookup))
-                                    .and_then(|c| {
-                                        subtable.map_codepoint(*c)
-                                    })
+                                    .and_then(|c| subtable.map_codepoint(*c))
                                     .filter(|g| *g != GlyphId::NOTDEF)
                             })
                         }
@@ -155,15 +151,18 @@ impl TrueTypeFont {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
-                                glyph =
-                                    glyph.or_else(|| subtable.map_codepoint(code as u32 + offset)).filter(|g| *g != GlyphId::NOTDEF)
+                                glyph = glyph
+                                    .or_else(|| subtable.map_codepoint(code as u32 + offset))
+                                    .filter(|g| *g != GlyphId::NOTDEF)
                             }
                         }
                     } else if record.platform_id() == PlatformId::Macintosh
                         && record.encoding_id() == 0
                     {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
-                            glyph = glyph.or_else(|| subtable.map_codepoint(code)).filter(|g| *g != GlyphId::NOTDEF)
+                            glyph = glyph
+                                .or_else(|| subtable.map_codepoint(code))
+                                .filter(|g| *g != GlyphId::NOTDEF)
                         }
                     }
                 }

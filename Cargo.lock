@@ -468,15 +468,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "font-types"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02a596f5713680923a2080d86de50fe472fb290693cf0f701187a1c8b36996b7"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
 name = "fuchsia-cprng"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -568,7 +559,7 @@ dependencies = [
  "peniko",
  "phf",
  "qcms",
- "skrifa 0.30.0",
+ "skrifa",
  "smallvec",
  "yoke",
 ]
@@ -577,14 +568,15 @@ dependencies = [
 name = "hayro-render"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "hayro-interpret",
  "hayro-syntax",
  "image 0.25.6",
+ "kurbo",
  "log",
  "once_cell",
  "oxipng",
- "vello_api",
- "vello_cpu",
+ "peniko",
  "walkdir",
 ]
 
@@ -1287,17 +1279,7 @@ name = "read-fonts"
 version = "0.28.0"
 dependencies = [
  "bytemuck",
- "font-types 0.8.4",
-]
-
-[[package]]
-name = "read-fonts"
-version = "0.29.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ce8e2ca6b24313587a03ca61bb74c384e2a815bd90cf2866cfc9f5fb7a11fa0"
-dependencies = [
- "bytemuck",
- "font-types 0.9.0",
+ "font-types",
 ]
 
 [[package]]
@@ -1472,17 +1454,7 @@ name = "skrifa"
 version = "0.30.0"
 dependencies = [
  "bytemuck",
- "read-fonts 0.28.0",
-]
-
-[[package]]
-name = "skrifa"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbe6666ab11018ab91ff7b03f1a3b9fdbecfb610848436fefa5ce50343d3d913"
-dependencies = [
- "bytemuck",
- "read-fonts 0.29.0",
+ "read-fonts",
 ]
 
 [[package]]
@@ -1720,32 +1692,6 @@ dependencies = [
  "aligned-vec",
  "num-traits",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "vello_api"
-version = "0.5.0"
-dependencies = [
- "bytemuck",
- "peniko",
- "png",
-]
-
-[[package]]
-name = "vello_common"
-version = "0.5.0"
-dependencies = [
- "bytemuck",
- "skrifa 0.31.0",
- "smallvec",
- "vello_api",
-]
-
-[[package]]
-name = "vello_cpu"
-version = "0.5.0"
-dependencies = [
- "vello_common",
 ]
 
 [[package]]

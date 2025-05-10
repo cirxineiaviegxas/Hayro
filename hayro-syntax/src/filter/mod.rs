@@ -6,7 +6,6 @@ mod dct;
 mod lzw_flate;
 mod run_length;
 
-use log::warn;
 use crate::Result;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
@@ -14,6 +13,7 @@ use crate::object::name::Name;
 use crate::object::name::names::*;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
+use log::warn;
 use snafu::{OptionExt, whatever};
 
 pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<Vec<u8>> {
@@ -96,7 +96,7 @@ impl TryFrom<Name<'_>> for Filter {
     fn try_from(value: Name) -> std::result::Result<Self, Self::Error> {
         match value.as_ref() {
             ASCII_HEX_DECODE | b"AHx" => Ok(Filter::AsciiHexDecode),
-            ASCII85_DECODE | b"A85"=> Ok(Filter::Ascii85Decode),
+            ASCII85_DECODE | b"A85" => Ok(Filter::Ascii85Decode),
             LZW_DECODE | b"LZW" => Ok(Filter::LzwDecode),
             FLATE_DECODE | b"Fl" => Ok(Filter::FlateDecode),
             RUN_LENGTH_DECODE | b"RL" => Ok(Filter::RunLengthDecode),
