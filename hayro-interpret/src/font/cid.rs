@@ -1,5 +1,6 @@
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::util::OptionLog;
+use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
@@ -7,11 +8,8 @@ use hayro_syntax::object::dict::keys::{
     SUBTYPE, W, W2,
 };
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::{
-    CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, OPEN_TYPE,
-};
+use hayro_syntax::object::name::names::{CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, OPEN_TYPE};
 use hayro_syntax::object::stream::Stream;
-use hayro_syntax::object::Object;
 use kurbo::{BezPath, Vec2};
 use log::warn;
 use skrifa::raw::TableProvider;
