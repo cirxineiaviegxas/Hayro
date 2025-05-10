@@ -152,10 +152,8 @@ impl<'a> ImageXObject<'a> {
         let decoded = stream.decoded().unwrap();
         let interpolate = dict.get::<bool>(INTERPOLATE).unwrap_or(false);
         let image_mask = dict.get::<bool>(IMAGE_MASK).unwrap_or(false);
-        let mut bits_per_component = dict.get::<u8>(BITS_PER_COMPONENT).unwrap();
+        let bits_per_component = dict.get::<u8>(BITS_PER_COMPONENT).unwrap();
         let color_space = if image_mask {
-            // CCIT Fax Decoder will expand to 8 bits.
-            bits_per_component = 8;
             ColorSpace::DeviceGray
         } else {
             ColorSpace::new(dict.get::<Object>(COLORSPACE).unwrap())
