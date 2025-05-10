@@ -103,9 +103,9 @@ pub(crate) fn draw_form_xobject<'a>(
     context.restore_state();
 }
 
-pub(crate) fn draw_image_xobject<'a, 'b>(
-    x_object: &ImageXObject<'b>,
-    context: &mut Context<'a>,
+pub(crate) fn draw_image_xobject(
+    x_object: &ImageXObject<'_>,
+    context: &mut Context<'_>,
     device: &mut impl Device,
 ) {
     let width = x_object.width as f64;
@@ -160,7 +160,7 @@ pub struct ImageXObject<'a> {
 }
 
 impl<'a> ImageXObject<'a> {
-    fn new(stream: &Stream<'a>) -> Option<Self> {
+    pub(crate) fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
 
         let decoded = stream.decoded().unwrap();
@@ -250,7 +250,7 @@ impl<'a> ImageXObject<'a> {
         let interpolate =
             |n: f32, d_min: f32, d_max: f32| d_min + (n * (d_max - d_min) / (2.0f32.powi(8) - 1.0));
 
-        let adjusted_components = match self.bits_per_component {
+        let mut adjusted_components = match self.bits_per_component {
             1 | 2 | 4 => {
                 let mut buf = vec![];
                 let mut reader = BitReader::new(self.decoded.as_ref());
@@ -264,9 +264,6 @@ impl<'a> ImageXObject<'a> {
                         reader.align(1).unwrap();
                     }
                 }
-
-                // Remove padding bits.
-                buf.truncate(self.width as usize * self.height as usize);
 
                 buf
             }

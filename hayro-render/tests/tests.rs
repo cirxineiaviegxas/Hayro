@@ -51,6 +51,7 @@ use crate::run_test;
 #[test] fn image_ccit_4() { run_test("image_ccit_4", None); }
 #[test] fn image_cmyk_icc_jpg() { run_test("image_cmyk_icc_jpg", None); }
 #[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", None); }
+#[test] fn image_inline() { run_test("image_inline", None); }
 #[test] fn image_lab() { run_test("image_lab", None); }
 #[test] fn image_luma16() { run_test("image_luma16", None); }
 #[test] fn image_luma8() { run_test("image_luma8", None); }

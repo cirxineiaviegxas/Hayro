@@ -28,7 +28,7 @@ use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::util::OptionLog;
-use crate::x_object::{XObject, draw_xobject};
+use crate::x_object::{XObject, draw_xobject, ImageXObject, draw_image_xobject};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -412,8 +412,8 @@ pub fn interpret<'a, 'b>(
                 }
             }
             TypedOperation::InlineImage(i) => {
-                if let Some(x_object) = XObject::new(&i.0) {
-                    // draw_xobject(&x_object)
+                if let Some(x_object) = ImageXObject::new(&i.0) {
+                    draw_image_xobject(&x_object, context, device)
                 }
             }
             _ => {
