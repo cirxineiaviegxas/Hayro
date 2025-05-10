@@ -649,6 +649,9 @@ fn run_t3_instructions(
             ReplayInstruction::ApplyMask { mask } => {
                 device.apply_mask(mask);
             }
+            ReplayInstruction::DrawImage { image_data, width, height, is_stencil, quality } => {
+                device.draw_rgba_image(image_data.clone(), width.clone(), height.clone(), is_stencil.clone(), quality.clone())
+            }
         }
     }
 }

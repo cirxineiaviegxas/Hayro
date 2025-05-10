@@ -53,6 +53,13 @@ pub(crate) enum ReplayInstruction {
         clip: Option<ClipPath>,
         opacity: f32,
     },
+    DrawImage {
+        image_data: Vec<u8>,
+        width: u32,
+        height: u32,
+        is_stencil: bool,
+        quality: ImageQuality,
+    },
     ApplyMask {
         mask: Mask,
     },

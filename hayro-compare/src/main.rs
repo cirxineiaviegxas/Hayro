@@ -11,7 +11,7 @@ fn main() {
         log::set_max_level(log::LevelFilter::Warn);
     }
 
-    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/image_mask");
+    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/inline_images");
 
     let mut entries = WalkDir::new(&root_dir)
         .into_iter()
@@ -29,7 +29,7 @@ fn main() {
 
     let entries = &entries;
 
-    render_pdfium(&entries);
+    // render_pdfium(&entries);
     render_hayro(&entries);
 }
 

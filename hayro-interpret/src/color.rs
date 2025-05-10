@@ -66,7 +66,10 @@ impl ColorSpace {
                     return Some(ColorSpace::Lab(Lab::new(&lab_dict)?));
                 }
                 INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
-                _ => return None,
+                _ => {
+                    warn!("unsupported color space: {}", name.as_str());
+                    return None;
+                },
             }
         }
 

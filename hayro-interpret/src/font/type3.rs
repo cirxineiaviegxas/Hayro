@@ -53,7 +53,15 @@ impl Device for Type3GlyphDescription {
         todo!()
     }
 
-    fn draw_rgba_image(&mut self, _: Vec<u8>, _: u32, _: u32, _: bool, _: ImageQuality) {}
+    fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32, is_stencil: bool, quality: ImageQuality) {
+     self.0.push(ReplayInstruction::DrawImage {
+         image_data,
+         width,
+         height,
+         is_stencil,
+         quality,
+     })   
+    }
 
     fn pop(&mut self) {
         self.0.push(ReplayInstruction::PopClip)

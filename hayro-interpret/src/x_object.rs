@@ -124,7 +124,7 @@ pub(crate) fn draw_image_xobject(
     let quality = if x_object.interpolate {
         ImageQuality::Medium
     } else {
-        ImageQuality::Low
+        ImageQuality::Medium
     };
 
     context.save_state();
