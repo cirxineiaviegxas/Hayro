@@ -53,6 +53,7 @@ use crate::run_test;
 #[test] fn image_luma8() { run_test("image_luma8", None); }
 #[test] fn image_luma8_icc() { run_test("image_luma8_icc", None); }
 #[test] fn image_luma8_jpg() { run_test("image_luma8_jpg", None); }
+#[test] fn image_mask() { run_test("image_mask", None); }
 #[test] fn image_rgb16() { run_test("image_rgb16", None); }
 #[test] fn image_rgb8() { run_test("image_rgb8", None); }
 #[test] fn image_rgb8_decode() { run_test("image_rgb8_decode", None); }

@@ -234,7 +234,17 @@ impl<F: FineType> Fine<F> {
                         let filler = ImageFiller::new(i, start_x, start_y);
                         if i.is_stencil {
                             filler.paint(color_buf);
+                            for el in blend_buf.chunks(16) {
+                                println!("blend_buf{:?}", &el[0..4]);
+                            }
+                            for el in color_buf.chunks(16) {
+                                println!("color_buf{:?}", &el[0..4]);
+                            }
                             fill::mask(blend_buf, color_buf);
+                            for el in blend_buf.chunks(16) {
+                                println!("{:?}", &el[0..4]);
+                            }
+                            println!("end");
                         } else {
                             fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                         }

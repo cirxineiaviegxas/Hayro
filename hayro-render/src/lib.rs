@@ -48,6 +48,7 @@ impl Renderer {
             })
             .collect();
         let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
+        pixmap.clone().save_png("pix.png");
 
         let image = Image {
             pixmap: Arc::new(pixmap),
@@ -109,6 +110,7 @@ impl Device for Renderer {
     }
 
     fn draw_stencil_image(&mut self, image_data: Vec<u8>, width: u32, height: u32) {
+        println!("{:?}", image_data.len());
         self.draw_image(image_data, width, height, true);
     }
 
@@ -162,12 +164,14 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         .0
         .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
 
+    device.push_layer(None, 1.0);
     interpret(
         page.typed_operations(),
         &page.resources(),
         &mut state,
         &mut device,
     );
+    device.pop();
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
     device.0.render_to_pixmap(&mut pixmap);

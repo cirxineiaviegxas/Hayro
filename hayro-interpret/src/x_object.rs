@@ -1,4 +1,5 @@
-use crate::color::ColorSpace;
+use crate::color::ColorSpace::DeviceRgb;
+use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::{ClipPath, Device};
 use crate::interpret;
@@ -111,7 +112,14 @@ pub(crate) fn draw_image_xobject<'a>(
 ) {
     let width = x_object.width as f64;
     let height = x_object.height as f64;
-    let data = x_object.as_rgba8();
+
+    let color = Color::from_pdf(
+        context.get().fill_cs.clone(),
+        &context.get().fill_color,
+        context.get().fill_alpha,
+    );
+
+    let data = x_object.as_rgba8(color);
 
     context.save_state();
     context.pre_concat_affine(Affine::new([
@@ -134,6 +142,7 @@ pub struct ImageXObject<'a> {
     color_space: ColorSpace,
     interpolate: bool,
     decode: Vec<(f32, f32)>,
+    is_mask: bool,
     pub dict: Dict<'a>,
     bits_per_component: u8,
 }
@@ -142,16 +151,17 @@ impl<'a> ImageXObject<'a> {
     fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
 
-        if dict.contains_key(IMAGE_MASK) {
-            warn!("Image mask is not supported yet");
-
-            return None;
-        }
-
         let decoded = stream.decoded().unwrap();
         let interpolate = dict.get::<bool>(INTERPOLATE).unwrap_or(false);
-        let bits_per_component = dict.get::<u8>(BITS_PER_COMPONENT).unwrap();
-        let color_space = ColorSpace::new(dict.get::<Object>(COLORSPACE).unwrap());
+        let image_mask = dict.get::<bool>(IMAGE_MASK).unwrap_or(false);
+        let mut bits_per_component = dict.get::<u8>(BITS_PER_COMPONENT).unwrap();
+        let color_space = if image_mask {
+            // CCIT Fax Decoder will expand to 8 bits.
+            bits_per_component = 8;
+            ColorSpace::DeviceGray
+        } else {
+            ColorSpace::new(dict.get::<Object>(COLORSPACE).unwrap())
+        };
         let decode = dict
             .get::<Array>(DECODE)
             .map(|a| {
@@ -169,23 +179,38 @@ impl<'a> ImageXObject<'a> {
             color_space,
             interpolate,
             decode,
+            is_mask: image_mask,
             dict: dict.clone(),
             bits_per_component,
         })
     }
 
-    pub fn as_rgba8(&self) -> Vec<u8> {
-        let s_mask = self
-            .dict
-            .get::<Stream>(SMASK)
-            .and_then(|s| ImageXObject::new(&s).map(|s| s.decode_raw()))
-            .unwrap_or(vec![1.0; self.width as usize * self.height as usize]);
+    pub fn as_rgba8(&self, current_color: Color) -> Vec<u8> {
+        if self.is_mask {
+            let decoded = self.decode_raw();
+            decoded
+                .iter()
+                .flat_map(|alpha| {
+                    current_color
+                        .to_rgba()
+                        .multiply_alpha(1.0 - *alpha)
+                        .to_rgba8()
+                        .to_u8_array()
+                })
+                .collect()
+        } else {
+            let s_mask = self
+                .dict
+                .get::<Stream>(SMASK)
+                .and_then(|s| ImageXObject::new(&s).map(|s| s.decode_raw()))
+                .unwrap_or(vec![1.0; self.width as usize * self.height as usize]);
 
-        self.decode_raw()
-            .chunks(self.color_space.components() as usize)
-            .zip(s_mask)
-            .flat_map(|(v, alpha)| self.color_space.to_rgba(v, alpha).to_rgba8().to_u8_array())
-            .collect::<Vec<_>>()
+            self.decode_raw()
+                .chunks(self.color_space.components() as usize)
+                .zip(s_mask)
+                .flat_map(|(v, alpha)| self.color_space.to_rgba(v, alpha).to_rgba8().to_u8_array())
+                .collect::<Vec<_>>()
+        }
     }
 
     pub fn decode_raw(&self) -> Vec<f32> {

@@ -26,18 +26,6 @@ struct Layer {
     mask: Option<Mask>,
 }
 
-impl Layer {
-    /// Whether the layer actually requires allocating a new scratch buffer
-    /// for drawing its contents.
-    fn needs_buf(&self) -> bool {
-        self.blend_mode.mix != Mix::Normal
-            || self.blend_mode.compose != Compose::SrcOver
-            || self.opacity != 1.0
-            || self.mask.is_some()
-            || !self.clip
-    }
-}
-
 /// A container for wide tiles.
 #[derive(Debug)]
 pub struct Wide {
@@ -322,26 +310,6 @@ impl Wide {
         mask: Option<Mask>,
         opacity: f32,
     ) {
-        // Some explanations about what is going on here: We support the concept of
-        // layers, where a user can push a new layer (with certain properties), draw some
-        // stuff, and finally pop the layer, as part of which the layer as a whole will be
-        // blended into the previous layer.
-        // There are 3 "straightforward" properties that can be set for each layer:
-        // 1) The blend mode that should be used to blend the layer into the backdrop.
-        // 2) A mask that will be applied to the whole layer in the very end before blending.
-        // 3) An optional opacity that will be applied to the whole layer before blending (this
-        //    could in theory be simulated with an alpha mask, but since it's a common operation and
-        //    we only have a single opacity, this can easily be optimized.
-        //
-        // Finally, you can also add a clip path to the layer. However, clipping has its own
-        // more complicated logic for pushing/popping buffers where drawing is also suppressed
-        // in clipped-out wide tiles. Because of this, in case we have one of the above properties
-        // AND a clipping path, we will actually end up pushing two buffers, the first one handles
-        // the three properties and the second one is just for clip paths. That is a bit wasteful
-        // and I believe it should be possible to process them all in just one go, but for now
-        // this is good enough, and it allows us to implement blending without too deep changes to
-        // the original clipping implementation.
-
         let layer = Layer {
             clip: clip_path.is_some(),
             blend_mode,
@@ -349,21 +317,12 @@ impl Wide {
             mask,
         };
 
-        let needs_buf = layer.needs_buf();
-
-        // In case we do blending, masking or opacity, push one buffer per wide tile.
-        if needs_buf {
-            for x in 0..self.width_tiles() {
-                for y in 0..self.height_tiles() {
-                    self.get_mut(x, y).push_buf();
-                }
+        for x in 0..self.width_tiles() {
+            for y in 0..self.height_tiles() {
+                self.get_mut(x, y).push_buf();
             }
         }
 
-        // If we have a clip path, push another buffer in the affected wide tiles.
-        // Note that it is important that we FIRST push the buffer for blending etc. and
-        // only then for clipping, otherwise we will use the empty clip buffer as the backdrop
-        // for blending!
         if let Some((clip, fill)) = clip_path {
             self.push_clip(clip, fill);
         }
@@ -374,27 +333,22 @@ impl Wide {
     /// Pop a previously pushed layer.
     pub fn pop_layer(&mut self) {
         // This method basically unwinds everything we did in `push_layer`.
-
         let layer = self.layer_stack.pop().unwrap();
 
         if layer.clip {
             self.pop_clip();
         }
 
-        let needs_buf = layer.needs_buf();
+        for x in 0..self.width_tiles() {
+            for y in 0..self.height_tiles() {
+                let t = self.get_mut(x, y);
 
-        if needs_buf {
-            for x in 0..self.width_tiles() {
-                for y in 0..self.height_tiles() {
-                    let t = self.get_mut(x, y);
-
-                    if let Some(mask) = layer.mask.clone() {
-                        t.mask(mask);
-                    }
-                    t.opacity(layer.opacity);
-                    t.blend(layer.blend_mode);
-                    t.pop_buf();
+                if let Some(mask) = layer.mask.clone() {
+                    t.mask(mask);
                 }
+                t.opacity(layer.opacity);
+                t.blend(layer.blend_mode);
+                t.pop_buf();
             }
         }
     }
