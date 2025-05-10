@@ -56,6 +56,8 @@ impl Device for Type3GlyphDescription {
 
     fn draw_rgba_image(&mut self, _: Vec<u8>, _: u32, _: u32) {}
 
+    fn draw_stencil_image(&mut self, _: Vec<u8>, _: u32, _: u32) {}
+
     fn pop(&mut self) {
         self.0.push(ReplayInstruction::PopClip)
     }

@@ -37,6 +37,32 @@ pub enum RenderMode {
 
 struct Renderer(RenderContext);
 
+impl Renderer {
+    fn draw_image(&mut self, image_data: Vec<u8>, width: u32, height: u32, is_stencil: bool) {
+        let premul = image_data
+            .chunks_exact(4)
+            .map(|d| {
+                AlphaColor::<Srgb>::from_rgba8(d[0], d[1], d[2], d[3])
+                    .premultiply()
+                    .to_rgba8()
+            })
+            .collect();
+        let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
+
+        let image = Image {
+            pixmap: Arc::new(pixmap),
+            x_extend: Default::default(),
+            y_extend: Default::default(),
+            quality: ImageQuality::Low,
+            is_stencil,
+        };
+
+        self.0.set_paint(image);
+        self.0
+            .fill_rect(&Rect::new(0.0, 0.0, width as f64, height as f64));
+    }
+}
+
 impl Device for Renderer {
     fn set_transform(&mut self, affine: Affine) {
         self.0.set_transform(affine);
@@ -79,26 +105,11 @@ impl Device for Renderer {
     }
 
     fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32) {
-        let premul = image_data
-            .chunks_exact(4)
-            .map(|d| {
-                AlphaColor::<Srgb>::from_rgba8(d[0], d[1], d[2], d[3])
-                    .premultiply()
-                    .to_rgba8()
-            })
-            .collect();
-        let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
+        self.draw_image(image_data, width, height, false);
+    }
 
-        let image = Image {
-            pixmap: Arc::new(pixmap),
-            x_extend: Default::default(),
-            y_extend: Default::default(),
-            quality: ImageQuality::Low,
-        };
-
-        self.0.set_paint(image);
-        self.0
-            .fill_rect(&Rect::new(0.0, 0.0, width as f64, height as f64));
+    fn draw_stencil_image(&mut self, image_data: Vec<u8>, width: u32, height: u32) {
+        self.draw_image(image_data, width, height, true);
     }
 
     fn pop(&mut self) {

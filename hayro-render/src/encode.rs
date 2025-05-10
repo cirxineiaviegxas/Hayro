@@ -34,6 +34,7 @@ impl EncodeExt for Image {
             transform,
             x_advance,
             y_advance,
+            is_stencil: self.is_stencil,
         };
 
         paints.push(EncodedPaint::Image(encoded));
@@ -64,6 +65,7 @@ pub struct EncodedImage {
     pub x_advance: Vec2,
     /// The advance in image coordinates for one step in the y direction.
     pub y_advance: Vec2,
+    pub is_stencil: bool,
 }
 
 pub(crate) fn x_y_advances(transform: &Affine) -> (Vec2, Vec2) {

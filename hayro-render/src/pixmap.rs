@@ -3,10 +3,10 @@
 
 //! A simple pixmap type.
 
+use image::{ImageBuffer, Rgba};
 use peniko::color::{PremulRgba8, Rgba8};
 use std::vec;
 use std::vec::Vec;
-use image::{ImageBuffer, Rgba};
 
 #[cfg(feature = "png")]
 extern crate std;
@@ -262,13 +262,13 @@ impl Pixmap {
             })
             .collect()
     }
-    
+
     pub fn save_png(self, path: impl AsRef<std::path::Path>) {
         let width = self.width as u32;
         let height = self.height as u32;
         let data = self.take_unpremultiplied();
         let as_u8: &[u8] = bytemuck::cast_slice(&data);
-        
+
         let image: ImageBuffer<Rgba<u8>, _> = ImageBuffer::from_raw(width, height, as_u8).unwrap();
         image.save(path).unwrap()
     }

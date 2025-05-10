@@ -232,7 +232,12 @@ impl<F: FineType> Fine<F> {
                 match encoded_paint {
                     EncodedPaint::Image(i) => {
                         let filler = ImageFiller::new(i, start_x, start_y);
-                        fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
+                        if i.is_stencil {
+                            filler.paint(color_buf);
+                            fill::mask(blend_buf, color_buf);
+                        } else {
+                            fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
+                        }
                     }
                 }
             }
@@ -293,7 +298,17 @@ impl<F: FineType> Fine<F> {
                 match encoded_paint {
                     EncodedPaint::Image(i) => {
                         let filler = ImageFiller::new(i, start_x, start_y);
-                        strip_complex_paint(color_buf, blend_buf, blend_mode, filler, alphas);
+
+                        if i.is_stencil {
+                            filler.paint(color_buf);
+                            strip::mask(
+                                blend_buf,
+                                color_buf,
+                                alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                            );
+                        } else {
+                            strip_complex_paint(color_buf, blend_buf, blend_mode, filler, alphas);
+                        }
                     }
                 }
             }
@@ -413,6 +428,19 @@ pub(crate) mod fill {
             }
         }
     }
+
+    pub(crate) fn mask<F: FineType>(target: &mut [F], source: &mut [F]) {
+        for strip in target.chunks_exact_mut(TILE_HEIGHT_COMPONENTS) {
+            for (bg, src) in strip
+                .chunks_exact_mut(COLOR_COMPONENTS)
+                .zip(source.chunks_exact(COLOR_COMPONENTS))
+            {
+                for i in 0..COLOR_COMPONENTS {
+                    bg[i] = bg[i].normalized_mul(src[i]);
+                }
+            }
+        }
+    }
 }
 
 pub(crate) mod strip {
@@ -458,6 +486,28 @@ pub(crate) mod strip {
                     let p2 = src_c[i].widen() * mask_a.widen();
 
                     bg_c[j * COLOR_COMPONENTS + i] = (p1 + p2).normalize().narrow();
+                }
+            }
+        }
+    }
+
+    pub(crate) fn mask<F: FineType, A: Iterator<Item = [u8; Tile::HEIGHT as usize]>>(
+        target: &mut [F],
+        source: &mut [F],
+        mut alphas: A,
+    ) {
+        for strip in target.chunks_exact_mut(TILE_HEIGHT_COMPONENTS) {
+            let alphas = alphas.next().unwrap();
+            let mut masks = alphas.iter().copied().map(F::from_normalized_u8);
+
+            for (bg, src) in strip
+                .chunks_exact_mut(COLOR_COMPONENTS)
+                .zip(source.chunks_exact(COLOR_COMPONENTS))
+            {
+                let alpha = masks.next().unwrap();
+
+                for i in 0..COLOR_COMPONENTS {
+                    bg[i] = bg[i].normalized_mul(src[i]).normalized_mul(alpha);
                 }
             }
         }

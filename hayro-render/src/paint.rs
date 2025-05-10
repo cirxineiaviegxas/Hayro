@@ -66,6 +66,7 @@ pub struct Image {
     pub y_extend: peniko::Extend,
     /// Hint for desired rendering quality.
     pub quality: ImageQuality,
+    pub is_stencil: bool,
 }
 
 /// A premultiplied color.
