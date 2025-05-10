@@ -105,11 +105,13 @@ impl<'a> Iterator for UntypedIter<'a> {
                     }
                 };
 
-                // Hack for now to skip inline images, which form an exception.
                 if operator.as_ref() == b"BI" {
                     // The ID operator will already be consumed by this.
                     let inline_dict = self.reader.read_without_xref::<InlineImageDict>()?;
                     let dict = inline_dict.get_dict().clone();
+                    
+                    // One whitespace after "ID".
+                    self.reader.read_byte()?;
 
                     let stream_data = self.reader.tail()?;
                     let start_offset = self.reader.offset();

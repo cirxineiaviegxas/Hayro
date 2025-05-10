@@ -205,7 +205,7 @@ impl<'a> InlineImageDict<'a> {
 
 impl<'a> Readable<'a> for InlineImageDict<'a> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        Some(Self(read_inner::<true>(r, xref, None, b"ID ")?))
+        Some(Self(read_inner::<true>(r, xref, None, b"ID")?))
     }
 }
 
