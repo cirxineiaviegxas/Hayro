@@ -8,8 +8,8 @@ use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    BASE_ENCODING, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESC, FONT_FILE2, LAST_CHAR,
-    MISSING_WIDTH, WIDTHS,
+    BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESC, FONT_FILE2,
+    LAST_CHAR, MISSING_WIDTH, WIDTHS,
 };
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
@@ -70,7 +70,10 @@ impl TrueTypeFont {
                     })
             })
             .unwrap_or_else(|| {
-                warn!("failed to extract base font. falling back to Times New Roman.");
+                warn!(
+                    "failed to extract base font {:?}. falling back to Times New Roman.",
+                    dict.get::<Name>(BASE_FONT).map(|b| b.as_str().to_string())
+                );
 
                 OpenTypeFont::Standard(StandardFont::TimesRoman)
             });

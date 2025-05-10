@@ -8,8 +8,8 @@ use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    BBOX, BITS_PER_COMPONENT, COLORSPACE, DECODE, HEIGHT, IMAGE_MASK, INTERPOLATE, MATRIX,
-    RESOURCES, SMASK, SUBTYPE, WIDTH,
+    BBOX, BITS_PER_COMPONENT, BPC, COLORSPACE, CS, D, DECODE, H, HEIGHT, I, IM, IMAGE_MASK,
+    INTERPOLATE, MATRIX, RESOURCES, SMASK, SUBTYPE, W, WIDTH,
 };
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
@@ -103,8 +103,8 @@ pub(crate) fn draw_form_xobject<'a>(
     context.restore_state();
 }
 
-pub(crate) fn draw_image_xobject<'a>(
-    x_object: &ImageXObject<'a>,
+pub(crate) fn draw_image_xobject<'a, 'b>(
+    x_object: &ImageXObject<'b>,
     context: &mut Context<'a>,
     device: &mut impl Device,
 ) {
@@ -164,27 +164,46 @@ impl<'a> ImageXObject<'a> {
         let dict = stream.dict();
 
         let decoded = stream.decoded().unwrap();
-        let interpolate = dict.get::<bool>(INTERPOLATE).unwrap_or(false);
-        let image_mask = dict.get::<bool>(IMAGE_MASK).unwrap_or(false);
+        let interpolate = dict
+            .get::<bool>(INTERPOLATE)
+            .or_else(|| dict.get::<bool>(I))
+            .unwrap_or(false);
+        let image_mask = dict
+            .get::<bool>(IMAGE_MASK)
+            .or_else(|| dict.get::<bool>(IM))
+            .unwrap_or(false);
         let bits_per_component = if image_mask {
             1
         } else {
-            dict.get::<u8>(BITS_PER_COMPONENT).unwrap()
+            dict.get::<u8>(BITS_PER_COMPONENT)
+                .or_else(|| dict.get::<u8>(BPC))
+                .unwrap()
         };
         let color_space = if image_mask {
             ColorSpace::DeviceGray
         } else {
-            ColorSpace::new(dict.get::<Object>(COLORSPACE).unwrap())
+            ColorSpace::new(
+                dict.get::<Object>(COLORSPACE)
+                    .or_else(|| dict.get::<Object>(CS))
+                    .unwrap(),
+            )
         };
         let decode = dict
             .get::<Array>(DECODE)
+            .or_else(|| dict.get::<Array>(D))
             .map(|a| {
                 let vals = a.iter::<f32>().collect::<Vec<_>>();
                 vals.chunks(2).map(|v| (v[0], v[1])).collect::<Vec<_>>()
             })
             .unwrap_or(color_space.default_decode_arr());
-        let width = dict.get::<u32>(WIDTH).unwrap();
-        let height = dict.get::<u32>(HEIGHT).unwrap();
+        let width = dict
+            .get::<u32>(WIDTH)
+            .or_else(|| dict.get::<u32>(W))
+            .unwrap();
+        let height = dict
+            .get::<u32>(HEIGHT)
+            .or_else(|| dict.get::<u32>(H))
+            .unwrap();
 
         Some(Self {
             decoded,

@@ -411,6 +411,11 @@ pub fn interpret<'a, 'b>(
                     draw_xobject(&x_object, context, device);
                 }
             }
+            TypedOperation::InlineImage(i) => {
+                if let Some(x_object) = XObject::new(&i.0) {
+                    // draw_xobject(&x_object)
+                }
+            }
             _ => {
                 println!("{:?}", op);
             }

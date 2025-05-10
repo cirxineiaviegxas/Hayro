@@ -3,7 +3,7 @@ use crate::file::xref::XRef;
 use crate::filter::{Filter, apply_filter};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{DECODE_PARMS, F, FILTER, LENGTH};
+use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
@@ -33,21 +33,33 @@ impl<'a> Stream<'a> {
     /// Note that the result of this method will not be cached, so calling it multiple
     /// times is expensive.
     pub fn decoded(&self) -> Result<Cow<'a, [u8]>> {
-        if let Some(filter) = self.dict.get::<Filter>(FILTER) {
-            let params = self.dict.get::<Dict>(DECODE_PARMS);
+        if let Some(filter) = self
+            .dict
+            .get::<Filter>(FILTER)
+            .or_else(|| self.dict.get::<Filter>(F))
+        {
+            let params = self
+                .dict
+                .get::<Dict>(DECODE_PARMS)
+                .or_else(|| self.dict.get::<Dict>(DP));
 
             Ok(Cow::Owned(apply_filter(
                 self.data,
                 filter,
                 params.as_ref(),
             )?))
-        } else if let Some(filters) = self.dict.get::<Array>(FILTER) {
+        } else if let Some(filters) = self
+            .dict
+            .get::<Array>(FILTER)
+            .or_else(|| self.dict.get::<Array>(F))
+        {
             // TODO: Avoid allocation?
 
             let filters = filters.iter::<Filter>().collect::<Vec<_>>();
             let params = self
                 .dict
                 .get::<Array>(DECODE_PARMS)
+                .or_else(|| self.dict.get::<Array>(DP))
                 .map(|a| a.iter::<Object>().collect())
                 .unwrap_or(vec![]);
 
