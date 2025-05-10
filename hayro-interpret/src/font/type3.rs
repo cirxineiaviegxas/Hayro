@@ -12,6 +12,7 @@ use peniko::{ImageFormat, ImageQuality};
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use crate::font::UNITS_PER_EM;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -147,7 +148,7 @@ impl<'a> Type3<'a> {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        *self.widths.get(code as usize).unwrap()
+        (*self.widths.get(code as usize).unwrap() * self.matrix.as_coeffs()[0] as f32) * UNITS_PER_EM
     }
 
     pub fn render_glyph(&self, glyph: GlyphId, context: &mut Context<'a>) -> Type3GlyphDescription {
