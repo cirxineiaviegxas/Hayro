@@ -15,7 +15,7 @@
 
 // See <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt_stream.js>
 
-use std::io::{Read};
+use std::io::Read;
 
 use crate::filter::ccitt::{CCITTFaxDecoder, CCITTFaxDecoderOptions, CcittFaxSource};
 use crate::object::dict::Dict;
@@ -43,62 +43,62 @@ pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
         decoder::{decode_g4, pels},
     };
 
-    if params.k < 0 {
-        let columns = params.columns as usize;
-        let rows = params.rows as usize;
+    // if params.k < 0 {
+    //     let columns = params.columns as usize;
+    //     let rows = params.rows as usize;
+    //
+    //     let height = if params.rows == 0 {
+    //         None
+    //     } else {
+    //         Some(params.rows as u16)
+    //     };
+    //     let mut buf = Vec::with_capacity(columns * rows);
+    //     decode_g4(data.iter().cloned(), columns as u16, height, |line| {
+    //         buf.extend(pels(line, columns as u16).map(|c| match c {
+    //             Color::Black => 0,
+    //             Color::White => 255,
+    //         }));
+    //         assert_eq!(
+    //             buf.len() % columns,
+    //             0,
+    //             "len={}, columns={}",
+    //             buf.len(),
+    //             columns
+    //         );
+    //     })?;
+    //     assert_eq!(
+    //         buf.len() % columns,
+    //         0,
+    //         "len={}, columns={}",
+    //         buf.len(),
+    //         columns
+    //     );
+    //
+    //     if rows != 0 && buf.len() != columns * rows {
+    //         panic!(
+    //             "decoded length does not match (expected {rows}∙{columns}, got {})",
+    //             buf.len()
+    //         );
+    //     }
+    //     Some(buf)
+    // } else {
+    //     unimplemented!()
+    // }
 
-        let height = if params.rows == 0 {
-            None
-        } else {
-            Some(params.rows as u16)
-        };
-        let mut buf = Vec::with_capacity(columns * rows);
-        decode_g4(data.iter().cloned(), columns as u16, height, |line| {
-            buf.extend(pels(line, columns as u16).map(|c| match c {
-                Color::Black => 0,
-                Color::White => 255,
-            }));
-            assert_eq!(
-                buf.len() % columns,
-                0,
-                "len={}, columns={}",
-                buf.len(),
-                columns
-            );
-        })?;
-        assert_eq!(
-            buf.len() % columns,
-            0,
-            "len={}, columns={}",
-            buf.len(),
-            columns
-        );
+    let mut stream = CCITTFaxStream::new(std::io::Cursor::new(data), params);
 
-        if rows != 0 && buf.len() != columns * rows {
-            panic!(
-                "decoded length does not match (expected {rows}∙{columns}, got {})",
-                buf.len()
-            );
+    let mut out = vec![];
+
+    loop {
+        let byte = stream.decoder.read_next_char();
+        if byte == -1 {
+            break;
         }
-        Some(buf)
-    } else {
-        unimplemented!()
+
+        out.push(byte as u8);
     }
 
-    // let mut stream = CCITTFaxStream::new(io::Cursor::new(data), params);
-    //
-    // let mut out = vec![];
-    //
-    // loop {
-    //     let byte = stream.decoder.read_next_char();
-    //     if byte == -1 {
-    //         break;
-    //     }
-    //
-    //     out.push(byte as u8);
-    // }
-    //
-    // Some(out)
+    Some(out)
 }
 
 /// A stream that reads CCITT fax encoded data and decodes it into bytes.

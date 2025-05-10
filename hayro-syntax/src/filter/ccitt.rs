@@ -21,6 +21,8 @@
 
 // See <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt.js>
 
+use log::warn;
+
 const ccittEOL: i32 = -2;
 const ccittEOF: i32 = -1;
 const twoDimPass: i32 = 0;
@@ -1123,6 +1125,7 @@ pub struct CCITTFaxDecoder<S: CcittFaxSource> {
     pub eof: bool,
     pub encoding: i32,
     pub eoline: bool,
+    counter: u32,
     pub byte_align: bool,
     pub columns: usize,
     pub rows: usize,
@@ -1163,6 +1166,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
             columns,
             rows,
             eoblock,
+            counter: 0,
             black,
             coding_line,
             ref_line,
@@ -1291,29 +1295,88 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
     }
 
     fn get_white_code(&mut self) -> i32 {
-        let code = self.look_bits(5);
-        let entry = whiteTable1[code as usize];
-        if entry[0] > 0 {
-            self.eat_bits(entry[0] as usize);
-            return entry[1];
+        let mut code = 0;
+
+        if self.eoblock {
+            code = self.look_bits(12);
+
+            if code == ccittEOF {
+                return 1;
+            }
+
+            let code = code as usize;
+
+            let p = if (code >> 5) == 0 {
+                &whiteTable1[code]
+            } else {
+                &whiteTable2[code >> 3]
+            };
+
+            if p[0] > 0 {
+                self.eat_bits(p[0] as usize);
+                return p[1];
+            }
+        } else {
+            let result = self.find_table_code(1, 9, &whiteTable2, None);
+            if result.0 {
+                return result.1;
+            }
+
+            let result = self.find_table_code(11, 12, &whiteTable1, None);
+
+            if result.0 {
+                return result.1;
+            }
         }
-        let code = self.look_bits(9);
-        let entry = whiteTable2[code as usize];
-        self.eat_bits(entry[0] as usize);
-        entry[1]
+
+        warn!("bad white code: {}", code);
+
+        self.eat_bits(1);
+        1
     }
 
     fn get_black_code(&mut self) -> i32 {
-        let code = self.look_bits(5);
-        let entry = blackTable1[code as usize];
-        if entry[0] > 0 {
-            self.eat_bits(entry[0] as usize);
-            return entry[1];
+        let mut code;
+
+        if self.eoblock {
+            code = self.look_bits(13);
+            if code == ccittEOF {
+                return 1;
+            }
+
+            let p = if (code >> 7) == 0 {
+                blackTable1[code as usize]
+            } else if (code >> 9) == 0 && (code >> 7) != 0 {
+                let index = ((code >> 1) as isize - 64).max(0) as usize;
+                blackTable2[index]
+            } else {
+                blackTable3[(code >> 7) as usize]
+            };
+
+            if p[0] > 0 {
+                self.eat_bits(p[0] as usize);
+                return p[1];
+            }
+        } else {
+            let result = self.find_table_code(2, 6, &blackTable3, None);
+            if result.0 {
+                return result.1;
+            }
+
+            let result = self.find_table_code(7, 12, &blackTable2, Some(64));
+            if result.0 {
+                return result.1;
+            }
+
+            let result = self.find_table_code(10, 13, &blackTable1, None);
+            if result.0 {
+                return result.1;
+            }
         }
-        let code = self.look_bits(9);
-        let entry = blackTable2[code as usize];
-        self.eat_bits(entry[0] as usize);
-        entry[1]
+
+        warn!("bad black code");
+        self.eat_bits(1);
+        1
     }
 
     pub fn read_next_char(&mut self) -> i32 {
@@ -1684,6 +1747,11 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
         if self.black {
             c ^= 0xff;
         }
+
+        self.counter += 1;
+
+        println!("{}, {:?}", self.counter, &self.coding_line[0..3]);
+
         c
     }
 }
