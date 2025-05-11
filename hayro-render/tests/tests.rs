@@ -25,6 +25,7 @@ use crate::run_test;
 #[test] fn font_truetype_5() { run_test("font_truetype_5", None); }
 #[test] fn font_truetype_6() { run_test("font_truetype_6", None); }
 #[test] fn font_truetype_7() { run_test("font_truetype_7", Some(1..=1)); }
+#[test] fn font_truetype_8() { run_test("font_truetype_8", Some(0..=0)); }
 #[test] fn font_type1_1() { run_test("font_type1_1", None); }
 #[test] fn font_type1_10() { run_test("font_type1_10", Some(0..=1)); }
 #[test] fn font_type1_11() { run_test("font_type1_11", None); }
@@ -56,6 +57,8 @@ use crate::run_test;
 #[test] fn image_inline_3() { run_test("image_inline_3", None); }
 #[test] fn image_inline_4() { run_test("image_inline_4", None); }
 #[test] fn image_inline_5() { run_test("image_inline_5", None); }
+#[test] fn image_inline_6() { run_test("image_inline_6", None); }
+#[test] fn image_inline_7() { run_test("image_inline_7", None); }
 #[test] fn image_lab() { run_test("image_lab", None); }
 #[test] fn image_luma16() { run_test("image_luma16", None); }
 #[test] fn image_luma8() { run_test("image_luma8", None); }

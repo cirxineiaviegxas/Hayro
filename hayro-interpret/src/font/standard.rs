@@ -53,6 +53,14 @@ impl StandardFont {
     pub fn code_to_unicode(&self, code: u8) -> Option<&'static str> {
         self.name_to_unicode(self.code_to_name(code)?)
     }
+    
+    pub fn is_non_symbolic(&self) -> bool {
+        match self {
+            StandardFont::ZapfDingBats => false,
+            StandardFont::Symbol => false,
+            _ => true,
+        }
+    }
 
     pub fn get_blob(&self) -> OpenTypeFontBlob {
         match self {

@@ -42,7 +42,7 @@ impl OpenTypeFont {
 pub(crate) struct TrueTypeFont {
     base_font: OpenTypeFont,
     widths: Vec<f32>,
-    font_flags: FontFlags,
+    font_flags: Option<FontFlags>,
     encoding: Encoding,
     cached_mappings: RefCell<HashMap<u8, GlyphId>>,
 }
@@ -53,8 +53,7 @@ impl TrueTypeFont {
 
         let font_flags = descriptor
             .get::<u32>(FLAGS)
-            .and_then(|n| FontFlags::from_bits(n))
-            .unwrap_or(FontFlags::empty());
+            .and_then(|n| FontFlags::from_bits(n));
 
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
@@ -93,6 +92,15 @@ impl TrueTypeFont {
             OpenTypeFont::Custom(c) => c.outline_glyph(glyph),
         }
     }
+    
+    fn is_non_symbolic(&self) -> bool {
+        self.font_flags.as_ref().map(|f| f.contains(FontFlags::NON_SYMBOLIC))
+            .or_else(|| match self.base_font {
+                OpenTypeFont::Standard(s) => Some(s.is_non_symbolic()),
+                OpenTypeFont::Custom(_) => None
+            })
+            .unwrap_or(false)
+    }
 
     // TODO: Cache this
     pub fn map_code(&self, code: u8) -> GlyphId {
@@ -101,8 +109,9 @@ impl TrueTypeFont {
         }
 
         let mut glyph = None;
+        
 
-        if self.font_flags.contains(FontFlags::NON_SYMBOLIC)
+        if self.is_non_symbolic()
             && matches!(self.encoding, Encoding::MacRoman | Encoding::WinAnsi)
         {
             let Some(lookup) = self.encoding.lookup(code) else {

@@ -15,6 +15,7 @@ lengths = {
     "font_cid_2": "0..=0",
     "issue_cmap_lookup": "0..=0",
     "issue_stream_abbreviations": "0..=0",
+    "font_truetype_8": "0..=0",
 }
 
 def generate_rust_function(file_stem):
