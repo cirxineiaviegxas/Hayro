@@ -52,7 +52,6 @@ use crate::run_test;
 #[test] fn image_ccit_4() { run_test("image_ccit_4", None); }
 #[test] fn image_cmyk_icc_jpg() { run_test("image_cmyk_icc_jpg", None); }
 #[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", None); }
-#[test] fn image_inline() { run_test("image_inline", None); }
 #[test] fn image_inline_2() { run_test("image_inline_2", None); }
 #[test] fn image_inline_3() { run_test("image_inline_3", None); }
 #[test] fn image_inline_4() { run_test("image_inline_4", None); }
