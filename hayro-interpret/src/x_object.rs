@@ -248,7 +248,7 @@ impl<'a> ImageXObject<'a> {
 
     pub fn decode_raw(&self) -> Vec<f32> {
         let interpolate =
-            |n: f32, d_min: f32, d_max: f32| d_min + (n * (d_max - d_min) / (2.0f32.powi(8) - 1.0));
+            |n: f32, d_min: f32, d_max: f32| d_min + (n * (d_max - d_min) / (2.0f32.powi(self.bits_per_component as i32) - 1.0));
 
         let mut adjusted_components = match self.bits_per_component {
             1 | 2 | 4 => {
@@ -261,9 +261,8 @@ impl<'a> ImageXObject<'a> {
                         // See `stream_ccit_not_enough_data`, some images seemingly don't have
                         // enough data, so we just pad with zeroes in this case.
                         let next = reader.read_u8(self.bits_per_component).unwrap_or(0);
-                        let mapped = next as u16 * 255 / ((1 << self.bits_per_component) - 1);
 
-                        buf.push(mapped as u8);
+                        buf.push(next as u16);
                     }
 
                     reader.align(1).unwrap();
@@ -271,11 +270,11 @@ impl<'a> ImageXObject<'a> {
 
                 buf
             }
-            8 => self.decoded.to_vec(),
+            8 => self.decoded.iter().map(|v| *v as u16).collect(),
             16 => self
                 .decoded
                 .chunks(2)
-                .map(|v| (u16::from_be_bytes([v[0], v[1]]) >> 8) as u8)
+                .map(|v| (u16::from_be_bytes([v[0], v[1]])))
                 .collect(),
             _ => unimplemented!(),
         };
