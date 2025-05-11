@@ -78,9 +78,9 @@ impl ColorSpace {
 
     pub fn new_from_name(name: Name) -> Option<ColorSpace> {
         match name.as_ref() {
-            DEVICE_RGB => Some(ColorSpace::DeviceRgb),
-            DEVICE_GRAY => Some(ColorSpace::DeviceGray),
-            DEVICE_CMYK => Some(ColorSpace::DeviceCmyk),
+            DEVICE_RGB | RGB => Some(ColorSpace::DeviceRgb),
+            DEVICE_GRAY | G => Some(ColorSpace::DeviceGray),
+            DEVICE_CMYK | CMYK => Some(ColorSpace::DeviceCmyk),
             CAL_CMYK => Some(ColorSpace::DeviceCmyk),
             PATTERN => {
                 warn!("pattern color spaces are not supported yet");

@@ -127,12 +127,14 @@ pub mod names {
     name!(CAL_RGB, b"CalRGB");
     name!(CCITTFAX_DECODE, b"CCITTFaxDecode");
     name!(CID_FONT_TYPE_0C, b"CIDFontType0C");
+    name!(CMYK, b"CMYK");
     name!(CRYPT, b"Crypt");
     name!(DCT_DECODE, b"DCTDecode");
     name!(DEVICE_CMYK, b"DeviceCMYK");
     name!(DEVICE_GRAY, b"DeviceGray");
     name!(DEVICE_RGB, b"DeviceRGB");
     name!(FLATE_DECODE, b"FlateDecode");
+    name!(G, b"G");
     name!(ICC_BASED, b"ICCBased");
     name!(INDEXED, b"Indexed");
     name!(IDENTITY, b"Identity");
@@ -148,6 +150,7 @@ pub mod names {
     name!(PAGE, b"Page");
     name!(PAGES, b"Pages");
     name!(PATTERN, b"Pattern");
+    name!(RGB, b"RGB");
     name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
     name!(TYPE0, b"Type0");
     name!(TYPE1, b"Type1");
