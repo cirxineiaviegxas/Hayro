@@ -1288,10 +1288,25 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
     }
 
     fn get_two_dim_code(&mut self) -> i32 {
-        let code = self.look_bits(7);
-        let entry = twoDimTable[code as usize];
-        self.eat_bits(entry[0] as usize);
-        entry[1]
+        if self.eoblock {
+            let code = self.look_bits(7);
+            
+            if let Some(p) = twoDimTable.get(code as usize) {
+                if p[0] > 0 {
+                    self.eat_bits(p[0] as usize);
+                    return p[1];
+                }
+            }
+        } else {
+            let (found, value, matched) = self.find_table_code(1, 7, &twoDimTable, None);
+            if found && matched {
+                return value;
+            }
+        }
+
+        log::info!("Bad two dim code");
+        
+        ccittEOF
     }
 
     fn get_white_code(&mut self) -> i32 {
@@ -1752,6 +1767,8 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
 
         // TODO: Remove
         self.counter += 1;
+        
+        // println!("{} {}", self.counter, c);
 
         c
     }
