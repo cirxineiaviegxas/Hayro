@@ -121,10 +121,10 @@ pub(crate) fn draw_image_xobject(
 
     // TODO: image_ccit test cases look pretty bad, we need support for mipmaps to improve
     // them.
-    let quality = if x_object.interpolate {
+    let quality = if x_object.interpolate || x_object.bits_per_component <= 8 {
         ImageQuality::Medium
     } else {
-        ImageQuality::Medium
+        ImageQuality::Low
     };
 
     context.save_state();
@@ -257,7 +257,10 @@ impl<'a> ImageXObject<'a> {
                 
                 for _ in 0..self.height {
                     for _ in 0..self.width {
-                        let next = reader.read_u8(self.bits_per_component).unwrap();
+                        
+                        // See `stream_ccit_not_enough_data`, some images seemingly don't have
+                        // enough data, so we just pad with zeroes in this case.
+                        let next = reader.read_u8(self.bits_per_component).unwrap_or(0);
                         let mapped = next as u16 * 255 / ((1 << self.bits_per_component) - 1);
 
                         buf.push(mapped as u8);

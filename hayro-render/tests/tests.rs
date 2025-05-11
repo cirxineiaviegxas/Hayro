@@ -109,6 +109,7 @@ use crate::run_test;
 #[test] fn path_rendering_7() { run_test("path_rendering_7", None); }
 #[test] fn path_rendering_8() { run_test("path_rendering_8", None); }
 #[test] fn path_rendering_9() { run_test("path_rendering_9", None); }
+#[test] fn stream_ccit_not_enough_data() { run_test("stream_ccit_not_enough_data", None); }
 #[test] fn text_rendering_1() { run_test("text_rendering_1", None); }
 #[test] fn text_rendering_2() { run_test("text_rendering_2", None); }
 #[test] fn text_rendering_3() { run_test("text_rendering_3", None); }
