@@ -16,6 +16,7 @@ lengths = {
     "issue_cmap_lookup": "0..=0",
     "issue_stream_abbreviations": "0..=0",
     "font_truetype_8": "0..=0",
+    "image_inline_8": "2..=2",
 }
 
 def generate_rust_function(file_stem):

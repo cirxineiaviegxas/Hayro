@@ -91,7 +91,7 @@ impl ColorSpace {
         }
     }
 
-    pub fn default_decode_arr(&self) -> Vec<(f32, f32)> {
+    pub fn default_decode_arr(&self, n: f32) -> Vec<(f32, f32)> {
         match self {
             ColorSpace::DeviceCmyk => vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
             ColorSpace::DeviceGray => vec![(0.0, 1.0)],
@@ -104,7 +104,7 @@ impl ColorSpace {
                 (l.0.range[0], l.0.range[1]),
                 (l.0.range[2], l.0.range[3]),
             ],
-            ColorSpace::Indexed(_) => vec![(0.0, 255.0)],
+            ColorSpace::Indexed(_) => vec![(0.0, 2.0f32.powf(n) - 1.0)],
         }
     }
 
@@ -501,7 +501,6 @@ impl Indexed {
                 let mut temp = vec![];
 
                 for _ in 0..num_components {
-                    // TODO: That's probably not the proper way to scale
                     temp.push(byte_iter.next()? as f32 / 255.0)
                 }
 
