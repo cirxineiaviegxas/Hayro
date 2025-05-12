@@ -465,7 +465,7 @@ fn show_text_string<'a>(
         };
 
         let glyph = font.map_code(code);
-        show_glyph(ctx, device, glyph, &font, font.origin_displacement(code));
+        show_glyph(ctx, device, glyph, font, font.origin_displacement(code));
 
         ctx.get_mut().text_state.apply_glyph_width(
             font.code_advance(code),
@@ -533,14 +533,14 @@ fn handle_gs(dict: &Dict, context: &mut Context) {
 fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()> {
     // TODO Can we use constants here somehow?
     match key.as_str() {
-        "LW" => context.get_mut().line_width = dict.get::<f32>(&key)?,
-        "LC" => context.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(&key)?)),
+        "LW" => context.get_mut().line_width = dict.get::<f32>(key)?,
+        "LC" => context.get_mut().line_cap = convert_line_cap(LineCap(dict.get::<Number>(key)?)),
         "LJ" => {
-            context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(&key)?))
+            context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(key)?))
         }
-        "ML" => context.get_mut().miter_limit = dict.get::<f32>(&key)?,
-        "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(&key)?,
-        "ca" => context.get_mut().fill_alpha = dict.get::<f32>(&key)?,
+        "ML" => context.get_mut().miter_limit = dict.get::<f32>(key)?,
+        "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(key)?,
+        "ca" => context.get_mut().fill_alpha = dict.get::<f32>(key)?,
         "Type" => {}
         _ => {}
     }
@@ -661,10 +661,10 @@ fn run_t3_instructions(
                 quality,
             } => device.draw_rgba_image(
                 image_data.clone(),
-                width.clone(),
-                height.clone(),
-                is_stencil.clone(),
-                quality.clone(),
+                *width,
+                *height,
+                *is_stencil,
+                *quality,
             ),
         }
     }

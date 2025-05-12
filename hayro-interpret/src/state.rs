@@ -43,14 +43,11 @@ impl<'a> TextState<'a> {
     }
 
     pub(crate) fn apply_adjustment(&mut self, adjustment: f32, horizontal: bool) {
-        let horizontal_scaling = horizontal.then(|| self.horizontal_scaling()).unwrap_or(1.0);
+        let horizontal_scaling = if horizontal { self.horizontal_scaling() } else { 1.0 };
         let scaled_adjustment = -adjustment / UNITS_PER_EM * self.font_size() * horizontal_scaling;
-        let (tx, ty) = horizontal
-            .then(|| (scaled_adjustment, 0.0))
-            .unwrap_or((0.0, scaled_adjustment));
+        let (tx, ty) = if horizontal { (scaled_adjustment, 0.0) } else { (0.0, scaled_adjustment) };
 
-        self.text_matrix =
-            self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
+        self.text_matrix *= Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
     }
 
     pub(crate) fn apply_glyph_width(
@@ -60,22 +57,15 @@ impl<'a> TextState<'a> {
         code_len: usize,
         is_horizontal: bool,
     ) {
-        let word_space = (char_code == 32 && code_len == 1)
-            .then(|| self.word_space)
-            .unwrap_or(0.0);
+        let word_space = if char_code == 32 && code_len == 1 { self.word_space } else { 0.0 };
 
         let base_advance =
             |advance: f32| advance / UNITS_PER_EM * self.font_size() + self.char_space + word_space;
 
-        let tx = is_horizontal
-            .then(|| base_advance(glyph_advance.x as f32) * self.horizontal_scaling())
-            .unwrap_or(0.0);
-        let ty = (!is_horizontal)
-            .then(|| base_advance(glyph_advance.y as f32))
-            .unwrap_or(0.0);
+        let tx = if is_horizontal { base_advance(glyph_advance.x as f32) * self.horizontal_scaling() } else { 0.0 };
+        let ty = if !is_horizontal { base_advance(glyph_advance.y as f32) } else { 0.0 };
 
-        self.text_matrix =
-            self.text_matrix * Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
+        self.text_matrix *= Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
     }
 }
 

@@ -38,10 +38,7 @@ pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
         black_is_1: params.get::<bool>(BLACK_IS_1).unwrap_or(dp.black_is_1),
     };
 
-    use fax::{
-        Color,
-        decoder::{decode_g4, pels},
-    };
+    
 
     // if params.k < 0 {
     //     let columns = params.columns as usize;

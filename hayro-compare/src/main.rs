@@ -13,7 +13,7 @@ fn main() {
 
     let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/type3");
 
-    let mut entries = WalkDir::new(&root_dir)
+    let mut entries = WalkDir::new(root_dir)
         .into_iter()
         .flat_map(|e| e.ok().map(|f| f.path().to_path_buf()))
         .flat_map(|p| {
@@ -29,8 +29,8 @@ fn main() {
 
     let entries = &entries;
 
-    render_pdfium(&entries);
-    render_hayro(&entries);
+    render_pdfium(entries);
+    render_hayro(entries);
 }
 
 fn render_pdfium(entries: &[PathBuf]) {
@@ -91,7 +91,7 @@ impl log::Log for SimpleLogger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let target = if record.target().len() > 0 {
+            let target = if !record.target().is_empty() {
                 record.target()
             } else {
                 record.module_path().unwrap_or_default()

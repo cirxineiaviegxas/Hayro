@@ -1351,7 +1351,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
     }
 
     fn get_black_code(&mut self) -> i32 {
-        let mut code;
+        let code;
 
         if self.eoblock {
             code = self.look_bits(13);

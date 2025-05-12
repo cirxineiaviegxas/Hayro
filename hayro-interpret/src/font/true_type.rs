@@ -53,19 +53,19 @@ impl TrueTypeFont {
 
         let font_flags = descriptor
             .get::<u32>(FLAGS)
-            .and_then(|n| FontFlags::from_bits(n));
+            .and_then(FontFlags::from_bits);
 
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
         let base_font = select_standard_font(dict)
-            .map(|d| OpenTypeFont::Standard(d))
+            .map(OpenTypeFont::Standard)
             .or_else(|| {
                 descriptor
                     .get::<Stream>(FONT_FILE2)
                     .and_then(|s| s.decoded().ok())
                     .and_then(|d| {
                         OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)
-                            .map(|b| OpenTypeFont::Custom(b))
+                            .map(OpenTypeFont::Custom)
                     })
             })
             .unwrap_or_else(|| {
@@ -157,25 +157,23 @@ impl TrueTypeFont {
                     }
                 }
             }
-        } else {
-            if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
-                for record in cmap.encoding_records() {
-                    if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
-                        if let Ok(subtable) = record.subtable(cmap.offset_data()) {
-                            for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
-                                glyph = glyph
-                                    .or_else(|| subtable.map_codepoint(code as u32 + offset))
-                                    .filter(|g| *g != GlyphId::NOTDEF)
-                            }
-                        }
-                    } else if record.platform_id() == PlatformId::Macintosh
-                        && record.encoding_id() == 0
-                    {
-                        if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+        } else if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
+            for record in cmap.encoding_records() {
+                if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
+                    if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                        for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
                             glyph = glyph
-                                .or_else(|| subtable.map_codepoint(code))
+                                .or_else(|| subtable.map_codepoint(code as u32 + offset))
                                 .filter(|g| *g != GlyphId::NOTDEF)
                         }
+                    }
+                } else if record.platform_id() == PlatformId::Macintosh
+                    && record.encoding_id() == 0
+                {
+                    if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                        glyph = glyph
+                            .or_else(|| subtable.map_codepoint(code))
+                            .filter(|g| *g != GlyphId::NOTDEF)
                     }
                 }
             }
@@ -226,23 +224,20 @@ pub(crate) fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
     let widths_arr = dict.get::<Array>(WIDTHS);
     let missing_width = descriptor.get::<f32>(MISSING_WIDTH).unwrap_or(0.0);
 
-    match (first_char, last_char, widths_arr) {
-        (Some(fc), Some(lc), Some(w)) => {
-            let mut iter = w.iter::<f32>().take(lc - fc + 1);
+    if let (Some(fc), Some(lc), Some(w)) = (first_char, last_char, widths_arr) {
+        let iter = w.iter::<f32>().take(lc - fc + 1);
 
-            for _ in 0..fc {
-                widths.push(missing_width);
-            }
-
-            while let Some(w) = iter.next() {
-                widths.push(w);
-            }
-
-            while widths.len() <= (u8::MAX as usize) + 1 {
-                widths.push(missing_width);
-            }
+        for _ in 0..fc {
+            widths.push(missing_width);
         }
-        _ => {}
+
+        for w in iter {
+            widths.push(w);
+        }
+
+        while widths.len() <= (u8::MAX as usize) + 1 {
+            widths.push(missing_width);
+        }
     }
 
     widths
@@ -270,11 +265,11 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
     if let Some(encoding_dict) = dict.get::<Dict>(ENCODING) {
         // Note that those only exist for Type1 and Type3 fonts, not for TrueType fonts.
         if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
-            let mut entries = differences.iter::<Object>();
+            let entries = differences.iter::<Object>();
 
             let mut code = 0;
 
-            while let Some(obj) = entries.next() {
+            for obj in entries {
                 if let Ok(num) = obj.clone().cast::<i32>() {
                     code = num;
                 } else if let Ok(name) = obj.cast::<Name>() {
@@ -286,6 +281,6 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
 
         (get_encoding_base(&encoding_dict, BASE_ENCODING), map)
     } else {
-        (get_encoding_base(&dict, ENCODING), HashMap::new())
+        (get_encoding_base(dict, ENCODING), HashMap::new())
     }
 }

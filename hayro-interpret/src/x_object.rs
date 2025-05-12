@@ -251,7 +251,7 @@ impl<'a> ImageXObject<'a> {
             d_min + (n * (d_max - d_min) / (2.0f32.powi(self.bits_per_component as i32) - 1.0))
         };
 
-        let mut adjusted_components = match self.bits_per_component {
+        let adjusted_components = match self.bits_per_component {
             1 | 2 | 4 => {
                 let mut buf = vec![];
                 let bpc = BitSize::from_u8(self.bits_per_component).unwrap();

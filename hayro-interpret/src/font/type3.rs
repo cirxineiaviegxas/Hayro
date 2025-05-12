@@ -9,7 +9,7 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
-use peniko::{ImageFormat, ImageQuality};
+use peniko::ImageQuality;
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -94,7 +94,7 @@ pub struct Type3<'a> {
 impl<'a> Type3<'a> {
     pub fn new(dict: &Dict<'a>) -> Self {
         let (_, encodings) = read_encoding(dict);
-        let widths = read_widths(&dict, &dict);
+        let widths = read_widths(dict, dict);
 
         let matrix = Affine::new(
             dict.get::<[f64; 6]>(FONT_MATRIX)

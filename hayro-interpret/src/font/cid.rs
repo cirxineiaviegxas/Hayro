@@ -79,7 +79,9 @@ impl Type0Font {
     }
 
     pub fn map_code(&self, code: u16) -> GlyphId {
-        let res = match &self.font_type {
+        
+
+        match &self.font_type {
             FontType::TrueType(_) => self.cid_to_gid_map.map(code),
             FontType::Cff(c) => {
                 let table = c.table();
@@ -93,9 +95,7 @@ impl Type0Font {
                     GlyphId::new(code as u32)
                 }
             }
-        };
-
-        res
+        }
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
@@ -108,12 +108,10 @@ impl Type0Font {
     pub fn code_advance(&self, code: u16) -> Vec2 {
         if self.horizontal {
             Vec2::new(self.horizontal_width(code) as f64, 0.0)
+        } else if let Some([w, _, _]) = self.widths2.get(&code) {
+            Vec2::new(0.0, *w as f64)
         } else {
-            if let Some([w, _, _]) = self.widths2.get(&code) {
-                Vec2::new(0.0, *w as f64)
-            } else {
-                Vec2::new(0.0, self.dw2.1 as f64)
-            }
+            Vec2::new(0.0, self.dw2.1 as f64)
         }
     }
 
@@ -132,15 +130,13 @@ impl Type0Font {
     pub fn origin_displacement(&self, code: u16) -> Vec2 {
         if self.is_horizontal() {
             Vec2::default()
+        } else if let Some([_, v1, v2]) = self.widths2.get(&code) {
+            Vec2::new(-*v1 as f64, -*v2 as f64)
         } else {
-            if let Some([_, v1, v2]) = self.widths2.get(&code) {
-                Vec2::new(-*v1 as f64, -*v2 as f64)
-            } else {
-                Vec2::new(
-                    -self.horizontal_width(code) as f64 / 2.0,
-                    -self.dw2.0 as f64,
-                )
-            }
+            Vec2::new(
+                -self.horizontal_width(code) as f64 / 2.0,
+                -self.dw2.0 as f64,
+            )
         }
     }
 }
@@ -243,13 +239,13 @@ fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
     while let Some(mut first) = iter.next().and_then(|o| o.cast::<u16>().ok()) {
         let second = iter.next()?;
 
-        if let Some(second) = second.clone().cast::<u16>().ok() {
+        if let Ok(second) = second.clone().cast::<u16>() {
             let width = iter.next().and_then(|o| o.cast::<f32>().ok())?;
 
             for i in first..=second {
                 map.insert(i, width);
             }
-        } else if let Some(range) = second.cast::<Array>().ok() {
+        } else if let Ok(range) = second.cast::<Array>() {
             for width in range.iter::<f32>() {
                 map.insert(first, width);
                 first = first.checked_add(1)?;
@@ -267,7 +263,7 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
     while let Some(mut first) = iter.next().and_then(|o| o.cast::<u16>().ok()) {
         let second = iter.next()?;
 
-        if let Some(second) = second.clone().cast::<u16>().ok() {
+        if let Ok(second) = second.clone().cast::<u16>() {
             let w = iter.next().and_then(|o| o.cast::<f32>().ok())?;
             let v1 = iter.next().and_then(|o| o.cast::<f32>().ok())?;
             let v2 = iter.next().and_then(|o| o.cast::<f32>().ok())?;
@@ -275,7 +271,7 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
             for i in first..=second {
                 map.insert(i, [w, v1, v2]);
             }
-        } else if let Some(range) = second.cast::<Array>().ok() {
+        } else if let Ok(range) = second.cast::<Array>() {
             let mut iter = range.iter::<f32>();
 
             while let Some(w) = iter.next() {

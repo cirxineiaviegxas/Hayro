@@ -217,11 +217,11 @@ impl Type1 {
             Some(get_glyph(entry))
         } else {
             match self.encoding {
-                Encoding::Standard => STANDARD.get(&code).map(|v| get_glyph(*v)),
-                Encoding::MacRoman => MAC_ROMAN.get(&code).map(|v| get_glyph(*v)),
-                Encoding::WinAnsi => win_ansi::get(code).map(|v| get_glyph(v)),
-                Encoding::MacExpert => MAC_EXPERT.get(&code).map(|v| get_glyph(*v)),
-                Encoding::BuiltIn => table.code_to_string(code).map(|g| get_glyph(g)),
+                Encoding::Standard => STANDARD.get(&code).map(|v| get_glyph(v)),
+                Encoding::MacRoman => MAC_ROMAN.get(&code).map(|v| get_glyph(v)),
+                Encoding::WinAnsi => win_ansi::get(code).map(get_glyph),
+                Encoding::MacExpert => MAC_EXPERT.get(&code).map(|v| get_glyph(v)),
+                Encoding::BuiltIn => table.code_to_string(code).map(get_glyph),
             }
         }
         .unwrap_or(GlyphId::NOTDEF)
@@ -275,10 +275,10 @@ impl Cff {
             get_glyph(entry)
         } else {
             match self.encoding {
-                Encoding::Standard => STANDARD.get(&code).and_then(|v| get_glyph(*v)),
-                Encoding::MacRoman => MAC_ROMAN.get(&code).and_then(|v| get_glyph(*v)),
-                Encoding::WinAnsi => win_ansi::get(code).and_then(|v| get_glyph(v)),
-                Encoding::MacExpert => MAC_EXPERT.get(&code).and_then(|v| get_glyph(*v)),
+                Encoding::Standard => STANDARD.get(&code).and_then(|v| get_glyph(v)),
+                Encoding::MacRoman => MAC_ROMAN.get(&code).and_then(|v| get_glyph(v)),
+                Encoding::WinAnsi => win_ansi::get(code).and_then(get_glyph),
+                Encoding::MacExpert => MAC_EXPERT.get(&code).and_then(|v| get_glyph(v)),
                 Encoding::BuiltIn => table.glyph_index(code).map(|g| GlyphId::new(g.0 as u32)),
             }
         }

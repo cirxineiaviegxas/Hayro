@@ -147,13 +147,13 @@ impl ColorSpace {
             ColorSpace::DeviceGray => AlphaColor::new([c[0], c[0], c[0], opacity]),
             ColorSpace::DeviceCmyk => {
                 let opacity = u8_to_f32(opacity);
-                let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
+                let srgb = CMYK_TRANSFORM.to_rgba(c);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorSpace::ICCColor(icc) => {
                 let opacity = u8_to_f32(opacity);
-                let srgb = icc.to_rgba(&c[..]);
+                let srgb = icc.to_rgba(c);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
@@ -218,7 +218,7 @@ impl CalGray {
         let a = c;
         let ag = a.powf(g);
         let l = yw * ag;
-        let val = (0.0f32.max(295.8 * l.powf(0.3333333333333333) - 40.8) + 0.5) as u8;
+        let val = (0.0f32.max(295.8 * l.powf(0.333_333_34) - 40.8) + 0.5) as u8;
 
         [val, val, val]
     }
@@ -266,7 +266,7 @@ impl CalRgb {
     ];
 
     const SRGB_D65_XYZ_TO_RGB_MATRIX: [f32; 9] = [
-        3.2404542, -1.5371385, -0.4985314, -0.9692660, 1.8760108, 0.0415560, 0.0556434, -0.2040259,
+        3.2404542, -1.5371385, -0.4985314, -0.969_266, 1.8760108, 0.0415560, 0.0556434, -0.2040259,
         1.0572252,
     ];
 
@@ -646,17 +646,17 @@ impl Color {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
 
-                let res = AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity);
+                
 
-                res
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorType::Icc(icc, c) => {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = icc.to_rgba(&c[..]);
 
-                let res = AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity);
+                
 
-                res
+                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorType::CalGray(cal, c) => {
                 let opacity = u8_to_f32(self.opacity);

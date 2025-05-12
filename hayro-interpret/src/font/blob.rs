@@ -156,7 +156,7 @@ impl Debug for Type1FontBlob {
 impl Type1FontBlob {
     pub fn new(data: FontData) -> Self {
         let yoke = Yoke::<Type1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
-            let table = type1::Table::parse(data.as_ref().as_ref()).unwrap();
+            let table = type1::Table::parse(data.as_ref()).unwrap();
             Type1Yoke { table }
         });
 
@@ -190,7 +190,7 @@ impl CffFontBlob {
         let _ = cff::Table::parse(data.as_ref().as_ref())?;
 
         let yoke = Yoke::<CFFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
-            let table = cff::Table::parse(data.as_ref().as_ref()).unwrap();
+            let table = cff::Table::parse(data.as_ref()).unwrap();
             CFFYoke { table }
         });
 

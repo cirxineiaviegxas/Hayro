@@ -1,4 +1,3 @@
-use log::warn;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct BitSize(u8);

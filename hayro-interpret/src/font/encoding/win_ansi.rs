@@ -5,7 +5,7 @@ use phf::phf_map;
 pub(crate) fn get(code: u8) -> Option<&'static str> {
     WIN_ANSI
         .get(&code)
-        .or_else(|| if code > 40 { Some(&"bullet") } else { None })
+        .or(if code > 40 { Some(&"bullet") } else { None })
         .copied()
 }
 
