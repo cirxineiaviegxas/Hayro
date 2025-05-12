@@ -284,7 +284,11 @@ fn apply<'a, T: Predictor>(
         for (cur_row, prev_row, out_row, prev_col, top_left) in
             izip!(cur_row, prev_row, out_row.iter_mut(), prev_col, top_left)
         {
-            *out_row = T::predict(*cur_row, *prev_row, *prev_col, *top_left);
+            // Note that the wrapping behavior when adding inside of the predictors is dependent on the
+            // bit size, so it wouldn't be triggered for bits per component < 16. Because of this, we
+            // need to mask out the result, which is equivalent to having done `wrapping_add` at the
+            // corresponding bit depth.
+            *out_row = (T::predict(*cur_row as u16, *prev_row as u16, *prev_col as u16, *top_left as u16) & 0xFF) as u8;
         }
 
         prev_col = out_row;
@@ -293,37 +297,37 @@ fn apply<'a, T: Predictor>(
 }
 
 trait Predictor {
-    fn predict(cur_row: u8, prev_row: u8, prev_col: u8, top_left: u8) -> u8;
+    fn predict(cur_row: u16, prev_row: u16, prev_col: u16, top_left: u16) -> u16;
 }
 
 struct Sub;
 impl Predictor for Sub {
-    fn predict(cur_row: u8, _: u8, prev_col: u8, _: u8) -> u8 {
+    fn predict(cur_row: u16, _: u16, prev_col: u16, _: u16) -> u16 {
         cur_row.wrapping_add(prev_col)
     }
 }
 
 struct Up;
 impl Predictor for Up {
-    fn predict(cur_row: u8, prev_row: u8, _: u8, _: u8) -> u8 {
+    fn predict(cur_row: u16, prev_row: u16, _: u16, _: u16) -> u16 {
         cur_row.wrapping_add(prev_row)
     }
 }
 
 struct Avg;
 impl Predictor for Avg {
-    fn predict(cur_row: u8, prev_row: u8, prev_col: u8, _: u8) -> u8 {
-        cur_row.wrapping_add(((prev_col as u16 + prev_row as u16) / 2) as u8)
+    fn predict(cur_row: u16, prev_row: u16, prev_col: u16, _: u16) -> u16 {
+        cur_row.wrapping_add(((prev_col as u32 + prev_row as u32) / 2) as u16)
     }
 }
 
 struct Paeth;
 impl Predictor for Paeth {
-    fn predict(cur_row: u8, prev_row: u8, prev_col: u8, top_left: u8) -> u8 {
-        fn paeth(a: u8, b: u8, c: u8) -> u8 {
-            let a = a as i16;
-            let b = b as i16;
-            let c = c as i16;
+    fn predict(cur_row: u16, prev_row: u16, prev_col: u16, top_left: u16) -> u16 {
+        fn paeth(a: u16, b: u16, c: u16) -> u16 {
+            let a = a as i32;
+            let b = b as i32;
+            let c = c as i32;
 
             let p = a + b - c;
             let pa = (p - a).abs();
@@ -331,11 +335,11 @@ impl Predictor for Paeth {
             let pc = (p - c).abs();
 
             if pa <= pb && pa <= pc {
-                a as u8
+                a as u16
             } else if pb <= pc {
-                b as u8
+                b as u16
             } else {
-                c as u8
+                c as u16
             }
         }
 
