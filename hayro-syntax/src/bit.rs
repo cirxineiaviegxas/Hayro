@@ -20,14 +20,22 @@ pub struct BitReader<'a> {
     data: &'a [u8],
     cur_pos: usize,
     bit_size: BitSize,
+    max: usize,
+    count: usize,
 }
 
 impl<'a> BitReader<'a> {
     pub fn new(data: &'a [u8], bit_size: BitSize) -> Self {
+        Self::new_with(data, bit_size, 0, None)
+    }
+    
+    fn new_with(data: &'a [u8], bit_size: BitSize, cur_pos: usize, max: Option<usize>) -> Self {
         Self {
             data,
             bit_size,
-            cur_pos: 0,
+            cur_pos,
+            count: 0,
+            max: max.unwrap_or(usize::MAX),
         }
     }
 
@@ -57,10 +65,14 @@ impl<'a> Iterator for BitReader<'a> {
         if byte_pos >= self.data.len() {
             return None;
         }
+        
+        if self.count >= self.max {
+            return None;
+        }
 
         let bit_size = self.bit_size;
 
-        match bit_size.0 {
+        let item = match bit_size.0 {
             8 => {
                 let item = self.data[byte_pos] as u16;
                 self.cur_pos += 8;
@@ -92,7 +104,11 @@ impl<'a> Iterator for BitReader<'a> {
 
                 Some(item)
             }
-        }
+        }?;
+        
+        self.count += 1;
+        
+        Some(item)
     }
 }
 
@@ -201,6 +217,18 @@ mod tests {
         assert_eq!(reader.next().unwrap(), 0b0);
         assert_eq!(reader.next().unwrap(), 0b1);
         assert_eq!(reader.next().unwrap(), 0b0);
+        assert_eq!(reader.next().unwrap(), 0b0);
+        assert_eq!(reader.next().unwrap(), 0b0);
+        assert_eq!(reader.next().unwrap(), 0b0);
+    }
+
+    #[test]
+    fn bit_reader_start_pos_and_max() {
+        let data = [0b10011000, 0b00010000];
+        let mut reader = BitReader::new_with(&data, BitSize::from_u8(1).unwrap(), 6, Some(5));
+        assert_eq!(reader.next().unwrap(), 0b0);
+        assert_eq!(reader.next().unwrap(), 0b0);
+
         assert_eq!(reader.next().unwrap(), 0b0);
         assert_eq!(reader.next().unwrap(), 0b0);
         assert_eq!(reader.next().unwrap(), 0b0);
