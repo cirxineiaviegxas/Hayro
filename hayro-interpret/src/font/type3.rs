@@ -1,6 +1,7 @@
 use crate::color::Color;
 use crate::context::Context;
 use crate::device::{ClipPath, Device, Mask, ReplayInstruction};
+use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::{FillProps, StrokeProps, interpret};
 use hayro_syntax::content::{TypedIter, UntypedIter};
@@ -12,7 +13,6 @@ use peniko::{ImageFormat, ImageQuality};
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use crate::font::UNITS_PER_EM;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -54,14 +54,21 @@ impl Device for Type3GlyphDescription {
         todo!()
     }
 
-    fn draw_rgba_image(&mut self, image_data: Vec<u8>, width: u32, height: u32, is_stencil: bool, quality: ImageQuality) {
-     self.0.push(ReplayInstruction::DrawImage {
-         image_data,
-         width,
-         height,
-         is_stencil,
-         quality,
-     })   
+    fn draw_rgba_image(
+        &mut self,
+        image_data: Vec<u8>,
+        width: u32,
+        height: u32,
+        is_stencil: bool,
+        quality: ImageQuality,
+    ) {
+        self.0.push(ReplayInstruction::DrawImage {
+            image_data,
+            width,
+            height,
+            is_stencil,
+            quality,
+        })
     }
 
     fn pop(&mut self) {
@@ -148,7 +155,8 @@ impl<'a> Type3<'a> {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        (*self.widths.get(code as usize).unwrap() * self.matrix.as_coeffs()[0] as f32) * UNITS_PER_EM
+        (*self.widths.get(code as usize).unwrap() * self.matrix.as_coeffs()[0] as f32)
+            * UNITS_PER_EM
     }
 
     pub fn render_glyph(&self, glyph: GlyphId, context: &mut Context<'a>) -> Type3GlyphDescription {

@@ -55,7 +55,7 @@ impl Renderer {
             })
             .collect();
         let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
-        
+
         // pixmap.clone().save_png("out_pix.png");
 
         let image = Image {

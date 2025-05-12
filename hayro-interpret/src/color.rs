@@ -69,7 +69,7 @@ impl ColorSpace {
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
-                },
+                }
             }
         }
 

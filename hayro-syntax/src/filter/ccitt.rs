@@ -1290,7 +1290,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
     fn get_two_dim_code(&mut self) -> i32 {
         if self.eoblock {
             let code = self.look_bits(7);
-            
+
             if let Some(p) = twoDimTable.get(code as usize) {
                 if p[0] > 0 {
                     self.eat_bits(p[0] as usize);
@@ -1305,7 +1305,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
         }
 
         log::info!("Bad two dim code");
-        
+
         ccittEOF
     }
 
@@ -1767,7 +1767,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
 
         // TODO: Remove
         self.counter += 1;
-        
+
         // println!("{} {}", self.counter, c);
 
         c

@@ -109,7 +109,7 @@ impl<'a> Iterator for UntypedIter<'a> {
                     // The ID operator will already be consumed by this.
                     let inline_dict = self.reader.read_without_xref::<InlineImageDict>()?;
                     let dict = inline_dict.get_dict().clone();
-                    
+
                     // One whitespace after "ID".
                     self.reader.read_byte()?;
 

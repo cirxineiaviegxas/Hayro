@@ -5,13 +5,9 @@ pub struct BitSize(u8);
 
 impl BitSize {
     pub fn from_u8(value: u8) -> Option<Self> {
-        if value > 16 {
-            None
-        }   else {
-            Some(Self(value))
-        }
+        if value > 16 { None } else { Some(Self(value)) }
     }
-    
+
     pub fn bits(&self) -> usize {
         self.0 as usize
     }
@@ -61,8 +57,8 @@ impl<'a> Iterator for BitReader<'a> {
 
         if byte_pos >= self.data.len() {
             return None;
-        } 
-        
+        }
+
         let bit_size = self.bit_size;
 
         match bit_size.0 {
@@ -76,12 +72,13 @@ impl<'a> Iterator for BitReader<'a> {
                 let bit_pos = self.bit_pos();
                 let end_byte_pos = (bit_pos + bit_size.0 as usize - 1) / 8;
                 let mut read = [0u8; 4];
-                
+
                 for i in 0..=end_byte_pos {
                     read[i] = *self.data.get(byte_pos + i)?;
                 }
-                
-                let item = (u32::from_be_bytes(read) >> (32 - bit_pos - bit_size.0 as usize)) & bit_size.mask();
+
+                let item = (u32::from_be_bytes(read) >> (32 - bit_pos - bit_size.0 as usize))
+                    & bit_size.mask();
                 self.cur_pos += bit_size.0 as usize;
 
                 Some(item as u16)
@@ -89,8 +86,8 @@ impl<'a> Iterator for BitReader<'a> {
             0..=7 => {
                 let bit_pos = self.bit_pos();
                 let advance = self.bit_size.bits();
-                let item =
-                    (self.data[byte_pos] as u16 >> (8 - bit_pos - advance)) & self.bit_size.mask() as u16;
+                let item = (self.data[byte_pos] as u16 >> (8 - bit_pos - advance))
+                    & self.bit_size.mask() as u16;
 
                 self.cur_pos += advance;
 

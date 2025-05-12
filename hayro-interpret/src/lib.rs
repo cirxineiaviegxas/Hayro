@@ -28,7 +28,7 @@ use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::util::OptionLog;
-use crate::x_object::{XObject, draw_xobject, ImageXObject, draw_image_xobject};
+use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -272,7 +272,10 @@ pub fn interpret<'a, 'b>(
             TypedOperation::DashPattern(p) => {
                 context.get_mut().dash_offset = p.1.as_f32();
                 // kurbo apparently cannot properly deal with offsets that are exactly 0.
-                context.get_mut().dash_array = p.0.iter::<f32>().map(|n| if n == 0.0 { 0.01 } else { n }).collect();
+                context.get_mut().dash_array =
+                    p.0.iter::<f32>()
+                        .map(|n| if n == 0.0 { 0.01 } else { n })
+                        .collect();
             }
             TypedOperation::RenderingIntent(_) => {
                 // Ignore for now.
@@ -650,9 +653,19 @@ fn run_t3_instructions(
             ReplayInstruction::ApplyMask { mask } => {
                 device.apply_mask(mask);
             }
-            ReplayInstruction::DrawImage { image_data, width, height, is_stencil, quality } => {
-                device.draw_rgba_image(image_data.clone(), width.clone(), height.clone(), is_stencil.clone(), quality.clone())
-            }
+            ReplayInstruction::DrawImage {
+                image_data,
+                width,
+                height,
+                is_stencil,
+                quality,
+            } => device.draw_rgba_image(
+                image_data.clone(),
+                width.clone(),
+                height.clone(),
+                is_stencil.clone(),
+                quality.clone(),
+            ),
         }
     }
 }

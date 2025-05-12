@@ -92,12 +92,14 @@ impl TrueTypeFont {
             OpenTypeFont::Custom(c) => c.outline_glyph(glyph),
         }
     }
-    
+
     fn is_non_symbolic(&self) -> bool {
-        self.font_flags.as_ref().map(|f| f.contains(FontFlags::NON_SYMBOLIC))
+        self.font_flags
+            .as_ref()
+            .map(|f| f.contains(FontFlags::NON_SYMBOLIC))
             .or_else(|| match self.base_font {
                 OpenTypeFont::Standard(s) => Some(s.is_non_symbolic()),
-                OpenTypeFont::Custom(_) => None
+                OpenTypeFont::Custom(_) => None,
             })
             .unwrap_or(false)
     }
@@ -109,10 +111,8 @@ impl TrueTypeFont {
         }
 
         let mut glyph = None;
-        
 
-        if self.is_non_symbolic()
-            && matches!(self.encoding, Encoding::MacRoman | Encoding::WinAnsi)
+        if self.is_non_symbolic() && matches!(self.encoding, Encoding::MacRoman | Encoding::WinAnsi)
         {
             let Some(lookup) = self.encoding.lookup(code) else {
                 return GlyphId::NOTDEF;

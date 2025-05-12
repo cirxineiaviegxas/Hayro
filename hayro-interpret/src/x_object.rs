@@ -2,6 +2,7 @@ use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::{ClipPath, Device};
 use crate::interpret;
+use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
@@ -15,7 +16,6 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::{Fill, ImageQuality};
 use std::borrow::Cow;
-use hayro_syntax::bit::{BitReader, BitSize};
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
