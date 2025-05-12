@@ -15,7 +15,7 @@ pub fn convert_line_cap(lc: LineCap) -> kurbo::Cap {
     match lc.0.as_i32() {
         0 => kurbo::Cap::Butt,
         1 => kurbo::Cap::Round,
-        2 => kurbo::Cap::Round,
+        2 => kurbo::Cap::Square,
         _ => kurbo::Cap::Butt,
     }
 }

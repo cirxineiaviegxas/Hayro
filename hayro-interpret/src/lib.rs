@@ -271,7 +271,8 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::DashPattern(p) => {
                 context.get_mut().dash_offset = p.1.as_f32();
-                context.get_mut().dash_array = p.0.iter::<f32>().collect();
+                // kurbo apparently cannot properly deal with offsets that are exactly 0.
+                context.get_mut().dash_array = p.0.iter::<f32>().map(|n| if n == 0.0 { 0.01 } else { n }).collect();
             }
             TypedOperation::RenderingIntent(_) => {
                 // Ignore for now.

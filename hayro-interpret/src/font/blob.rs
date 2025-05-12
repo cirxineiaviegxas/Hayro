@@ -170,7 +170,7 @@ impl Type1FontBlob {
     pub fn outline_glyph(&self, name: &str) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
 
-        self.table().outline(name, &mut path).unwrap();
+        self.table().outline(name, &mut path).unwrap_or_default();
 
         Affine::scale(UNITS_PER_EM as f64) * convert_matrix(self.table().matrix()) * path.0
     }
