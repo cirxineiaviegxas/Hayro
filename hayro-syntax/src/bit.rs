@@ -1,3 +1,4 @@
+use smallvec::{SmallVec, smallvec};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct BitSize(u8);
@@ -11,8 +12,8 @@ impl BitSize {
         self.0 as usize
     }
 
-    pub fn mask(&self) -> u32 {
-        (1 << self.0) - 1
+    pub fn mask(&self) -> u16 {
+        ((1 << self.0 as u32) - 1) as u16
     }
 }
 
@@ -28,7 +29,7 @@ impl<'a> BitReader<'a> {
     pub fn new(data: &'a [u8], bit_size: BitSize) -> Self {
         Self::new_with(data, bit_size, 0, None)
     }
-    
+
     fn new_with(data: &'a [u8], bit_size: BitSize, cur_pos: usize, max: Option<usize>) -> Self {
         Self {
             data,
@@ -65,7 +66,7 @@ impl<'a> Iterator for BitReader<'a> {
         if byte_pos >= self.data.len() {
             return None;
         }
-        
+
         if self.count >= self.max {
             return None;
         }
@@ -88,11 +89,11 @@ impl<'a> Iterator for BitReader<'a> {
                     read[i] = *self.data.get(byte_pos + i)?;
                 }
 
-                let item = (u32::from_be_bytes(read) >> (32 - bit_pos - bit_size.0 as usize))
+                let item = (u32::from_be_bytes(read) >> (32 - bit_pos - bit_size.0 as usize)) as u16
                     & bit_size.mask();
                 self.cur_pos += bit_size.0 as usize;
 
-                Some(item as u16)
+                Some(item)
             }
             0..=7 => {
                 let bit_pos = self.bit_pos();
@@ -105,10 +106,64 @@ impl<'a> Iterator for BitReader<'a> {
                 Some(item)
             }
         }?;
-        
+
         self.count += 1;
-        
+
         Some(item)
+    }
+}
+
+pub struct BitChunks<'a> {
+    reader: BitReader<'a>,
+    chunk_len: usize,
+}
+
+impl<'a> BitChunks<'a> {
+    pub fn new(data: &'a [u8], bit_size: BitSize, chunk_len: usize) -> Self {
+        let reader = BitReader::new(data, bit_size);
+
+        Self { reader, chunk_len }
+    }
+}
+
+impl<'a> Iterator for BitChunks<'_> {
+    type Item = BitChunk;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut bits = SmallVec::new();
+
+        for _ in 0..self.chunk_len {
+            bits.push(self.reader.next()?);
+        }
+
+        Some(BitChunk { bits })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BitChunk {
+    bits: SmallVec<[u16; 4]>,
+}
+
+impl BitChunk {
+    pub fn bits(&self) -> &[u16] {
+        &self.bits
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = u16> + '_ {
+        self.bits.iter().copied()
+    }
+
+    pub fn new(val: u8, count: usize) -> Self {
+        Self {
+            bits: smallvec![val as u16; count],
+        }
+    }
+
+    pub fn from_u8(slice: &[u8]) -> Self {
+        Self {
+            bits: slice.iter().map(|n| *n as u16).collect(),
+        }
     }
 }
 
@@ -232,5 +287,16 @@ mod tests {
         assert_eq!(reader.next().unwrap(), 0b0);
         assert_eq!(reader.next().unwrap(), 0b0);
         assert_eq!(reader.next().unwrap(), 0b0);
+    }
+
+    #[test]
+    fn bit_reader_chunks() {
+        let data = [0b10011000, 0b00010000];
+        let mut reader = BitChunks::new(&data, BitSize::from_u8(1).unwrap(), 3);
+        assert_eq!(reader.next().unwrap().bits(), [0b1, 0b0, 0b0]);
+        assert_eq!(reader.next().unwrap().bits(), [0b1, 0b1, 0b0]);
+        assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b0]);
+        assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b1]);
+        assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b0]);
     }
 }

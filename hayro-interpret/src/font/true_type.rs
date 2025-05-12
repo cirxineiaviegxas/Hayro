@@ -51,9 +51,7 @@ impl TrueTypeFont {
     pub fn new(dict: &Dict) -> Option<TrueTypeFont> {
         let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
 
-        let font_flags = descriptor
-            .get::<u32>(FLAGS)
-            .and_then(FontFlags::from_bits);
+        let font_flags = descriptor.get::<u32>(FLAGS).and_then(FontFlags::from_bits);
 
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
@@ -64,8 +62,7 @@ impl TrueTypeFont {
                     .get::<Stream>(FONT_FILE2)
                     .and_then(|s| s.decoded().ok())
                     .and_then(|d| {
-                        OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)
-                            .map(OpenTypeFont::Custom)
+                        OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0).map(OpenTypeFont::Custom)
                     })
             })
             .unwrap_or_else(|| {
@@ -167,8 +164,7 @@ impl TrueTypeFont {
                                 .filter(|g| *g != GlyphId::NOTDEF)
                         }
                     }
-                } else if record.platform_id() == PlatformId::Macintosh
-                    && record.encoding_id() == 0
+                } else if record.platform_id() == PlatformId::Macintosh && record.encoding_id() == 0
                 {
                     if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                         glyph = glyph

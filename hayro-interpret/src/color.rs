@@ -646,15 +646,11 @@ impl Color {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
 
-                
-
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorType::Icc(icc, c) => {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = icc.to_rgba(&c[..]);
-
-                
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }

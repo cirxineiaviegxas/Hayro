@@ -1,3 +1,4 @@
+use crate::bit::{BitChunk, BitChunks, BitSize};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
 use itertools::izip;
@@ -220,11 +221,13 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             }
 
             let colors = params.colors as usize;
+            let bit_size = BitSize::from_u8(params.bits_per_component)?;
 
             let zero_row = vec![0; row_len];
-            let zero_col = vec![0; colors];
 
-            let mut prev_row: &[u8] = &zero_row;
+            let mut prev_row = BitChunks::new(&zero_row, bit_size, colors);
+
+            let zero_col = BitChunk::new(0, colors);
 
             let mut out = vec![0; num_rows * row_len];
 
@@ -235,28 +238,63 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 if is_png_predictor {
                     let predictor = in_row[0];
                     let in_data = &in_row[1..];
+                    let in_data_chunks = BitChunks::new(in_data, bit_size, colors);
 
                     match predictor {
-                        0 => out_row.copy_from_slice(in_data),
-                        1 => {
-                            apply::<Sub>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors)
-                        }
-                        2 => apply::<Up>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors),
-                        3 => {
-                            apply::<Avg>(&prev_row, &zero_col, &zero_col, in_data, out_row, colors)
-                        }
+                        0 => out_row.copy_from_slice(&in_data),
+                        1 => apply::<Sub>(
+                            prev_row,
+                            zero_col.clone(),
+                            zero_col.clone(),
+                            in_data_chunks,
+                            out_row,
+                            colors,
+                            bit_size
+                        ),
+                        2 => apply::<Up>(
+                            prev_row,
+                            zero_col.clone(),
+                            zero_col.clone(),
+                            in_data_chunks,
+                            out_row,
+                            colors,
+                            bit_size
+                        ),
+                        3 => apply::<Avg>(
+                            prev_row,
+                            zero_col.clone(),
+                            zero_col.clone(),
+                            in_data_chunks,
+                            out_row,
+                            colors,
+                            bit_size
+                        ),
                         4 => apply::<Paeth>(
-                            &prev_row, &zero_col, &zero_col, in_data, out_row, colors,
+                            prev_row,
+                            zero_col.clone(),
+                            zero_col.clone(),
+                            in_data_chunks,
+                            out_row,
+                            colors,
+                            bit_size
                         ),
                         _ => unreachable!(),
                     }
                 } else if i == 2 {
-                    apply::<Sub>(&prev_row, &zero_col, &zero_col, in_row, out_row, colors);
+                    apply::<Sub>(
+                        prev_row,
+                        zero_col.clone(),
+                        zero_col.clone(),
+                        BitChunks::new(in_row, bit_size, colors),
+                        out_row,
+                        colors,
+                        bit_size
+                    );
                 } else {
                     warn!("unknown predictor {}", i);
                 }
 
-                prev_row = out_row;
+                prev_row = BitChunks::new(out_row, bit_size, colors);
             }
 
             Some(out)
@@ -269,29 +307,32 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 }
 
 fn apply<'a, T: Predictor>(
-    prev_row: &'a [u8],
-    mut prev_col: &'a [u8],
-    mut top_left: &'a [u8],
-    cur_row: &'a [u8],
+    prev_row: BitChunks<'a>,
+    mut prev_col: BitChunk,
+    mut top_left: BitChunk,
+    cur_row: BitChunks<'a>,
     out: &'a mut [u8],
     colors: usize,
+    bit_size: BitSize
 ) {
-    let cur_row = cur_row.chunks_exact(colors);
-    let prev_row = prev_row.chunks_exact(colors);
     let out_row = out.chunks_exact_mut(colors);
 
     for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
-        for (cur_row, prev_row, out_row, prev_col, top_left) in
-            izip!(cur_row, prev_row, out_row.iter_mut(), prev_col, top_left)
-        {
+        for (cur_row, prev_row, out_row, prev_col, top_left) in izip!(
+            cur_row.iter(),
+            prev_row.iter(),
+            out_row.iter_mut(),
+            prev_col.iter(),
+            top_left.iter()
+        ) {
             // Note that the wrapping behavior when adding inside of the predictors is dependent on the
             // bit size, so it wouldn't be triggered for bits per component < 16. Because of this, we
             // need to mask out the result, which is equivalent to having done `wrapping_add` at the
             // corresponding bit depth.
-            *out_row = (T::predict(*cur_row as u16, *prev_row as u16, *prev_col as u16, *top_left as u16) & 0xFF) as u8;
+            *out_row = (T::predict(cur_row, prev_row, prev_col, top_left) & bit_size.mask()) as u8;
         }
 
-        prev_col = out_row;
+        prev_col = BitChunk::from_u8(out_row);
         top_left = prev_row;
     }
 }

@@ -79,8 +79,6 @@ impl Type0Font {
     }
 
     pub fn map_code(&self, code: u16) -> GlyphId {
-        
-
         match &self.font_type {
             FontType::TrueType(_) => self.cid_to_gid_map.map(code),
             FontType::Cff(c) => {
