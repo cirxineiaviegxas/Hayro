@@ -156,15 +156,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
-name = "bitreader"
-version = "0.3.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "886559b1e163d56c765bc3a985febb4eee8009f625244511d8ee3c432e08c066"
-dependencies = [
- "cfg-if",
-]
-
-[[package]]
 name = "bitstream-io"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -550,7 +541,6 @@ name = "hayro-interpret"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.9.0",
- "bitreader",
  "hayro-syntax",
  "kurbo",
  "log",
@@ -584,7 +574,6 @@ dependencies = [
 name = "hayro-syntax"
 version = "0.1.0"
 dependencies = [
- "bitreader",
  "fax",
  "hex",
  "itertools 0.14.0",

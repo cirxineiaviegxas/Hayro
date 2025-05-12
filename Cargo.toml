@@ -3,7 +3,6 @@ resolver = "2"
 members = [ "hayro-compare", "hayro-interpret", "hayro-render","hayro-syntax"]
 
 [workspace.dependencies]
-bitreader = { version = "0.3.11" }
 hayro-syntax = { path = "hayro-syntax" }
 hayro-interpret = { path = "hayro-interpret" }
 hayro-render = { path = "hayro-render" }

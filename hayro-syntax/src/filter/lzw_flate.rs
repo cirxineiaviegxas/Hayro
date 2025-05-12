@@ -72,10 +72,10 @@ pub mod flate {
 }
 
 pub mod lzw {
+    use crate::bit::{BitReader, BitSize};
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
 
     use crate::object::dict::Dict;
-    use bitreader::BitReader;
 
     pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
         let params = PredictorParams::from_params(&params);
@@ -92,13 +92,14 @@ pub mod lzw {
 
     fn decode_impl(data: &[u8], early_change: bool) -> Option<Vec<u8>> {
         let mut table = Table::new(early_change);
-
-        let mut reader = BitReader::new(data);
+        
+        let bit_size = BitSize::from_u8(table.code_length())?;
+        let mut reader = BitReader::new(data, bit_size);
         let mut decoded = vec![];
         let mut prev = None;
 
         loop {
-            let next = reader.read_u16(table.code_length()).ok()? as usize;
+            let next = reader.next()? as usize;
 
             match next {
                 CLEAR_TABLE => {

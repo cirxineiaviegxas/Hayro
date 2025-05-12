@@ -2,7 +2,6 @@ use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::{ClipPath, Device};
 use crate::interpret;
-use bitreader::BitReader;
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
@@ -16,6 +15,7 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::{Fill, ImageQuality};
 use std::borrow::Cow;
+use hayro_syntax::bit::{BitReader, BitSize};
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -247,25 +247,26 @@ impl<'a> ImageXObject<'a> {
     }
 
     pub fn decode_raw(&self) -> Vec<f32> {
-        let interpolate =
-            |n: f32, d_min: f32, d_max: f32| d_min + (n * (d_max - d_min) / (2.0f32.powi(self.bits_per_component as i32) - 1.0));
+        let interpolate = |n: f32, d_min: f32, d_max: f32| {
+            d_min + (n * (d_max - d_min) / (2.0f32.powi(self.bits_per_component as i32) - 1.0))
+        };
 
         let mut adjusted_components = match self.bits_per_component {
             1 | 2 | 4 => {
                 let mut buf = vec![];
-                let mut reader = BitReader::new(self.decoded.as_ref());
-                
+                let bpc = BitSize::from_u8(self.bits_per_component).unwrap();
+                let mut reader = BitReader::new(self.decoded.as_ref(), bpc);
+
                 for _ in 0..self.height {
                     for _ in 0..self.width {
-                        
                         // See `stream_ccit_not_enough_data`, some images seemingly don't have
                         // enough data, so we just pad with zeroes in this case.
-                        let next = reader.read_u8(self.bits_per_component).unwrap_or(0);
+                        let next = reader.next().unwrap_or(0);
 
-                        buf.push(next as u16);
+                        buf.push(next);
                     }
 
-                    reader.align(1).unwrap();
+                    reader.align();
                 }
 
                 buf
@@ -278,7 +279,6 @@ impl<'a> ImageXObject<'a> {
                 .collect(),
             _ => unimplemented!(),
         };
-        
 
         let mut decoded_arr = vec![];
 

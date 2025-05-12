@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bitreader = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 kurbo = { workspace = true }
