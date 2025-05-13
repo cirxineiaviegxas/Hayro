@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use smallvec::{SmallVec, smallvec};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -83,6 +85,7 @@ impl<'a> Iterator for BitReader<'a> {
 
                 Some(item)
             }
+            // TODO: This won't work correctly for powers not a multiple of 2.
             0..=7 => {
                 let bit_pos = self.bit_pos();
                 let advance = self.bit_size.bits();
@@ -96,6 +99,70 @@ impl<'a> Iterator for BitReader<'a> {
         }?;
 
         Some(item)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BitWriter<'a> {
+    data: Rc<RefCell<&'a mut [u8]>>,
+    cur_pos: usize,
+    bit_size: BitSize,
+}
+
+impl<'a> BitWriter<'a> {
+    pub fn new(data: &'a mut [u8], bit_size: BitSize) -> Option<Self> {
+        
+        if !matches!(bit_size.0, 1 | 2 | 4 | 8 | 16) {
+            return None;
+        }
+        
+        Some(Self {
+            data: Rc::new(RefCell::new(data)),
+            bit_size,
+            cur_pos: 0,
+        })
+    }
+
+    fn byte_pos(&self) -> usize {
+        self.cur_pos / 8
+    }
+
+    fn bit_pos(&self) -> usize {
+        self.cur_pos % 8
+    }
+    
+    pub fn write(&mut self, val: u16) -> Option<()> {
+        let byte_pos = self.byte_pos();
+        let bit_size = self.bit_size;
+
+        let mut data = self.data.borrow_mut();
+
+        match bit_size.0 {
+            1 | 2 | 4 => {
+                
+                
+                let bit_pos = self.bit_pos();
+                
+                let base = data.get(byte_pos)?;
+                let shift = 8 - self.bit_size.bits() - bit_pos;
+                let item = ((val & self.bit_size.mask()) as u8) << shift;
+
+
+                *(data.get_mut(byte_pos)?) = *base | item;
+                self.cur_pos += bit_size.bits();
+            }
+            8 => {
+                *(data.get_mut(byte_pos)?) = val as u8;
+                self.cur_pos += 8;
+            }
+            16 => {
+                data.get_mut(byte_pos..(byte_pos + 2))?.copy_from_slice(&val.to_be_bytes());
+                self.cur_pos += 16;
+            }
+            _ => unreachable!()
+        }
+
+        Some(())
     }
 }
 
@@ -153,6 +220,25 @@ impl BitChunk {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct BitChunkMut<'a> {
+    writer: BitWriter<'a>,
+}
+
+impl<'a> BitChunkMut<'a> {
+    
+}
+
+pub struct ByteMut<'a> {
+    writer: BitWriter<'a>,
+}
+
+impl<'a> ByteMut<'a> {
+    pub fn write(&mut self, val: u16) -> Option<()> {
+        self.writer.write(val)        
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,6 +250,17 @@ mod tests {
         assert_eq!(reader.next().unwrap(), u16::from_be_bytes([0x01, 0x02]));
         assert_eq!(reader.next().unwrap(), u16::from_be_bytes([0x03, 0x04]));
         assert_eq!(reader.next().unwrap(), u16::from_be_bytes([0x05, 0x06]));
+    }
+
+    #[test]
+    fn bit_writer_16() {
+        let mut buf = vec![0u8; 6];
+        let mut writer = BitWriter::new(&mut buf, BitSize::from_u8(16).unwrap()).unwrap();
+        writer.write(u16::from_be_bytes([0x01, 0x02])).unwrap();
+        writer.write(u16::from_be_bytes([0x03, 0x04])).unwrap();
+        writer.write(u16::from_be_bytes([0x05, 0x06])).unwrap();
+        
+        assert_eq!(buf, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
     }
 
     #[test]
@@ -186,6 +283,17 @@ mod tests {
     }
 
     #[test]
+    fn bit_writer_8() {
+        let mut buf = vec![0u8; 3];
+        let mut writer = BitWriter::new(&mut buf, BitSize::from_u8(8).unwrap()).unwrap();
+        writer.write(0x01).unwrap();
+        writer.write(0x02).unwrap();
+        writer.write(0x03).unwrap();
+
+        assert_eq!(buf, [0x01, 0x02, 0x03]);
+    }
+
+    #[test]
     fn bit_reader_8() {
         let data = [0x01, 0x02, 0x03];
         let mut reader = BitReader::new(&data, BitSize::from_u8(8).unwrap());
@@ -193,6 +301,21 @@ mod tests {
         assert_eq!(reader.next().unwrap(), 0x02);
         assert_eq!(reader.next().unwrap(), 0x03);
     }
+
+    #[test]
+    fn bit_writer_4() {
+        let mut buf = vec![0u8; 3];
+        let mut writer = BitWriter::new(&mut buf, BitSize::from_u8(4).unwrap()).unwrap();
+        writer.write(0b1001).unwrap();
+        writer.write(0b1000).unwrap();
+        writer.write(0b0001).unwrap();
+        writer.write(0b1111).unwrap();
+        writer.write(0b1010).unwrap();
+        writer.write(0b1001).unwrap();
+
+        assert_eq!(buf, [0b10011000, 0b00011111, 0b10101001]);
+    }
+
 
     #[test]
     fn bit_reader_4() {
@@ -207,6 +330,23 @@ mod tests {
     }
 
     #[test]
+    fn bit_writer_2() {
+        let mut buf = vec![0u8; 2];
+        let mut writer = BitWriter::new(&mut buf, BitSize::from_u8(2).unwrap()).unwrap();
+        writer.write(0b10).unwrap();
+        writer.write(0b01).unwrap();
+        writer.write(0b10).unwrap();
+        writer.write(0b00).unwrap();
+        writer.write(0b00).unwrap();
+        writer.write(0b01).unwrap();
+        writer.write(0b00).unwrap();
+        writer.write(0b00).unwrap();
+
+        assert_eq!(buf, [0b10011000, 0b00010000]);
+    }
+
+
+    #[test]
     fn bit_reader_2() {
         let data = [0b10011000, 0b00010000];
         let mut reader = BitReader::new(&data, BitSize::from_u8(2).unwrap());
@@ -219,6 +359,32 @@ mod tests {
         assert_eq!(reader.next().unwrap(), 0b00);
         assert_eq!(reader.next().unwrap(), 0b00);
     }
+
+    #[test]
+    fn bit_writer_1() {
+        let mut buf = vec![0u8; 2];
+        let mut writer = BitWriter::new(&mut buf, BitSize::from_u8(1).unwrap()).unwrap();
+        writer.write(0b1).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b1).unwrap();
+        writer.write(0b1).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b1).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+        writer.write(0b0).unwrap();
+
+        assert_eq!(buf, [0b10011000, 0b00010000]);
+    }
+
 
     #[test]
     fn bit_reader_1() {
