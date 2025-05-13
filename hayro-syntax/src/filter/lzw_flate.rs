@@ -1,7 +1,7 @@
-use crate::bit::{BitChunk, BitChunks, BitSize};
+use crate::bit::{BitChunk, BitChunks, BitReader, BitSize, BitWriter};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
-use itertools::izip;
+use itertools::{izip, Itertools};
 use log::warn;
 
 struct PredictorParams {
@@ -22,7 +22,16 @@ impl PredictorParams {
     }
 
     fn row_length_in_bytes(&self) -> usize {
-        self.columns * self.bytes_per_pixel() as usize
+        let raw = self.columns * self.bytes_per_pixel() as usize;
+        
+        match self.bits_per_component {
+            1 => raw.div_ceil(8),
+            2 => raw.div_ceil(4),
+            4 => raw.div_ceil(2),
+            8 => raw,
+            16 => 2 * raw,
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -195,12 +204,6 @@ pub mod lzw {
 }
 
 fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
-    if params.bits_per_component != 8 {
-        warn!("Predictor only supports 8 bits per component");
-
-        return None;
-    }
-
     match params.predictor {
         1 | 10 => Some(data),
         i => {
@@ -230,10 +233,10 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             let zero_col = BitChunk::new(0, colors);
 
             let mut out = vec![0; num_rows * row_len];
+            let mut writer = BitWriter::new(&mut out, bit_size)?;
 
-            for (in_row, out_row) in data
+            for in_row in data
                 .chunks_exact(total_row_len)
-                .zip(out.chunks_exact_mut(row_len))
             {
                 if is_png_predictor {
                     let predictor = in_row[0];
@@ -241,13 +244,19 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                     let in_data_chunks = BitChunks::new(in_data, bit_size, colors);
 
                     match predictor {
-                        0 => out_row.copy_from_slice(&in_data),
+                        0 => {
+                            // Just copy the data.
+                            let mut reader = BitReader::new(in_data, bit_size);
+                            for data in reader {
+                                writer.write(data);
+                            }
+                        },
                         1 => apply::<Sub>(
                             prev_row,
                             zero_col.clone(),
                             zero_col.clone(),
                             in_data_chunks,
-                            out_row,
+                            &mut writer,
                             colors,
                             bit_size
                         ),
@@ -256,7 +265,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             zero_col.clone(),
                             zero_col.clone(),
                             in_data_chunks,
-                            out_row,
+                            &mut writer,
                             colors,
                             bit_size
                         ),
@@ -265,7 +274,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             zero_col.clone(),
                             zero_col.clone(),
                             in_data_chunks,
-                            out_row,
+                            &mut writer,
                             colors,
                             bit_size
                         ),
@@ -274,7 +283,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             zero_col.clone(),
                             zero_col.clone(),
                             in_data_chunks,
-                            out_row,
+                            &mut writer,
                             colors,
                             bit_size
                         ),
@@ -286,15 +295,17 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                         zero_col.clone(),
                         zero_col.clone(),
                         BitChunks::new(in_row, bit_size, colors),
-                        out_row,
+                        &mut writer,
                         colors,
                         bit_size
                     );
                 } else {
                     warn!("unknown predictor {}", i);
                 }
-
-                prev_row = BitChunks::new(out_row, bit_size, colors);
+                
+                let (data, new_writer) = writer.split_off();
+                writer = new_writer;
+                prev_row = BitChunks::new(data, bit_size, colors);
             }
 
             Some(out)
@@ -311,28 +322,31 @@ fn apply<'a, T: Predictor>(
     mut prev_col: BitChunk,
     mut top_left: BitChunk,
     cur_row: BitChunks<'a>,
-    out: &'a mut [u8],
-    colors: usize,
+    writer: &mut BitWriter<'a>,
+    chunk_len: usize,
     bit_size: BitSize
 ) {
-    let out_row = out.chunks_exact_mut(colors);
-
-    for (cur_row, prev_row, out_row) in izip!(cur_row, prev_row, out_row) {
-        for (cur_row, prev_row, out_row, prev_col, top_left) in izip!(
+    for (cur_row, prev_row) in izip!(cur_row, prev_row) {
+        let old_pos = writer.cur_pos();
+        
+        for (cur_row, prev_row, prev_col, top_left) in izip!(
             cur_row.iter(),
             prev_row.iter(),
-            out_row.iter_mut(),
             prev_col.iter(),
             top_left.iter()
         ) {
-            // Note that the wrapping behavior when adding inside of the predictors is dependent on the
-            // bit size, so it wouldn't be triggered for bits per component < 16. Because of this, we
-            // need to mask out the result, which is equivalent to having done `wrapping_add` at the
-            // corresponding bit depth.
-            *out_row = (T::predict(cur_row, prev_row, prev_col, top_left) & bit_size.mask()) as u8;
+            // Note that the wrapping behavior when adding inside the predictors is dependent on the
+            // bit size, so it wouldn't be triggered for bits per component < 16. However, the bit
+            // writer will take care of masking out the superfluous bytes.
+            writer.write(T::predict(cur_row, prev_row, prev_col, top_left) & bit_size.mask());
         }
-
-        prev_col = BitChunk::from_u8(out_row);
+        
+        prev_col = {
+            let out_data = writer.get_data();
+            let mut reader = BitReader::new_with(&out_data, bit_size, old_pos);
+            BitChunk::from_reader(&mut reader, chunk_len).unwrap()
+        };
+        
         top_left = prev_row;
     }
 }
