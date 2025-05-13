@@ -62,6 +62,8 @@ pub struct Image {
     pub pixmap: Arc<Pixmap>,
     /// Extend mode in the horizontal direction.
     pub x_extend: peniko::Extend,
+    pub x_step: f32,
+    pub y_step: f32,
     /// Extend mode in the vertical direction.
     pub y_extend: peniko::Extend,
     /// Hint for desired rendering quality.

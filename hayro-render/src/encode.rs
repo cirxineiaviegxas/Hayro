@@ -34,6 +34,8 @@ impl EncodeExt for Image {
             transform,
             x_advance,
             y_advance,
+            x_step: self.x_step,
+            y_step: self.y_step,
             is_stencil: self.is_stencil,
         };
 
@@ -65,6 +67,8 @@ pub struct EncodedImage {
     pub x_advance: Vec2,
     /// The advance in image coordinates for one step in the y direction.
     pub y_advance: Vec2,
+    pub x_step: f32,
+    pub y_step: f32,
     pub is_stencil: bool,
 }
 

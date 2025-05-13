@@ -40,12 +40,12 @@ impl<'a> ImageFiller<'a> {
             point.x = f64::from(extend(
                 point.x.floor() as f32,
                 self.image.extends.0,
-                f32::from(self.image.pixmap.width()),
+                self.image.x_step,
             ));
             point.y = f64::from(extend(
                 point.y.floor() as f32,
                 self.image.extends.1,
-                f32::from(self.image.pixmap.height()),
+                self.image.y_step
             ));
 
             point
