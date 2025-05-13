@@ -25,6 +25,7 @@ impl PredictorParams {
         let raw = self.columns * self.bytes_per_pixel() as usize;
         
         match self.bits_per_component {
+            // TODO: Find tests for 2,4,16 bits.
             1 => raw.div_ceil(8),
             2 => raw.div_ceil(4),
             4 => raw.div_ceil(2),
