@@ -116,7 +116,7 @@ pub(crate) fn draw_image_xobject(
 
     let color = Color::from_pdf(
         context.get().fill_cs.clone(),
-        &context.get().fill_color,
+        context.get().fill_color.clone(),
         context.get().fill_alpha,
     );
 

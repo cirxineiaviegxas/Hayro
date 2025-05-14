@@ -587,7 +587,7 @@ fn fill_path_impl(
 ) {
     let color = Color::from_pdf(
         context.get().fill_cs.clone(),
-        &context.get().fill_color,
+        context.get().fill_color.clone(),
         context.get().fill_alpha,
     );
 
@@ -611,7 +611,7 @@ fn stroke_path_impl(
 ) {
     let color = Color::from_pdf(
         context.get().stroke_cs.clone(),
-        &context.get().stroke_color,
+        context.get().stroke_color.clone(),
         context.get().stroke_alpha,
     );
 

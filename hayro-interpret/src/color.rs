@@ -617,67 +617,57 @@ fn u8_to_f32(val: f32) -> u8 {
     (val * 255.0 + 0.5) as u8
 }
 
-#[derive(Clone, Debug)]
 pub struct Color {
-    color_type: ColorType,
-    opacity: f32,
+    color_space: ColorSpace,
+    components: ColorComponents,
+    opacity: f32
 }
 
 impl Color {
-    pub(crate) fn from_pdf(color_space: ColorSpace, c: &ColorComponents, opacity: f32) -> Self {
-        let c_type = match color_space {
-            ColorSpace::DeviceCmyk => ColorType::DeviceCmyk([c[0], c[1], c[2], c[3]]),
-            ColorSpace::DeviceGray => ColorType::DeviceGray(c[0]),
-            ColorSpace::DeviceRgb => ColorType::DeviceRgb([c[0], c[1], c[2]]),
-            ColorSpace::ICCColor(icc) => ColorType::Icc(icc, c.clone()),
-            ColorSpace::CalGray(cal) => ColorType::CalGray(cal, c[0]),
-            ColorSpace::CalRgb(cal) => ColorType::CalRgb(cal, [c[0], c[1], c[2]]),
-            ColorSpace::Lab(lab) => ColorType::Lab(lab, [c[0], c[1], c[2]]),
-            ColorSpace::Indexed(i) => ColorType::Indexed(i, c[0]),
-        };
-
+    pub(crate) fn from_pdf(color_space: ColorSpace, components: ColorComponents, opacity: f32) -> Self {
         Self {
-            color_type: c_type,
+           color_space,
+            components,
             opacity,
         }
     }
 
     pub fn to_rgba(&self) -> AlphaColor<Srgb> {
-        match &self.color_type {
-            // TODO: Deduplicate
-            ColorType::DeviceRgb(r) => AlphaColor::new([r[0], r[1], r[2], self.opacity]),
-            ColorType::DeviceGray(g) => AlphaColor::new([*g, *g, *g, self.opacity]),
-            ColorType::DeviceCmyk(c) => {
+        let c = &self.components;
+        match &self.color_space {
+            ColorSpace::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], self.opacity]),
+            ColorSpace::DeviceGray => AlphaColor::new([c[0], c[0], c[0], self.opacity]),
+            ColorSpace::DeviceCmyk => {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
-            ColorType::Icc(icc, c) => {
+            ColorSpace::ICCColor(icc) => {
                 let opacity = u8_to_f32(self.opacity);
                 let srgb = icc.to_rgba(&c[..]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
-            ColorType::CalGray(cal, c) => {
+            ColorSpace::CalGray(cal) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = cal.to_rgb(*c);
+                let srgb = cal.to_rgb(c[0]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
-            ColorType::CalRgb(cal, c) => {
+            ColorSpace::CalRgb(cal) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = cal.to_rgb(*c);
+                let srgb = cal.to_rgb([c[0], c[1], c[2]]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
-            ColorType::Lab(lab, c) => {
+            ColorSpace::Lab(lab) => {
                 let opacity = u8_to_f32(self.opacity);
-                let srgb = lab.to_rgb(*c);
+                let srgb = lab.to_rgb([c[0], c[1], c[2]]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
-            ColorType::Indexed(i, c) => i.to_rgb(*c, self.opacity),
+            ColorSpace::Indexed(i) => i.to_rgb(c[0], self.opacity),
         }
     }
 }
