@@ -1,0 +1,18 @@
+[package]
+name = "hayro-font-parser"
+version = "0.1.0"
+authors = [
+    "Laurenz Stampfl <laurenz.stampfl@gmail.com>",
+]
+keywords = ["pdf", "cff", "type1"]
+categories = ["parser-implementations"]
+license = "MIT OR Apache-2.0"
+description = "A high-level, safe, zero-allocation font parser for TrueType, OpenType, and AAT."
+repository = "https://github.com/LaurenzV/pdf-font-parser"
+readme = "README.md"
+edition = "2018"
+rust-version = "1.63.0"
+
+[dependencies]
+log = "0.4.27"
+phf = { version = "0.11.3", features = ["macros"] }

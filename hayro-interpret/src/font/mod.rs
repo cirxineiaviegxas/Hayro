@@ -9,7 +9,7 @@ use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use kurbo::{BezPath, Vec2};
-use pdf_font_parser::OutlineBuilder;
+use hayro_font_parser::OutlineBuilder;
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;

@@ -1,7 +1,7 @@
 use crate::font::{OutlinePath, UNITS_PER_EM};
 use kurbo::{Affine, BezPath};
 use once_cell::sync::Lazy;
-use pdf_font_parser::{Matrix, cff, type1};
+use hayro_font_parser::{Matrix, cff, type1};
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
 use skrifa::outline::DrawSettings;
@@ -206,7 +206,7 @@ impl CffFontBlob {
 
         let Ok(_) = self
             .table()
-            .outline(pdf_font_parser::GlyphId(glyph.to_u32() as u16), &mut path)
+            .outline(hayro_font_parser::GlyphId(glyph.to_u32() as u16), &mut path)
         else {
             return BezPath::new();
         };
