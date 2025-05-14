@@ -18,6 +18,8 @@ lengths = {
     "font_truetype_8": "0..=0",
     "image_inline_8": "2..=2",
     "stream_flate_bpc_1": "0..=0",
+    "stream_jpx_1": "2..=2",
+    "stream_jpx_3": "2..=2",
 }
 
 def generate_rust_function(file_stem):
