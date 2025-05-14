@@ -22,6 +22,7 @@ mod font;
 mod state;
 mod util;
 pub mod x_object;
+mod shading;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
