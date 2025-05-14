@@ -20,6 +20,7 @@ pub struct Context<'a> {
     last_point: Point,
     clip: Option<Fill>,
     font_cache: HashMap<ObjRef, Font<'a>>,
+    root_transforms: Vec<Affine>,
     color_space_cache: HashMap<ObjRef, ColorSpace>,
 }
 
@@ -49,6 +50,7 @@ impl<'a> Context<'a> {
                 n_clips: 0,
                 text_state: TextState::default(),
             }],
+            root_transforms: vec![initial_transform],
             last_point: Point::default(),
             sub_path_start: Point::default(),
             clip: None,
@@ -61,6 +63,18 @@ impl<'a> Context<'a> {
     pub(crate) fn save_state(&mut self) {
         let cur = self.states.last().unwrap().clone();
         self.states.push(cur);
+    }
+    
+    pub(crate) fn push_root_transform(&mut self) {
+        self.root_transforms.push(self.get().affine);
+    }
+    
+    pub(crate) fn pop_root_transform(&mut self) {
+        self.root_transforms.pop();
+    }
+    
+    pub(crate) fn root_transform(&self) -> &Affine {
+        self.root_transforms.last().unwrap()
     }
 
     pub(crate) fn restore_state(&mut self) {

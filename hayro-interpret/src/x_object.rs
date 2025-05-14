@@ -84,6 +84,8 @@ pub(crate) fn draw_form_xobject<'a>(
 
     context.save_state();
     context.pre_concat_affine(x_object.matrix);
+    context.push_root_transform();
+    
     device.set_transform(context.get().affine);
     device.push_layer(
         Some(&ClipPath {
@@ -100,6 +102,7 @@ pub(crate) fn draw_form_xobject<'a>(
     );
     interpret(iter, &x_object.resources, context, device);
     device.pop();
+    context.pop_root_transform();
     context.restore_state();
 }
 
