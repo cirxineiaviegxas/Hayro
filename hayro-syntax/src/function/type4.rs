@@ -1,6 +1,8 @@
 use crate::file::xref::XRef;
-use crate::function::{CommonProperties, Values};
+use crate::function::Values;
+use crate::object::dict::Dict;
 use crate::object::number::Number;
+use crate::object::stream::Stream;
 use crate::reader::Reader;
 use crate::{OptionLog, content};
 use log::error;
@@ -39,15 +41,18 @@ impl Argument {
 type ArgumentStack = SmallVec<[Argument; 64]>;
 type ParseStack = SmallVec<[Vec<PostScriptOp>; 2]>;
 
-struct Type4 {
-    common: CommonProperties,
+pub(crate) struct Type4 {
     program: Vec<PostScriptOp>,
 }
 
 impl Type4 {
-    fn eval(&self, mut input: Values) -> Option<Values> {
-        self.common.clamp_domain(&mut input)?;
+    pub(crate) fn new(stream: &Stream) -> Option<Self> {
+        Some(Self {
+            program: parse_procedure(&stream.decoded().ok()?)?,
+        })
+    }
 
+    pub(crate) fn eval(&self, mut input: Values) -> Option<Values> {
         let mut arg_stack = ArgumentStack::new();
 
         for input in input {
@@ -61,8 +66,6 @@ impl Type4 {
         for num in arg_stack {
             out.push(num.as_f32());
         }
-
-        self.common.clamp_range(&mut out)?;
 
         Some(out)
     }
@@ -461,7 +464,7 @@ impl PostScriptOp {
 #[cfg(test)]
 mod tests {
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
-    use crate::function::{Clamper, CommonProperties, Values};
+    use crate::function::{Clamper, Function, FunctionType, Values};
     use crate::object::number::Number;
 
     use smallvec::smallvec;
@@ -504,14 +507,7 @@ mod tests {
         let procedure = format!("{{{prog}}}");
         let procedure = parse_procedure(procedure.as_bytes()).unwrap();
 
-        let type4 = Type4 {
-            common: CommonProperties {
-                domain: Clamper(smallvec![]),
-                // Note that a range is in theory required, but we leave it out for testing.
-                range: None,
-            },
-            program: procedure,
-        };
+        let type4 = Type4 { program: procedure };
 
         let res = type4.eval(Values::new()).unwrap();
 
@@ -792,14 +788,10 @@ mod tests {
     fn domain() {
         let procedure = parse_procedure(b"{  }").unwrap();
 
-        let type4 = Type4 {
-            // Note that a range is in theory required, but we leave it out for testing.
-            common: CommonProperties {
-                domain: Clamper(smallvec![-5.0, 5.0, -5.0, 5.0, -5.0, 5.0]),
-                // TODO: Enforce range
-                range: None,
-            },
-            program: procedure,
+        let type4 = Function {
+            function_type: FunctionType::Type4(Type4 { program: procedure }),
+            domain: Clamper(smallvec![-5.0, 5.0, -5.0, 5.0, -5.0, 5.0]),
+            range: None,
         };
 
         let input = smallvec![-10.0, -2.0, 6.0];
