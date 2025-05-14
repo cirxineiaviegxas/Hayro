@@ -1,6 +1,6 @@
 use crate::Result;
 use crate::file::xref::XRef;
-use crate::filter::{Filter, apply_filter};
+use crate::filter::{Filter, apply_filter, FilterResult};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
@@ -32,7 +32,11 @@ impl<'a> Stream<'a> {
     ///
     /// Note that the result of this method will not be cached, so calling it multiple
     /// times is expensive.
-    pub fn decoded(&self) -> Result<Cow<'a, [u8]>> {
+    pub fn decoded(&self) -> Result<Vec<u8>> {
+        self.decoded_image().map(|r| r.data)
+    }
+
+    pub fn decoded_image(&self) -> Result<FilterResult> {
         if let Some(filter) = self
             .dict
             .get::<Filter>(FILTER)
@@ -43,11 +47,11 @@ impl<'a> Stream<'a> {
                 .get::<Dict>(DECODE_PARMS)
                 .or_else(|| self.dict.get::<Dict>(DP));
 
-            Ok(Cow::Owned(apply_filter(
+            Ok(apply_filter(
                 self.data,
                 filter,
                 params.as_ref(),
-            )?))
+            )?)
         } else if let Some(filters) = self
             .dict
             .get::<Array>(FILTER)
@@ -63,23 +67,32 @@ impl<'a> Stream<'a> {
                 .map(|a| a.iter::<Object>().collect())
                 .unwrap_or(vec![]);
 
-            let mut current = Cow::Borrowed(self.data);
+            let mut current: Option<FilterResult> = None;
 
             for i in 0..filters.len() {
+                let params = params
+                    .get(i)
+                    .and_then(|p| p.clone().cast::<Dict>().ok());
+                
                 let new = apply_filter(
-                    current.as_ref(),
+                    current.as_ref().map(|c| c.data.as_ref()).unwrap_or(self.data),
                     filters[i],
-                    params
-                        .get(i)
-                        .and_then(|p| p.clone().cast::<Dict>().ok())
-                        .as_ref(),
+                    params.as_ref(),
                 )?;
-                current = Cow::Owned(new);
+                current = Some(new);
             }
 
-            Ok(current)
+            Ok(current.unwrap_or(FilterResult {
+                data: self.data.to_vec(),
+                color_space: None,
+                bits_per_component: None,
+            }))
         } else {
-            Ok(Cow::Borrowed(self.data))
+            Ok(FilterResult {
+                data: self.data.to_vec(),
+                color_space: None,
+                bits_per_component: None,
+            })
         }
     }
 

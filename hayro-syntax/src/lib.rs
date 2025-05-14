@@ -35,7 +35,7 @@ pub type Result<T> = std::result::Result<T, Whatever>;
 // PDF objects that actually stem from different data sources.
 pub struct Data<'a> {
     data: &'a [u8],
-    map: RwLock<HashMap<ObjectIdentifier, Option<Cow<'a, [u8]>>>>,
+    map: RwLock<HashMap<ObjectIdentifier, Option<Vec<u8>>>>,
 }
 
 impl<'a> Data<'a> {

@@ -34,7 +34,7 @@ impl<'a> XObject<'a> {
 }
 
 pub struct FormXObject<'a> {
-    pub decoded: Cow<'a, [u8]>,
+    pub decoded: Vec<u8>,
     matrix: Affine,
     bbox: [f32; 4],
     resources: Dict<'a>,
@@ -148,7 +148,7 @@ pub(crate) fn draw_image_xobject(
 }
 
 pub struct ImageXObject<'a> {
-    pub decoded: Cow<'a, [u8]>,
+    pub decoded: Vec<u8>,
     pub width: u32,
     pub height: u32,
     color_space: ColorSpace,
@@ -163,7 +163,7 @@ impl<'a> ImageXObject<'a> {
     pub(crate) fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
 
-        let decoded = stream.decoded().ok()?;
+        let decoded = stream.decoded_image().ok()?;
         let interpolate = dict
             .get::<bool>(INTERPOLATE)
             .or_else(|| dict.get::<bool>(I))
@@ -177,16 +177,21 @@ impl<'a> ImageXObject<'a> {
         } else {
             dict.get::<u8>(BITS_PER_COMPONENT)
                 .or_else(|| dict.get::<u8>(BPC))
-                .unwrap()
+                .or_else(|| decoded.bits_per_component)
+                .unwrap_or(8)
         };
         let color_space = if image_mask {
             ColorSpace::DeviceGray
         } else {
-            ColorSpace::new(
-                dict.get::<Object>(COLORSPACE)
-                    .or_else(|| dict.get::<Object>(CS))
-                    .unwrap(),
-            )
+            dict.get::<Object>(COLORSPACE)
+                .or_else(|| dict.get::<Object>(CS))
+                .map(|c| ColorSpace::new(c))
+                .or_else(|| decoded.color_space.map(|c| match c {
+                    hayro_syntax::filter::ColorSpace::Gray => ColorSpace::DeviceGray,
+                    hayro_syntax::filter::ColorSpace::Rgb => ColorSpace::DeviceRgb,
+                    hayro_syntax::filter::ColorSpace::Cmyk => ColorSpace::DeviceCmyk
+                }))
+                .unwrap_or(ColorSpace::DeviceGray)
         };
         let decode = dict
             .get::<Array>(DECODE)
@@ -206,7 +211,7 @@ impl<'a> ImageXObject<'a> {
             .unwrap();
 
         Some(Self {
-            decoded,
+            decoded: decoded.data,
             width,
             height,
             color_space,

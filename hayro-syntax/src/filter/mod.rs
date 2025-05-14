@@ -5,7 +5,6 @@ mod ccitt;
 mod dct;
 mod lzw_flate;
 mod run_length;
-mod jpx;
 
 use jpeg2k::ImagePixelData;
 use crate::Result;
@@ -17,9 +16,8 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use log::warn;
 use snafu::{OptionExt, whatever};
-use crate::filter::jpx::JpxExt;
 
-pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<Vec<u8>> {
+pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<FilterResult> {
     filter.apply(data, params.cloned().unwrap_or_default())
 }
 
@@ -35,6 +33,28 @@ pub enum Filter {
     DctDecode,
     JpxDecode,
     Crypt,
+}
+
+pub enum ColorSpace {
+    Gray,
+    Rgb,
+    Cmyk
+}
+
+pub struct FilterResult {
+    pub data: Vec<u8>,
+    pub color_space: Option<ColorSpace>,
+    pub bits_per_component: Option<u8>
+}
+
+impl FilterResult {
+    pub fn from_data(data: Vec<u8>) -> Self {
+        Self {
+            data,
+            color_space: None,
+            bits_per_component: None
+        }
+    }
 }
 
 impl Filter {
@@ -53,18 +73,28 @@ impl Filter {
         }
     }
 
-    pub fn apply(&self, data: &[u8], params: Dict) -> Result<Vec<u8>> {
+    pub fn apply(&self, data: &[u8], params: Dict) -> Result<FilterResult> {
         let applied = match self {
-            Filter::AsciiHexDecode => ascii_hex::decode(data),
-            Filter::Ascii85Decode => ascii_85::decode(data),
-            Filter::RunLengthDecode => run_length::decode(data),
-            Filter::LzwDecode => lzw_flate::lzw::decode(data, params),
-            Filter::DctDecode => dct::decode(data, params),
-            Filter::FlateDecode => lzw_flate::flate::decode(data, params),
-            Filter::CcittFaxDecode => ccit_stream::decode(data, params),
+            Filter::AsciiHexDecode => ascii_hex::decode(data).map(FilterResult::from_data),
+            Filter::Ascii85Decode => ascii_85::decode(data).map(FilterResult::from_data),
+            Filter::RunLengthDecode => run_length::decode(data).map(FilterResult::from_data),
+            Filter::LzwDecode => lzw_flate::lzw::decode(data, params).map(FilterResult::from_data),
+            Filter::DctDecode => dct::decode(data, params).map(FilterResult::from_data),
+            Filter::FlateDecode => lzw_flate::flate::decode(data, params).map(FilterResult::from_data),
+            Filter::CcittFaxDecode => ccit_stream::decode(data, params).map(FilterResult::from_data),
             Filter::JpxDecode => {
                 // TODO: Make dependency optional to allow compiling to WASM.
                 let image =jpeg2k::Image::from_bytes(data).unwrap();
+                let components = image.components();
+                let cs = match components.len() {
+                    1 => Some(ColorSpace::Gray),
+                    3 => Some(ColorSpace::Rgb),
+                    4 => Some(ColorSpace::Cmyk),
+                    _ => None
+                };
+                let bpc = components
+                    .iter()
+                    .fold(std::u32::MIN, |max, c| max.max(c.precision())) as u8;
                 let mut components_iters = image.components().iter().map(|c| c.data_u8()).collect::<Vec<_>>();
                 let mut buf = vec![];
                 
@@ -78,7 +108,11 @@ impl Filter {
                     }
                 }
                 
-                Some(buf)
+                Some(FilterResult {
+                    data: buf,
+                    color_space: cs,
+                    bits_per_component: Some(bpc),
+                })
             }
             _ => {
                 whatever!("the {} filter is not supported", self.debug_name());
