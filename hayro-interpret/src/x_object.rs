@@ -163,7 +163,7 @@ impl<'a> ImageXObject<'a> {
     pub(crate) fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
 
-        let decoded = stream.decoded().unwrap();
+        let decoded = stream.decoded().ok()?;
         let interpolate = dict
             .get::<bool>(INTERPOLATE)
             .or_else(|| dict.get::<bool>(I))

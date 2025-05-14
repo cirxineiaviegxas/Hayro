@@ -5,7 +5,9 @@ mod ccitt;
 mod dct;
 mod lzw_flate;
 mod run_length;
+mod jpx;
 
+use jpeg2k::ImagePixelData;
 use crate::Result;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
@@ -15,6 +17,7 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use log::warn;
 use snafu::{OptionExt, whatever};
+use crate::filter::jpx::JpxExt;
 
 pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<Vec<u8>> {
     filter.apply(data, params.cloned().unwrap_or_default())
@@ -59,6 +62,24 @@ impl Filter {
             Filter::DctDecode => dct::decode(data, params),
             Filter::FlateDecode => lzw_flate::flate::decode(data, params),
             Filter::CcittFaxDecode => ccit_stream::decode(data, params),
+            Filter::JpxDecode => {
+                // TODO: Make dependency optional to allow compiling to WASM.
+                let image =jpeg2k::Image::from_bytes(data).unwrap();
+                let mut components_iters = image.components().iter().map(|c| c.data_u8()).collect::<Vec<_>>();
+                let mut buf = vec![];
+                
+                'outer: loop {
+                    for iter in &mut components_iters {
+                        if let Some(n) = iter.next() {
+                            buf.push(n);
+                        } else {
+                            break 'outer;
+                        }
+                    }
+                }
+                
+                Some(buf)
+            }
             _ => {
                 whatever!("the {} filter is not supported", self.debug_name());
             }

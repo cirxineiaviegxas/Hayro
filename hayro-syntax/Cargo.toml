@@ -14,8 +14,8 @@ zune-jpeg = { workspace = true }
 miniz_oxide = { workspace = true }
 snafu = { workspace = true }
 itertools = { workspace = true }
-jpeg-decoder = "0.3.1"
 fax = "0.2.4"
+jpeg2k = { version = "0.9.1", default-features = false, features = ["openjp2"] }
 
 [dev-dependencies]
 walkdir = "2.5.0"
