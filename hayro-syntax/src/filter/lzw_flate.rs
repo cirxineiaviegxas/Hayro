@@ -1,7 +1,7 @@
 use crate::bit::{BitChunk, BitChunks, BitReader, BitSize, BitWriter};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 use log::warn;
 
 struct PredictorParams {
@@ -23,7 +23,7 @@ impl PredictorParams {
 
     fn row_length_in_bytes(&self) -> usize {
         let raw = self.columns * self.bytes_per_pixel() as usize;
-        
+
         match self.bits_per_component {
             // TODO: Find tests for 2,4,16 bits.
             1 => raw.div_ceil(8),
@@ -236,9 +236,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             let mut out = vec![0; num_rows * row_len];
             let mut writer = BitWriter::new(&mut out, bit_size)?;
 
-            for in_row in data
-                .chunks_exact(total_row_len)
-            {
+            for in_row in data.chunks_exact(total_row_len) {
                 if is_png_predictor {
                     let predictor = in_row[0];
                     let in_data = &in_row[1..];
@@ -251,7 +249,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             for data in reader {
                                 writer.write(data);
                             }
-                        },
+                        }
                         1 => apply::<Sub>(
                             prev_row,
                             zero_col.clone(),
@@ -259,7 +257,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             in_data_chunks,
                             &mut writer,
                             colors,
-                            bit_size
+                            bit_size,
                         ),
                         2 => apply::<Up>(
                             prev_row,
@@ -268,7 +266,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             in_data_chunks,
                             &mut writer,
                             colors,
-                            bit_size
+                            bit_size,
                         ),
                         3 => apply::<Avg>(
                             prev_row,
@@ -277,7 +275,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             in_data_chunks,
                             &mut writer,
                             colors,
-                            bit_size
+                            bit_size,
                         ),
                         4 => apply::<Paeth>(
                             prev_row,
@@ -286,7 +284,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             in_data_chunks,
                             &mut writer,
                             colors,
-                            bit_size
+                            bit_size,
                         ),
                         _ => unreachable!(),
                     }
@@ -298,12 +296,12 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                         BitChunks::new(in_row, bit_size, colors),
                         &mut writer,
                         colors,
-                        bit_size
+                        bit_size,
                     );
                 } else {
                     warn!("unknown predictor {}", i);
                 }
-                
+
                 let (data, new_writer) = writer.split_off();
                 writer = new_writer;
                 prev_row = BitChunks::new(data, bit_size, colors);
@@ -325,11 +323,11 @@ fn apply<'a, T: Predictor>(
     cur_row: BitChunks<'a>,
     writer: &mut BitWriter<'a>,
     chunk_len: usize,
-    bit_size: BitSize
+    bit_size: BitSize,
 ) {
     for (cur_row, prev_row) in izip!(cur_row, prev_row) {
         let old_pos = writer.cur_pos();
-        
+
         for (cur_row, prev_row, prev_col, top_left) in izip!(
             cur_row.iter(),
             prev_row.iter(),
@@ -341,13 +339,13 @@ fn apply<'a, T: Predictor>(
             // writer will take care of masking out the superfluous bytes.
             writer.write(T::predict(cur_row, prev_row, prev_col, top_left) & bit_size.mask());
         }
-        
+
         prev_col = {
             let out_data = writer.get_data();
             let mut reader = BitReader::new_with(&out_data, bit_size, old_pos);
             BitChunk::from_reader(&mut reader, chunk_len).unwrap()
         };
-        
+
         top_left = prev_row;
     }
 }

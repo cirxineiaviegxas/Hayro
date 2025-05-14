@@ -64,15 +64,15 @@ impl<'a> Context<'a> {
         let cur = self.states.last().unwrap().clone();
         self.states.push(cur);
     }
-    
+
     pub(crate) fn push_root_transform(&mut self) {
         self.root_transforms.push(self.get().affine);
     }
-    
+
     pub(crate) fn pop_root_transform(&mut self) {
         self.root_transforms.pop();
     }
-    
+
     pub(crate) fn root_transform(&self) -> &Affine {
         self.root_transforms.last().unwrap()
     }

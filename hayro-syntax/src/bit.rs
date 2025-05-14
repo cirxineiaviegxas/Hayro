@@ -27,7 +27,7 @@ impl<'a> BitReader<'a> {
     pub fn new(data: &'a [u8], bit_size: BitSize) -> Self {
         Self::new_with(data, bit_size, 0)
     }
-    
+
     pub fn new_with(data: &'a [u8], bit_size: BitSize, cur_pos: usize) -> Self {
         Self {
             data,
@@ -81,7 +81,8 @@ impl<'a> Iterator for BitReader<'a> {
                     read[i] = *self.data.get(byte_pos + i)?;
                 }
 
-                let item = (u32::from_be_bytes(read) >> (32 - bit_pos - bit_size.0 as usize)) as u16
+                let item = (u32::from_be_bytes(read) >> (32 - bit_pos - bit_size.0 as usize))
+                    as u16
                     & bit_size.mask();
                 self.cur_pos += bit_size.0 as usize;
 
@@ -91,8 +92,8 @@ impl<'a> Iterator for BitReader<'a> {
             0..=7 => {
                 let bit_pos = self.bit_pos();
                 let advance = self.bit_size.bits();
-                let item = (self.data[byte_pos] as u16 >> (8 - bit_pos - advance))
-                    & self.bit_size.mask();
+                let item =
+                    (self.data[byte_pos] as u16 >> (8 - bit_pos - advance)) & self.bit_size.mask();
 
                 self.cur_pos += advance;
 
@@ -113,32 +114,34 @@ pub struct BitWriter<'a> {
 
 impl<'a> BitWriter<'a> {
     pub fn new(data: &'a mut [u8], bit_size: BitSize) -> Option<Self> {
-        
         if !matches!(bit_size.0, 1 | 2 | 4 | 8 | 16) {
             return None;
         }
-        
+
         Some(Self {
             data,
             bit_size,
             cur_pos: 0,
         })
     }
-    
+
     pub fn split_off(self) -> (&'a [u8], BitWriter<'a>) {
         // Assumes that we are currently aligned to a byte boundary!
         let (left, right) = self.data.split_at_mut(self.cur_pos / 8);
-        (left, BitWriter {
-            data: right,
-            cur_pos: 0,
-            bit_size: self.bit_size,
-        })
+        (
+            left,
+            BitWriter {
+                data: right,
+                cur_pos: 0,
+                bit_size: self.bit_size,
+            },
+        )
     }
-    
+
     pub fn cur_pos(&self) -> usize {
         self.cur_pos
     }
-    
+
     pub fn get_data(&self) -> &[u8] {
         self.data
     }
@@ -150,7 +153,7 @@ impl<'a> BitWriter<'a> {
     fn bit_pos(&self) -> usize {
         self.cur_pos % 8
     }
-    
+
     pub fn write(&mut self, val: u16) -> Option<()> {
         let byte_pos = self.byte_pos();
         let bit_size = self.bit_size;
@@ -158,11 +161,10 @@ impl<'a> BitWriter<'a> {
         match bit_size.0 {
             1 | 2 | 4 => {
                 let bit_pos = self.bit_pos();
-                
+
                 let base = self.data.get(byte_pos)?;
                 let shift = 8 - self.bit_size.bits() - bit_pos;
                 let item = ((val & self.bit_size.mask()) as u8) << shift;
-
 
                 *(self.data.get_mut(byte_pos)?) = *base | item;
                 self.cur_pos += bit_size.bits();
@@ -172,20 +174,22 @@ impl<'a> BitWriter<'a> {
                 self.cur_pos += 8;
             }
             16 => {
-                self.data.get_mut(byte_pos..(byte_pos + 2))?.copy_from_slice(&val.to_be_bytes());
+                self.data
+                    .get_mut(byte_pos..(byte_pos + 2))?
+                    .copy_from_slice(&val.to_be_bytes());
                 self.cur_pos += 16;
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
 
         Some(())
     }
-    
+
     pub fn has_capacity(&self) -> bool {
         match self.bit_size.0 {
             1 | 2 | 4 | 8 => self.cur_pos / 8 < self.data.len(),
             16 => self.cur_pos / 8 < self.data.len() - 1,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -236,7 +240,7 @@ impl BitChunk {
             bits: smallvec![val as u16; count],
         }
     }
-    
+
     pub fn from_reader(bit_reader: &mut BitReader, chunk_len: usize) -> Option<Self> {
         let mut bits = SmallVec::new();
 
@@ -268,7 +272,7 @@ mod tests {
         writer.write(u16::from_be_bytes([0x01, 0x02])).unwrap();
         writer.write(u16::from_be_bytes([0x03, 0x04])).unwrap();
         writer.write(u16::from_be_bytes([0x05, 0x06])).unwrap();
-        
+
         assert_eq!(buf, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
     }
 
@@ -325,7 +329,6 @@ mod tests {
         assert_eq!(buf, [0b10011000, 0b00011111, 0b10101001]);
     }
 
-
     #[test]
     fn bit_reader_4() {
         let data = [0b10011000, 0b00011111, 0b10101001];
@@ -353,7 +356,6 @@ mod tests {
 
         assert_eq!(buf, [0b10011000, 0b00010000]);
     }
-
 
     #[test]
     fn bit_reader_2() {
@@ -393,7 +395,6 @@ mod tests {
 
         assert_eq!(buf, [0b10011000, 0b00010000]);
     }
-
 
     #[test]
     fn bit_reader_1() {

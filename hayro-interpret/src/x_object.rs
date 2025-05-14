@@ -85,7 +85,7 @@ pub(crate) fn draw_form_xobject<'a>(
     context.save_state();
     context.pre_concat_affine(x_object.matrix);
     context.push_root_transform();
-    
+
     device.set_transform(context.get().affine);
     device.push_layer(
         Some(&ClipPath {
@@ -189,11 +189,13 @@ impl<'a> ImageXObject<'a> {
             dict.get::<Object>(COLORSPACE)
                 .or_else(|| dict.get::<Object>(CS))
                 .map(|c| ColorSpace::new(c))
-                .or_else(|| decoded.color_space.map(|c| match c {
-                    hayro_syntax::filter::ColorSpace::Gray => ColorSpace::DeviceGray,
-                    hayro_syntax::filter::ColorSpace::Rgb => ColorSpace::DeviceRgb,
-                    hayro_syntax::filter::ColorSpace::Cmyk => ColorSpace::DeviceCmyk
-                }))
+                .or_else(|| {
+                    decoded.color_space.map(|c| match c {
+                        hayro_syntax::filter::ColorSpace::Gray => ColorSpace::DeviceGray,
+                        hayro_syntax::filter::ColorSpace::Rgb => ColorSpace::DeviceRgb,
+                        hayro_syntax::filter::ColorSpace::Cmyk => ColorSpace::DeviceCmyk,
+                    })
+                })
                 .unwrap_or(ColorSpace::DeviceGray)
         };
         let decode = dict

@@ -6,7 +6,6 @@ mod dct;
 mod lzw_flate;
 mod run_length;
 
-use jpeg2k::ImagePixelData;
 use crate::Result;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
@@ -14,6 +13,7 @@ use crate::object::name::Name;
 use crate::object::name::names::*;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
+use jpeg2k::ImagePixelData;
 use log::warn;
 use snafu::{OptionExt, whatever};
 
@@ -38,13 +38,13 @@ pub enum Filter {
 pub enum ColorSpace {
     Gray,
     Rgb,
-    Cmyk
+    Cmyk,
 }
 
 pub struct FilterResult {
     pub data: Vec<u8>,
     pub color_space: Option<ColorSpace>,
-    pub bits_per_component: Option<u8>
+    pub bits_per_component: Option<u8>,
 }
 
 impl FilterResult {
@@ -52,7 +52,7 @@ impl FilterResult {
         Self {
             data,
             color_space: None,
-            bits_per_component: None
+            bits_per_component: None,
         }
     }
 }
@@ -80,24 +80,33 @@ impl Filter {
             Filter::RunLengthDecode => run_length::decode(data).map(FilterResult::from_data),
             Filter::LzwDecode => lzw_flate::lzw::decode(data, params).map(FilterResult::from_data),
             Filter::DctDecode => dct::decode(data, params).map(FilterResult::from_data),
-            Filter::FlateDecode => lzw_flate::flate::decode(data, params).map(FilterResult::from_data),
-            Filter::CcittFaxDecode => ccit_stream::decode(data, params).map(FilterResult::from_data),
+            Filter::FlateDecode => {
+                lzw_flate::flate::decode(data, params).map(FilterResult::from_data)
+            }
+            Filter::CcittFaxDecode => {
+                ccit_stream::decode(data, params).map(FilterResult::from_data)
+            }
             Filter::JpxDecode => {
                 // TODO: Make dependency optional to allow compiling to WASM.
-                let image =jpeg2k::Image::from_bytes(data).unwrap();
+                let image = jpeg2k::Image::from_bytes(data).unwrap();
                 let components = image.components();
                 let cs = match components.len() {
                     1 => Some(ColorSpace::Gray),
                     3 => Some(ColorSpace::Rgb),
                     4 => Some(ColorSpace::Cmyk),
-                    _ => None
+                    _ => None,
                 };
                 let bpc = components
                     .iter()
-                    .fold(std::u32::MIN, |max, c| max.max(c.precision())) as u8;
-                let mut components_iters = image.components().iter().map(|c| c.data_u8()).collect::<Vec<_>>();
+                    .fold(std::u32::MIN, |max, c| max.max(c.precision()))
+                    as u8;
+                let mut components_iters = image
+                    .components()
+                    .iter()
+                    .map(|c| c.data_u8())
+                    .collect::<Vec<_>>();
                 let mut buf = vec![];
-                
+
                 'outer: loop {
                     for iter in &mut components_iters {
                         if let Some(n) = iter.next() {
@@ -107,7 +116,7 @@ impl Filter {
                         }
                     }
                 }
-                
+
                 Some(FilterResult {
                     data: buf,
                     color_space: cs,

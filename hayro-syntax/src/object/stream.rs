@@ -1,6 +1,6 @@
 use crate::Result;
 use crate::file::xref::XRef;
-use crate::filter::{Filter, apply_filter, FilterResult};
+use crate::filter::{Filter, FilterResult, apply_filter};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
@@ -47,11 +47,7 @@ impl<'a> Stream<'a> {
                 .get::<Dict>(DECODE_PARMS)
                 .or_else(|| self.dict.get::<Dict>(DP));
 
-            Ok(apply_filter(
-                self.data,
-                filter,
-                params.as_ref(),
-            )?)
+            Ok(apply_filter(self.data, filter, params.as_ref())?)
         } else if let Some(filters) = self
             .dict
             .get::<Array>(FILTER)
@@ -70,12 +66,13 @@ impl<'a> Stream<'a> {
             let mut current: Option<FilterResult> = None;
 
             for i in 0..filters.len() {
-                let params = params
-                    .get(i)
-                    .and_then(|p| p.clone().cast::<Dict>().ok());
-                
+                let params = params.get(i).and_then(|p| p.clone().cast::<Dict>().ok());
+
                 let new = apply_filter(
-                    current.as_ref().map(|c| c.data.as_ref()).unwrap_or(self.data),
+                    current
+                        .as_ref()
+                        .map(|c| c.data.as_ref())
+                        .unwrap_or(self.data),
                     filters[i],
                     params.as_ref(),
                 )?;

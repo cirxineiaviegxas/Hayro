@@ -19,10 +19,10 @@ pub mod context;
 mod convert;
 pub mod device;
 mod font;
+mod shading;
 mod state;
 mod util;
 pub mod x_object;
-mod shading;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;

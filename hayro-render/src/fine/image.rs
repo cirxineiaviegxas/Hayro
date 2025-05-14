@@ -45,7 +45,7 @@ impl<'a> ImageFiller<'a> {
             point.y = f64::from(extend(
                 point.y.floor() as f32,
                 self.image.extends.1,
-                self.image.y_step
+                self.image.y_step,
             ));
 
             point

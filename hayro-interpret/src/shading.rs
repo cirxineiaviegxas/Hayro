@@ -1,9 +1,9 @@
-use smallvec::SmallVec;
+use crate::color::ColorSpace;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{BACKGROUND, BBOX, COLORSPACE, SHADING_TYPE};
 use hayro_syntax::object::rect::Rect;
-use crate::color::ColorSpace;
+use smallvec::SmallVec;
 
 #[derive(Copy, Clone, Debug)]
 enum ShadingType {
@@ -34,13 +34,15 @@ impl CommonProperties {
             5 => ShadingType::LatticeFormGouraud,
             6 => ShadingType::CoonsPatchMesh,
             7 => ShadingType::TensorProductPatchMesh,
-            _ => return None
+            _ => return None,
         };
-        
+
         let color_space = ColorSpace::new(dict.get(COLORSPACE)?);
         let bbox = dict.get::<Rect>(BBOX);
-        let background = dict.get::<Array>(BACKGROUND).map(|a| a.iter::<f32>().collect::<SmallVec<_>>());
-        
+        let background = dict
+            .get::<Array>(BACKGROUND)
+            .map(|a| a.iter::<f32>().collect::<SmallVec<_>>());
+
         Some(Self {
             shading_type,
             color_space,

@@ -489,7 +489,12 @@ impl Indexed {
                 .cast::<Stream>()
                 .ok()
                 .and_then(|s| s.decoded().ok())
-                .or_else(|| next.clone().cast::<string::String>().ok().map(|s| s.get().to_vec()))
+                .or_else(|| {
+                    next.clone()
+                        .cast::<string::String>()
+                        .ok()
+                        .map(|s| s.get().to_vec())
+                })
                 .unwrap();
 
             let num_components = base_color_space.components();
