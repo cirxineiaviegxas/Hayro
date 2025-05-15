@@ -248,3 +248,39 @@ pub trait Readable<'a>: Sized {
 pub trait Skippable {
     fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()>;
 }
+
+impl<'a, T, U> Readable<'a> for (T, U) where 
+    T: Readable<'a>,
+    U: Readable<'a>,
+{
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        let t = T::read::<PLAIN>(r, xref)?;
+        let u = U::read::<PLAIN>(r, xref)?;
+        Some((t, u))
+    }
+}
+
+impl<'a, T, U, V> Readable<'a> for (T, U, V) where 
+    T: Readable<'a>,
+    U: Readable<'a>,
+    V: Readable<'a>,
+{
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        let t = T::read::<PLAIN>(r, xref)?;
+        let u = U::read::<PLAIN>(r, xref)?;
+        let v = V::read::<PLAIN>(r, xref)?;
+        Some((t, u, v))
+    }
+}
+
+impl<'a, T> Readable<'a> for Vec<T> where T: Readable<'a> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        let mut v = vec![];
+        
+        while let Some(t) = T::read::<PLAIN>(r, xref) {
+            v.push(t);
+        }
+        
+        Some(v)
+    }
+}

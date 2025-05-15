@@ -31,7 +31,7 @@ impl<'a> Array<'a> {
     /// Returns an iterator over the resolved objects of the array.
     pub fn iter<T>(&self) -> ResolvedArrayIter<'a, T>
     where
-        T: ObjectLike<'a>,
+        T: Readable<'a>,
     {
         ResolvedArrayIter::new(self.data, self.xref.clone())
     }

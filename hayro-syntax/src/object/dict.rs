@@ -70,7 +70,7 @@ impl<'a> Dict<'a> {
 
     pub(crate) fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
     where
-        T: ObjectLike<'a>,
+        T: Readable<'a>,
     {
         let offset = *self.0.offsets.get(key)?;
 
