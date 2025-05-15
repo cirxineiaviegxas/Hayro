@@ -5,6 +5,7 @@ under the Apache 2.0 license.
 The following points have been adapted/translated from the pdf.js library, available
 under the Apache 2.0 license:
 - The CalRGB and CalGray conversion code.
+- The code for decoding CCITFax images.
 
                                  Apache License
                            Version 2.0, January 2004
