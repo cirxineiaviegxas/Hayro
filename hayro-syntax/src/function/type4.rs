@@ -41,6 +41,7 @@ impl Argument {
 type ArgumentStack = SmallVec<[Argument; 64]>;
 type ParseStack = SmallVec<[Vec<PostScriptOp>; 2]>;
 
+#[derive(Debug)]
 pub(crate) struct Type4 {
     program: Vec<PostScriptOp>,
 }

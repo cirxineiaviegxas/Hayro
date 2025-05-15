@@ -152,6 +152,7 @@ pub mod names {
     name!(PATTERN, b"Pattern");
     name!(RGB, b"RGB");
     name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
+    name!(SEPARATION, b"Separation");
     name!(TYPE0, b"Type0");
     name!(TYPE1, b"Type1");
     name!(TYPE1_C, b"Type1C");

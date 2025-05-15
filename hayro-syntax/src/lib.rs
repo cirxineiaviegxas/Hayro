@@ -14,7 +14,7 @@ pub mod content;
 pub mod document;
 pub mod file;
 pub mod filter;
-mod function;
+pub mod function;
 pub mod object;
 pub mod pdf;
 pub mod reader;

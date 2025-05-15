@@ -10,9 +10,10 @@ use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::{AlphaColor, Srgb};
 use qcms::Transform;
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use hayro_syntax::function::Function;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
@@ -26,6 +27,7 @@ pub(crate) enum ColorSpace {
     CalGray(CalGray),
     CalRgb(CalRgb),
     Lab(Lab),
+    Separation(Separation),
 }
 
 impl ColorSpace {
@@ -66,6 +68,7 @@ impl ColorSpace {
                     return Some(ColorSpace::Lab(Lab::new(&lab_dict)?));
                 }
                 INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
+                SEPARATION => return Some(ColorSpace::Separation(Separation::new(&color_array)?)),
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
@@ -105,6 +108,7 @@ impl ColorSpace {
                 (l.0.range[2], l.0.range[3]),
             ],
             ColorSpace::Indexed(_) => vec![(0.0, 2.0f32.powf(n) - 1.0)],
+            ColorSpace::Separation(_) => vec![(0.0, 1.0)],
         }
     }
 
@@ -125,6 +129,7 @@ impl ColorSpace {
             ColorSpace::CalRgb(_) => components.extend([0.0, 0.0, 0.0]),
             ColorSpace::Lab(_) => components.extend([0.0, 0.0, 0.0]),
             ColorSpace::Indexed(_) => components.push(0.0),
+            ColorSpace::Separation(_) => components.push(1.0),
         }
     }
 
@@ -138,6 +143,7 @@ impl ColorSpace {
             ColorSpace::CalRgb(_) => 3,
             ColorSpace::Lab(_) => 3,
             ColorSpace::Indexed(_) => 1,
+            ColorSpace::Separation(_) => 1
         }
     }
 
@@ -176,6 +182,7 @@ impl ColorSpace {
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorSpace::Indexed(i) => i.to_rgb(c[0], opacity),
+            ColorSpace::Separation(s) => s.to_rgba(c[0], opacity)
         }
     }
 }
@@ -528,16 +535,46 @@ impl Indexed {
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum ColorType {
-    DeviceRgb([f32; 3]),
-    DeviceGray(f32),
-    DeviceCmyk([f32; 4]),
-    Icc(ICCProfile, ColorComponents),
-    CalGray(CalGray, f32),
-    CalRgb(CalRgb, [f32; 3]),
-    Lab(Lab, [f32; 3]),
-    Indexed(Indexed, f32),
+#[derive(Debug)]
+struct SeparationRepr {
+    alternate_space: ColorSpace,
+    tint_transform: Function,
+    name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Separation(Arc<SeparationRepr>);
+
+impl Separation {
+    pub fn new(array: &Array) -> Option<Self> {
+        let mut iter = array.iter::<Object>();
+        // Skip `/Separation`
+        let _ = iter.next()?;
+        let name = iter.next()?.cast::<Name>().ok()?.as_str().to_owned();
+        let alternate_space = ColorSpace::new(iter.next()?);
+        let tint_transform = Function::new(&iter.next()?)?;
+        
+        if matches!(name.as_str(), "All" | "None") {
+            warn!("Separation color spaces with `All` or `None` as name are not supported yet");
+        }
+            
+        Some(Self(Arc::new(SeparationRepr {
+            alternate_space,
+            tint_transform,
+            name,
+        })))
+    }
+
+    pub fn to_rgba(&self, c: f32, opacity: f32) -> AlphaColor<Srgb> {
+        // TODO: Handle /All and /None
+        let res = self.0.tint_transform.eval(smallvec![c]).unwrap_or_else(|| {
+            let mut vals = smallvec![];
+            self.0.alternate_space.set_initial_color(&mut vals);
+            
+            vals
+        });
+        self.0.alternate_space.to_rgba(&res, opacity)
+    }
 }
 
 struct ICCColorRepr {
@@ -633,42 +670,7 @@ impl Color {
     }
 
     pub fn to_rgba(&self) -> AlphaColor<Srgb> {
-        let c = &self.components;
-        match &self.color_space {
-            ColorSpace::DeviceRgb => AlphaColor::new([c[0], c[1], c[2], self.opacity]),
-            ColorSpace::DeviceGray => AlphaColor::new([c[0], c[0], c[0], self.opacity]),
-            ColorSpace::DeviceCmyk => {
-                let opacity = u8_to_f32(self.opacity);
-                let srgb = CMYK_TRANSFORM.to_rgba(&c[..]);
-
-                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
-            }
-            ColorSpace::ICCColor(icc) => {
-                let opacity = u8_to_f32(self.opacity);
-                let srgb = icc.to_rgba(&c[..]);
-
-                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
-            }
-            ColorSpace::CalGray(cal) => {
-                let opacity = u8_to_f32(self.opacity);
-                let srgb = cal.to_rgb(c[0]);
-
-                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
-            }
-            ColorSpace::CalRgb(cal) => {
-                let opacity = u8_to_f32(self.opacity);
-                let srgb = cal.to_rgb([c[0], c[1], c[2]]);
-
-                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
-            }
-            ColorSpace::Lab(lab) => {
-                let opacity = u8_to_f32(self.opacity);
-                let srgb = lab.to_rgb([c[0], c[1], c[2]]);
-
-                AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
-            }
-            ColorSpace::Indexed(i) => i.to_rgb(c[0], self.opacity),
-        }
+       self.color_space.to_rgba(&self.components, self.opacity)
     }
 }
 

@@ -7,6 +7,7 @@ use itertools::izip;
 use smallvec::smallvec;
 
 /// Type 2 exponential interpolation function.
+#[derive(Debug)]
 pub(crate) struct Type2 {
     c0: Values,
     c1: Values,

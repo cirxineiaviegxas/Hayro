@@ -143,16 +143,19 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn get_color_space(&mut self, resources: &Dict, name: Name) -> ColorSpace {
-        let cs_ref = resources.get_ref(&name).unwrap();
+        resources.get_ref(&name).map(|cs_ref| {
+            self.color_space_cache
+                .entry(cs_ref)
+                .or_insert_with(|| {
+                    let obj = resources.get::<Object>(&name).unwrap();
 
-        self.color_space_cache
-            .entry(cs_ref)
-            .or_insert_with(|| {
-                let obj = resources.get::<Object>(&name).unwrap();
-
-                ColorSpace::new(obj)
-            })
-            .clone()
+                    ColorSpace::new(obj)
+                })
+                .clone()
+        })
+            .or_else(|| {
+                resources.get::<Object>(&name).map(|c| ColorSpace::new(c))
+            }).unwrap()
     }
 
     pub(crate) fn stroke_props(&self) -> StrokeProps {

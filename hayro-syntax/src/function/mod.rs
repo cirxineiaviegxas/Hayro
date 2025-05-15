@@ -12,13 +12,15 @@ use crate::object::stream::Stream;
 use log::{error, warn};
 use smallvec::SmallVec;
 
-type Values = SmallVec<[f32; 6]>;
+type Values = SmallVec<[f32; 4]>;
 
+#[derive(Debug)]
 enum FunctionType {
     Type2(Type2),
     Type4(Type4),
 }
 
+#[derive(Debug)]
 pub struct Function {
     function_type: FunctionType,
     domain: Clamper,
@@ -110,6 +112,7 @@ impl From<Array<'_>> for Values {
     }
 }
 
+#[derive(Debug)]
 struct Clamper(Values);
 
 impl Clamper {
