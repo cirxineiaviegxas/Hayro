@@ -2,6 +2,7 @@ use crate::run_test;
 
 #[test] fn clip_path_evenodd() { run_test("clip_path_evenodd", None); }
 #[test] fn clip_path_nested() { run_test("clip_path_nested", None); }
+#[test] fn color_separation_3() { run_test("color_separation_3", None); }
 #[test] fn color_space_calgray() { run_test("color_space_calgray", None); }
 #[test] fn color_space_calrgb() { run_test("color_space_calrgb", Some(0..=8)); }
 #[test] fn color_space_icc_gray() { run_test("color_space_icc_gray", None); }

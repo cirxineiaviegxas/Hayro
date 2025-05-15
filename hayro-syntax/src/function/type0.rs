@@ -186,9 +186,15 @@ fn build_table(data: &[u32], sizes: &[u32], n: usize) -> Option<HashMap<Key, Int
     let mut key = Key::new(sizes);
     let mut table = HashMap::new();
     
+    let mut first = true;
     for b in data.chunks(n) {
+        if !first {
+            key.increment();
+        }
+        
         table.insert(key.clone(), b.to_smallvec());
-        key.increment()?;
+       
+        first = false;
     }
     
     Some(table)
