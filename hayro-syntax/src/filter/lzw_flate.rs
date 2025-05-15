@@ -105,7 +105,7 @@ pub mod lzw {
         let mut table = Table::new(early_change);
 
         let bit_size = BitSize::from_u8(table.code_length())?;
-        let mut reader = BitReader::new(data, bit_size);
+        let mut reader = BitReader::new(data, bit_size)?;
         let mut decoded = vec![];
         let mut prev = None;
 
@@ -229,7 +229,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
             let zero_row = vec![0; row_len];
 
-            let mut prev_row = BitChunks::new(&zero_row, bit_size, colors);
+            let mut prev_row = BitChunks::new(&zero_row, bit_size, colors)?;
 
             let zero_col = BitChunk::new(0, colors);
 
@@ -240,12 +240,12 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 if is_png_predictor {
                     let predictor = in_row[0];
                     let in_data = &in_row[1..];
-                    let in_data_chunks = BitChunks::new(in_data, bit_size, colors);
+                    let in_data_chunks = BitChunks::new(in_data, bit_size, colors)?;
 
                     match predictor {
                         0 => {
                             // Just copy the data.
-                            let mut reader = BitReader::new(in_data, bit_size);
+                            let mut reader = BitReader::new(in_data, bit_size)?;
                             for data in reader {
                                 writer.write(data);
                             }
@@ -258,7 +258,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             &mut writer,
                             colors,
                             bit_size,
-                        ),
+                        )?,
                         2 => apply::<Up>(
                             prev_row,
                             zero_col.clone(),
@@ -267,7 +267,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             &mut writer,
                             colors,
                             bit_size,
-                        ),
+                        )?,
                         3 => apply::<Avg>(
                             prev_row,
                             zero_col.clone(),
@@ -276,7 +276,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             &mut writer,
                             colors,
                             bit_size,
-                        ),
+                        )?,
                         4 => apply::<Paeth>(
                             prev_row,
                             zero_col.clone(),
@@ -285,7 +285,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             &mut writer,
                             colors,
                             bit_size,
-                        ),
+                        )?,
                         _ => unreachable!(),
                     }
                 } else if i == 2 {
@@ -293,7 +293,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                         prev_row,
                         zero_col.clone(),
                         zero_col.clone(),
-                        BitChunks::new(in_row, bit_size, colors),
+                        BitChunks::new(in_row, bit_size, colors)?,
                         &mut writer,
                         colors,
                         bit_size,
@@ -304,7 +304,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
                 let (data, new_writer) = writer.split_off();
                 writer = new_writer;
-                prev_row = BitChunks::new(data, bit_size, colors);
+                prev_row = BitChunks::new(data, bit_size, colors)?;
             }
 
             Some(out)
@@ -324,7 +324,7 @@ fn apply<'a, T: Predictor>(
     writer: &mut BitWriter<'a>,
     chunk_len: usize,
     bit_size: BitSize,
-) {
+) -> Option<()> {
     for (cur_row, prev_row) in izip!(cur_row, prev_row) {
         let old_pos = writer.cur_pos();
 
@@ -342,12 +342,14 @@ fn apply<'a, T: Predictor>(
 
         prev_col = {
             let out_data = writer.get_data();
-            let mut reader = BitReader::new_with(&out_data, bit_size, old_pos);
+            let mut reader = BitReader::new_with(&out_data, bit_size, old_pos)?;
             BitChunk::from_reader(&mut reader, chunk_len).unwrap()
         };
 
         top_left = prev_row;
     }
+    
+    Some(())
 }
 
 trait Predictor {
