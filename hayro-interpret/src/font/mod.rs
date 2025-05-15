@@ -35,7 +35,11 @@ impl<'a> Font<'a> {
             TRUE_TYPE => FontType::TrueType(TrueTypeFont::new(dict)?),
             TYPE0 => FontType::Type0(Type0Font::new(dict)?),
             TYPE3 => FontType::Type3(Type3::new(dict)),
-            _ => unimplemented!(),
+            f => {
+                println!("unimplemented font type {:?}", std::str::from_utf8(f).unwrap());
+                
+                return None;
+            },
         };
 
         Some(Self(Arc::new(f_type)))

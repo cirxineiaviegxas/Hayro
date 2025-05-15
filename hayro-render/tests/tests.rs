@@ -50,6 +50,8 @@ use crate::run_test;
 #[test] fn font_type3_widths_with_matrix() { run_test("font_type3_widths_with_matrix", None); }
 #[test] fn font_vertical() { run_test("font_vertical", None); }
 #[test] fn fonts_type1_latex() { run_test("fonts_type1_latex", None); }
+#[test] fn function_type0_1() { run_test("function_type0_1", None); }
+#[test] fn function_type0_2() { run_test("function_type0_2", None); }
 #[test] fn image_1_bit_per_component() { run_test("image_1_bit_per_component", None); }
 #[test] fn image_ccit_1() { run_test("image_ccit_1", None); }
 #[test] fn image_ccit_3() { run_test("image_ccit_3", None); }
