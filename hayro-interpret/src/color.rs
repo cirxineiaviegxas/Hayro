@@ -1,4 +1,5 @@
 use crate::util::OptionLog;
+use hayro_syntax::function::Function;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
@@ -10,10 +11,9 @@ use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::{AlphaColor, Srgb};
 use qcms::Transform;
-use smallvec::{smallvec, SmallVec};
+use smallvec::{SmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use hayro_syntax::function::Function;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
@@ -143,7 +143,7 @@ impl ColorSpace {
             ColorSpace::CalRgb(_) => 3,
             ColorSpace::Lab(_) => 3,
             ColorSpace::Indexed(_) => 1,
-            ColorSpace::Separation(_) => 1
+            ColorSpace::Separation(_) => 1,
         }
     }
 
@@ -182,7 +182,7 @@ impl ColorSpace {
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorSpace::Indexed(i) => i.to_rgb(c[0], opacity),
-            ColorSpace::Separation(s) => s.to_rgba(c[0], opacity)
+            ColorSpace::Separation(s) => s.to_rgba(c[0], opacity),
         }
     }
 }
@@ -553,11 +553,11 @@ impl Separation {
         let name = iter.next()?.cast::<Name>().ok()?.as_str().to_owned();
         let alternate_space = ColorSpace::new(iter.next()?);
         let tint_transform = Function::new(&iter.next()?)?;
-        
+
         if matches!(name.as_str(), "All" | "None") {
             warn!("Separation color spaces with `All` or `None` as name are not supported yet");
         }
-            
+
         Some(Self(Arc::new(SeparationRepr {
             alternate_space,
             tint_transform,
@@ -570,7 +570,7 @@ impl Separation {
         let res = self.0.tint_transform.eval(smallvec![c]).unwrap_or_else(|| {
             let mut vals = smallvec![];
             self.0.alternate_space.set_initial_color(&mut vals);
-            
+
             vals
         });
         self.0.alternate_space.to_rgba(&res, opacity)
@@ -657,20 +657,24 @@ fn u8_to_f32(val: f32) -> u8 {
 pub struct Color {
     color_space: ColorSpace,
     components: ColorComponents,
-    opacity: f32
+    opacity: f32,
 }
 
 impl Color {
-    pub(crate) fn from_pdf(color_space: ColorSpace, components: ColorComponents, opacity: f32) -> Self {
+    pub(crate) fn from_pdf(
+        color_space: ColorSpace,
+        components: ColorComponents,
+        opacity: f32,
+    ) -> Self {
         Self {
-           color_space,
+            color_space,
             components,
             opacity,
         }
     }
 
     pub fn to_rgba(&self) -> AlphaColor<Srgb> {
-       self.color_space.to_rgba(&self.components, self.opacity)
+        self.color_space.to_rgba(&self.components, self.opacity)
     }
 }
 

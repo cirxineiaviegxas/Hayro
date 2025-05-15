@@ -4,12 +4,12 @@ use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_a
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::{Type3, Type3GlyphDescription};
+use hayro_font_parser::OutlineBuilder;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use kurbo::{BezPath, Vec2};
-use hayro_font_parser::OutlineBuilder;
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;

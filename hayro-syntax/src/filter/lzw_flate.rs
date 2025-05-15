@@ -348,7 +348,7 @@ fn apply<'a, T: Predictor>(
 
         top_left = prev_row;
     }
-    
+
     Some(())
 }
 

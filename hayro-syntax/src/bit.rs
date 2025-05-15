@@ -31,7 +31,7 @@ impl<'a> BitReader<'a> {
     pub fn new_with(data: &'a [u8], bit_size: BitSize, cur_pos: usize) -> Option<Self> {
         if bit_size.0 > 32 {
             None
-        }   else {
+        } else {
             Some(Self {
                 data,
                 bit_size,
