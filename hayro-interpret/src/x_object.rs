@@ -271,7 +271,7 @@ impl<'a> ImageXObject<'a> {
                     for _ in 0..self.width {
                         // See `stream_ccit_not_enough_data`, some images seemingly don't have
                         // enough data, so we just pad with zeroes in this case.
-                        let next = reader.next().unwrap_or(0);
+                        let next = reader.next().unwrap_or(0) as u16;
 
                         buf.push(next);
                     }

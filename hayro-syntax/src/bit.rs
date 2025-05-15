@@ -1,3 +1,6 @@
+use std::fmt::Debug;
+use std::ops::Shr;
+use log::warn;
 use smallvec::{SmallVec, smallvec};
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -5,15 +8,15 @@ pub struct BitSize(u8);
 
 impl BitSize {
     pub fn from_u8(value: u8) -> Option<Self> {
-        if value > 16 { None } else { Some(Self(value)) }
+        if value > 32 { None } else { Some(Self(value)) }
     }
 
     pub fn bits(&self) -> usize {
         self.0 as usize
     }
 
-    pub fn mask(&self) -> u16 {
-        ((1 << self.0 as u32) - 1) as u16
+    pub fn mask(&self) -> u32 {
+        ((1 << self.0 as u64) - 1) as u32
     }
 }
 
@@ -58,7 +61,7 @@ impl<'a> BitReader<'a> {
 }
 
 impl<'a> Iterator for BitReader<'a> {
-    type Item = u16;
+    type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
         let byte_pos = self.byte_pos();
@@ -71,7 +74,7 @@ impl<'a> Iterator for BitReader<'a> {
 
         let item = match bit_size.0 {
             8 => {
-                let item = self.data[byte_pos] as u16;
+                let item = self.data[byte_pos] as u32;
                 self.cur_pos += 8;
 
                 Some(item)
@@ -86,7 +89,7 @@ impl<'a> Iterator for BitReader<'a> {
                 }
 
                 let item = (u64::from_be_bytes(read) >> (64 - bit_pos - bit_size.0 as usize))
-                    as u16
+                    as u32
                     & bit_size.mask();
                 self.cur_pos += bit_size.0 as usize;
 
@@ -97,7 +100,7 @@ impl<'a> Iterator for BitReader<'a> {
                 let bit_pos = self.bit_pos();
                 let advance = self.bit_size.bits();
                 let item =
-                    (self.data[byte_pos] as u16 >> (8 - bit_pos - advance)) & self.bit_size.mask();
+                    (self.data[byte_pos] as u32 >> (8 - bit_pos - advance)) & self.bit_size.mask();
 
                 self.cur_pos += advance;
 
@@ -169,7 +172,7 @@ impl<'a> BitWriter<'a> {
 
                 let base = self.data.get(byte_pos)?;
                 let shift = 8 - self.bit_size.bits() - bit_pos;
-                let item = ((val & self.bit_size.mask()) as u8) << shift;
+                let item = ((val & self.bit_size.mask() as u16) as u8) << shift;
 
                 *(self.data.get_mut(byte_pos)?) = *base | item;
                 self.cur_pos += bit_size.bits();
@@ -206,6 +209,12 @@ pub struct BitChunks<'a> {
 
 impl<'a> BitChunks<'a> {
     pub fn new(data: &'a [u8], bit_size: BitSize, chunk_len: usize) -> Option<Self> {
+        if bit_size.0 > 16 {
+            warn!("BitChunks doesn't support working with bit sizes > 16.");
+            
+            return None;
+        }
+        
         let reader = BitReader::new(data, bit_size)?;
 
         Some(Self { reader, chunk_len })
@@ -219,7 +228,7 @@ impl<'a> Iterator for BitChunks<'_> {
         let mut bits = SmallVec::new();
 
         for _ in 0..self.chunk_len {
-            bits.push(self.reader.next()?);
+            bits.push(self.reader.next()? as u16);
         }
 
         Some(BitChunk { bits })
@@ -247,10 +256,16 @@ impl BitChunk {
     }
 
     pub fn from_reader(bit_reader: &mut BitReader, chunk_len: usize) -> Option<Self> {
+        if bit_reader.bit_size.0 > 16 {
+            warn!("BitChunk doesn't support working with bit sizes > 16.");
+
+            return None;
+        }
+        
         let mut bits = SmallVec::new();
 
         for _ in 0..chunk_len {
-            bits.push(bit_reader.next()?);
+            bits.push(bit_reader.next()? as u16);
         }
 
         Some(BitChunk { bits })
@@ -265,9 +280,9 @@ mod tests {
     fn bit_reader_16() {
         let data = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
         let mut reader = BitReader::new(&data, BitSize::from_u8(16).unwrap()).unwrap();
-        assert_eq!(reader.next().unwrap(), u16::from_be_bytes([0x01, 0x02]));
-        assert_eq!(reader.next().unwrap(), u16::from_be_bytes([0x03, 0x04]));
-        assert_eq!(reader.next().unwrap(), u16::from_be_bytes([0x05, 0x06]));
+        assert_eq!(reader.next().unwrap() as u16, u16::from_be_bytes([0x01, 0x02]));
+        assert_eq!(reader.next().unwrap() as u16, u16::from_be_bytes([0x03, 0x04]));
+        assert_eq!(reader.next().unwrap() as u16, u16::from_be_bytes([0x05, 0x06]));
     }
 
     #[test]
