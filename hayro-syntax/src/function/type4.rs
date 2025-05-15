@@ -791,7 +791,7 @@ mod tests {
 
         let type4 = Function {
             function_type: FunctionType::Type4(Type4 { program: procedure }),
-            domain: Clamper(smallvec![-5.0, 5.0, -5.0, 5.0, -5.0, 5.0]),
+            domain: Clamper(smallvec![(-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)]),
             range: None,
         };
 

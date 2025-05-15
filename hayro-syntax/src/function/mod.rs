@@ -10,9 +10,10 @@ use crate::object::dict::keys::{DOMAIN, FUNCTION_TYPE, RANGE};
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use log::{error, warn};
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 
 type Values = SmallVec<[f32; 4]>;
+type DomainRange = SmallVec<[(f32, f32); 4]>;
 
 #[derive(Debug)]
 enum FunctionType {
@@ -37,8 +38,8 @@ impl Function {
             return None;
         };
 
-        let domain = dict.get::<Array>(DOMAIN).map(|a| a.into())?;
-        let range = dict.get::<Array>(RANGE).map(|a| a.into());
+        let domain = dict.get::<Array>(DOMAIN).and_then(|a| read_domain_range(&a))?;
+        let range = dict.get::<Array>(RANGE).and_then(|a| read_domain_range(&a));
 
         let function_type = match dict.get::<u8>(FUNCTION_TYPE)? {
             2 => FunctionType::Type2(Type2::new(&dict.clone())?),
@@ -103,6 +104,19 @@ impl Function {
     }
 }
 
+fn read_domain_range(array: &Array) -> Option<DomainRange> {
+    let mut iter = array.iter::<f32>();
+    let mut vals = smallvec![];
+    
+    while let Some(first) = iter.next() {
+        let second = iter.next()?;
+        
+        vals.push((first, second));
+    }
+    
+    Some(vals)
+}
+
 impl From<Array<'_>> for Values {
     fn from(value: Array) -> Self {
         value
@@ -113,22 +127,21 @@ impl From<Array<'_>> for Values {
 }
 
 #[derive(Debug)]
-struct Clamper(Values);
+struct Clamper(DomainRange);
 
 impl Clamper {
     fn clamp(&self, val: f32, idx: usize) -> f32 {
-        if idx * 2 >= self.0.len() {
+        if idx >= self.0.len() {
             warn!("the domain/range of the function was exceeded");
         }
-
-        let min = self.0.get(idx * 2).copied().unwrap_or(0.0);
-        let max = self.0.get(idx * 2 + 1).copied().unwrap_or(0.0);
+        
+        let (min, max) = self.0.get(idx).copied().unwrap_or((0.0, 0.0));
 
         val.clamp(min, max)
     }
 
     fn dimension(&self) -> usize {
-        self.0.len() / 2
+        self.0.len()
     }
 }
 
