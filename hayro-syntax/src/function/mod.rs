@@ -1,5 +1,6 @@
 mod type2;
 mod type4;
+mod type0;
 
 use crate::function::type2::Type2;
 use crate::function::type4::Type4;
@@ -11,12 +12,14 @@ use crate::object::number::Number;
 use crate::object::stream::Stream;
 use log::{error, warn};
 use smallvec::{smallvec, SmallVec};
+use crate::function::type0::Type0;
 
 type Values = SmallVec<[f32; 4]>;
 type DomainRange = SmallVec<[(f32, f32); 4]>;
 
 #[derive(Debug)]
 enum FunctionType {
+    Type0(Type0),
     Type2(Type2),
     Type4(Type4),
 }
@@ -42,7 +45,8 @@ impl Function {
         let range = dict.get::<Array>(RANGE).and_then(|a| read_domain_range(&a));
 
         let function_type = match dict.get::<u8>(FUNCTION_TYPE)? {
-            2 => FunctionType::Type2(Type2::new(&dict.clone())?),
+            0 => FunctionType::Type0(Type0::new(&stream?, &domain, range.as_ref()?)?),
+            2 => FunctionType::Type2(Type2::new(&dict)?),
             4 => FunctionType::Type4(Type4::new(&stream?)?),
             _ => return None,
         };
@@ -58,6 +62,7 @@ impl Function {
         self.clamp_domain(&mut input)?;
 
         match &self.function_type {
+            FunctionType::Type0(t0) => t0.eval(input),
             FunctionType::Type2(t2) => Some(t2.eval(*input.get(0)?)),
             FunctionType::Type4(t4) => Some(t4.eval(input)?),
         }
