@@ -21,6 +21,7 @@ lengths = {
     "stream_jpx_1": "2..=2",
     "stream_jpx_3": "2..=2",
     "font_truetype_slow_post_lookup": "0..=0",
+    "rendering_conflation_artifacts": "2..=2",
 }
 
 def generate_rust_function(file_stem):
