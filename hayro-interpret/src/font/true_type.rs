@@ -46,9 +46,7 @@ impl TrueTypeFont {
             .and_then(|s| s.decoded().ok())
             .and_then(|d| {
                 OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)
-            })
-            .warn_none(&format!("failed to extract base font {:?}. falling back to Times New Roman.",
-                    dict.get::<Name>(BASE_FONT).map(|b| b.as_str().to_string())))?;
+            })?;
         
         let mut glyph_names = HashMap::new();
 
