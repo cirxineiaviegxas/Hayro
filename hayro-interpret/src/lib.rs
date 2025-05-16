@@ -421,6 +421,9 @@ pub fn interpret<'a, 'b>(
                     draw_image_xobject(&x_object, context, device)
                 }
             }
+            TypedOperation::TextRise(t) => {
+                context.get_mut().text_state.rise = t.0.as_f32();
+            }
             _ => {
                 println!("{:?}", op);
             }

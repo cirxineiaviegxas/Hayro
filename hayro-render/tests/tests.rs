@@ -134,6 +134,7 @@ use crate::run_test;
 #[test] fn text_rendering_5() { run_test("text_rendering_5", None); }
 #[test] fn text_rendering_clipping() { run_test("text_rendering_clipping", None); }
 #[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping", None); }
+#[test] fn text_with_rise() { run_test("text_with_rise", None); }
 #[test] fn xobject_1() { run_test("xobject_1", None); }
 #[test] fn xobject_matrix() { run_test("xobject_matrix", None); }
 #[test] fn xobject_with_fill_opacity() { run_test("xobject_with_fill_opacity", None); }
