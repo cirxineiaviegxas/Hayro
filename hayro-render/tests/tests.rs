@@ -22,6 +22,7 @@ use crate::run_test;
 #[test] fn font_cid_7() { run_test("font_cid_7", None); }
 #[test] fn font_standard_1() { run_test("font_standard_1", None); }
 #[test] fn font_standard_2() { run_test("font_standard_2", Some(0..=0)); }
+#[test] fn font_standard_all_glyphs() { run_test("font_standard_all_glyphs", None); }
 #[test] fn font_truetype_1() { run_test("font_truetype_1", None); }
 #[test] fn font_truetype_2() { run_test("font_truetype_2", None); }
 #[test] fn font_truetype_3() { run_test("font_truetype_3", None); }
