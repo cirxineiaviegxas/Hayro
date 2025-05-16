@@ -2,7 +2,7 @@ use crate::util::OptionLog;
 use hayro_syntax::function::Function;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
+use hayro_syntax::object::dict::keys::{ALTERNATE, BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
@@ -47,12 +47,18 @@ impl ColorSpace {
             match name.as_ref() {
                 ICC_BASED => {
                     let icc_stream = iter.next()?.cast::<Stream>()?;
-                    let num_components = icc_stream.dict().get::<usize>(N)?;
-                    let profile =
-                        ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)?;
-                    return Some(ColorSpace::ICCColor(profile));
-                    // TODO: How to handle range?
-                    // TODO: Handle alternate.
+                    let dict = icc_stream.dict();
+                    let num_components = dict.get::<usize>(N)?;
+                    
+                    return ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)
+                            .map(|p| ColorSpace::ICCColor(p))
+                            .or_else(|| dict.get::<Object>(ALTERNATE).map(|o| ColorSpace::new(o)))
+                        .or_else(|| match dict.get::<u8>(N) {
+                            Some(1) => Some(ColorSpace::DeviceGray),
+                            Some(3) => Some(ColorSpace::DeviceRgb),
+                            Some(4) => Some(ColorSpace::DeviceCmyk),
+                            _ => None
+                        });
                 }
                 CAL_CMYK => return Some(ColorSpace::DeviceCmyk),
                 CAL_GRAY => {
