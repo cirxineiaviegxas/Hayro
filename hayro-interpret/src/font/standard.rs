@@ -1,15 +1,11 @@
-use crate::font::blob;
-use crate::font::blob::{
-    COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, HELVETICA_BOLD,
-    HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, OpenTypeFontBlob, TIMES_BOLD,
-    TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
-};
+use crate::font::blob::{COURIER_BOLD, COURIER_BOLD_ITALIC, COURIER_ITALIC, COURIER_REGULAR, HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, OpenTypeFontBlob, TIMES_BOLD, TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT, Type1FontBlob, CffFontBlob};
 use crate::font::encoding::{GLYPH_NAMES, ZAPF_DINGS_NAMES, metrics};
 use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::BASE_FONT;
 use hayro_syntax::object::name::Name;
+use crate::font::blob;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum StandardFont {
@@ -62,7 +58,7 @@ impl StandardFont {
         }
     }
 
-    pub fn get_blob(&self) -> OpenTypeFontBlob {
+    pub fn get_blob(&self) -> CffFontBlob {
         match self {
             StandardFont::Helvetica => HELVETICA_REGULAR.clone(),
             StandardFont::HelveticaBold => HELVETICA_BOLD.clone(),

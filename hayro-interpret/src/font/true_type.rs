@@ -1,5 +1,5 @@
 use crate::font::Encoding;
-use crate::font::blob::OpenTypeFontBlob;
+use crate::font::blob::{OpenTypeFontBlob};
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN_INVERSE};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::util::{CodeMapExt, OptionLog};
@@ -24,23 +24,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Debug)]
-enum OpenTypeFont {
-    Standard(StandardFont),
-    Custom(OpenTypeFontBlob),
-}
-
-impl OpenTypeFont {
-    fn blob(&self) -> OpenTypeFontBlob {
-        match self {
-            OpenTypeFont::Standard(s) => s.get_blob().clone(),
-            OpenTypeFont::Custom(c) => c.clone(),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub(crate) struct TrueTypeFont {
-    base_font: OpenTypeFont,
+    base_font: OpenTypeFontBlob,
     widths: Vec<f32>,
     font_flags: Option<FontFlags>,
     glyph_names: HashMap<String, GlyphId>,
@@ -56,30 +41,20 @@ impl TrueTypeFont {
 
         let widths = read_widths(dict, &descriptor);
         let (encoding, _) = read_encoding(dict);
-        let base_font = select_standard_font(dict)
-            .map(OpenTypeFont::Standard)
-            .or_else(|| {
-                descriptor
-                    .get::<Stream>(FONT_FILE2)
-                    .and_then(|s| s.decoded().ok())
-                    .and_then(|d| {
-                        OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0).map(OpenTypeFont::Custom)
-                    })
+        let base_font = descriptor
+            .get::<Stream>(FONT_FILE2)
+            .and_then(|s| s.decoded().ok())
+            .and_then(|d| {
+                OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)
             })
-            .unwrap_or_else(|| {
-                warn!(
-                    "failed to extract base font {:?}. falling back to Times New Roman.",
-                    dict.get::<Name>(BASE_FONT).map(|b| b.as_str().to_string())
-                );
-
-                OpenTypeFont::Standard(StandardFont::TimesRoman)
-            });
+            .warn_none(&format!("failed to extract base font {:?}. falling back to Times New Roman.",
+                    dict.get::<Name>(BASE_FONT).map(|b| b.as_str().to_string())))?;
         
         let mut glyph_names = HashMap::new();
 
         // TODO: This is still pretty slow, see test file `font_truetype_slow_post_lookup`.
-        if let Ok(post) = base_font.blob().font_ref().post() {
-            for i in 0..base_font.blob().num_glyphs() {
+        if let Ok(post) = base_font.font_ref().post() {
+            for i in 0..base_font.num_glyphs() {
                 if let Some(str) = post.glyph_name(GlyphId16::new(i)) {
                     glyph_names.insert(str.to_string(), GlyphId::new(i as u32));
                 }
@@ -97,20 +72,13 @@ impl TrueTypeFont {
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
-        match &self.base_font {
-            OpenTypeFont::Standard(s) => s.get_blob().outline_glyph(glyph),
-            OpenTypeFont::Custom(c) => c.outline_glyph(glyph),
-        }
+        self.base_font.outline_glyph(glyph)
     }
 
     fn is_non_symbolic(&self) -> bool {
         self.font_flags
             .as_ref()
             .map(|f| f.contains(FontFlags::NON_SYMBOLIC))
-            .or_else(|| match self.base_font {
-                OpenTypeFont::Standard(s) => Some(s.is_non_symbolic()),
-                OpenTypeFont::Custom(_) => None,
-            })
             .unwrap_or(false)
     }
 
@@ -128,7 +96,7 @@ impl TrueTypeFont {
                 return GlyphId::NOTDEF;
             };
 
-            if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
+            if let Ok(cmap) = self.base_font.font_ref().cmap() {
                 for record in cmap.encoding_records() {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 1 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
@@ -163,7 +131,7 @@ impl TrueTypeFont {
                     glyph = Some(*gid);
                 }
             }
-        } else if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
+        } else if let Ok(cmap) = self.base_font.font_ref().cmap() {
             for record in cmap.encoding_records() {
                 if record.platform_id() == PlatformId::Windows && record.encoding_id() == 0 {
                     if let Ok(subtable) = record.subtable(cmap.offset_data()) {
@@ -196,7 +164,6 @@ impl TrueTypeFont {
             .copied()
             .or_else(|| {
                 self.base_font
-                    .blob()
                     .glyph_metrics()
                     .advance_width(self.map_code(code))
             })

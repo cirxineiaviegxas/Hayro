@@ -49,7 +49,7 @@ impl<'a> Table<'a> {
     pub fn parse(data: &'a [u8]) -> Option<Self> {
         if !data.starts_with(b"%!") {
             error!("type1 font didn't start with %!");
-
+        
             return None;
         }
 

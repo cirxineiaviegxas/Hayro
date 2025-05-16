@@ -14,6 +14,7 @@ use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::sync::Arc;
+use crate::font::standard::select_standard_font;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
@@ -32,7 +33,7 @@ impl<'a> Font<'a> {
     pub fn new(dict: &Dict<'a>) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)?.as_ref() {
             TYPE1 => FontType::Type1(Type1Font::new(dict)?),
-            TRUE_TYPE => FontType::TrueType(TrueTypeFont::new(dict)?),
+            TRUE_TYPE => TrueTypeFont::new(dict).map(FontType::TrueType).or_else(|| Type1Font::new(dict).map(FontType::Type1))?,
             TYPE0 => FontType::Type0(Type0Font::new(dict)?),
             TYPE3 => FontType::Type3(Type3::new(dict)),
             f => {

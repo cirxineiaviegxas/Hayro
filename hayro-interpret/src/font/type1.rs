@@ -102,24 +102,9 @@ impl Standard {
             })
     }
 
-    fn ps_name_to_unicode(&self, name: &str) -> Option<&str> {
-        self.base_font
-            .name_to_unicode(name)
-            .warn_none(&format!("failed to map code {name} to a ps string."))
-    }
-
-    fn unicode_to_glyph(&self, name: &str) -> Option<GlyphId> {
-        self.base_font
-            .get_blob()
-            .font_ref()
-            .charmap()
-            .map(name.chars().nth(0).unwrap())
-    }
-
     pub fn map_code(&self, code: u8) -> GlyphId {
         self.code_to_ps_name(code)
-            .and_then(|c| self.ps_name_to_unicode(c))
-            .and_then(|n| self.unicode_to_glyph(n))
+            .and_then(|c| self.base_font.get_blob().table().glyph_index_by_name(c).map(|g| GlyphId::new(g.0 as u32)))
             .unwrap_or(GlyphId::NOTDEF)
     }
 
@@ -157,11 +142,7 @@ struct Type1 {
     encoding: Encoding,
     widths: Vec<f32>,
     encodings: HashMap<u8, String>,
-    // We simulate that Type1 glyphs have glyph IDs so we can handle them transparently
-    // to OpenType fonts.
-    glyph_to_string: RefCell<HashMap<GlyphId, String>>,
-    string_to_glyph: RefCell<HashMap<String, GlyphId>>,
-    glyph_counter: RefCell<u32>,
+    glyph_simulator: GlyphSimulator,
 }
 
 impl Type1 {
@@ -172,40 +153,20 @@ impl Type1 {
 
         let (encoding, encodings) = read_encoding(dict);
         let widths = read_widths(dict, &descriptor);
-
-        let mut glyph_to_string = HashMap::new();
-        glyph_to_string.insert(GlyphId::NOTDEF, "notdef".to_string());
-
-        let mut string_to_glyph = HashMap::new();
-        string_to_glyph.insert("notdef".to_string(), GlyphId::NOTDEF);
+        
+        let glyph_simulator = GlyphSimulator::new();
 
         Self {
             font,
             encoding,
-            glyph_to_string: RefCell::new(glyph_to_string),
-            string_to_glyph: RefCell::new(string_to_glyph),
-            glyph_counter: RefCell::new(1),
+            glyph_simulator,
             widths,
             encodings,
         }
     }
 
     fn string_to_glyph(&self, string: &str) -> GlyphId {
-        if let Some(g) = self.string_to_glyph.borrow().get(string) {
-            *g
-        } else {
-            let gid = GlyphId::new(*self.glyph_counter.borrow());
-            self.string_to_glyph
-                .borrow_mut()
-                .insert(string.to_string(), gid);
-            self.glyph_to_string
-                .borrow_mut()
-                .insert(gid, string.to_string());
-
-            *self.glyph_counter.borrow_mut() += 1;
-
-            gid
-        }
+        self.glyph_simulator.string_to_glyph(string)
     }
 
     pub fn map_code(&self, code: u8) -> GlyphId {
@@ -229,7 +190,7 @@ impl Type1 {
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         self.font
-            .outline_glyph(self.glyph_to_string.borrow().get(&glyph).unwrap())
+            .outline_glyph(self.glyph_simulator.glyph_to_string(glyph).unwrap().as_str())
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
@@ -291,5 +252,52 @@ impl Cff {
 
     pub fn glyph_width(&self, code: u8) -> f32 {
         *self.widths.get(code as usize).unwrap()
+    }
+}
+
+#[derive(Debug)]
+struct GlyphSimulator {
+    // We simulate that Type1 glyphs have glyph IDs so we can handle them transparently
+    // to OpenType fonts.
+    glyph_to_string: RefCell<HashMap<GlyphId, String>>,
+    string_to_glyph: RefCell<HashMap<String, GlyphId>>,
+    glyph_counter: RefCell<u32>,
+}
+
+impl GlyphSimulator {
+    pub fn new() -> Self {
+        let mut glyph_to_string = HashMap::new();
+        glyph_to_string.insert(GlyphId::NOTDEF, "notdef".to_string());
+
+        let mut string_to_glyph = HashMap::new();
+        string_to_glyph.insert("notdef".to_string(), GlyphId::NOTDEF);
+        
+        Self {
+            glyph_to_string: RefCell::new(glyph_to_string),
+            string_to_glyph: RefCell::new(string_to_glyph),
+            glyph_counter: RefCell::new(1),
+        }
+    }
+
+    fn string_to_glyph(&self, string: &str) -> GlyphId {
+        if let Some(g) = self.string_to_glyph.borrow().get(string) {
+            *g
+        } else {
+            let gid = GlyphId::new(*self.glyph_counter.borrow());
+            self.string_to_glyph
+                .borrow_mut()
+                .insert(string.to_string(), gid);
+            self.glyph_to_string
+                .borrow_mut()
+                .insert(gid, string.to_string());
+
+            *self.glyph_counter.borrow_mut() += 1;
+
+            gid
+        }
+    }
+    
+    fn glyph_to_string(&self, glyph: GlyphId) -> Option<String> {
+        self.glyph_to_string.borrow().get(&glyph).map(|s| s.to_string())
     }
 }
