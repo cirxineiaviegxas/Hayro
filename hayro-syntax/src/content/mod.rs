@@ -202,7 +202,7 @@ impl<'a> Stack<'a> {
     where
         T: ObjectLike<'a>,
     {
-        self.0.get(index).and_then(|e| e.clone().cast::<T>().ok())
+        self.0.get(index).and_then(|e| e.clone().cast::<T>())
     }
 
     fn get_all<T>(&self) -> Option<SmallVec<[T; OPERANDS_THRESHOLD]>>
@@ -212,7 +212,7 @@ impl<'a> Stack<'a> {
         let mut operands = SmallVec::new();
 
         for op in &self.0 {
-            let converted = op.clone().cast::<T>().ok()?;
+            let converted = op.clone().cast::<T>()?;
             operands.push(converted);
         }
 

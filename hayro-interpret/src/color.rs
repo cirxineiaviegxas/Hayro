@@ -38,15 +38,15 @@ impl ColorSpace {
     }
 
     fn new_inner(object: Object) -> Option<ColorSpace> {
-        if let Ok(name) = object.clone().cast::<Name>() {
+        if let Some(name) = object.clone().cast::<Name>() {
             return Self::new_from_name(name.clone());
-        } else if let Ok(color_array) = object.clone().cast::<Array>() {
+        } else if let Some(color_array) = object.clone().cast::<Array>() {
             let mut iter = color_array.clone().iter::<Object>();
-            let name = iter.next()?.cast::<Name>().ok()?;
+            let name = iter.next()?.cast::<Name>()?;
 
             match name.as_ref() {
                 ICC_BASED => {
-                    let icc_stream = iter.next()?.cast::<Stream>().ok()?;
+                    let icc_stream = iter.next()?.cast::<Stream>()?;
                     let num_components = icc_stream.dict().get::<usize>(N)?;
                     let profile =
                         ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)?;
@@ -56,15 +56,15 @@ impl ColorSpace {
                 }
                 CAL_CMYK => return Some(ColorSpace::DeviceCmyk),
                 CAL_GRAY => {
-                    let cal_dict = iter.next()?.cast::<Dict>().ok()?;
+                    let cal_dict = iter.next()?.cast::<Dict>()?;
                     return Some(ColorSpace::CalGray(CalGray::new(&cal_dict)?));
                 }
                 CAL_RGB => {
-                    let cal_dict = iter.next()?.cast::<Dict>().ok()?;
+                    let cal_dict = iter.next()?.cast::<Dict>()?;
                     return Some(ColorSpace::CalRgb(CalRgb::new(&cal_dict)?));
                 }
                 LAB => {
-                    let lab_dict = iter.next()?.cast::<Dict>().ok()?;
+                    let lab_dict = iter.next()?.cast::<Dict>()?;
                     return Some(ColorSpace::Lab(Lab::new(&lab_dict)?));
                 }
                 INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
@@ -486,7 +486,7 @@ impl Indexed {
         // Skip name
         let _ = iter.next()?;
         let base_color_space = ColorSpace::new(iter.next()?);
-        let hival = iter.next()?.cast::<u8>().ok()?;
+        let hival = iter.next()?.cast::<u8>()?;
 
         let values = {
             let next = iter.next()?;
@@ -494,12 +494,10 @@ impl Indexed {
             let data = next
                 .clone()
                 .cast::<Stream>()
-                .ok()
                 .and_then(|s| s.decoded().ok())
                 .or_else(|| {
                     next.clone()
                         .cast::<string::String>()
-                        .ok()
                         .map(|s| s.get().to_vec())
                 })
                 .unwrap();
@@ -550,7 +548,7 @@ impl Separation {
         let mut iter = array.iter::<Object>();
         // Skip `/Separation`
         let _ = iter.next()?;
-        let name = iter.next()?.cast::<Name>().ok()?.as_str().to_owned();
+        let name = iter.next()?.cast::<Name>()?.as_str().to_owned();
         let alternate_space = ColorSpace::new(iter.next()?);
         let tint_transform = Function::new(&iter.next()?)?;
 

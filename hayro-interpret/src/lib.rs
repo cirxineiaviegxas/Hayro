@@ -351,12 +351,12 @@ pub fn interpret<'a, 'b>(
                 let font = context.get().text_state.font();
 
                 for obj in s.0.iter::<Object>() {
-                    if let Ok(adjustment) = obj.clone().cast::<f32>() {
+                    if let Some(adjustment) = obj.clone().cast::<f32>() {
                         context
                             .get_mut()
                             .text_state
                             .apply_adjustment(adjustment, font.is_horizontal());
-                    } else if let Ok(text) = obj.cast::<String>() {
+                    } else if let Some(text) = obj.cast::<String>() {
                         show_text_string(context, device, text, &font);
                     }
                 }

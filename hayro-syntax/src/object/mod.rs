@@ -78,16 +78,11 @@ pub enum Object<'a> {
 
 impl<'a> Object<'a> {
     /// Try casting the object to a specific subtype.
-    pub fn cast<T>(self) -> Result<T>
+    pub fn cast<T>(self) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
-        let dynamic_name = self.dynamic_name();
-
-        match self.try_into() {
-            Ok(v) => Ok(v),
-            Err(_) => whatever!("failed to cast {} to {}", dynamic_name, T::STATIC_NAME),
-        }
+        self.try_into().ok()
     }
 }
 

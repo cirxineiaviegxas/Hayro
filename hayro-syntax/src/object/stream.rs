@@ -66,7 +66,7 @@ impl<'a> Stream<'a> {
             let mut current: Option<FilterResult> = None;
 
             for i in 0..filters.len() {
-                let params = params.get(i).and_then(|p| p.clone().cast::<Dict>().ok());
+                let params = params.get(i).and_then(|p| p.clone().cast::<Dict>());
 
                 let new = apply_filter(
                     current

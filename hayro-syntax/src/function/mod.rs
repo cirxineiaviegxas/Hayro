@@ -33,9 +33,9 @@ pub struct Function {
 
 impl Function {
     pub fn new(obj: &Object) -> Option<Function> {
-        let (dict, stream) = if let Some(stream) = obj.clone().cast::<Stream>().ok() {
+        let (dict, stream) = if let Some(stream) = obj.clone().cast::<Stream>() {
             (stream.dict().clone(), Some(stream))
-        } else if let Some(dict) = obj.clone().cast::<Dict>().ok() {
+        } else if let Some(dict) = obj.clone().cast::<Dict>() {
             (dict, None)
         } else {
             return None;
