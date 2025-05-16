@@ -20,6 +20,7 @@ lengths = {
     "stream_flate_bpc_1": "0..=0",
     "stream_jpx_1": "2..=2",
     "stream_jpx_3": "2..=2",
+    "font_truetype_slow_post_lookup": "0..=0",
 }
 
 def generate_rust_function(file_stem):

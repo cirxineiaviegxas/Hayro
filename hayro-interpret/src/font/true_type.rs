@@ -43,6 +43,7 @@ pub(crate) struct TrueTypeFont {
     base_font: OpenTypeFont,
     widths: Vec<f32>,
     font_flags: Option<FontFlags>,
+    glyph_names: HashMap<String, GlyphId>,
     encoding: Encoding,
     cached_mappings: RefCell<HashMap<u8, GlyphId>>,
 }
@@ -73,10 +74,22 @@ impl TrueTypeFont {
 
                 OpenTypeFont::Standard(StandardFont::TimesRoman)
             });
+        
+        let mut glyph_names = HashMap::new();
+
+        // TODO: This is still pretty slow, see test file `font_truetype_slow_post_lookup`.
+        if let Ok(post) = base_font.blob().font_ref().post() {
+            for i in 0..base_font.blob().num_glyphs() {
+                if let Some(str) = post.glyph_name(GlyphId16::new(i)) {
+                    glyph_names.insert(str.to_string(), GlyphId::new(i as u32));
+                }
+            }
+        }
 
         Some(Self {
             base_font,
             widths,
+            glyph_names,
             font_flags,
             encoding,
             cached_mappings: RefCell::new(HashMap::new()),
@@ -146,12 +159,8 @@ impl TrueTypeFont {
             }
 
             if glyph.is_none() {
-                if let Ok(post) = self.base_font.blob().font_ref().post() {
-                    for i in 0..self.base_font.blob().num_glyphs() {
-                        if post.glyph_name(GlyphId16::new(i)) == Some(lookup) {
-                            glyph = Some(GlyphId::new(i as u32));
-                        }
-                    }
+                if let Some(gid) = self.glyph_names.get(&lookup.to_string()) {
+                    glyph = Some(*gid);
                 }
             }
         } else if let Ok(cmap) = self.base_font.blob().font_ref().cmap() {
