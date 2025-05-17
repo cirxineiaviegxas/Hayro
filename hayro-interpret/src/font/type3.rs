@@ -28,10 +28,6 @@ impl Device for Type3GlyphDescription {
         self.0.push(ReplayInstruction::SetTransform { affine });
     }
 
-    fn set_root_transform(&mut self, affine: Affine) {
-        self.0.push(ReplayInstruction::SetRootTransform { affine });
-    }
-
     fn set_paint(&mut self, _: Color) {}
 
     fn set_shading_paint(&mut self, _: ShadingPattern) {}

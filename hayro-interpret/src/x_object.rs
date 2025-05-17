@@ -88,7 +88,6 @@ pub(crate) fn draw_form_xobject<'a>(
     context.push_root_transform();
 
     device.set_transform(context.get().affine);
-    device.set_root_transform(*context.root_transform());
     device.push_layer(
         Some(&ClipPath {
             path: Rect::new(
@@ -105,7 +104,6 @@ pub(crate) fn draw_form_xobject<'a>(
     interpret(iter, &x_object.resources, context, device);
     device.pop();
     context.pop_root_transform();
-    device.set_root_transform(*context.root_transform());
     context.restore_state();
 }
 

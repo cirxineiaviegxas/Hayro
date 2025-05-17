@@ -443,11 +443,12 @@ pub fn interpret<'a, 'b>(
 
                     ShadingPattern {
                         shading: Arc::new(shading),
-                        matrix: Default::default(),
+                        matrix: Affine::IDENTITY,
                     }
                 };
 
                 context.save_state();
+                context.push_root_transform();
                 let st = context.get_mut();
                 st.fill_pattern = Some(shading_pattern);
                 st.fill_cs = ColorSpace::Pattern;
@@ -632,7 +633,8 @@ fn fill_path_impl(
     device.set_transform(base_transform);
 
     let clip_path = if matches!(context.get().fill_cs, ColorSpace::Pattern) {
-        let pattern = context.get().fill_pattern.clone().unwrap();
+        let mut pattern = context.get().fill_pattern.clone().unwrap();
+        pattern.matrix = *context.root_transform() * pattern.matrix;
         let bbox = pattern.shading.bbox;
         device.set_shading_paint(pattern);
 
@@ -680,6 +682,8 @@ fn stroke_path_impl(
     path: Option<&GlyphDescription>,
     transform: Option<Affine>,
 ) {
+    // TODO: Support gradient fill
+    
     let color = Color::from_pdf(
         context.get().stroke_cs.clone(),
         context.get().stroke_color.clone(),

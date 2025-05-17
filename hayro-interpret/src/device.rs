@@ -19,7 +19,6 @@ pub struct Mask {
 
 pub trait Device {
     fn set_transform(&mut self, affine: Affine);
-    fn set_root_transform(&mut self, affine: Affine);
     fn set_paint(&mut self, color: Color);
     fn set_shading_paint(&mut self, color: ShadingPattern);
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps);

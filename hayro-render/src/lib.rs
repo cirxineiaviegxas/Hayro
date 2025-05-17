@@ -80,10 +80,6 @@ impl Device for Renderer {
         self.0.set_transform(affine);
     }
 
-    fn set_root_transform(&mut self, affine: Affine) {
-        self.0.set_paint_transform(affine);
-    }
-
     fn set_paint(&mut self, color: Color) {
         let res = color.to_rgba();
         self.0.set_paint(res);
@@ -189,7 +185,6 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
 
     device.set_transform(initial_transform);
-    device.set_root_transform(initial_transform);
 
     device.push_layer(None, 1.0);
     interpret(
