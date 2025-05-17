@@ -91,11 +91,12 @@ impl<'a> AxialShadingFiller<'a> {
     fn run_complex_column<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4]) {
         let mut pos = self.cur_pos;
         let [x0, y0, x1, y1] = self.shading.coords;
-        let (x, y) = (pos.x as f32, pos.y as f32);
+        
         let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            let p1 = ((x1 - x0) * (x - x0) + (y1 - y0) * (y - y0));
+            let (x, y) = (pos.x as f32, pos.y as f32);
+            let p1 = (x1 - x0) * (x - x0) + (y1 - y0) * (y - y0);
             let mut x = p1 / self.shading.denom;
 
             if x < 0.0 {
@@ -113,7 +114,7 @@ impl<'a> AxialShadingFiller<'a> {
             }
 
             let t = t0 + (t1 - t0) * x;
-
+            
             let val = self.shading.function.eval(smallvec![t]).unwrap();
 
             let color = self.shading.color_space.to_rgba(&val, 1.0);
