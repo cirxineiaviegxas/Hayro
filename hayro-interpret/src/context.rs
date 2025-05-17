@@ -12,6 +12,7 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
+use hayro_font_parser::Rect;
 
 pub struct Context<'a> {
     states: Vec<State<'a>>,
@@ -21,11 +22,12 @@ pub struct Context<'a> {
     clip: Option<Fill>,
     font_cache: HashMap<ObjRef, Font<'a>>,
     root_transforms: Vec<Affine>,
+    bbox: Vec<kurbo::Rect>,
     color_space_cache: HashMap<ObjRef, ColorSpace>,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(initial_transform: Affine) -> Self {
+    pub fn new(initial_transform: Affine, bbox: kurbo::Rect) -> Self {
         let line_width = 1.0;
         let line_cap = Cap::Butt;
         let line_join = Join::Miter;
@@ -56,6 +58,7 @@ impl<'a> Context<'a> {
             last_point: Point::default(),
             sub_path_start: Point::default(),
             clip: None,
+            bbox: vec![bbox],
             path: BezPath::new(),
             font_cache: HashMap::new(),
             color_space_cache: HashMap::new(),
@@ -65,6 +68,18 @@ impl<'a> Context<'a> {
     pub(crate) fn save_state(&mut self) {
         let cur = self.states.last().unwrap().clone();
         self.states.push(cur);
+    }
+
+    pub(crate) fn push_bbox(&mut self, bbox: kurbo::Rect) {
+        self.bbox.push(bbox);
+    }
+
+    pub(crate) fn pop_bbox(&mut self) {
+        self.bbox.pop();
+    }
+
+    pub(crate) fn bbox(&self) -> kurbo::Rect {
+        *self.bbox.last().unwrap()
     }
 
     pub(crate) fn push_root_transform(&mut self) {

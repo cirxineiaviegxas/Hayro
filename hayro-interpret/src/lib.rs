@@ -1,19 +1,21 @@
+use std::sync::Arc;
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, XOBJECT};
+use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, SHADING, XOBJECT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::stream::Stream;
 use hayro_syntax::object::string::String;
-use kurbo::{Affine, Cap, Join, Point, Rect, Shape, Vec2};
+use kurbo::{Affine, BezPath, Cap, Join, Point, Shape, Vec2};
 use log::warn;
 use peniko::color::palette::css::GREEN;
 use peniko::Fill;
 use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
+use hayro_syntax::object::rect::Rect;
 
 pub mod color;
 pub mod context;
@@ -31,6 +33,7 @@ use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::pattern::ShadingPattern;
+use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
 
@@ -60,6 +63,7 @@ pub fn interpret<'a, 'b>(
     let color_spaces = resources.get::<Dict>(COLORSPACE).unwrap_or_default();
     let x_objects = resources.get::<Dict>(XOBJECT).unwrap_or_default();
     let patterns = resources.get::<Dict>(PATTERN).unwrap_or_default();
+    let shadings = resources.get::<Dict>(SHADING).unwrap_or_default();
 
     save_sate(context);
 
@@ -96,7 +100,7 @@ pub fn interpret<'a, 'b>(
                 context.pre_concat_transform(t);
             }
             TypedOperation::RectPath(r) => {
-                let rect = Rect::new(
+                let rect = kurbo::Rect::new(
                     r.0.as_f64(),
                     r.1.as_f64(),
                     r.0.as_f64() + r.2.as_f64(),
@@ -432,6 +436,28 @@ pub fn interpret<'a, 'b>(
             TypedOperation::TextRise(t) => {
                 context.get_mut().text_state.rise = t.0.as_f32();
             }
+            // TypedOperation::Shading(s) => {
+            //     let shading_dict = shadings.get::<Dict>(&s.0).unwrap();
+            //     let shading_pattern = {
+            //         let shading = Shading::new(&shading_dict).unwrap();
+            //         
+            //         ShadingPattern {
+            //             shading: Arc::new(shading),
+            //             matrix: Default::default(),
+            //         }
+            //     };
+            //     
+            //     context.save_state();
+            //     let st = context.get_mut();
+            //     st.fill_pattern = Some(shading_pattern);
+            //     st.fill_cs = ColorSpace::Pattern;
+            //     
+            //     let bbox = context.bbox().to_path(0.1);
+            //     let inverted_bbox = context.get().affine.inverse() * bbox;
+            //     fill_path_impl(context, device, Some(&GlyphDescription::Path(inverted_bbox)), None);
+            //     
+            //     context.restore_state();
+            // }
             _ => {
                 println!("{:?}", op);
             }
