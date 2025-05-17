@@ -1,7 +1,7 @@
 // Copyright 2025 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::encode::{EncodedRadialAxialShading, EncodedFunctionShading, RadialAxialParams};
+use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading, RadialAxialParams};
 use crate::fine::{COLOR_COMPONENTS, FineType, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use kurbo::{Point, Vec2};
@@ -79,10 +79,10 @@ impl<'a> RadialAxialShadingFiller<'a> {
 
     pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
         let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
-        
+
         let denom = match self.shading.params {
             RadialAxialParams::Axial { denom } => denom,
-            RadialAxialParams::Radial => 0.0
+            RadialAxialParams::Radial => 0.0,
         };
 
         target
@@ -97,10 +97,10 @@ impl<'a> RadialAxialShadingFiller<'a> {
         // TODO: If the
         // starting and ending coordinates are coincident (x0=x1 and y0=y1) nothing shall be
         // painted.
-        
+
         let mut pos = self.cur_pos;
         let (x1, y1) = (self.shading.p1.x as f32, self.shading.p1.y as f32);
-        
+
         let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
@@ -110,10 +110,10 @@ impl<'a> RadialAxialShadingFiller<'a> {
                 let p1 = x1 * x + y1 * y;
 
                 p1 / denom
-            }   else {
+            } else {
                 radial_pos(&pos, &self.shading.p1, self.shading.r).unwrap_or(f32::MIN)
             };
-            
+
             if x == f32::MIN {
                 pixel.copy_from_slice(bg_color);
 
@@ -138,7 +138,7 @@ impl<'a> RadialAxialShadingFiller<'a> {
             }
 
             let t = t0 + (t1 - t0) * x;
-            
+
             let val = self.shading.function.eval(smallvec![t]).unwrap();
 
             let color = self.shading.color_space.to_rgba(&val, 1.0);
@@ -190,11 +190,7 @@ fn radial_pos(pos: &Point, p1: &Point, r: Point) -> Option<f32> {
 
     // We only want values for `t` where the interpolated radius is actually positive.
     if r0 + dr * max < 0.0 {
-        if r0 + dr * min < 0.0 {
-            None
-        } else {
-            Some(min)
-        }
+        if r0 + dr * min < 0.0 { None } else { Some(min) }
     } else {
         Some(max)
     }

@@ -23,7 +23,7 @@ pub enum ShadingType {
         domain: [f32; 2],
         function: Function,
         extend: [bool; 2],
-        axial: bool
+        axial: bool,
     },
     FreeFormGouraud,
     LatticeFormGouraud,
@@ -69,10 +69,10 @@ impl Shading {
                 let coords = if shading_num == 2 {
                     let read = dict.get::<[f32; 4]>(COORDS)?;
                     [read[0], read[1], read[2], read[3], 0.0, 0.0]
-                }   else {
+                } else {
                     dict.get::<[f32; 6]>(COORDS)?
                 };
-                
+
                 let axial = shading_num == 2;
 
                 ShadingType::RadialAxial {

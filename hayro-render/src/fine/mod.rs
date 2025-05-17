@@ -11,7 +11,7 @@ mod shading;
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
-use crate::fine::shading::{RadialAxialShadingFiller, FunctionShadingFiller};
+use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
 use crate::paint::{Paint, PremulColor};
 use crate::tile::Tile;
 use crate::util::scalar::div_255;

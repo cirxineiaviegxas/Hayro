@@ -440,22 +440,27 @@ pub fn interpret<'a, 'b>(
                 let shading_dict = shadings.get::<Dict>(&s.0).unwrap();
                 let shading_pattern = {
                     let shading = Shading::new(&shading_dict).unwrap();
-            
+
                     ShadingPattern {
                         shading: Arc::new(shading),
                         matrix: Default::default(),
                     }
                 };
-            
+
                 context.save_state();
                 let st = context.get_mut();
                 st.fill_pattern = Some(shading_pattern);
                 st.fill_cs = ColorSpace::Pattern;
-            
+
                 let bbox = context.bbox().to_path(0.1);
                 let inverted_bbox = context.get().affine.inverse() * bbox;
-                fill_path_impl(context, device, Some(&GlyphDescription::Path(inverted_bbox)), None);
-            
+                fill_path_impl(
+                    context,
+                    device,
+                    Some(&GlyphDescription::Path(inverted_bbox)),
+                    None,
+                );
+
                 context.restore_state();
             }
             _ => {
