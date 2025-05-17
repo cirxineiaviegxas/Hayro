@@ -3,7 +3,7 @@ use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, XOBJECT};
+use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, XOBJECT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::stream::Stream;
@@ -23,11 +23,13 @@ mod shading;
 mod state;
 mod util;
 pub mod x_object;
+mod pattern;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
+use crate::pattern::ShadingPattern;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
 
@@ -56,6 +58,7 @@ pub fn interpret<'a, 'b>(
     let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
     let color_spaces = resources.get::<Dict>(COLORSPACE).unwrap_or_default();
     let x_objects = resources.get::<Dict>(XOBJECT).unwrap_or_default();
+    let patterns = resources.get::<Dict>(PATTERN).unwrap_or_default();
 
     save_sate(context);
 
@@ -282,17 +285,23 @@ pub fn interpret<'a, 'b>(
                 // Ignore for now.
             }
             TypedOperation::NonStrokeColorNamed(n) => {
-                if n.1.is_none() {
+                if let Some(name) = n.1 {
+                    let pattern = ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
+                    println!("{:?}", pattern);
+                    context.get_mut().fill_pattern = Some(pattern);
+
+                }   else {
                     context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
-                } else {
-                    warn!("named color spaces are not supported!");
                 }
+                
             }
             TypedOperation::StrokeColorNamed(n) => {
-                if n.1.is_none() {
+                if let Some(name) = n.1 {
+                    let pattern = ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
+                    println!("{:?}", pattern);
+                    context.get_mut().stroke_pattern = Some(pattern);
+                }   else {
                     context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
-                } else {
-                    warn!("named color spaces are not supported!");
                 }
             }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}

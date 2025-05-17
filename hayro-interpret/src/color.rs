@@ -14,6 +14,7 @@ use qcms::Transform;
 use smallvec::{SmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use peniko::color::palette::css::BLACK;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
@@ -22,6 +23,7 @@ pub(crate) enum ColorSpace {
     DeviceCmyk,
     DeviceGray,
     DeviceRgb,
+    Pattern,
     Indexed(Indexed),
     ICCColor(ICCProfile),
     CalGray(CalGray),
@@ -91,12 +93,12 @@ impl ColorSpace {
             DEVICE_GRAY | G => Some(ColorSpace::DeviceGray),
             DEVICE_CMYK | CMYK => Some(ColorSpace::DeviceCmyk),
             CAL_CMYK => Some(ColorSpace::DeviceCmyk),
-            PATTERN => {
-                warn!("pattern color spaces are not supported yet");
-
-                Some(ColorSpace::DeviceGray)
-            }
-            _ => None,
+            PATTERN =>  Some(ColorSpace::Pattern),
+            _ => {
+                warn!("unsupported color space: {}", name.as_str());
+                
+                None
+            },
         }
     }
 
@@ -115,6 +117,8 @@ impl ColorSpace {
             ],
             ColorSpace::Indexed(_) => vec![(0.0, 2.0f32.powf(n) - 1.0)],
             ColorSpace::Separation(_) => vec![(0.0, 1.0)],
+            // Not a valid image color space.
+            ColorSpace::Pattern => vec![(0.0, 1.0)],
         }
     }
 
@@ -136,6 +140,7 @@ impl ColorSpace {
             ColorSpace::Lab(_) => components.extend([0.0, 0.0, 0.0]),
             ColorSpace::Indexed(_) => components.push(0.0),
             ColorSpace::Separation(_) => components.push(1.0),
+            ColorSpace::Pattern => components.push(0.0),
         }
     }
 
@@ -150,6 +155,7 @@ impl ColorSpace {
             ColorSpace::Lab(_) => 3,
             ColorSpace::Indexed(_) => 1,
             ColorSpace::Separation(_) => 1,
+            ColorSpace::Pattern => 1
         }
     }
 
@@ -189,6 +195,7 @@ impl ColorSpace {
             }
             ColorSpace::Indexed(i) => i.to_rgb(c[0], opacity),
             ColorSpace::Separation(s) => s.to_rgba(c[0], opacity),
+            ColorSpace::Pattern => BLACK
         }
     }
 }

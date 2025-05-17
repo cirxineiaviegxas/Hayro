@@ -3,6 +3,7 @@ use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
 use kurbo::{Affine, BezPath, Cap, Join, Vec2};
 use peniko::Fill;
 use smallvec::SmallVec;
+use crate::pattern::ShadingPattern;
 
 #[derive(Clone, Debug)]
 pub(crate) struct TextState<'a> {
@@ -116,9 +117,11 @@ pub(crate) struct State<'a> {
     pub(crate) dash_offset: f32,
     pub(crate) affine: Affine,
     pub(crate) stroke_color: ColorComponents,
+    pub(crate) stroke_pattern: Option<ShadingPattern>,
     pub(crate) stroke_cs: ColorSpace,
     pub(crate) stroke_alpha: f32,
     pub(crate) fill_color: ColorComponents,
+    pub(crate) fill_pattern: Option<ShadingPattern>,
     pub(crate) fill_cs: ColorSpace,
     pub(crate) fill_alpha: f32,
     pub(crate) text_state: TextState<'a>,

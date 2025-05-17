@@ -49,6 +49,8 @@ impl<'a> Context<'a> {
                 fill: Fill::NonZero,
                 n_clips: 0,
                 text_state: TextState::default(),
+                stroke_pattern: None,
+                fill_pattern: None,
             }],
             root_transforms: vec![initial_transform],
             last_point: Point::default(),
