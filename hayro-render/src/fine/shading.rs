@@ -3,7 +3,9 @@
 
 use crate::encode::EncodedFunctionShading;
 use crate::fine::{COLOR_COMPONENTS, FineType, Painter, TILE_HEIGHT_COMPONENTS};
+use crate::paint::PremulColor;
 use kurbo::{Point, Vec2};
+use smallvec::smallvec;
 
 #[derive(Debug)]
 pub(crate) struct ShadingFiller<'a> {
@@ -22,20 +24,31 @@ impl<'a> ShadingFiller<'a> {
     }
 
     pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
+        let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
         // Fallback path.
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
             .for_each(|column| {
-                self.run_complex_column(column);
+                self.run_complex_column(column, &bg_color);
                 self.cur_pos += self.shading.x_advance;
             });
     }
 
-    fn run_complex_column<F: FineType>(&mut self, col: &mut [F]) {
+    fn run_complex_column<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4]) {
         let mut pos = self.cur_pos;
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            println!("{:?}", pos);
+            if !self.shading.domain.contains(pos) {
+                pixel.copy_from_slice(bg_color);
+            } else {
+                let out = self
+                    .shading
+                    .function
+                    .eval(smallvec![pos.x as f32, pos.y as f32])
+                    .unwrap();
+                let color = self.shading.color_space.to_rgba(&out, 1.0);
+                pixel.copy_from_slice(&F::extract_color(&PremulColor::from_alpha_color(color)));
+            }
             pos += self.shading.y_advance;
         }
     }

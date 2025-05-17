@@ -4,12 +4,12 @@
 //! Types for paints.
 
 use crate::pixmap::Pixmap;
+use hayro_interpret::pattern::ShadingPattern;
 use peniko::{
     ImageQuality,
     color::{AlphaColor, PremulRgba8, Srgb},
 };
 use std::sync::Arc;
-use hayro_interpret::pattern::ShadingPattern;
 
 /// A paint that needs to be resolved via its index.
 // In the future, we might add additional flags, that's why we have

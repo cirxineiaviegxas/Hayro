@@ -1,8 +1,8 @@
 use crate::color::Color;
+use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
 use peniko::{Fill, ImageQuality};
-use crate::pattern::ShadingPattern;
 
 #[derive(Debug, Clone)]
 pub struct ClipPath {

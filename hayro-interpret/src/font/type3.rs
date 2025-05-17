@@ -3,6 +3,7 @@ use crate::context::Context;
 use crate::device::{ClipPath, Device, Mask, ReplayInstruction};
 use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
+use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps, interpret};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::dict::Dict;
@@ -13,7 +14,6 @@ use peniko::ImageQuality;
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use crate::pattern::ShadingPattern;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -34,9 +34,7 @@ impl Device for Type3GlyphDescription {
 
     fn set_paint(&mut self, _: Color) {}
 
-    fn set_shading_paint(&mut self, _: ShadingPattern) {
-        
-    }
+    fn set_shading_paint(&mut self, _: ShadingPattern) {}
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
         self.0.push(ReplayInstruction::StrokePath {

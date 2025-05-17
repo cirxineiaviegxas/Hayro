@@ -4,6 +4,7 @@ use crate::render::RenderContext;
 use hayro_interpret::color::Color;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::{ClipPath, Device, Mask};
+use hayro_interpret::pattern::ShadingPattern;
 use hayro_interpret::{FillProps, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
@@ -16,7 +17,6 @@ use peniko::{Fill, ImageQuality};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use hayro_interpret::pattern::ShadingPattern;
 
 mod coarse;
 mod encode;
@@ -184,6 +184,9 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     device
         .0
         .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
+
+    device.set_transform(initial_transform);
+    device.set_root_transform(initial_transform);
 
     device.push_layer(None, 1.0);
     interpret(

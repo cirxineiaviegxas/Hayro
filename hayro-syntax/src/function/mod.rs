@@ -2,7 +2,6 @@ mod type0;
 mod type2;
 mod type4;
 
-use std::sync::Arc;
 use crate::function::type0::Type0;
 use crate::function::type2::Type2;
 use crate::function::type4::Type4;
@@ -14,6 +13,7 @@ use crate::object::number::Number;
 use crate::object::stream::Stream;
 use log::{error, warn};
 use smallvec::{SmallVec, smallvec};
+use std::sync::Arc;
 
 type Values = SmallVec<[f32; 4]>;
 type DomainRange = SmallVec<[(f32, f32); 4]>;

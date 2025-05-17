@@ -11,6 +11,7 @@ mod shading;
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
+use crate::fine::shading::ShadingFiller;
 use crate::paint::{Paint, PremulColor};
 use crate::tile::Tile;
 use crate::util::scalar::div_255;
@@ -18,7 +19,6 @@ use core::fmt::Debug;
 use core::iter;
 use peniko::{BlendMode, Compose, Mix};
 use std::ops::{Add, Div, Mul, Sub};
-use crate::fine::shading::ShadingFiller;
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;

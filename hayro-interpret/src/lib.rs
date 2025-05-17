@@ -288,7 +288,6 @@ pub fn interpret<'a, 'b>(
                 if let Some(name) = n.1 {
                     let pattern =
                         ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
-                    println!("{:?}", pattern);
                     context.get_mut().fill_pattern = Some(pattern);
                 } else {
                     context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
@@ -603,7 +602,7 @@ fn fill_path_impl(
 
     if matches!(context.get().fill_cs, ColorSpace::Pattern) {
         device.set_shading_paint(context.get().fill_pattern.clone().unwrap());
-    }   else {
+    } else {
         let color = Color::from_pdf(
             context.get().fill_cs.clone(),
             context.get().fill_color.clone(),
