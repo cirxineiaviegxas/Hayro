@@ -55,16 +55,74 @@ impl EncodeExt for Image {
 impl EncodeExt for ShadingPattern {
     fn encode_into(&self, paints: &mut Vec<EncodedPaint>, transform: Affine) -> Paint {
         match self.shading.shading_type.as_ref() {
-            ShadingType::FunctionBased { domain, matrix, function } => encode_function_shading(self, paints, transform, domain, matrix, function),
+            ShadingType::FunctionBased {
+                domain,
+                matrix,
+                function,
+            } => encode_function_shading(self, paints, transform, domain, matrix, function),
+            ShadingType::Axial {
+                coords,
+                domain,
+                function,
+                extend,
+            } => encode_axial_shading(self, paints, transform, *coords, *domain, function, *extend),
             _ => unimplemented!(),
         }
     }
 }
 
-fn encode_function_shading(sp: &ShadingPattern, paints: &mut Vec<EncodedPaint>, transform: Affine,
-                           domain: &[f32; 4],
-                           matrix: &Affine,
-                           function: &Function,) -> Paint {
+fn encode_axial_shading(
+    sp: &ShadingPattern,
+    paints: &mut Vec<EncodedPaint>,
+    transform: Affine,
+    coords: [f32; 4],
+    domain: [f32; 2],
+    function: &Function,
+    extend: [bool; 2],
+) -> Paint {
+    let idx = paints.len();
+
+    let [x_0, y_0, x_1, y_1] = coords;
+    let denom = (x_1 - x_0) * (x_1 - x_0) + (y_1 - y_0) * (y_1 - y_0);
+
+    let full_transform = transform * sp.matrix;
+    let inverse_transform = full_transform.inverse();
+
+    let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+
+    let cs = sp.shading.color_space.clone();
+
+    let encoded = EncodedAxialShading {
+        inverse_transform,
+        x_advance,
+        y_advance,
+        function: function.clone(),
+        color_space: cs.clone(),
+        background: sp
+            .shading
+            .background
+            .as_ref()
+            .map(|b| cs.to_rgba(&b, 1.0))
+            .unwrap_or(TRANSPARENT),
+        denom,
+        coords,
+        domain,
+        extend,
+    };
+
+    paints.push(EncodedPaint::AxialShading(encoded));
+
+    Paint::Indexed(IndexedPaint::new(idx))
+}
+
+fn encode_function_shading(
+    sp: &ShadingPattern,
+    paints: &mut Vec<EncodedPaint>,
+    transform: Affine,
+    domain: &[f32; 4],
+    matrix: &Affine,
+    function: &Function,
+) -> Paint {
     let idx = paints.len();
 
     let shading_transform = *matrix;
@@ -102,8 +160,6 @@ fn encode_function_shading(sp: &ShadingPattern, paints: &mut Vec<EncodedPaint>, 
     Paint::Indexed(IndexedPaint::new(idx))
 }
 
-
-
 #[derive(Debug)]
 pub struct EncodedFunctionShading {
     pub domain: kurbo::Rect,
@@ -117,16 +173,16 @@ pub struct EncodedFunctionShading {
 
 #[derive(Debug)]
 pub struct EncodedAxialShading {
-    pub domain: kurbo::Rect,
     pub inverse_transform: Affine,
     pub function: Function,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
     pub color_space: ColorSpace,
     pub background: AlphaColor<Srgb>,
-    pub distance: f32,
-    pub y2_minus_y1: f32,
-    pub x2_minus_x1: f32,
+    pub denom: f32,
+    pub coords: [f32; 4],
+    pub domain: [f32; 2],
+    pub extend: [bool; 2],
 }
 
 /// An encoded paint.

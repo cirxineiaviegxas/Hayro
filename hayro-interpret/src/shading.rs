@@ -3,7 +3,9 @@ use hayro_syntax::function::Function;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BACKGROUND, BBOX, COLORSPACE, COORDS, DOMAIN, FUNCTION, MATRIX, SHADING_TYPE};
+use hayro_syntax::object::dict::keys::{
+    BACKGROUND, BBOX, COLORSPACE, COORDS, DOMAIN, FUNCTION, MATRIX, SHADING_TYPE,
+};
 use hayro_syntax::object::rect::Rect;
 use kurbo::Affine;
 use smallvec::SmallVec;
@@ -64,11 +66,14 @@ impl Shading {
                     .and_then(|f| Function::new(&f))?;
                 let extend = dict.get::<[bool; 2]>(DOMAIN).unwrap_or([false, false]);
                 let coords = dict.get::<[f32; 4]>(COORDS)?;
-                
+
                 ShadingType::Axial {
-                    domain, function, extend, coords
+                    domain,
+                    function,
+                    extend,
+                    coords,
                 }
-            },
+            }
             3 => ShadingType::Radial,
             4 => ShadingType::FreeFormGouraud,
             5 => ShadingType::LatticeFormGouraud,
