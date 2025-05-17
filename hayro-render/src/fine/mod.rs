@@ -11,7 +11,7 @@ mod shading;
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
-use crate::fine::shading::{AxialShadingFiller, FunctionShadingFiller};
+use crate::fine::shading::{RadialAxialShadingFiller, FunctionShadingFiller};
 use crate::paint::{Paint, PremulColor};
 use crate::tile::Tile;
 use crate::util::scalar::div_255;
@@ -241,7 +241,7 @@ impl<F: FineType> Fine<F> {
                         fill_complex_paint(color_buf, blend_buf, false, blend_mode, filler);
                     }
                     EncodedPaint::AxialShading(a) => {
-                        let filler = AxialShadingFiller::new(a, start_x, start_y);
+                        let filler = RadialAxialShadingFiller::new(a, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, !a.extend[0] || !a.extend[1], blend_mode, filler);
                     }
                     _ => unimplemented!(),
@@ -322,7 +322,7 @@ impl<F: FineType> Fine<F> {
                         );
                     }
                     EncodedPaint::AxialShading(s) => {
-                        let filler = AxialShadingFiller::new(s, start_x, start_y);
+                        let filler = RadialAxialShadingFiller::new(s, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(

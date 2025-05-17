@@ -60,12 +60,13 @@ impl EncodeExt for ShadingPattern {
                 matrix,
                 function,
             } => encode_function_shading(self, paints, transform, domain, matrix, function),
-            ShadingType::Axial {
+            ShadingType::RadialAxial {
                 coords,
                 domain,
                 function,
                 extend,
-            } => encode_axial_shading(self, paints, transform, *coords, *domain, function, *extend),
+                axial,
+            } => encode_axial_shading(self, paints, transform, *coords, *domain, function, *extend, *axial),
             _ => unimplemented!(),
         }
     }
@@ -75,16 +76,36 @@ fn encode_axial_shading(
     sp: &ShadingPattern,
     paints: &mut Vec<EncodedPaint>,
     transform: Affine,
-    coords: [f32; 4],
+    coords: [f32; 6],
     domain: [f32; 2],
     function: &Function,
     extend: [bool; 2],
+    is_axial: bool,
 ) -> Paint {
     let idx = paints.len();
+    
+    let mut p0;
+    let mut p1;
+    let mut r;
+    
+    let params = if is_axial {
+        let [x_0, y_0, x_1, y_1, _, _] = coords;
+        
+        p0 = Point::new(x_0 as f64, y_0 as f64);
+        p1 = Point::new(x_1 as f64, y_1 as f64);
+        r = Point::default();
+        
+        RadialAxialParams::Axial {denom: (x_1 - x_0) * (x_1 - x_0) + (y_1 - y_0) * (y_1 - y_0)}
+    }   else {
+        let [x_0, y_0, r0, x_1, y_1, r_1] = coords;
 
-    let [x_0, y_0, x_1, y_1] = coords;
-    let denom = (x_1 - x_0) * (x_1 - x_0) + (y_1 - y_0) * (y_1 - y_0);
-
+        p0 = Point::new(x_0 as f64, y_0 as f64);
+        p1 = Point::new(x_1 as f64, y_1 as f64);
+        r = Point::new(r0 as f64, r_1 as f64);
+        
+        RadialAxialParams::Radial
+    };
+    
     let full_transform = transform * sp.matrix;
     let inverse_transform = full_transform.inverse();
 
@@ -92,7 +113,7 @@ fn encode_axial_shading(
 
     let cs = sp.shading.color_space.clone();
 
-    let encoded = EncodedAxialShading {
+    let encoded = EncodedRadialAxialShading {
         inverse_transform,
         x_advance,
         y_advance,
@@ -104,8 +125,10 @@ fn encode_axial_shading(
             .as_ref()
             .map(|b| cs.to_rgba(&b, 1.0))
             .unwrap_or(TRANSPARENT),
-        denom,
-        coords,
+        params,
+        p0,
+        p1,
+        r,
         domain,
         extend,
     };
@@ -172,15 +195,25 @@ pub struct EncodedFunctionShading {
 }
 
 #[derive(Debug)]
-pub struct EncodedAxialShading {
+pub enum RadialAxialParams {
+    Axial {
+        denom: f32,
+    },
+    Radial
+}
+
+#[derive(Debug)]
+pub struct EncodedRadialAxialShading {
     pub inverse_transform: Affine,
     pub function: Function,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
     pub color_space: ColorSpace,
     pub background: AlphaColor<Srgb>,
-    pub denom: f32,
-    pub coords: [f32; 4],
+    pub params: RadialAxialParams,
+    pub p0: Point,
+    pub p1: Point,
+    pub r: Point,
     pub domain: [f32; 2],
     pub extend: [bool; 2],
 }
@@ -191,7 +224,7 @@ pub enum EncodedPaint {
     /// An encoded image.
     Image(EncodedImage),
     FunctionShading(EncodedFunctionShading),
-    AxialShading(EncodedAxialShading),
+    AxialShading(EncodedRadialAxialShading),
 }
 
 /// An encoded image.

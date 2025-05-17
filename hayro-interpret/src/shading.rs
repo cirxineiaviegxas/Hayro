@@ -18,13 +18,13 @@ pub enum ShadingType {
         matrix: Affine,
         function: Function,
     },
-    Axial {
-        coords: [f32; 4],
+    RadialAxial {
+        coords: [f32; 6],
         domain: [f32; 2],
         function: Function,
         extend: [bool; 2],
+        axial: bool
     },
-    Radial,
     FreeFormGouraud,
     LatticeFormGouraud,
     CoonsPatchMesh,
@@ -41,7 +41,8 @@ pub struct Shading {
 
 impl Shading {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let shading_type = match dict.get::<u8>(SHADING_TYPE)? {
+        let shading_num = dict.get::<u8>(SHADING_TYPE)?;
+        let shading_type = match shading_num {
             1 => {
                 let domain = dict.get::<[f32; 4]>(DOMAIN).unwrap_or([0.0, 1.0, 0.0, 1.0]);
                 let matrix = dict
@@ -58,23 +59,30 @@ impl Shading {
                     function,
                 }
             }
-            2 => {
+            2 | 3 => {
                 let domain = dict.get::<[f32; 2]>(DOMAIN).unwrap_or([0.0, 1.0]);
                 // TODO: Array of functions is permissible as well.
                 let function = dict
                     .get::<Object>(FUNCTION)
                     .and_then(|f| Function::new(&f))?;
                 let extend = dict.get::<[bool; 2]>(EXTEND).unwrap_or([false, false]);
-                let coords = dict.get::<[f32; 4]>(COORDS)?;
+                let coords = if shading_num == 2 {
+                    let read = dict.get::<[f32; 4]>(COORDS)?;
+                    [read[0], read[1], read[2], read[3], 0.0, 0.0]
+                }   else {
+                    dict.get::<[f32; 6]>(COORDS)?
+                };
+                
+                let axial = shading_num == 2;
 
-                ShadingType::Axial {
+                ShadingType::RadialAxial {
                     domain,
                     function,
                     extend,
                     coords,
+                    axial,
                 }
             }
-            3 => ShadingType::Radial,
             4 => ShadingType::FreeFormGouraud,
             5 => ShadingType::LatticeFormGouraud,
             6 => ShadingType::CoonsPatchMesh,
