@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct ShadingPattern {
-    shading: Arc<Shading>,
-    matrix: Affine,
+    pub shading: Arc<Shading>,
+    pub matrix: Affine,
 }
 
 impl ShadingPattern {

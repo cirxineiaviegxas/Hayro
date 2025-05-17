@@ -2,6 +2,7 @@ mod type0;
 mod type2;
 mod type4;
 
+use std::sync::Arc;
 use crate::function::type0::Type0;
 use crate::function::type2::Type2;
 use crate::function::type4::Type4;
@@ -24,9 +25,9 @@ enum FunctionType {
     Type4(Type4),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Function {
-    function_type: FunctionType,
+    function_type: Arc<FunctionType>,
     domain: Clamper,
     range: Option<Clamper>,
 }
@@ -56,14 +57,14 @@ impl Function {
         Some(Self {
             domain: Clamper(domain),
             range: range.map(|a| Clamper(a)),
-            function_type,
+            function_type: Arc::new(function_type),
         })
     }
 
     pub fn eval(&self, mut input: Values) -> Option<Values> {
         self.clamp_domain(&mut input)?;
 
-        match &self.function_type {
+        match self.function_type.as_ref() {
             FunctionType::Type0(t0) => t0.eval(input),
             FunctionType::Type2(t2) => Some(t2.eval(*input.get(0)?)),
             FunctionType::Type4(t4) => Some(t4.eval(input)?),
@@ -133,7 +134,7 @@ impl From<Array<'_>> for Values {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Clamper(DomainRange);
 
 impl Clamper {

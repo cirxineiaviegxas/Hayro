@@ -8,6 +8,13 @@ use crate::pixmap::Pixmap;
 use kurbo::{Affine, Point, Vec2};
 use peniko::ImageQuality;
 use std::sync::Arc;
+use peniko::color::{AlphaColor, Srgb};
+use peniko::color::palette::css::TRANSPARENT;
+use hayro_interpret::color::ColorSpace;
+use hayro_interpret::pattern::ShadingPattern;
+use hayro_interpret::shading::ShadingType;
+use hayro_syntax::function::Function;
+use hayro_syntax::object::rect::Rect;
 
 const DEGENERATE_THRESHOLD: f32 = 1.0e-6;
 const NUDGE_VAL: f32 = 1.0e-7;
@@ -45,11 +52,63 @@ impl EncodeExt for Image {
     }
 }
 
+impl EncodeExt for ShadingPattern {
+    fn encode_into(&self, paints: &mut Vec<EncodedPaint>, transform: Affine) -> Paint {
+        let idx = paints.len();
+        
+        let shading_transform = match self.shading.shading_type.as_ref() {
+            ShadingType::FunctionBased { matrix, ..} => {
+                *matrix
+            },
+            _ => unimplemented!()
+        };
+        
+        let full_transform = transform * self.matrix * shading_transform;
+        let inverse_transform = full_transform.inverse();
+
+        let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+        
+        let cs = self.shading.color_space.clone();
+        
+        let encoded = match self.shading.shading_type.as_ref() {
+            ShadingType::FunctionBased {domain, function, ..} => {
+                let d = kurbo::Rect::new(domain[0] as f64, domain[2] as f64, domain[1] as f64, domain[3] as f64);
+                EncodedFunctionShading {
+                    domain: d,
+                    inverse_transform,
+                    x_advance,
+                    y_advance,
+                    function: function.clone(),
+                    color_space: cs.clone(),
+                    background: self.shading.background.as_ref().map(|b| cs.to_rgba(&b, 1.0)).unwrap_or(TRANSPARENT),
+                }
+            }
+            _ => unimplemented!()
+        };
+
+        paints.push(EncodedPaint::FunctionShading(encoded));
+
+        Paint::Indexed(IndexedPaint::new(idx))
+    }
+}
+
+#[derive(Debug)]
+pub struct EncodedFunctionShading {
+    pub domain: kurbo::Rect,
+    pub inverse_transform: Affine,
+    pub function: Function,
+    pub x_advance: Vec2,
+    pub y_advance: Vec2,
+    pub color_space: ColorSpace,
+    pub background: AlphaColor<Srgb>,
+}
+
 /// An encoded paint.
 #[derive(Debug)]
 pub enum EncodedPaint {
     /// An encoded image.
     Image(EncodedImage),
+    FunctionShading(EncodedFunctionShading)
 }
 
 /// An encoded image.

@@ -12,7 +12,7 @@ use smallvec::SmallVec;
 use std::sync::Arc;
 
 #[derive(Debug)]
-enum ShadingType {
+pub enum ShadingType {
     FunctionBased {
         domain: [f32; 4],
         matrix: Affine,
@@ -28,10 +28,10 @@ enum ShadingType {
 
 #[derive(Clone, Debug)]
 pub struct Shading {
-    shading_type: Arc<ShadingType>,
-    color_space: ColorSpace,
-    bbox: Option<Rect>,
-    background: Option<SmallVec<[f32; 4]>>,
+    pub shading_type: Arc<ShadingType>,
+    pub color_space: ColorSpace,
+    pub bbox: Option<Rect>,
+    pub background: Option<SmallVec<[f32; 4]>>,
 }
 
 impl Shading {

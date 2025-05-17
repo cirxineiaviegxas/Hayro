@@ -16,6 +16,7 @@ use peniko::{Fill, ImageQuality};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
+use hayro_interpret::pattern::ShadingPattern;
 
 mod coarse;
 mod encode;
@@ -86,6 +87,10 @@ impl Device for Renderer {
     fn set_paint(&mut self, color: Color) {
         let res = color.to_rgba();
         self.0.set_paint(res);
+    }
+
+    fn set_shading_paint(&mut self, color: ShadingPattern) {
+        self.0.set_paint(color);
     }
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {

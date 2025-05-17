@@ -6,6 +6,7 @@
 
 mod blend;
 mod image;
+mod shading;
 
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
@@ -17,6 +18,7 @@ use core::fmt::Debug;
 use core::iter;
 use peniko::{BlendMode, Compose, Mix};
 use std::ops::{Add, Div, Mul, Sub};
+use crate::fine::shading::ShadingFiller;
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;
@@ -234,6 +236,10 @@ impl<F: FineType> Fine<F> {
                         let filler = ImageFiller::new(i, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
+                    EncodedPaint::FunctionShading(s) => {
+                        let filler = ShadingFiller::new(s, start_x, start_y);
+                        fill_complex_paint(color_buf, blend_buf, false, blend_mode, filler);
+                    }
                 }
             }
         }
@@ -298,6 +304,10 @@ impl<F: FineType> Fine<F> {
                                 alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                             );
                         }
+                    }
+                    EncodedPaint::FunctionShading(s) => {
+                        let filler = ShadingFiller::new(s, start_x, start_y);
+                        filler.paint(color_buf);
                     }
                 }
             }

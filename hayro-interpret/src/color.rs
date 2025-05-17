@@ -21,7 +21,7 @@ use std::sync::Arc;
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
 #[derive(Debug, Clone)]
-pub(crate) enum ColorSpace {
+pub enum ColorSpace {
     DeviceCmyk,
     DeviceGray,
     DeviceRgb,

@@ -85,6 +85,9 @@ impl RenderContext {
                 &mut self.encoded_paints,
                 self.transform * self.paint_transform,
             ),
+            PaintType::ShadingPattern(s) => {
+                s.encode_into(&mut self.encoded_paints, self.paint_transform)
+            }
         }
     }
 

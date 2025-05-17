@@ -9,6 +9,7 @@ use peniko::{
     color::{AlphaColor, PremulRgba8, Srgb},
 };
 use std::sync::Arc;
+use hayro_interpret::pattern::ShadingPattern;
 
 /// A paint that needs to be resolved via its index.
 // In the future, we might add additional flags, that's why we have
@@ -115,11 +116,18 @@ pub enum PaintType {
     Solid(AlphaColor<Srgb>),
     /// An image.
     Image(Image),
+    ShadingPattern(ShadingPattern),
 }
 
 impl From<AlphaColor<Srgb>> for PaintType {
     fn from(value: AlphaColor<Srgb>) -> Self {
         Self::Solid(value)
+    }
+}
+
+impl From<ShadingPattern> for PaintType {
+    fn from(value: ShadingPattern) -> Self {
+        Self::ShadingPattern(value)
     }
 }
 

@@ -19,8 +19,8 @@ pub mod context;
 mod convert;
 pub mod device;
 mod font;
-mod pattern;
-mod shading;
+pub mod pattern;
+pub mod shading;
 mod state;
 mod util;
 pub mod x_object;
@@ -559,9 +559,10 @@ fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()
     Some(())
 }
 
+// TODO: Apply bbox if shading has one!
+
 fn fill_path(context: &mut Context, device: &mut impl Device) {
     fill_path_impl(context, device, None, None);
-    // TODO: Where in spec?
     context.path_mut().truncate(0);
 }
 
@@ -597,16 +598,20 @@ fn fill_path_impl(
     path: Option<&GlyphDescription>,
     transform: Option<Affine>,
 ) {
-    let color = Color::from_pdf(
-        context.get().fill_cs.clone(),
-        context.get().fill_color.clone(),
-        context.get().fill_alpha,
-    );
-
     let base_transform = transform.unwrap_or(context.get().affine);
-
-    device.set_paint(color);
     device.set_transform(base_transform);
+
+    if matches!(context.get().fill_cs, ColorSpace::Pattern) {
+        device.set_shading_paint(context.get().fill_pattern.clone().unwrap());
+    }   else {
+        let color = Color::from_pdf(
+            context.get().fill_cs.clone(),
+            context.get().fill_color.clone(),
+            context.get().fill_alpha,
+        );
+
+        device.set_paint(color);
+    }
 
     match path {
         None => device.fill_path(context.path(), &context.fill_props()),

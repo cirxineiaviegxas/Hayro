@@ -13,6 +13,7 @@ use peniko::ImageQuality;
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use crate::pattern::ShadingPattern;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -32,6 +33,10 @@ impl Device for Type3GlyphDescription {
     }
 
     fn set_paint(&mut self, _: Color) {}
+
+    fn set_shading_paint(&mut self, _: ShadingPattern) {
+        
+    }
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
         self.0.push(ReplayInstruction::StrokePath {
