@@ -184,6 +184,25 @@ fn radial_pos(pos: &Point, p1: &Point, r: Point, min_extend: bool, max_extend: b
         return None;
     }
 
+    if a.abs() < 1e-6 {
+        if b.abs() < 1e-6 {
+            return None;
+        }
+
+        let t = -c / b;
+
+        if (!min_extend && t < 0.0) || (!max_extend && t > 1.0) {
+            return None;
+        }
+
+        let r_t = r0 + dr * t;
+        if r_t < 0.0 {
+            return None;
+        }
+
+        return Some(t);
+    }
+
     let sqrt_d = discriminant.sqrt();
     let t1 = (-b - sqrt_d) / (2.0 * a);
     let t2 = (-b + sqrt_d) / (2.0 * a);

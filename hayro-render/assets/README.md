@@ -1,0 +1,1 @@
+Test case `pattern_shading_type3_collection` is from: https://github.com/SerenityOS/serenity/blob/master/Tests/LibPDF/shade-radial.pdf
