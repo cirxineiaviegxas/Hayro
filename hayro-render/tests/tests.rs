@@ -140,6 +140,7 @@ use crate::run_test;
 #[test] fn pattern_shading_type2_many() { run_test("pattern_shading_type2_many", None); }
 #[test] fn pattern_shading_type2_no_extend() { run_test("pattern_shading_type2_no_extend", None); }
 #[test] fn pattern_shading_type2_no_extend_with_background() { run_test("pattern_shading_type2_no_extend_with_background", None); }
+#[test] fn pattern_shading_type2_out_of_viewport() { run_test("pattern_shading_type2_out_of_viewport", None); }
 #[test] fn pattern_shading_type2_slanted() { run_test("pattern_shading_type2_slanted", None); }
 #[test] fn rendering_conflation_artifacts() { run_test("rendering_conflation_artifacts", Some(2..=2)); }
 #[test] fn shading_operator_1() { run_test("shading_operator_1", None); }
