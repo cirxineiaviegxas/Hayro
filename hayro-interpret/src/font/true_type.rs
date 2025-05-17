@@ -1,5 +1,5 @@
 use crate::font::Encoding;
-use crate::font::blob::{OpenTypeFontBlob};
+use crate::font::blob::OpenTypeFontBlob;
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN_INVERSE};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::util::{CodeMapExt, OptionLog};
@@ -44,10 +44,8 @@ impl TrueTypeFont {
         let base_font = descriptor
             .get::<Stream>(FONT_FILE2)
             .and_then(|s| s.decoded().ok())
-            .and_then(|d| {
-                OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0)
-            })?;
-        
+            .and_then(|d| OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0))?;
+
         let mut glyph_names = HashMap::new();
 
         // TODO: This is still pretty slow, see test file `font_truetype_slow_post_lookup`.

@@ -104,7 +104,13 @@ impl Standard {
 
     pub fn map_code(&self, code: u8) -> GlyphId {
         self.code_to_ps_name(code)
-            .and_then(|c| self.base_font.get_blob().table().glyph_index_by_name(c).map(|g| GlyphId::new(g.0 as u32)))
+            .and_then(|c| {
+                self.base_font
+                    .get_blob()
+                    .table()
+                    .glyph_index_by_name(c)
+                    .map(|g| GlyphId::new(g.0 as u32))
+            })
             .unwrap_or(GlyphId::NOTDEF)
     }
 
@@ -153,7 +159,7 @@ impl Type1 {
 
         let (encoding, encodings) = read_encoding(dict);
         let widths = read_widths(dict, &descriptor);
-        
+
         let glyph_simulator = GlyphSimulator::new();
 
         Self {
@@ -189,8 +195,12 @@ impl Type1 {
     }
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
-        self.font
-            .outline_glyph(self.glyph_simulator.glyph_to_string(glyph).unwrap().as_str())
+        self.font.outline_glyph(
+            self.glyph_simulator
+                .glyph_to_string(glyph)
+                .unwrap()
+                .as_str(),
+        )
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
@@ -271,7 +281,7 @@ impl GlyphSimulator {
 
         let mut string_to_glyph = HashMap::new();
         string_to_glyph.insert("notdef".to_string(), GlyphId::NOTDEF);
-        
+
         Self {
             glyph_to_string: RefCell::new(glyph_to_string),
             string_to_glyph: RefCell::new(string_to_glyph),
@@ -296,8 +306,11 @@ impl GlyphSimulator {
             gid
         }
     }
-    
+
     fn glyph_to_string(&self, glyph: GlyphId) -> Option<String> {
-        self.glyph_to_string.borrow().get(&glyph).map(|s| s.to_string())
+        self.glyph_to_string
+            .borrow()
+            .get(&glyph)
+            .map(|s| s.to_string())
     }
 }

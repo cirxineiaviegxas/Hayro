@@ -1,7 +1,7 @@
-use std::fmt::Debug;
-use std::ops::Shr;
 use log::warn;
 use smallvec::{SmallVec, smallvec};
+use std::fmt::Debug;
+use std::ops::Shr;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct BitSize(u8);
@@ -211,10 +211,10 @@ impl<'a> BitChunks<'a> {
     pub fn new(data: &'a [u8], bit_size: BitSize, chunk_len: usize) -> Option<Self> {
         if bit_size.0 > 16 {
             warn!("BitChunks doesn't support working with bit sizes > 16.");
-            
+
             return None;
         }
-        
+
         let reader = BitReader::new(data, bit_size)?;
 
         Some(Self { reader, chunk_len })
@@ -261,7 +261,7 @@ impl BitChunk {
 
             return None;
         }
-        
+
         let mut bits = SmallVec::new();
 
         for _ in 0..chunk_len {
@@ -280,9 +280,18 @@ mod tests {
     fn bit_reader_16() {
         let data = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
         let mut reader = BitReader::new(&data, BitSize::from_u8(16).unwrap()).unwrap();
-        assert_eq!(reader.next().unwrap() as u16, u16::from_be_bytes([0x01, 0x02]));
-        assert_eq!(reader.next().unwrap() as u16, u16::from_be_bytes([0x03, 0x04]));
-        assert_eq!(reader.next().unwrap() as u16, u16::from_be_bytes([0x05, 0x06]));
+        assert_eq!(
+            reader.next().unwrap() as u16,
+            u16::from_be_bytes([0x01, 0x02])
+        );
+        assert_eq!(
+            reader.next().unwrap() as u16,
+            u16::from_be_bytes([0x03, 0x04])
+        );
+        assert_eq!(
+            reader.next().unwrap() as u16,
+            u16::from_be_bytes([0x05, 0x06])
+        );
     }
 
     #[test]

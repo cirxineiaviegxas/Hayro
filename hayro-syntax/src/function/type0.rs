@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-use itertools::izip;
-use log::warn;
-use smallvec::{smallvec, SmallVec, ToSmallVec};
+use crate::OptionLog;
 use crate::bit::{BitReader, BitSize};
-use crate::function::{interpolate, read_domain_range, DomainRange, Values};
+use crate::function::{DomainRange, Values, interpolate, read_domain_range};
 use crate::object::array::Array;
 use crate::object::dict::keys::{BITS_PER_SAMPLE, DECODE, ENCODE, SIZE};
 use crate::object::stream::Stream;
-use crate::OptionLog;
+use itertools::izip;
+use log::warn;
+use smallvec::{SmallVec, ToSmallVec, smallvec};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub(crate) struct Type0 {
@@ -30,18 +30,22 @@ impl Type0 {
             return None;
         }
         let sizes = dict.get::<Array>(SIZE)?.iter::<u32>().collect::<Vec<_>>();
-        
-        let encode = dict.get::<Array>(ENCODE).and_then(|a| {
-           read_domain_range(&a)
-        }).unwrap_or(sizes.iter().map(|s| (0.0, (*s - 1) as f32)).collect());
 
-        let decode = dict.get::<Array>(DECODE).and_then(|a| {
-            read_domain_range(&a)
-        }).unwrap_or(range.clone());
-        
-        let data = BitReader::new(&stream.decoded().ok()?, BitSize::from_u8(bits_per_sample)?)?.into_iter().collect::<Vec<_>>();
+        let encode = dict
+            .get::<Array>(ENCODE)
+            .and_then(|a| read_domain_range(&a))
+            .unwrap_or(sizes.iter().map(|s| (0.0, (*s - 1) as f32)).collect());
+
+        let decode = dict
+            .get::<Array>(DECODE)
+            .and_then(|a| read_domain_range(&a))
+            .unwrap_or(range.clone());
+
+        let data = BitReader::new(&stream.decoded().ok()?, BitSize::from_u8(bits_per_sample)?)?
+            .into_iter()
+            .collect::<Vec<_>>();
         let table = build_table(&data, &sizes, range.len())?;
-        
+
         Some(Self {
             sizes,
             domain: domain.clone(),
@@ -52,11 +56,11 @@ impl Type0 {
             decode,
         })
     }
-    
+
     fn input_dimension(&self) -> usize {
         self.domain.len()
     }
-    
+
     fn output_dimension(&self) -> usize {
         self.range.len()
     }
@@ -64,16 +68,16 @@ impl Type0 {
     pub(crate) fn eval(&self, input: Values) -> Option<Values> {
         if input.len() != self.sizes.len() {
             warn!("wrong number of arguments for sampled function");
-            
+
             return None;
         }
-        
+
         let mut key = input;
         for (x, domain, encode, size) in izip!(&mut key, &self.domain, &self.encode, &self.sizes) {
             *x = interpolate(*x, domain.0, domain.1, encode.0, encode.1);
             *x = x.max(0.0).min(*size as f32 - 1.0);
         }
-        
+
         let in_prev = key.iter().map(|v| v.floor() as u32).collect::<IntVec>();
         let in_next = key.iter().map(|v| v.floor() as u32).collect::<IntVec>();
 
@@ -89,9 +93,15 @@ impl Type0 {
         let mut out = smallvec![0.0; self.output_dimension()];
 
         for (x, decode, out) in izip!(&interpolated, &self.decode, &mut out) {
-            *out = interpolate(*x as f32, 0.0, (2u32.pow(self.bits_per_sample as u32) - 1) as f32, decode.0, decode.1);
+            *out = interpolate(
+                *x as f32,
+                0.0,
+                (2u32.pow(self.bits_per_sample as u32) - 1) as f32,
+                decode.0,
+                decode.1,
+            );
         }
-        
+
         Some(out)
     }
 }
@@ -99,8 +109,7 @@ impl Type0 {
 type FloatVec = SmallVec<[f32; 4]>;
 type IntVec = SmallVec<[u32; 4]>;
 
-
-// Taken from PDFBox 
+// Taken from PDFBox
 struct Interpolator {
     input: FloatVec,
     sizes: IntVec,
@@ -110,7 +119,13 @@ struct Interpolator {
 }
 
 impl Interpolator {
-    pub fn new(input: FloatVec, in_prev: IntVec, in_next: IntVec, sizes: IntVec, out_len: usize) -> Self {
+    pub fn new(
+        input: FloatVec,
+        in_prev: IntVec,
+        in_next: IntVec,
+        sizes: IntVec,
+        out_len: usize,
+    ) -> Self {
         Self {
             input,
             in_prev,
@@ -133,7 +148,13 @@ impl Interpolator {
         if step == self.input.len() - 1 {
             if self.in_prev[step] == self.in_next[step] {
                 coord[step] = self.in_prev[step];
-                table.get(&Key::from_raw(&self.sizes, &coord)).unwrap().clone().iter().map(|n| *n as f32).collect()
+                table
+                    .get(&Key::from_raw(&self.sizes, &coord))
+                    .unwrap()
+                    .clone()
+                    .iter()
+                    .map(|n| *n as f32)
+                    .collect()
             } else {
                 coord[step] = self.in_prev[step];
                 let val1 = table.get(&Key::from_raw(&self.sizes, &coord)).unwrap();
@@ -141,7 +162,7 @@ impl Interpolator {
                 let val2 = table.get(&Key::from_raw(&self.sizes, &coord)).unwrap();
 
                 let mut out = smallvec![0.0; self.out_len];
-                
+
                 for i in 0..self.out_len {
                     out[i] = interpolate(
                         self.input[step],
@@ -151,7 +172,7 @@ impl Interpolator {
                         val2[i] as f32,
                     )
                 }
-                
+
                 out
             }
         } else {
@@ -185,18 +206,18 @@ impl Interpolator {
 fn build_table(data: &[u32], sizes: &[u32], n: usize) -> Option<HashMap<Key, IntVec>> {
     let mut key = Key::new(sizes);
     let mut table = HashMap::new();
-    
+
     let mut first = true;
     for b in data.chunks(n) {
         if !first {
             key.increment();
         }
-        
+
         table.insert(key.clone(), b.to_smallvec());
-       
+
         first = false;
     }
-    
+
     Some(table)
 }
 
@@ -209,39 +230,42 @@ struct Key {
 impl Key {
     fn new(sizes: &[u32]) -> Self {
         let parts = smallvec![0; sizes.len()];
-        
+
         Self {
             sizes: sizes.to_smallvec(),
-            parts
+            parts,
         }
     }
-    
+
     fn from_raw(sizes: &[u32], parts: &[u32]) -> Self {
         Self {
             sizes: sizes.to_smallvec(),
-            parts: parts.to_smallvec()
+            parts: parts.to_smallvec(),
         }
     }
-    
+
     fn increment(&mut self) -> Option<()> {
         self.increment_index(0)
     }
-    
+
     fn components(&self) -> &[u32] {
         &self.parts
     }
-    
+
     fn increment_index(&mut self, index: usize) -> Option<()> {
-        let size = self.sizes.get(index).warn_none("overflowed key in sampled function")?;
+        let size = self
+            .sizes
+            .get(index)
+            .warn_none("overflowed key in sampled function")?;
         let val = self.parts.get_mut(index)?;
-        
+
         if *val >= (*size - 1) {
             *val = 0;
             self.increment_index(index + 1)?;
-        }   else {
+        } else {
             *val += 1;
         }
-        
+
         Some(())
     }
 
@@ -256,10 +280,10 @@ impl Key {
         if *val == 0 {
             *val = *size - 1;
             self.increment_index(index + 1)?;
-        }   else {
+        } else {
             *val -= 1;
         }
-        
+
         Some(())
     }
 }
@@ -267,11 +291,11 @@ impl Key {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn key_increment() {
         let mut key = Key::new(&[3, 3, 2]);
-    
+
         assert_eq!(key.components(), &[0, 0, 0]);
         key.increment();
         assert_eq!(key.components(), &[1, 0, 0]);
@@ -292,5 +316,4 @@ mod tests {
         key.increment();
         assert_eq!(key.components(), &[1, 0, 1]);
     }
-
 }

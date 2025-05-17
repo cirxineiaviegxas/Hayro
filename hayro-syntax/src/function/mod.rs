@@ -1,7 +1,8 @@
+mod type0;
 mod type2;
 mod type4;
-mod type0;
 
+use crate::function::type0::Type0;
 use crate::function::type2::Type2;
 use crate::function::type4::Type4;
 use crate::object::Object;
@@ -11,8 +12,7 @@ use crate::object::dict::keys::{DOMAIN, FUNCTION_TYPE, RANGE};
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use log::{error, warn};
-use smallvec::{smallvec, SmallVec};
-use crate::function::type0::Type0;
+use smallvec::{SmallVec, smallvec};
 
 type Values = SmallVec<[f32; 4]>;
 type DomainRange = SmallVec<[(f32, f32); 4]>;
@@ -41,7 +41,9 @@ impl Function {
             return None;
         };
 
-        let domain = dict.get::<Array>(DOMAIN).and_then(|a| read_domain_range(&a))?;
+        let domain = dict
+            .get::<Array>(DOMAIN)
+            .and_then(|a| read_domain_range(&a))?;
         let range = dict.get::<Array>(RANGE).and_then(|a| read_domain_range(&a));
 
         let function_type = match dict.get::<u8>(FUNCTION_TYPE)? {
@@ -112,13 +114,13 @@ impl Function {
 fn read_domain_range(array: &Array) -> Option<DomainRange> {
     let mut iter = array.iter::<f32>();
     let mut vals = smallvec![];
-    
+
     while let Some(first) = iter.next() {
         let second = iter.next()?;
-        
+
         vals.push((first, second));
     }
-    
+
     Some(vals)
 }
 
@@ -139,7 +141,7 @@ impl Clamper {
         if idx >= self.0.len() {
             warn!("the domain/range of the function was exceeded");
         }
-        
+
         let (min, max) = self.0.get(idx).copied().unwrap_or((0.0, 0.0));
 
         val.clamp(min, max)

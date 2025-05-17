@@ -249,7 +249,8 @@ pub trait Skippable {
     fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()>;
 }
 
-impl<'a, T, U> Readable<'a> for (T, U) where 
+impl<'a, T, U> Readable<'a> for (T, U)
+where
     T: Readable<'a>,
     U: Readable<'a>,
 {
@@ -260,7 +261,8 @@ impl<'a, T, U> Readable<'a> for (T, U) where
     }
 }
 
-impl<'a, T, U, V> Readable<'a> for (T, U, V) where 
+impl<'a, T, U, V> Readable<'a> for (T, U, V)
+where
     T: Readable<'a>,
     U: Readable<'a>,
     V: Readable<'a>,
@@ -273,14 +275,17 @@ impl<'a, T, U, V> Readable<'a> for (T, U, V) where
     }
 }
 
-impl<'a, T> Readable<'a> for Vec<T> where T: Readable<'a> {
+impl<'a, T> Readable<'a> for Vec<T>
+where
+    T: Readable<'a>,
+{
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
         let mut v = vec![];
-        
+
         while let Some(t) = T::read::<PLAIN>(r, xref) {
             v.push(t);
         }
-        
+
         Some(v)
     }
 }

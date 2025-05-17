@@ -2,19 +2,21 @@ use crate::util::OptionLog;
 use hayro_syntax::function::Function;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{ALTERNATE, BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT};
+use hayro_syntax::object::dict::keys::{
+    ALTERNATE, BLACK_POINT, GAMMA, MATRIX, N, RANGE, WHITE_POINT,
+};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
 use hayro_syntax::object::{Object, string};
 use log::warn;
 use once_cell::sync::Lazy;
+use peniko::color::palette::css::BLACK;
 use peniko::color::{AlphaColor, Srgb};
 use qcms::Transform;
 use smallvec::{SmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use peniko::color::palette::css::BLACK;
 
 pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
 
@@ -51,15 +53,15 @@ impl ColorSpace {
                     let icc_stream = iter.next()?.cast::<Stream>()?;
                     let dict = icc_stream.dict();
                     let num_components = dict.get::<usize>(N)?;
-                    
+
                     return ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)
-                            .map(|p| ColorSpace::ICCColor(p))
-                            .or_else(|| dict.get::<Object>(ALTERNATE).map(|o| ColorSpace::new(o)))
+                        .map(|p| ColorSpace::ICCColor(p))
+                        .or_else(|| dict.get::<Object>(ALTERNATE).map(|o| ColorSpace::new(o)))
                         .or_else(|| match dict.get::<u8>(N) {
                             Some(1) => Some(ColorSpace::DeviceGray),
                             Some(3) => Some(ColorSpace::DeviceRgb),
                             Some(4) => Some(ColorSpace::DeviceCmyk),
-                            _ => None
+                            _ => None,
                         });
                 }
                 CAL_CMYK => return Some(ColorSpace::DeviceCmyk),
@@ -93,12 +95,12 @@ impl ColorSpace {
             DEVICE_GRAY | G => Some(ColorSpace::DeviceGray),
             DEVICE_CMYK | CMYK => Some(ColorSpace::DeviceCmyk),
             CAL_CMYK => Some(ColorSpace::DeviceCmyk),
-            PATTERN =>  Some(ColorSpace::Pattern),
+            PATTERN => Some(ColorSpace::Pattern),
             _ => {
                 warn!("unsupported color space: {}", name.as_str());
-                
+
                 None
-            },
+            }
         }
     }
 
@@ -155,7 +157,7 @@ impl ColorSpace {
             ColorSpace::Lab(_) => 3,
             ColorSpace::Indexed(_) => 1,
             ColorSpace::Separation(_) => 1,
-            ColorSpace::Pattern => 1
+            ColorSpace::Pattern => 1,
         }
     }
 
@@ -195,7 +197,7 @@ impl ColorSpace {
             }
             ColorSpace::Indexed(i) => i.to_rgb(c[0], opacity),
             ColorSpace::Separation(s) => s.to_rgba(c[0], opacity),
-            ColorSpace::Pattern => BLACK
+            ColorSpace::Pattern => BLACK,
         }
     }
 }

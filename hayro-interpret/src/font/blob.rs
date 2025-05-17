@@ -12,107 +12,98 @@ use std::sync::Arc;
 use yoke::{Yoke, Yokeable};
 
 pub(crate) static HELVETICA_REGULAR: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!("../../../assets/standard_fonts/FoxitSans.pfb")),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSans.pfb"
+    )))
+    .unwrap()
 });
 
-pub(crate) static HELVETICA_BOLD:  Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!("../../../assets/standard_fonts/FoxitSansBold.pfb")),
-    )
-        .unwrap()
+pub(crate) static HELVETICA_BOLD: Lazy<CffFontBlob> = Lazy::new(|| {
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSansBold.pfb"
+    )))
+    .unwrap()
 });
-pub(crate) static HELVETICA_ITALIC:  Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!("../../../assets/standard_fonts/FoxitSansItalic.pfb")),
-    )
-        .unwrap()
+pub(crate) static HELVETICA_ITALIC: Lazy<CffFontBlob> = Lazy::new(|| {
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSansItalic.pfb"
+    )))
+    .unwrap()
 });
-pub(crate) static HELVETICA_BOLD_ITALIC:  Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!("../../../assets/standard_fonts/FoxitSansBoldItalic.pfb")),
-    )
-        .unwrap()
+pub(crate) static HELVETICA_BOLD_ITALIC: Lazy<CffFontBlob> = Lazy::new(|| {
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSansBoldItalic.pfb"
+    )))
+    .unwrap()
 });
 pub(crate) static COURIER_REGULAR: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitFixed.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitFixed.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static COURIER_BOLD: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitFixedBold.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitFixedBold.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static COURIER_ITALIC: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitFixedItalic.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitFixedItalic.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static COURIER_BOLD_ITALIC: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitFixedBoldItalic.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitFixedBoldItalic.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static TIMES_REGULAR: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitSerif.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSerif.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static TIMES_BOLD: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitSerifBold.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSerifBold.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static TIMES_ITALIC: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitSerifItalic.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSerifItalic.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static TIMES_ROMAN_BOLD_ITALIC: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitSerifBoldItalic.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSerifBoldItalic.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static ZAPF_DINGS_BAT: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitDingbats.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitDingbats.pfb"
+    )))
+    .unwrap()
 });
 
 pub(crate) static SYMBOL: Lazy<CffFontBlob> = Lazy::new(|| {
-    CffFontBlob::new(
-        Arc::new(include_bytes!(
-            "../../../assets/standard_fonts/FoxitSymbol.pfb"
-        )),
-    ).unwrap()
+    CffFontBlob::new(Arc::new(include_bytes!(
+        "../../../assets/standard_fonts/FoxitSymbol.pfb"
+    )))
+    .unwrap()
 });
 
 type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;

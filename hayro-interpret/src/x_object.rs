@@ -4,6 +4,7 @@ use crate::device::{ClipPath, Device};
 use crate::interpret;
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
+use hayro_syntax::function::interpolate;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
@@ -16,7 +17,6 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::{Fill, ImageQuality};
 use std::borrow::Cow;
-use hayro_syntax::function::interpolate;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -259,7 +259,13 @@ impl<'a> ImageXObject<'a> {
 
     pub fn decode_raw(&self) -> Vec<f32> {
         let interpolate = |n: f32, d_min: f32, d_max: f32| {
-            interpolate(n, 0.0, 2.0f32.powi(self.bits_per_component as i32) - 1.0, d_min, d_max)
+            interpolate(
+                n,
+                0.0,
+                2.0f32.powi(self.bits_per_component as i32) - 1.0,
+                d_min,
+                d_max,
+            )
         };
 
         let adjusted_components = match self.bits_per_component {

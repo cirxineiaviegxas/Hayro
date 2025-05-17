@@ -19,11 +19,11 @@ pub mod context;
 mod convert;
 pub mod device;
 mod font;
+mod pattern;
 mod shading;
 mod state;
 mod util;
 pub mod x_object;
-mod pattern;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
@@ -286,21 +286,21 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::NonStrokeColorNamed(n) => {
                 if let Some(name) = n.1 {
-                    let pattern = ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
+                    let pattern =
+                        ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
                     println!("{:?}", pattern);
                     context.get_mut().fill_pattern = Some(pattern);
-
-                }   else {
+                } else {
                     context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 }
-                
             }
             TypedOperation::StrokeColorNamed(n) => {
                 if let Some(name) = n.1 {
-                    let pattern = ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
+                    let pattern =
+                        ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
                     println!("{:?}", pattern);
                     context.get_mut().stroke_pattern = Some(pattern);
-                }   else {
+                } else {
                     context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 }
             }
