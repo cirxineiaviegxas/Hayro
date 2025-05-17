@@ -240,6 +240,7 @@ impl<F: FineType> Fine<F> {
                         let filler = ShadingFiller::new(s, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, false, blend_mode, filler);
                     }
+                    _ => unimplemented!()
                 }
             }
         }
@@ -316,6 +317,7 @@ impl<F: FineType> Fine<F> {
                             alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                         );
                     }
+                    _ => unimplemented!()
                 }
             }
         }
