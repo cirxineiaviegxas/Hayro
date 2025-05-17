@@ -671,6 +671,9 @@ fn run_t3_instructions(
                 is_stencil,
                 quality,
             } => device.draw_rgba_image(image_data.clone(), *width, *height, *is_stencil, *quality),
+            ReplayInstruction::SetRootTransform { affine } => {
+                device.set_transform(*affine);
+            }
         }
     }
 }
