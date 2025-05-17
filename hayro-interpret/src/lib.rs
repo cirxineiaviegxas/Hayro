@@ -632,8 +632,31 @@ fn fill_path_impl(
     let base_transform = transform.unwrap_or(context.get().affine);
     device.set_transform(base_transform);
 
-    let clip_path = if matches!(context.get().fill_cs, ColorSpace::Pattern) {
-        let mut pattern = context.get().fill_pattern.clone().unwrap();
+    let need_pop = handle_paint(context, device, base_transform, false);
+
+    match path {
+        None => device.fill_path(context.path(), &context.fill_props()),
+        Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
+        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
+    };
+
+    if need_pop {
+        device.pop();
+    }
+}
+
+fn handle_paint(    context: &mut Context,
+                      device: &mut impl Device, base_transform: Affine, is_stroke: bool) -> bool {
+    let (cs, pattern, color, alpha) = if is_stroke {
+        let s = context.get();
+        (s.stroke_cs.clone(), s.stroke_pattern.clone(), s.stroke_color.clone(), s.stroke_alpha)
+    }   else {
+        let s = context.get();
+        (s.fill_cs.clone(), s.fill_pattern.clone(), s.fill_color.clone(), s.fill_alpha)
+    };
+    
+    let clip_path = if matches!(cs, ColorSpace::Pattern) {
+        let mut pattern = pattern.unwrap();
         pattern.matrix = *context.root_transform() * pattern.matrix;
         let bbox = pattern.shading.bbox;
         device.set_shading_paint(pattern);
@@ -641,9 +664,9 @@ fn fill_path_impl(
         bbox
     } else {
         let color = Color::from_pdf(
-            context.get().fill_cs.clone(),
-            context.get().fill_color.clone(),
-            context.get().fill_alpha,
+            cs,
+            color,
+            alpha,
         );
 
         device.set_paint(color);
@@ -664,16 +687,8 @@ fn fill_path_impl(
         );
         device.set_transform(base_transform);
     }
-
-    match path {
-        None => device.fill_path(context.path(), &context.fill_props()),
-        Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
-    };
-
-    if clip_path.is_some() {
-        device.pop();
-    }
+    
+    clip_path.is_some()
 }
 
 fn stroke_path_impl(
@@ -682,24 +697,20 @@ fn stroke_path_impl(
     path: Option<&GlyphDescription>,
     transform: Option<Affine>,
 ) {
-    // TODO: Support gradient fill
-    
-    let color = Color::from_pdf(
-        context.get().stroke_cs.clone(),
-        context.get().stroke_color.clone(),
-        context.get().stroke_alpha,
-    );
-
     let base_transform = transform.unwrap_or(context.get().affine);
-
-    device.set_paint(color);
     device.set_transform(base_transform);
+
+    let need_pop = handle_paint(context, device, base_transform, true);
 
     match path {
         None => device.stroke_path(context.path(), &context.stroke_props()),
         Some(GlyphDescription::Path(path)) => device.stroke_path(path, &context.stroke_props()),
         Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
+
+    if need_pop {
+        device.pop();
+    }
 }
 
 fn run_t3_instructions(
@@ -710,7 +721,6 @@ fn run_t3_instructions(
     for instruction in &description.0 {
         match instruction {
             ReplayInstruction::SetTransform { affine } => {
-                // TODO: Paint transforms shouldnt be affected by this!
                 device.set_transform(initial_transform * *affine);
             }
             ReplayInstruction::SetPaint { .. } => {}

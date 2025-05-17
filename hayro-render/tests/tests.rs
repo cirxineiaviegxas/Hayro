@@ -155,6 +155,7 @@ use crate::run_test;
 #[test] fn stream_jpx_3() { run_test("stream_jpx_3", Some(2..=2)); }
 #[test] fn stream_jpx_5() { run_test("stream_jpx_5", None); }
 #[test] fn stream_jpx_6() { run_test("stream_jpx_6", None); }
+#[test] fn text_filled_complex_paint() { run_test("text_filled_complex_paint", None); }
 #[test] fn text_rendering_1() { run_test("text_rendering_1", None); }
 #[test] fn text_rendering_2() { run_test("text_rendering_2", None); }
 #[test] fn text_rendering_3() { run_test("text_rendering_3", None); }
@@ -162,6 +163,7 @@ use crate::run_test;
 #[test] fn text_rendering_5() { run_test("text_rendering_5", None); }
 #[test] fn text_rendering_clipping() { run_test("text_rendering_clipping", None); }
 #[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping", None); }
+#[test] fn text_stroked_complex_paint() { run_test("text_stroked_complex_paint", None); }
 #[test] fn text_with_rise() { run_test("text_with_rise", None); }
 #[test] fn xobject_1() { run_test("xobject_1", None); }
 #[test] fn xobject_matrix() { run_test("xobject_matrix", None); }
