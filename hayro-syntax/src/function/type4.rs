@@ -464,6 +464,7 @@ impl PostScriptOp {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
     use crate::function::{Clamper, Function, FunctionType, Values};
     use crate::object::number::Number;
@@ -790,7 +791,7 @@ mod tests {
         let procedure = parse_procedure(b"{  }").unwrap();
 
         let type4 = Function {
-            function_type: FunctionType::Type4(Type4 { program: procedure }),
+            function_type: Arc::new(FunctionType::Type4(Type4 { program: procedure })),
             domain: Clamper(smallvec![(-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)]),
             range: None,
         };

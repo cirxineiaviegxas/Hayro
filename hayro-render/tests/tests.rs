@@ -122,6 +122,17 @@ use crate::run_test;
 #[test] fn path_rendering_8() { run_test("path_rendering_8", None); }
 #[test] fn path_rendering_9() { run_test("path_rendering_9", None); }
 #[test] fn path_rendering_dash_array_0_phase() { run_test("path_rendering_dash_array_0_phase", None); }
+#[test] fn pattern_shading_background() { run_test("pattern_shading_background", None); }
+#[test] fn pattern_shading_bbox() { run_test("pattern_shading_bbox", None); }
+#[test] fn pattern_shading_on_text() { run_test("pattern_shading_on_text", None); }
+#[test] fn pattern_shading_type0_7() { run_test("pattern_shading_type0_7", None); }
+#[test] fn pattern_shading_type1_1() { run_test("pattern_shading_type1_1", None); }
+#[test] fn pattern_shading_type1_2() { run_test("pattern_shading_type1_2", None); }
+#[test] fn pattern_shading_type1_3() { run_test("pattern_shading_type1_3", None); }
+#[test] fn pattern_shading_type1_4() { run_test("pattern_shading_type1_4", None); }
+#[test] fn pattern_shading_type1_5() { run_test("pattern_shading_type1_5", None); }
+#[test] fn pattern_shading_type1_6() { run_test("pattern_shading_type1_6", None); }
+#[test] fn pattern_shading_type1_transform() { run_test("pattern_shading_type1_transform", None); }
 #[test] fn rendering_conflation_artifacts() { run_test("rendering_conflation_artifacts", Some(2..=2)); }
 #[test] fn stream_ccit_not_enough_data() { run_test("stream_ccit_not_enough_data", None); }
 #[test] fn stream_flate_bpc_1() { run_test("stream_flate_bpc_1", Some(0..=0)); }

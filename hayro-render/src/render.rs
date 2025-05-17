@@ -83,7 +83,7 @@ impl RenderContext {
             PaintType::Solid(s) => s.into(),
             PaintType::Image(i) => i.encode_into(
                 &mut self.encoded_paints,
-                self.transform * self.paint_transform,
+                self.transform,
             ),
             PaintType::ShadingPattern(s) => {
                 s.encode_into(&mut self.encoded_paints, self.paint_transform)

@@ -308,6 +308,13 @@ impl<F: FineType> Fine<F> {
                     EncodedPaint::FunctionShading(s) => {
                         let filler = ShadingFiller::new(s, start_x, start_y);
                         filler.paint(color_buf);
+
+                        strip::blend(
+                            blend_buf,
+                            color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                            blend_mode,
+                            alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                        );
                     }
                 }
             }

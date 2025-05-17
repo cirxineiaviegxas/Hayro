@@ -25,7 +25,7 @@ impl<'a> ShadingFiller<'a> {
 
     pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
         let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
-        // Fallback path.
+        
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
             .for_each(|column| {
@@ -46,6 +46,7 @@ impl<'a> ShadingFiller<'a> {
                     .function
                     .eval(smallvec![pos.x as f32, pos.y as f32])
                     .unwrap();
+                // TODO: CLamp out-of-range values.
                 let color = self.shading.color_space.to_rgba(&out, 1.0);
                 pixel.copy_from_slice(&F::extract_color(&PremulColor::from_alpha_color(color)));
             }

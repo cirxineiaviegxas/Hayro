@@ -10,6 +10,7 @@ use hayro_syntax::object::stream::Stream;
 use hayro_syntax::object::string::String;
 use kurbo::{Affine, Cap, Join, Point, Rect, Shape, Vec2};
 use log::warn;
+use peniko::color::palette::css::GREEN;
 use peniko::Fill;
 use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
@@ -297,7 +298,6 @@ pub fn interpret<'a, 'b>(
                 if let Some(name) = n.1 {
                     let pattern =
                         ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
-                    println!("{:?}", pattern);
                     context.get_mut().stroke_pattern = Some(pattern);
                 } else {
                     context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
@@ -600,16 +600,35 @@ fn fill_path_impl(
     let base_transform = transform.unwrap_or(context.get().affine);
     device.set_transform(base_transform);
 
-    if matches!(context.get().fill_cs, ColorSpace::Pattern) {
-        device.set_shading_paint(context.get().fill_pattern.clone().unwrap());
+    let clip_path = if matches!(context.get().fill_cs, ColorSpace::Pattern) {
+        let pattern = context.get().fill_pattern.clone().unwrap();
+        let bbox =
+            pattern.shading.bbox;
+        device.set_shading_paint(pattern);
+        
+        bbox
+        
     } else {
         let color = Color::from_pdf(
             context.get().fill_cs.clone(),
             context.get().fill_color.clone(),
             context.get().fill_alpha,
         );
-
+    
         device.set_paint(color);
+        
+        None
+    };
+    
+    if let Some(clip_path) = clip_path {
+        // Temporary hack, because currently a clip path will always assume the transform used
+        // by `set_transform`.
+        device.set_transform(*context.root_transform());
+        device.push_layer(Some(&ClipPath {
+            path: clip_path.get().to_path(0.1),
+            fill: Fill::NonZero,
+        }), 1.0);
+        device.set_transform(base_transform);
     }
 
     match path {
@@ -617,6 +636,10 @@ fn fill_path_impl(
         Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
         Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
+    
+    if clip_path.is_some() {
+        device.pop();
+    }
 }
 
 fn stroke_path_impl(
