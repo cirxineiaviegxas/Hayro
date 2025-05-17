@@ -4,7 +4,7 @@ use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    BACKGROUND, BBOX, COLORSPACE, COORDS, DOMAIN, FUNCTION, MATRIX, SHADING_TYPE,
+    BACKGROUND, BBOX, COLORSPACE, COORDS, DOMAIN, EXTEND, FUNCTION, MATRIX, SHADING_TYPE,
 };
 use hayro_syntax::object::rect::Rect;
 use kurbo::Affine;
@@ -64,7 +64,7 @@ impl Shading {
                 let function = dict
                     .get::<Object>(FUNCTION)
                     .and_then(|f| Function::new(&f))?;
-                let extend = dict.get::<[bool; 2]>(DOMAIN).unwrap_or([false, false]);
+                let extend = dict.get::<[bool; 2]>(EXTEND).unwrap_or([false, false]);
                 let coords = dict.get::<[f32; 4]>(COORDS)?;
 
                 ShadingType::Axial {

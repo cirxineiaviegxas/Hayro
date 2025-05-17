@@ -11,7 +11,7 @@ mod shading;
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
-use crate::fine::shading::ShadingFiller;
+use crate::fine::shading::{AxialShadingFiller, FunctionShadingFiller};
 use crate::paint::{Paint, PremulColor};
 use crate::tile::Tile;
 use crate::util::scalar::div_255;
@@ -237,7 +237,11 @@ impl<F: FineType> Fine<F> {
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                     EncodedPaint::FunctionShading(s) => {
-                        let filler = ShadingFiller::new(s, start_x, start_y);
+                        let filler = FunctionShadingFiller::new(s, start_x, start_y);
+                        fill_complex_paint(color_buf, blend_buf, false, blend_mode, filler);
+                    }
+                    EncodedPaint::AxialShading(a) => {
+                        let filler = AxialShadingFiller::new(a, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, false, blend_mode, filler);
                     }
                     _ => unimplemented!(),
@@ -307,7 +311,18 @@ impl<F: FineType> Fine<F> {
                         }
                     }
                     EncodedPaint::FunctionShading(s) => {
-                        let filler = ShadingFiller::new(s, start_x, start_y);
+                        let filler = FunctionShadingFiller::new(s, start_x, start_y);
+                        filler.paint(color_buf);
+
+                        strip::blend(
+                            blend_buf,
+                            color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                            blend_mode,
+                            alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                        );
+                    }
+                    EncodedPaint::AxialShading(s) => {
+                        let filler = AxialShadingFiller::new(s, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(
