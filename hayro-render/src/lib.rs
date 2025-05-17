@@ -177,7 +177,10 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         (pix_height as f32 * scale) as f64,
     );
     let (pix_width, pix_height) = (scaled_width.floor() as u16, scaled_height.floor() as u16);
-    let mut state = Context::new(initial_transform, kurbo::Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
+    let mut state = Context::new(
+        initial_transform,
+        kurbo::Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
+    );
     let mut device = Renderer(RenderContext::new(pix_width, pix_height));
 
     device.0.set_paint(WHITE);

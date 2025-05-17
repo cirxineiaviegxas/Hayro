@@ -464,10 +464,10 @@ impl PostScriptOp {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
     use crate::function::{Clamper, Function, FunctionType, Values};
     use crate::object::number::Number;
+    use std::sync::Arc;
 
     use smallvec::smallvec;
 

@@ -25,7 +25,7 @@ impl<'a> ShadingFiller<'a> {
 
     pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
         let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
-        
+
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
             .for_each(|column| {

@@ -1,9 +1,11 @@
 mod type0;
 mod type2;
+mod type3;
 mod type4;
 
 use crate::function::type0::Type0;
 use crate::function::type2::Type2;
+use crate::function::type3::Type3;
 use crate::function::type4::Type4;
 use crate::object::Object;
 use crate::object::array::Array;
@@ -22,6 +24,7 @@ type DomainRange = SmallVec<[(f32, f32); 4]>;
 enum FunctionType {
     Type0(Type0),
     Type2(Type2),
+    Type3(Type3),
     Type4(Type4),
 }
 
@@ -50,6 +53,7 @@ impl Function {
         let function_type = match dict.get::<u8>(FUNCTION_TYPE)? {
             0 => FunctionType::Type0(Type0::new(&stream?, &domain, range.as_ref()?)?),
             2 => FunctionType::Type2(Type2::new(&dict)?),
+            3 => FunctionType::Type3(Type3::new(&dict, &domain)?),
             4 => FunctionType::Type4(Type4::new(&stream?)?),
             _ => return None,
         };
@@ -67,6 +71,7 @@ impl Function {
         match self.function_type.as_ref() {
             FunctionType::Type0(t0) => t0.eval(input),
             FunctionType::Type2(t2) => Some(t2.eval(*input.get(0)?)),
+            FunctionType::Type3(t3) => t3.eval(*input.get(0)?),
             FunctionType::Type4(t4) => Some(t4.eval(input)?),
         }
         .map(|mut v| {

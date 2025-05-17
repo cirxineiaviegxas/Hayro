@@ -9,9 +9,9 @@ use smallvec::smallvec;
 /// Type 2 exponential interpolation function.
 #[derive(Debug)]
 pub(crate) struct Type2 {
-    c0: Values,
-    c1: Values,
-    n: f32,
+    pub(crate) c0: Values,
+    pub(crate) c1: Values,
+    pub(crate) n: f32,
 }
 
 impl Type2 {

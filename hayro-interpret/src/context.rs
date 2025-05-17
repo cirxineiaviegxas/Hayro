@@ -3,6 +3,7 @@ use crate::convert::convert_transform;
 use crate::font::Font;
 use crate::state::{State, TextState};
 use crate::{FillProps, StrokeProps};
+use hayro_font_parser::Rect;
 use hayro_syntax::content::ops::Transform;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
@@ -12,7 +13,6 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
-use hayro_font_parser::Rect;
 
 pub struct Context<'a> {
     states: Vec<State<'a>>,

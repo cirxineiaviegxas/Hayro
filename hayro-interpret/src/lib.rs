@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
@@ -7,15 +6,16 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, SHADING, XOBJECT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
+use hayro_syntax::object::rect::Rect;
 use hayro_syntax::object::stream::Stream;
 use hayro_syntax::object::string::String;
 use kurbo::{Affine, BezPath, Cap, Join, Point, Shape, Vec2};
 use log::warn;
-use peniko::color::palette::css::GREEN;
 use peniko::Fill;
+use peniko::color::palette::css::GREEN;
 use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
-use hayro_syntax::object::rect::Rect;
+use std::sync::Arc;
 
 pub mod color;
 pub mod context;
@@ -440,22 +440,22 @@ pub fn interpret<'a, 'b>(
             //     let shading_dict = shadings.get::<Dict>(&s.0).unwrap();
             //     let shading_pattern = {
             //         let shading = Shading::new(&shading_dict).unwrap();
-            //         
+            //
             //         ShadingPattern {
             //             shading: Arc::new(shading),
             //             matrix: Default::default(),
             //         }
             //     };
-            //     
+            //
             //     context.save_state();
             //     let st = context.get_mut();
             //     st.fill_pattern = Some(shading_pattern);
             //     st.fill_cs = ColorSpace::Pattern;
-            //     
+            //
             //     let bbox = context.bbox().to_path(0.1);
             //     let inverted_bbox = context.get().affine.inverse() * bbox;
             //     fill_path_impl(context, device, Some(&GlyphDescription::Path(inverted_bbox)), None);
-            //     
+            //
             //     context.restore_state();
             // }
             _ => {
@@ -628,32 +628,33 @@ fn fill_path_impl(
 
     let clip_path = if matches!(context.get().fill_cs, ColorSpace::Pattern) {
         let pattern = context.get().fill_pattern.clone().unwrap();
-        let bbox =
-            pattern.shading.bbox;
+        let bbox = pattern.shading.bbox;
         device.set_shading_paint(pattern);
-        
+
         bbox
-        
     } else {
         let color = Color::from_pdf(
             context.get().fill_cs.clone(),
             context.get().fill_color.clone(),
             context.get().fill_alpha,
         );
-    
+
         device.set_paint(color);
-        
+
         None
     };
-    
+
     if let Some(clip_path) = clip_path {
         // Temporary hack, because currently a clip path will always assume the transform used
         // by `set_transform`.
         device.set_transform(*context.root_transform());
-        device.push_layer(Some(&ClipPath {
-            path: clip_path.get().to_path(0.1),
-            fill: Fill::NonZero,
-        }), 1.0);
+        device.push_layer(
+            Some(&ClipPath {
+                path: clip_path.get().to_path(0.1),
+                fill: Fill::NonZero,
+            }),
+            1.0,
+        );
         device.set_transform(base_transform);
     }
 
@@ -662,7 +663,7 @@ fn fill_path_impl(
         Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
         Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
-    
+
     if clip_path.is_some() {
         device.pop();
     }

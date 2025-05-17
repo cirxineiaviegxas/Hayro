@@ -81,10 +81,7 @@ impl RenderContext {
     fn encode_current_paint(&mut self) -> Paint {
         match self.paint.clone() {
             PaintType::Solid(s) => s.into(),
-            PaintType::Image(i) => i.encode_into(
-                &mut self.encoded_paints,
-                self.transform,
-            ),
+            PaintType::Image(i) => i.encode_into(&mut self.encoded_paints, self.transform),
             PaintType::ShadingPattern(s) => {
                 s.encode_into(&mut self.encoded_paints, self.paint_transform)
             }
