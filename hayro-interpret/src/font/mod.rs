@@ -32,7 +32,7 @@ pub struct Font<'a>(Arc<FontType<'a>>);
 impl<'a> Font<'a> {
     pub fn new(dict: &Dict<'a>) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)?.as_ref() {
-            TYPE1 => FontType::Type1(Type1Font::new(dict)?),
+            TYPE1 | MMTYPE1 => FontType::Type1(Type1Font::new(dict)?),
             TRUE_TYPE => TrueTypeFont::new(dict)
                 .map(FontType::TrueType)
                 .or_else(|| Type1Font::new(dict).map(FontType::Type1))?,

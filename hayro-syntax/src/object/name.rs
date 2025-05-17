@@ -146,6 +146,7 @@ pub mod names {
     name!(LZW_DECODE, b"LZWDecode");
     name!(MAC_EXPERT_ENCODING, b"MacExpertEncoding");
     name!(MAC_ROMAN_ENCODING, b"MacRomanEncoding");
+    name!(MMTYPE1, b"MMType1");
     name!(OPEN_TYPE, b"OpenType");
     name!(PAGE, b"Page");
     name!(PAGES, b"Pages");
