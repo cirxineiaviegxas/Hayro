@@ -75,7 +75,7 @@ impl EncodeExt for ShadingPattern {
 fn encode_axial_shading(
     sp: &ShadingPattern,
     paints: &mut Vec<EncodedPaint>,
-    transform: Affine,
+    mut transform: Affine,
     coords: [f32; 6],
     domain: [f32; 2],
     function: &Function,
@@ -87,15 +87,18 @@ fn encode_axial_shading(
     let mut p0;
     let mut p1;
     let mut r;
+    let mut initial_transform = Affine::IDENTITY;
     
     let params = if is_axial {
         let [x_0, y_0, x_1, y_1, _, _] = coords;
-        
-        p0 = Point::new(x_0 as f64, y_0 as f64);
-        p1 = Point::new(x_1 as f64, y_1 as f64);
+
+        initial_transform = Affine::translate((-x_0 as f64, -y_0 as f64));
+        let new_x1 = x_1 - x_0;
+        let new_y1 = y_1 - y_0;
+        p1 = Point::new(new_x1 as f64, new_y1 as f64);
         r = Point::default();
         
-        RadialAxialParams::Axial {denom: (x_1 - x_0) * (x_1 - x_0) + (y_1 - y_0) * (y_1 - y_0)}
+        RadialAxialParams::Axial {denom: new_x1 * new_x1 + new_y1 * new_y1}
     }   else {
         let [x_0, y_0, r0, x_1, y_1, r_1] = coords;
 
@@ -107,7 +110,7 @@ fn encode_axial_shading(
     };
     
     let full_transform = transform * sp.matrix;
-    let inverse_transform = full_transform.inverse();
+    let inverse_transform = initial_transform * full_transform.inverse();
 
     let (x_advance, y_advance) = x_y_advances(&inverse_transform);
 
@@ -126,7 +129,6 @@ fn encode_axial_shading(
             .map(|b| cs.to_rgba(&b, 1.0))
             .unwrap_or(TRANSPARENT),
         params,
-        p0,
         p1,
         r,
         domain,
@@ -211,7 +213,6 @@ pub struct EncodedRadialAxialShading {
     pub color_space: ColorSpace,
     pub background: AlphaColor<Srgb>,
     pub params: RadialAxialParams,
-    pub p0: Point,
     pub p1: Point,
     pub r: Point,
     pub domain: [f32; 2],

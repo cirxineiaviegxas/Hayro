@@ -141,14 +141,14 @@ impl<'a> RadialAxialShadingFiller<'a> {
         // painted.
         
         let mut pos = self.cur_pos;
-        let (x0, y0) = (self.shading.p0.x as f32, self.shading.p0.y as f32);
         let (x1, y1) = (self.shading.p1.x as f32, self.shading.p1.y as f32);
         
         let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
             let (x, y) = (pos.x as f32, pos.y as f32);
-            let p1 = (x1 - x0) * (x - x0) + (y1 - y0) * (y - y0);
+            // Note that x0 is not needed because we shortened it to 0.
+            let p1 = x1 * x + y1 * y;
             let mut x = p1 / denom;
 
             if x < 0.0 {
