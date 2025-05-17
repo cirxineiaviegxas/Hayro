@@ -84,7 +84,6 @@ fn encode_axial_shading(
 ) -> Paint {
     let idx = paints.len();
     
-    let mut p0;
     let mut p1;
     let mut r;
     let mut initial_transform = Affine::IDENTITY;
@@ -102,8 +101,11 @@ fn encode_axial_shading(
     }   else {
         let [x_0, y_0, r0, x_1, y_1, r_1] = coords;
 
-        p0 = Point::new(x_0 as f64, y_0 as f64);
-        p1 = Point::new(x_1 as f64, y_1 as f64);
+        initial_transform = Affine::translate((-x_0 as f64, -y_0 as f64));
+        let new_x1 = x_1 - x_0;
+        let new_y1 = y_1 - y_0;
+
+        p1 = Point::new(new_x1 as f64, new_y1 as f64);
         r = Point::new(r0 as f64, r_1 as f64);
         
         RadialAxialParams::Radial
@@ -133,6 +135,7 @@ fn encode_axial_shading(
         r,
         domain,
         extend,
+        axial: is_axial,
     };
 
     paints.push(EncodedPaint::AxialShading(encoded));
@@ -217,6 +220,7 @@ pub struct EncodedRadialAxialShading {
     pub r: Point,
     pub domain: [f32; 2],
     pub extend: [bool; 2],
+    pub axial: bool
 }
 
 /// An encoded paint.

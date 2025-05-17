@@ -82,7 +82,7 @@ impl<'a> RadialAxialShadingFiller<'a> {
         
         let denom = match self.shading.params {
             RadialAxialParams::Axial { denom } => denom,
-            RadialAxialParams::Radial => unimplemented!()
+            RadialAxialParams::Radial => 0.0
         };
 
         target
@@ -91,48 +91,6 @@ impl<'a> RadialAxialShadingFiller<'a> {
                 self.fill_axial(column, &bg_color, denom);
                 self.cur_pos += self.shading.x_advance;
             });
-    }
-
-    fn fill_radial<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4], denom: f32) {
-        // TODO: If one radius is 0, the
-        // corresponding circle shall be treated as a point; if both are 0, nothing shall be
-        // painted.
-
-        // let mut pos = self.cur_pos;
-        // let [x0, y0, r0, x1, y1, r1] = self.shading.coords;
-        // 
-        // let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
-        // 
-        // for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-        //     let (x, y) = (pos.x as f32, pos.y as f32);
-        //     let p1 = (x1 - x0) * (x - x0) + (y1 - y0) * (y - y0);
-        //     let mut x = p1 / denom;
-        // 
-        //     if x < 0.0 {
-        //         if self.shading.extend[0] {
-        //             x = 0.0;
-        //         } else {
-        //             pixel.copy_from_slice(bg_color);
-        //             continue;
-        //         }
-        //     } else if x > 1.0 {
-        //         if self.shading.extend[1] {
-        //             x = 1.0;
-        //         } else {
-        //             pixel.copy_from_slice(bg_color);
-        //             continue;
-        //         }
-        //     }
-        // 
-        //     let t = t0 + (t1 - t0) * x;
-        // 
-        //     let val = self.shading.function.eval(smallvec![t]).unwrap();
-        // 
-        //     let color = self.shading.color_space.to_rgba(&val, 1.0);
-        //     pixel.copy_from_slice(&F::extract_color(&PremulColor::from_alpha_color(color)));
-        // 
-        //     pos += self.shading.y_advance;
-        // }
     }
 
     fn fill_axial<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4], denom: f32) {
@@ -146,10 +104,22 @@ impl<'a> RadialAxialShadingFiller<'a> {
         let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            let (x, y) = (pos.x as f32, pos.y as f32);
-            // Note that x0 is not needed because we shortened it to 0.
-            let p1 = x1 * x + y1 * y;
-            let mut x = p1 / denom;
+            let mut x = if self.shading.axial {
+                let (x, y) = (pos.x as f32, pos.y as f32);
+                // Note that x0 is not needed because we shortened it to 0.
+                let p1 = x1 * x + y1 * y;
+
+                p1 / denom
+            }   else {
+                radial_pos(&pos, &self.shading.p1, self.shading.r).unwrap_or(f32::MIN)
+            };
+            
+            if x == f32::MIN {
+                pixel.copy_from_slice(bg_color);
+
+                pos += self.shading.y_advance;
+                continue;
+            }
 
             if x < 0.0 {
                 if self.shading.extend[0] {
@@ -179,57 +149,56 @@ impl<'a> RadialAxialShadingFiller<'a> {
     }
 }
 
-// fn radial_pos(pos: &Point, coords: [f32; 6]) -> Option<f32> {
-//     let [x0, y0, r0, x1, y1, r1] = coords;
-//     // The values for a radial gradient can be calculated for any t as follow:
-//     // Let x(t) = (x_1 - x_0)*t + x_0 (since x_0 is always 0, this shortens to x_1 * t)
-//     // Let y(t) = (y_1 - y_0)*t + y_0 (since y_0 is always 0, this shortens to y_1 * t)
-//     // Let r(t) = (r_1 - r_0)*t + r_0
-//     // Given a pixel at a position (x_2, y_2), we need to find the largest t such that
-//     // (x_2 - x(t))^2 + (y - y_(t))^2 = r_t()^2, i.e. the circle with the interpolated
-//     // radius and center position needs to intersect the pixel we are processing.
-//     //
-//     // You can reformulate this problem to a quadratic equation (TODO: add derivation. Since
-//     // I'm not sure if that code will stay the same after performance optimizations I haven't
-//     // written this down yet), to which we then simply need to find the solutions.
-// 
-//     let r0 = self.r0;
-//     let dx = self.c1.0;
-//     let dy = self.c1.1;
-//     let dr = self.r1 - self.r0;
-// 
-//     let px = pos.x as f32;
-//     let py = pos.y as f32;
-// 
-//     let a = dx * dx + dy * dy - dr * dr;
-//     let b = -2.0 * (px * dx + py * dy + r0 * dr);
-//     let c = px * px + py * py - r0 * r0;
-// 
-//     let discriminant = b * b - 4.0 * a * c;
-// 
-//     // No solution available.
-//     if discriminant < 0.0 {
-//         return None;
-//     }
-// 
-//     let sqrt_d = discriminant.sqrt();
-//     let t1 = (-b - sqrt_d) / (2.0 * a);
-//     let t2 = (-b + sqrt_d) / (2.0 * a);
-// 
-//     let max = t1.max(t2);
-//     let min = t1.min(t2);
-// 
-//     // We only want values for `t` where the interpolated radius is actually positive.
-//     if self.r0 + dr * max < 0.0 {
-//         if self.r0 + dr * min < 0.0 {
-//             None
-//         } else {
-//             Some(min)
-//         }
-//     } else {
-//         Some(max)
-//     }
-// }
+fn radial_pos(pos: &Point, p1: &Point, r: Point) -> Option<f32> {
+    // The values for a radial gradient can be calculated for any t as follow:
+    // Let x(t) = (x_1 - x_0)*t + x_0 (since x_0 is always 0, this shortens to x_1 * t)
+    // Let y(t) = (y_1 - y_0)*t + y_0 (since y_0 is always 0, this shortens to y_1 * t)
+    // Let r(t) = (r_1 - r_0)*t + r_0
+    // Given a pixel at a position (x_2, y_2), we need to find the largest t such that
+    // (x_2 - x(t))^2 + (y - y_(t))^2 = r_t()^2, i.e. the circle with the interpolated
+    // radius and center position needs to intersect the pixel we are processing.
+    //
+    // You can reformulate this problem to a quadratic equation (TODO: add derivation. Since
+    // I'm not sure if that code will stay the same after performance optimizations I haven't
+    // written this down yet), to which we then simply need to find the solutions.
+
+    let r0 = r.x as f32;
+    let dx = p1.x as f32;
+    let dy = p1.y as f32;
+    let dr = r.y as f32 - r0;
+
+    let px = pos.x as f32;
+    let py = pos.y as f32;
+
+    let a = dx * dx + dy * dy - dr * dr;
+    let b = -2.0 * (px * dx + py * dy + r0 * dr);
+    let c = px * px + py * py - r0 * r0;
+
+    let discriminant = b * b - 4.0 * a * c;
+
+    // No solution available.
+    if discriminant < 0.0 {
+        return None;
+    }
+
+    let sqrt_d = discriminant.sqrt();
+    let t1 = (-b - sqrt_d) / (2.0 * a);
+    let t2 = (-b + sqrt_d) / (2.0 * a);
+
+    let max = t1.max(t2);
+    let min = t1.min(t2);
+
+    // We only want values for `t` where the interpolated radius is actually positive.
+    if r0 + dr * max < 0.0 {
+        if r0 + dr * min < 0.0 {
+            None
+        } else {
+            Some(min)
+        }
+    } else {
+        Some(max)
+    }
+}
 
 impl Painter for RadialAxialShadingFiller<'_> {
     fn paint<F: FineType>(self, target: &mut [F]) {

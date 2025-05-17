@@ -242,7 +242,9 @@ impl<F: FineType> Fine<F> {
                     }
                     EncodedPaint::AxialShading(a) => {
                         let filler = RadialAxialShadingFiller::new(a, start_x, start_y);
-                        fill_complex_paint(color_buf, blend_buf, !a.extend[0] || !a.extend[1], blend_mode, filler);
+                        // TODO: Refine when opacities are needed (if one of extents is none or if radial
+                        // gradient is degenerate
+                        fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                     _ => unimplemented!(),
                 }
