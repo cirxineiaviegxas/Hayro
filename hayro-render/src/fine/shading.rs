@@ -78,15 +78,17 @@ impl<'a> AxialShadingFiller<'a> {
     }
 
     pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
+        let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
+
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
             .for_each(|column| {
-                self.run_complex_column(column);
+                self.run_complex_column(column, &bg_color);
                 self.cur_pos += self.shading.x_advance;
             });
     }
 
-    fn run_complex_column<F: FineType>(&mut self, col: &mut [F]) {
+    fn run_complex_column<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4]) {
         // TODO: If the
         // starting and ending coordinates are coincident (x0=x1 and y0=y1) nothing shall be
         // painted.
@@ -105,12 +107,14 @@ impl<'a> AxialShadingFiller<'a> {
                 if self.shading.extend[0] {
                     x = 0.0;
                 } else {
+                    pixel.copy_from_slice(bg_color);
                     continue;
                 }
             } else if x > 1.0 {
                 if self.shading.extend[1] {
                     x = 1.0;
                 } else {
+                    pixel.copy_from_slice(bg_color);
                     continue;
                 }
             }
