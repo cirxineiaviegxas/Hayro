@@ -140,6 +140,7 @@ use crate::run_test;
 #[test] fn pattern_shading_type2_no_extend() { run_test("pattern_shading_type2_no_extend", None); }
 #[test] fn pattern_shading_type2_slanted() { run_test("pattern_shading_type2_slanted", None); }
 #[test] fn rendering_conflation_artifacts() { run_test("rendering_conflation_artifacts", Some(2..=2)); }
+#[test] fn shading_operator_1() { run_test("shading_operator_1", None); }
 #[test] fn stream_ccit_not_enough_data() { run_test("stream_ccit_not_enough_data", None); }
 #[test] fn stream_flate_bpc_1() { run_test("stream_flate_bpc_1", Some(0..=0)); }
 #[test] fn stream_jpx_1() { run_test("stream_jpx_1", Some(2..=2)); }
