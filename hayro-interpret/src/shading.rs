@@ -1,14 +1,18 @@
 use crate::color::ColorSpace;
-use hayro_syntax::function::Function;
+use hayro_syntax::bit::{BitReader, BitSize};
+use hayro_syntax::function::{Function, interpolate};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    BACKGROUND, BBOX, COLORSPACE, COORDS, DOMAIN, EXTEND, FUNCTION, MATRIX, SHADING_TYPE,
+    BACKGROUND, BBOX, BITS_PER_COMPONENT, BITS_PER_COORDINATE, BITS_PER_FLAG, COLORSPACE, COORDS,
+    DECODE, DOMAIN, EXTEND, FUNCTION, MATRIX, SHADING_TYPE,
 };
 use hayro_syntax::object::rect::Rect;
-use kurbo::Affine;
-use smallvec::SmallVec;
+use hayro_syntax::object::stream::Stream;
+use hayro_syntax::reader::Reader;
+use kurbo::{Affine, Point};
+use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -25,7 +29,10 @@ pub enum ShadingType {
         extend: [bool; 2],
         axial: bool,
     },
-    FreeFormGouraud,
+    FreeFormGouraud {
+        triangles: Vec<Triangle>,
+        function: Option<Function>,
+    },
     LatticeFormGouraud,
     CoonsPatchMesh,
     TensorProductPatchMesh,
@@ -40,7 +47,7 @@ pub struct Shading {
 }
 
 impl Shading {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    pub fn new(dict: &Dict, stream: Option<&Stream>) -> Option<Self> {
         let shading_num = dict.get::<u8>(SHADING_TYPE)?;
         let shading_type = match shading_num {
             1 => {
@@ -83,7 +90,31 @@ impl Shading {
                     axial,
                 }
             }
-            4 => ShadingType::FreeFormGouraud,
+            4 => {
+                let stream = stream?;
+                let stream_data = stream.decoded().ok()?;
+                let bp_coord = dict.get::<u8>(BITS_PER_COORDINATE)?;
+                let bp_comp = dict.get::<u8>(BITS_PER_COMPONENT)?;
+                let bpf = dict.get::<u8>(BITS_PER_FLAG)?;
+                let function = dict.get::<Object>(FUNCTION).and_then(|o| Function::new(&o));
+                let decode = dict.get::<Array>(DECODE)?.iter::<f32>().collect::<Vec<_>>();
+
+                let triangles = read_triangles(
+                    stream_data.as_ref(),
+                    bpf,
+                    bp_coord,
+                    bp_comp,
+                    function.as_ref(),
+                    &decode,
+                )?;
+
+                println!("{:?}", &triangles);
+
+                ShadingType::FreeFormGouraud {
+                    triangles,
+                    function,
+                }
+            }
             5 => ShadingType::LatticeFormGouraud,
             6 => ShadingType::CoonsPatchMesh,
             7 => ShadingType::TensorProductPatchMesh,
@@ -103,4 +134,123 @@ impl Shading {
             background,
         })
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct Triangle {
+    pub p0: TriangleVertex,
+    pub p1: TriangleVertex,
+    pub p2: TriangleVertex,
+}
+
+#[derive(Clone, Debug)]
+pub struct TriangleVertex {
+    flag: u32,
+    pub x: f32,
+    pub y: f32,
+    pub colors: Vec<f32>,
+}
+
+fn read_triangles(
+    data: &[u8],
+    bpf: u8,
+    bp_cord: u8,
+    bp_comp: u8,
+    function: Option<&Function>,
+    decode: &[f32],
+) -> Option<Vec<Triangle>> {
+    let bpf = BitSize::from_u8(bpf)?;
+    let bp_cord = BitSize::from_u8(bp_cord)?;
+    let bp_comp = BitSize::from_u8(bp_comp)?;
+
+    let mut triangles = vec![];
+
+    let ([x_min, x_max, y_min, y_max], decode) =
+        decode.split_first_chunk::<4>().map(|(a, b)| (*a, b))?;
+    let num_components = decode.len() / 2;
+
+    let mut reader = BitReader::new(data);
+
+    let interpolate_coord = |n: u32, d_min: f32, d_max: f32| {
+        interpolate(
+            n as f32,
+            0.0,
+            2.0f32.powi(bp_cord.bits() as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
+
+    let interpolate_comp = |n: u32, d_min: f32, d_max: f32| {
+        interpolate(
+            n as f32,
+            0.0,
+            2.0f32.powi(bp_comp.bits() as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
+
+    let read_single = |reader: &mut BitReader, has_function: bool| -> Option<TriangleVertex> {
+        let flag = reader.read(bpf)?;
+        let x = interpolate_coord(reader.read(bp_cord)?, x_min, x_max);
+        let y = interpolate_coord(reader.read(bp_cord)?, y_min, y_max);
+
+        let mut colors = vec![];
+
+        if has_function {
+            // Just read the parametric value.
+            colors.push(interpolate_comp(
+                reader.read(bp_comp)?,
+                decode[0],
+                decode[1],
+            ));
+        } else {
+            for (_, decode) in (0..num_components).zip(decode.chunks_exact(2)) {
+                colors.push(interpolate_comp(
+                    reader.read(bp_comp)?,
+                    decode[0],
+                    decode[1],
+                ));
+            }
+        }
+
+        Some(TriangleVertex { flag, x, y, colors })
+    };
+
+    let mut a = None;
+    let mut b = None;
+    let mut c = None;
+
+    loop {
+        let Some(first) = read_single(&mut reader, function.is_some()) else {
+            break;
+        };
+
+        if first.flag == 0 {
+            let second = read_single(&mut reader, function.is_some())?;
+            let third = read_single(&mut reader, function.is_some())?;
+
+            a = Some(first.clone());
+            b = Some(second.clone());
+            c = Some(third.clone());
+        } else if first.flag == 1 {
+            a = Some(b.clone()?);
+            b = Some(c.clone()?);
+            c = Some(first);
+        } else if first.flag == 2 {
+            b = Some(c.clone()?);
+            c = Some(first);
+        }
+
+        reader.align();
+
+        triangles.push(Triangle {
+            p0: a.clone()?,
+            p1: b.clone()?,
+            p2: c.clone()?,
+        })
+    }
+
+    Some(triangles)
 }

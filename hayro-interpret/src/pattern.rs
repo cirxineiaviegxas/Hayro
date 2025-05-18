@@ -1,6 +1,9 @@
 use crate::shading::Shading;
+use hayro_syntax::function::dict_or_stream;
+use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{EXT_G_STATE, MATRIX, SHADING};
+use hayro_syntax::object::stream::Stream;
 use kurbo::Affine;
 use log::warn;
 use std::sync::Arc;
@@ -13,7 +16,11 @@ pub struct ShadingPattern {
 
 impl ShadingPattern {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let shading = dict.get::<Dict>(SHADING).and_then(|s| Shading::new(&s))?;
+        let shading = dict.get::<Object>(SHADING).and_then(|o| {
+            let (dict, stream) = dict_or_stream(&o)?;
+
+            Shading::new(&dict, stream.as_ref())
+        })?;
         let matrix = dict
             .get::<[f64; 6]>(MATRIX)
             .map(|f| Affine::new(f))

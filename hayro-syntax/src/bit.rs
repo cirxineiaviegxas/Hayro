@@ -498,6 +498,9 @@ mod tests {
         assert_eq!(reader.read(BitSize::from_u8(5).unwrap()).unwrap(), 0b00111);
         assert_eq!(reader.read(BS1).unwrap(), 0b1);
         assert_eq!(reader.read(BS2).unwrap(), 0b11);
-        assert_eq!(reader.read(BitSize::from_u8(7).unwrap()).unwrap(), 0b0101001);
+        assert_eq!(
+            reader.read(BitSize::from_u8(7).unwrap()).unwrap(),
+            0b0101001
+        );
     }
 }

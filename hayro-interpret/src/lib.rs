@@ -1,6 +1,7 @@
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
+use hayro_syntax::function::dict_or_stream;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, SHADING, XOBJECT};
@@ -435,9 +436,10 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.rise = t.0.as_f32();
             }
             TypedOperation::Shading(s) => {
-                let shading_dict = shadings.get::<Dict>(&s.0).unwrap();
+                let shading_obj = shadings.get::<Object>(&s.0).unwrap();
                 let shading_pattern = {
-                    let shading = Shading::new(&shading_dict).unwrap();
+                    let (dict, stream) = dict_or_stream(&shading_obj).unwrap();
+                    let shading = Shading::new(&dict, stream.as_ref()).unwrap();
 
                     ShadingPattern {
                         shading: Arc::new(shading),

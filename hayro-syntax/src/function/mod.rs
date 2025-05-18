@@ -37,13 +37,7 @@ pub struct Function {
 
 impl Function {
     pub fn new(obj: &Object) -> Option<Function> {
-        let (dict, stream) = if let Some(stream) = obj.clone().cast::<Stream>() {
-            (stream.dict().clone(), Some(stream))
-        } else if let Some(dict) = obj.clone().cast::<Dict>() {
-            (dict, None)
-        } else {
-            return None;
-        };
+        let (dict, stream) = dict_or_stream(obj)?;
 
         let domain = dict
             .get::<Array>(DOMAIN)
@@ -160,4 +154,14 @@ impl Clamper {
 
 pub fn interpolate(x: f32, x_min: f32, x_max: f32, y_min: f32, y_max: f32) -> f32 {
     y_min + (x - x_min) * (y_max - y_min) / (x_max - x_min)
+}
+
+pub fn dict_or_stream<'a>(obj: &Object<'a>) -> Option<(Dict<'a>, Option<Stream<'a>>)> {
+    if let Some(stream) = obj.clone().cast::<Stream>() {
+        Some((stream.dict().clone(), Some(stream)))
+    } else if let Some(dict) = obj.clone().cast::<Dict>() {
+        Some((dict, None))
+    } else {
+        None
+    }
 }
