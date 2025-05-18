@@ -30,16 +30,6 @@ pub(crate) static GLYPH_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
         start = process_lines(lines, start)
     
     start += "};"
-        
-    start += """\n\n
-pub(crate) static ZAPF_DINGS_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
-"""
-
-    with open(ZAPF_DINGS_BATS) as file:
-        lines = file.read().splitlines()
-        start = process_lines(lines, start)
-
-    start += "};"
 
     with open(GLYPH_LIST_RS, 'w') as file:
         file.write(start)

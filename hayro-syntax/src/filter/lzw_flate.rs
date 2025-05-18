@@ -1,7 +1,7 @@
 use crate::bit::{BitChunk, BitChunks, BitReader, BitSize, BitWriter};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
-use itertools::{Itertools, izip};
+use itertools::izip;
 use log::warn;
 
 struct PredictorParams {
@@ -308,10 +308,6 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             }
 
             Some(out)
-        }
-        i => {
-            warn!("predictor {} is not supported", i);
-            None
         }
     }
 }

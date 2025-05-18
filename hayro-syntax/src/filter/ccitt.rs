@@ -19,6 +19,8 @@
  * license.
  */
 
+#![allow(non_upper_case_globals)]
+
 // See <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt.js>
 
 use log::warn;
@@ -1248,6 +1250,8 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
             }
             self.coding_line[self.coding_pos] = a1;
         } else if a1 < self.coding_line[self.coding_pos] {
+            // TODO: Investigate this.
+            #[allow(unused_comparisons)]
             if a1 < 0 {
                 println!("invalid code");
                 self.err = true;

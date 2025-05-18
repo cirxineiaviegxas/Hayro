@@ -24,9 +24,7 @@ impl<'a> FunctionShadingFiller<'a> {
     }
 
     pub(super) fn run(mut self, target: &mut [f32]) {
-        let bg_color = PremulColor::from_alpha_color(self.shading.background)
-            .as_premul_f32()
-            .components;
+        let bg_color = PremulColor::from_alpha_color(self.shading.background).0;
 
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
@@ -50,11 +48,7 @@ impl<'a> FunctionShadingFiller<'a> {
                     .unwrap();
                 // TODO: CLamp out-of-range values.
                 let color = self.shading.color_space.to_rgba(&out, 1.0);
-                pixel.copy_from_slice(
-                    &PremulColor::from_alpha_color(color)
-                        .as_premul_f32()
-                        .components,
-                );
+                pixel.copy_from_slice(&PremulColor::from_alpha_color(color).0);
             }
             pos += self.shading.y_advance;
         }
@@ -84,9 +78,7 @@ impl<'a> RadialAxialShadingFiller<'a> {
     }
 
     pub(super) fn run(mut self, target: &mut [f32]) {
-        let bg_color = PremulColor::from_alpha_color(self.shading.background)
-            .as_premul_f32()
-            .components;
+        let bg_color = PremulColor::from_alpha_color(self.shading.background).0;
 
         let denom = match self.shading.params {
             RadialAxialParams::Axial { denom } => denom,
@@ -159,11 +151,7 @@ impl<'a> RadialAxialShadingFiller<'a> {
             let val = self.shading.function.eval(smallvec![t]).unwrap();
 
             let color = self.shading.color_space.to_rgba(&val, 1.0);
-            pixel.copy_from_slice(
-                &PremulColor::from_alpha_color(color)
-                    .as_premul_f32()
-                    .components,
-            );
+            pixel.copy_from_slice(&PremulColor::from_alpha_color(color).0);
 
             pos += self.shading.y_advance;
         }

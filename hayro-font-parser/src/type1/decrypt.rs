@@ -9,7 +9,7 @@ pub(crate) fn decrypt(data: &[u8]) -> Vec<u8> {
 
     let mut decrypt = |b: u8| decrypt_byte(b, &mut r);
 
-    for i in 0..1000 {
+    for _ in 0..1000 {
         let c = stream.read_byte().unwrap();
         if !is_white_space_after_token_eexec(c) {
             b00 = Some(c);

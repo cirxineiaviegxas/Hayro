@@ -1,5 +1,5 @@
 use crate::argstack::ArgumentsStack;
-use crate::cff::{CFFError, IsEven};
+use crate::cff::CFFError;
 use crate::type1::stream::Stream;
 use crate::Builder;
 
@@ -124,112 +124,6 @@ impl CharStringParser<'_> {
 
             self.builder.curve_to(x1, y1, x2, y2, self.x, self.y);
             i += 6;
-        }
-
-        self.stack.clear();
-        Ok(())
-    }
-
-    #[inline]
-    pub fn parse_curve_line(&mut self) -> Result<(), CFFError> {
-        let mut i = 0;
-        while i < self.stack.len() - 2 {
-            let x1 = self.x + self.stack.at(i + 0);
-            let y1 = self.y + self.stack.at(i + 1);
-            let x2 = x1 + self.stack.at(i + 2);
-            let y2 = y1 + self.stack.at(i + 3);
-            self.x = x2 + self.stack.at(i + 4);
-            self.y = y2 + self.stack.at(i + 5);
-
-            self.builder.curve_to(x1, y1, x2, y2, self.x, self.y);
-            i += 6;
-        }
-
-        self.x += self.stack.at(i + 0);
-        self.y += self.stack.at(i + 1);
-        self.builder.line_to(self.x, self.y);
-
-        self.stack.clear();
-        Ok(())
-    }
-
-    #[inline]
-    pub fn parse_line_curve(&mut self) -> Result<(), CFFError> {
-        let mut i = 0;
-        while i < self.stack.len() - 6 {
-            self.x += self.stack.at(i + 0);
-            self.y += self.stack.at(i + 1);
-
-            self.builder.line_to(self.x, self.y);
-            i += 2;
-        }
-
-        let x1 = self.x + self.stack.at(i + 0);
-        let y1 = self.y + self.stack.at(i + 1);
-        let x2 = x1 + self.stack.at(i + 2);
-        let y2 = y1 + self.stack.at(i + 3);
-        self.x = x2 + self.stack.at(i + 4);
-        self.y = y2 + self.stack.at(i + 5);
-        self.builder.curve_to(x1, y1, x2, y2, self.x, self.y);
-
-        self.stack.clear();
-        Ok(())
-    }
-
-    #[inline]
-    pub fn parse_hh_curve_to(&mut self) -> Result<(), CFFError> {
-        let mut i = 0;
-
-        // The odd argument count indicates an Y position.
-        if self.stack.len().is_odd() {
-            self.y += self.stack.at(0);
-            i += 1;
-        }
-
-        if (self.stack.len() - i) % 4 != 0 {
-            return Err(CFFError::InvalidArgumentsStackLength);
-        }
-
-        while i < self.stack.len() {
-            let x1 = self.x + self.stack.at(i + 0);
-            let y1 = self.y;
-            let x2 = x1 + self.stack.at(i + 1);
-            let y2 = y1 + self.stack.at(i + 2);
-            self.x = x2 + self.stack.at(i + 3);
-            self.y = y2;
-
-            self.builder.curve_to(x1, y1, x2, y2, self.x, self.y);
-            i += 4;
-        }
-
-        self.stack.clear();
-        Ok(())
-    }
-
-    #[inline]
-    pub fn parse_vv_curve_to(&mut self) -> Result<(), CFFError> {
-        let mut i = 0;
-
-        // The odd argument count indicates an X position.
-        if self.stack.len().is_odd() {
-            self.x += self.stack.at(0);
-            i += 1;
-        }
-
-        if (self.stack.len() - i) % 4 != 0 {
-            return Err(CFFError::InvalidArgumentsStackLength);
-        }
-
-        while i < self.stack.len() {
-            let x1 = self.x;
-            let y1 = self.y + self.stack.at(i + 0);
-            let x2 = x1 + self.stack.at(i + 1);
-            let y2 = y1 + self.stack.at(i + 2);
-            self.x = x2;
-            self.y = y2 + self.stack.at(i + 3);
-
-            self.builder.curve_to(x1, y1, x2, y2, self.x, self.y);
-            i += 4;
         }
 
         self.stack.clear();

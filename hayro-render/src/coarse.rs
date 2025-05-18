@@ -117,9 +117,9 @@ impl Wide {
         let height_tiles = height.div_ceil(Tile::HEIGHT);
         let mut tiles = Vec::with_capacity(usize::from(width_tiles) * usize::from(height_tiles));
 
-        for h in 0..height_tiles {
-            for w in 0..width_tiles {
-                tiles.push(WideTile::new(w * WideTile::WIDTH, h * Tile::HEIGHT));
+        for _ in 0..height_tiles {
+            for _ in 0..width_tiles {
+                tiles.push(WideTile::new());
             }
         }
 
@@ -180,11 +180,6 @@ impl Wide {
 
         let idx = usize::from(y) * usize::from(self.width_tiles()) + usize::from(x);
         &mut self.tiles[idx]
-    }
-
-    /// Return a reference to all wide tiles.
-    pub fn tiles(&self) -> &[WideTile] {
-        self.tiles.as_slice()
     }
 
     /// Generate wide tile commands from the strip buffer.
@@ -690,10 +685,6 @@ impl Wide {
 /// A wide tile.
 #[derive(Debug)]
 pub struct WideTile {
-    /// The x coordinate of the wide tile.
-    pub x: u16,
-    /// The y coordinate of the wide tile.
-    pub y: u16,
     /// The background of the tile.
     pub bg: PremulColor,
     /// The draw commands of the tile.
@@ -711,10 +702,8 @@ impl WideTile {
     pub const WIDTH: u16 = 256;
 
     /// Create a new wide tile.
-    pub fn new(x: u16, y: u16) -> Self {
+    pub fn new() -> Self {
         Self {
-            x,
-            y,
             bg: PremulColor::from_alpha_color(TRANSPARENT),
             cmds: vec![],
             n_zero_clip: 0,

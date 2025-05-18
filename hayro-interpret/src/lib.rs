@@ -731,7 +731,6 @@ fn run_t3_instructions(
             ReplayInstruction::SetTransform { affine } => {
                 device.set_transform(initial_transform * *affine);
             }
-            ReplayInstruction::SetPaint { .. } => {}
             ReplayInstruction::StrokePath { path, stroke_props } => {
                 device.stroke_path(path, stroke_props);
             }
@@ -749,9 +748,6 @@ fn run_t3_instructions(
                 is_stencil,
                 quality,
             } => device.draw_rgba_image(image_data.clone(), *width, *height, *is_stencil, *quality),
-            ReplayInstruction::SetRootTransform { affine } => {
-                device.set_transform(*affine);
-            }
         }
     }
 }

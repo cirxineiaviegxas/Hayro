@@ -3,7 +3,7 @@ use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
 use hayro_interpret::color::Color;
 use hayro_interpret::context::Context;
-use hayro_interpret::device::{ClipPath, Device, Mask};
+use hayro_interpret::device::{ClipPath, Device};
 use hayro_interpret::pattern::ShadingPattern;
 use hayro_interpret::{FillProps, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
@@ -28,13 +28,6 @@ mod pixmap;
 pub mod render;
 mod strip;
 mod tile;
-mod util;
-
-#[derive(Debug, Copy, Clone)]
-pub enum RenderMode {
-    OptimizeQuality,
-    OptimizeSpeed,
-}
 
 struct Renderer(RenderContext);
 

@@ -84,7 +84,7 @@ fn encode_axial_shading(
 
     let p1;
     let r;
-    let mut initial_transform = Affine::IDENTITY;
+    let initial_transform;
 
     let params = if is_axial {
         let [x_0, y_0, x_1, y_1, _, _] = coords;

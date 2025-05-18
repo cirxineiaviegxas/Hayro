@@ -11,12 +11,11 @@ use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
 use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
-use crate::paint::{Paint, PremulColor};
+use crate::paint::Paint;
 use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
 use peniko::{BlendMode, Compose, Mix};
-use std::ops::{Add, Div, Mul, Sub};
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;
@@ -210,7 +209,7 @@ impl Fine {
 
         match fill {
             Paint::Solid(color) => {
-                let color = color.as_premul_f32().components;
+                let color = color.0;
 
                 // If color is completely opaque we can just memcopy the colors.
                 if color[3] == 1.0 && default_blend {
@@ -241,7 +240,6 @@ impl Fine {
                         // gradient is degenerate
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
-                    _ => unimplemented!(),
                 }
             }
         }
@@ -274,7 +272,7 @@ impl Fine {
             Paint::Solid(color) => {
                 strip::blend(
                     blend_buf,
-                    iter::repeat(color.as_premul_f32().components),
+                    iter::repeat(color.0),
                     blend_mode,
                     alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                 );
@@ -329,7 +327,6 @@ impl Fine {
                             alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                         );
                     }
-                    _ => unimplemented!(),
                 }
             }
         }

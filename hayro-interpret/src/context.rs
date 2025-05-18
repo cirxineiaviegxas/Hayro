@@ -69,14 +69,6 @@ impl<'a> Context<'a> {
         self.states.push(cur);
     }
 
-    pub(crate) fn push_bbox(&mut self, bbox: kurbo::Rect) {
-        self.bbox.push(bbox);
-    }
-
-    pub(crate) fn pop_bbox(&mut self) {
-        self.bbox.pop();
-    }
-
     pub(crate) fn bbox(&self) -> kurbo::Rect {
         *self.bbox.last().unwrap()
     }

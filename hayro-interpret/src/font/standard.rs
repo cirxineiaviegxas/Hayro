@@ -4,9 +4,8 @@ use crate::font::blob::{
     HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD,
     TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
-use crate::font::encoding::{GLYPH_NAMES, ZAPF_DINGS_NAMES, metrics};
+use crate::font::encoding::metrics;
 use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
-use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::BASE_FONT;
 use hayro_syntax::object::name::Name;
@@ -39,27 +38,6 @@ impl StandardFont {
             _ => STANDARD.get(&code),
         }
         .copied()
-    }
-
-    pub fn name_to_unicode(&self, name: &str) -> Option<&'static str> {
-        match self {
-            Self::ZapfDingBats => ZAPF_DINGS_NAMES.get(name),
-            _ => GLYPH_NAMES.get(name),
-        }
-        .warn_none(&format!("failed to map code {name} for {:?}", self))
-        .copied()
-    }
-
-    pub fn code_to_unicode(&self, code: u8) -> Option<&'static str> {
-        self.name_to_unicode(self.code_to_name(code)?)
-    }
-
-    pub fn is_non_symbolic(&self) -> bool {
-        match self {
-            StandardFont::ZapfDingBats => false,
-            StandardFont::Symbol => false,
-            _ => true,
-        }
     }
 
     pub fn get_blob(&self) -> CffFontBlob {

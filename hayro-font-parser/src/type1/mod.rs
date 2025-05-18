@@ -40,6 +40,7 @@ impl Default for Parameters {
 
 #[derive(Debug, Clone)]
 pub struct Table<'a> {
+    #[allow(dead_code)]
     data: &'a [u8],
     params: Arc<Parameters>,
 }
@@ -98,18 +99,18 @@ impl<'a> Table<'a> {
     fn parse_eexec(data: &[u8], params: &mut Parameters) {
         let mut s = Stream::new(data);
 
-        let mut lenIv = 4;
+        let mut len_iv = 4;
 
         while let Some(token) = s.next_token() {
             match token {
                 b"/Subrs" => {
-                    params.subroutines = s.parse_subroutines(lenIv);
+                    params.subroutines = s.parse_subroutines(len_iv);
                 }
                 b"/CharStrings" => {
-                    params.charstrings = s.parse_charstrings(lenIv).unwrap();
+                    params.charstrings = s.parse_charstrings(len_iv).unwrap();
                 }
                 b"/lenIV" => {
-                    lenIv = s.next_int() as usize;
+                    len_iv = s.next_int() as usize;
                 }
                 _ => {}
             }
@@ -510,7 +511,7 @@ fn decrypt_charstring(data: &[u8], len_iv: usize) -> Vec<u8> {
     let mut cb: Copied<Iter<u8>> = data.iter().copied();
     let mut decrypted = vec![];
 
-    for i in 0..len_iv {
+    for _ in 0..len_iv {
         let _ = decrypt_byte(cb.next().unwrap(), &mut r);
     }
 

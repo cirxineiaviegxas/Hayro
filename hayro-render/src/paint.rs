@@ -7,7 +7,7 @@ use crate::pixmap::Pixmap;
 use hayro_interpret::pattern::ShadingPattern;
 use peniko::{
     ImageQuality,
-    color::{AlphaColor, PremulRgba8, Srgb},
+    color::{AlphaColor, Srgb},
 };
 use std::sync::Arc;
 
@@ -74,38 +74,17 @@ pub struct Image {
 
 /// A premultiplied color.
 #[derive(Debug, Clone, PartialEq, Copy)]
-pub struct PremulColor {
-    premul_u8: PremulRgba8,
-    premul_f32: peniko::color::PremulColor<Srgb>,
-}
+pub struct PremulColor(pub [f32; 4]);
 
 impl PremulColor {
     /// Create a new premultiplied color.
     pub fn from_alpha_color(color: AlphaColor<Srgb>) -> Self {
-        Self::from_premul_color(color.premultiply())
-    }
-
-    /// Create a new premultiplied color from `peniko::PremulColor`.
-    pub fn from_premul_color(color: peniko::color::PremulColor<Srgb>) -> Self {
-        Self {
-            premul_u8: color.to_rgba8(),
-            premul_f32: color,
-        }
-    }
-
-    /// Return the color as a premultiplied RGBA8 color.
-    pub fn as_premul_rgba8(&self) -> PremulRgba8 {
-        self.premul_u8
-    }
-
-    /// Return the color as a premultiplied RGBAF32 color.
-    pub fn as_premul_f32(&self) -> peniko::color::PremulColor<Srgb> {
-        self.premul_f32
+        Self(color.premultiply().components)
     }
 
     /// Return whether the color is opaque (i.e. doesn't have transparency).
     pub fn is_opaque(&self) -> bool {
-        self.premul_f32.components[3] == 1.0
+        self.0[3] == 1.0
     }
 }
 

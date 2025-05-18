@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::context::Context;
-use crate::device::{ClipPath, Device, Mask, ReplayInstruction};
+use crate::device::{ClipPath, Device, ReplayInstruction};
 use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::pattern::ShadingPattern;

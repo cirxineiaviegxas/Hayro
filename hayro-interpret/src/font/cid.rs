@@ -185,10 +185,6 @@ impl FontType {
 
         None
     }
-
-    fn is_type0(&self) -> bool {
-        !matches!(self, FontType::TrueType(_))
-    }
 }
 
 #[derive(Debug, Default)]

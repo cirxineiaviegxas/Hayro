@@ -419,7 +419,7 @@ impl CalRgb {
 #[derive(Debug)]
 struct LabRepr {
     white_point: [f32; 3],
-    black_point: [f32; 3],
+    _black_point: [f32; 3],
     range: [f32; 4],
 }
 
@@ -436,12 +436,9 @@ impl Lab {
 
         Some(Self(Arc::new(LabRepr {
             white_point,
-            black_point,
+            _black_point: black_point,
             range,
         })))
-    }
-    fn decode(value: f32, high1: f32, low2: f32, high2: f32) -> f32 {
-        low2 + (value * (high2 - low2)) / high1
     }
 
     fn fn_g(x: f32) -> f32 {
@@ -552,7 +549,6 @@ impl Indexed {
 struct SeparationRepr {
     alternate_space: ColorSpace,
     tint_transform: Function,
-    name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -574,7 +570,6 @@ impl Separation {
         Some(Self(Arc::new(SeparationRepr {
             alternate_space,
             tint_transform,
-            name,
         })))
     }
 

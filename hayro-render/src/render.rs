@@ -201,7 +201,7 @@ impl RenderContext {
                 let wtile = self.wide.get(x, y);
                 fine.set_coords(x, y);
 
-                fine.clear(wtile.bg.as_premul_f32().components);
+                fine.clear(wtile.bg.0);
                 for cmd in &wtile.cmds {
                     fine.run_cmd(cmd, &self.alphas, &self.encoded_paints);
                 }

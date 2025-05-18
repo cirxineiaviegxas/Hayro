@@ -39,12 +39,6 @@ pub(crate) enum ReplayInstruction {
     SetTransform {
         affine: Affine,
     },
-    SetRootTransform {
-        affine: Affine,
-    },
-    SetPaint {
-        color: Color,
-    },
     StrokePath {
         path: BezPath,
         stroke_props: StrokeProps,

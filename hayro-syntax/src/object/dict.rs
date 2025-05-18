@@ -732,7 +732,6 @@ pub mod keys {
     key!(OE, b"OE");
     key!(OID, b"OID");
     key!(OFF, b"OFF");
-    key!(Off, b"Off");
     key!(ON, b"ON");
     key!(OP, b"OP");
     key!(OP_NS, b"op");

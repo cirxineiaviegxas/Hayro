@@ -8,9 +8,6 @@ use peniko::color::{PremulRgba8, Rgba8};
 use std::vec;
 use std::vec::Vec;
 
-#[cfg(feature = "png")]
-extern crate std;
-
 /// A pixmap of premultiplied RGBA8 values backed by [`u8`][core::u8].
 #[derive(Debug, Clone)]
 pub struct Pixmap {
@@ -105,90 +102,6 @@ impl Pixmap {
                 a: multiply(pixel.a),
             };
         }
-    }
-
-    /// Create a pixmap from a PNG file.
-    #[cfg(feature = "png")]
-    pub fn from_png(data: impl std::io::Read) -> Result<Self, png::DecodingError> {
-        let mut decoder = png::Decoder::new(data);
-        decoder.set_transformations(
-            png::Transformations::normalize_to_color8() | png::Transformations::ALPHA,
-        );
-
-        let mut reader = decoder.read_info()?;
-        let mut pixmap = {
-            let info = reader.info();
-            let width: u16 = info
-                .width
-                .try_into()
-                .map_err(|_| png::DecodingError::LimitsExceeded)?;
-            let height: u16 = info
-                .height
-                .try_into()
-                .map_err(|_| png::DecodingError::LimitsExceeded)?;
-            Self::new(width, height)
-        };
-
-        // Note `reader.info()` returns the pre-transformation color type output, whereas
-        // `reader.output_color_type()` takes the transformation into account.
-        let (color_type, bit_depth) = reader.output_color_type();
-        debug_assert_eq!(
-            bit_depth,
-            png::BitDepth::Eight,
-            "normalize_to_color8 means the bit depth is always 8."
-        );
-
-        match color_type {
-            png::ColorType::Rgb | png::ColorType::Grayscale => {
-                unreachable!("We set a transformation to always convert to alpha")
-            }
-            png::ColorType::Indexed => {
-                unreachable!("Transformation should have expanded indexed images")
-            }
-            png::ColorType::Rgba => {
-                debug_assert_eq!(
-                    pixmap.data_as_u8_slice().len(),
-                    reader.output_buffer_size(),
-                    "The pixmap buffer should have the same number of bytes as the image."
-                );
-                reader.next_frame(pixmap.data_as_u8_slice_mut())?;
-            }
-            png::ColorType::GrayscaleAlpha => {
-                debug_assert_eq!(
-                    pixmap.data().len() * 2,
-                    reader.output_buffer_size(),
-                    "The pixmap buffer should have twice the number of bytes of the grayscale image."
-                );
-                let mut grayscale_data = vec![0; reader.output_buffer_size()];
-                reader.next_frame(&mut grayscale_data)?;
-
-                for (grayscale_pixel, pixmap_pixel) in
-                    grayscale_data.chunks_exact(2).zip(pixmap.data_mut())
-                {
-                    let [gray, alpha] = grayscale_pixel.try_into().unwrap();
-                    *pixmap_pixel = PremulRgba8 {
-                        r: gray,
-                        g: gray,
-                        b: gray,
-                        a: alpha,
-                    };
-                }
-            }
-        };
-
-        for pixel in pixmap.data_mut() {
-            let alpha = u16::from(pixel.a);
-            #[expect(
-                clippy::cast_possible_truncation,
-                reason = "Overflow should be impossible."
-            )]
-            let premultiply = |e: u8| ((u16::from(e) * alpha) / 255) as u8;
-            pixel.r = premultiply(pixel.r);
-            pixel.g = premultiply(pixel.g);
-            pixel.b = premultiply(pixel.b);
-        }
-
-        Ok(pixmap)
     }
 
     /// Returns a reference to the underlying data as premultiplied RGBA8.
