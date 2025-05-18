@@ -15,7 +15,7 @@ impl BitSize {
     }
 
     pub fn mask(&self) -> u32 {
-        ((1 << self.0 as u64) - 1) as u32
+        ((1u64 << self.0 as u64) - 1) as u32
     }
 }
 
