@@ -54,7 +54,7 @@ impl ColorSpace {
                     let icc_stream = iter.next()?.cast::<Stream>()?;
                     let dict = icc_stream.dict();
                     let num_components = dict.get::<usize>(N)?;
-                    
+
                     return ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)
                         .map(|p| ColorSpace::ICCColor(p))
                         .or_else(|| dict.get::<Object>(ALTERNATE).map(|o| ColorSpace::new(o)))

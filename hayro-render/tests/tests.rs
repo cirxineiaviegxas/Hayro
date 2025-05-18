@@ -1,174 +1,174 @@
 use crate::run_test;
 
-#[test] fn clip_path_evenodd() { run_test("clip_path_evenodd", None); }
-#[test] fn clip_path_nested() { run_test("clip_path_nested", None); }
-#[test] fn color_separation_3() { run_test("color_separation_3", None); }
-#[test] fn color_space_calgray() { run_test("color_space_calgray", None); }
-#[test] fn color_space_calrgb() { run_test("color_space_calrgb", Some(0..=8)); }
-#[test] fn color_space_icc_gray() { run_test("color_space_icc_gray", None); }
-#[test] fn color_space_icc_invalid_profile() { run_test("color_space_icc_invalid_profile", None); }
-#[test] fn color_space_icc_srgb() { run_test("color_space_icc_srgb", None); }
-#[test] fn color_space_indexed() { run_test("color_space_indexed", None); }
-#[test] fn color_space_lab() { run_test("color_space_lab", None); }
-#[test] fn color_space_separation_1() { run_test("color_space_separation_1", None); }
-#[test] fn color_space_separation_2() { run_test("color_space_separation_2", None); }
-#[test] fn filter_tiff_predictor_gray() { run_test("filter_tiff_predictor_gray", None); }
-#[test] fn font_cid_1() { run_test("font_cid_1", None); }
-#[test] fn font_cid_2() { run_test("font_cid_2", Some(0..=0)); }
-#[test] fn font_cid_3() { run_test("font_cid_3", None); }
-#[test] fn font_cid_4() { run_test("font_cid_4", None); }
-#[test] fn font_cid_5() { run_test("font_cid_5", None); }
-#[test] fn font_cid_6() { run_test("font_cid_6", None); }
-#[test] fn font_cid_7() { run_test("font_cid_7", None); }
-#[test] fn font_mmtype1() { run_test("font_mmtype1", None); }
-#[test] fn font_standard_1() { run_test("font_standard_1", None); }
-#[test] fn font_standard_2() { run_test("font_standard_2", Some(0..=0)); }
-#[test] fn font_standard_all_glyphs() { run_test("font_standard_all_glyphs", None); }
-#[test] fn font_truetype_1() { run_test("font_truetype_1", None); }
-#[test] fn font_truetype_2() { run_test("font_truetype_2", None); }
-#[test] fn font_truetype_3() { run_test("font_truetype_3", None); }
-#[test] fn font_truetype_4() { run_test("font_truetype_4", None); }
-#[test] fn font_truetype_5() { run_test("font_truetype_5", None); }
-#[test] fn font_truetype_6() { run_test("font_truetype_6", None); }
-#[test] fn font_truetype_7() { run_test("font_truetype_7", Some(1..=1)); }
-#[test] fn font_truetype_8() { run_test("font_truetype_8", Some(0..=0)); }
-#[test] fn font_truetype_slow_post_lookup() { run_test("font_truetype_slow_post_lookup", Some(0..=0)); }
-#[test] fn font_type1_1() { run_test("font_type1_1", None); }
-#[test] fn font_type1_10() { run_test("font_type1_10", Some(0..=1)); }
-#[test] fn font_type1_11() { run_test("font_type1_11", None); }
-#[test] fn font_type1_12() { run_test("font_type1_12", None); }
-#[test] fn font_type1_2() { run_test("font_type1_2", None); }
-#[test] fn font_type1_3() { run_test("font_type1_3", None); }
-#[test] fn font_type1_4() { run_test("font_type1_4", None); }
-#[test] fn font_type1_5() { run_test("font_type1_5", None); }
-#[test] fn font_type1_6() { run_test("font_type1_6", None); }
-#[test] fn font_type1_7() { run_test("font_type1_7", None); }
-#[test] fn font_type1_8() { run_test("font_type1_8", None); }
-#[test] fn font_type1_9() { run_test("font_type1_9", None); }
-#[test] fn font_type1_cff_1() { run_test("font_type1_cff_1", None); }
-#[test] fn font_type1_cff_2() { run_test("font_type1_cff_2", None); }
-#[test] fn font_type1_cff_3() { run_test("font_type1_cff_3", None); }
-#[test] fn font_type1_cff_4() { run_test("font_type1_cff_4", None); }
-#[test] fn font_type1_cff_5() { run_test("font_type1_cff_5", None); }
-#[test] fn font_type1_cff_6() { run_test("font_type1_cff_6", None); }
-#[test] fn font_type3_widths_with_matrix() { run_test("font_type3_widths_with_matrix", None); }
-#[test] fn font_vertical() { run_test("font_vertical", None); }
-#[test] fn fonts_type1_latex() { run_test("fonts_type1_latex", None); }
-#[test] fn function_type0_1() { run_test("function_type0_1", None); }
-#[test] fn function_type0_2() { run_test("function_type0_2", None); }
-#[test] fn image_1_bit_per_component() { run_test("image_1_bit_per_component", None); }
-#[test] fn image_ccit_1() { run_test("image_ccit_1", None); }
-#[test] fn image_ccit_3() { run_test("image_ccit_3", None); }
-#[test] fn image_ccit_4() { run_test("image_ccit_4", None); }
-#[test] fn image_cmyk_icc_jpg() { run_test("image_cmyk_icc_jpg", None); }
-#[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", None); }
-#[test] fn image_inline_2() { run_test("image_inline_2", None); }
-#[test] fn image_inline_3() { run_test("image_inline_3", None); }
-#[test] fn image_inline_4() { run_test("image_inline_4", None); }
-#[test] fn image_inline_5() { run_test("image_inline_5", None); }
-#[test] fn image_inline_6() { run_test("image_inline_6", None); }
-#[test] fn image_inline_7() { run_test("image_inline_7", None); }
-#[test] fn image_inline_8() { run_test("image_inline_8", Some(2..=2)); }
-#[test] fn image_lab() { run_test("image_lab", None); }
-#[test] fn image_luma16() { run_test("image_luma16", None); }
-#[test] fn image_luma8() { run_test("image_luma8", None); }
-#[test] fn image_luma8_icc() { run_test("image_luma8_icc", None); }
-#[test] fn image_luma8_jpg() { run_test("image_luma8_jpg", None); }
-#[test] fn image_mask() { run_test("image_mask", None); }
-#[test] fn image_mask_4() { run_test("image_mask_4", None); }
-#[test] fn image_mask_hairline() { run_test("image_mask_hairline", None); }
-#[test] fn image_mask_missing_bpc() { run_test("image_mask_missing_bpc", None); }
-#[test] fn image_rgb16() { run_test("image_rgb16", None); }
-#[test] fn image_rgb8() { run_test("image_rgb8", None); }
-#[test] fn image_rgb8_decode() { run_test("image_rgb8_decode", None); }
-#[test] fn image_rgb8_icc() { run_test("image_rgb8_icc", None); }
-#[test] fn image_rgb8_icc_jpg() { run_test("image_rgb8_icc_jpg", None); }
-#[test] fn image_rgb8_jpg() { run_test("image_rgb8_jpg", None); }
-#[test] fn image_rgba16() { run_test("image_rgba16", None); }
-#[test] fn image_rgba8() { run_test("image_rgba8", None); }
-#[test] fn image_rgba8_icc() { run_test("image_rgba8_icc", None); }
-#[test] fn integration_coat_of_arms() { run_test("integration_coat_of_arms", None); }
-#[test] fn integration_diagram() { run_test("integration_diagram", None); }
-#[test] fn integration_matplotlib_2() { run_test("integration_matplotlib_2", None); }
-#[test] fn issue_clipping_panic() { run_test("issue_clipping_panic", None); }
-#[test] fn issue_cmap_lookup() { run_test("issue_cmap_lookup", Some(0..=0)); }
-#[test] fn issue_cubic_start_end() { run_test("issue_cubic_start_end", None); }
-#[test] fn issue_predictor_with_null() { run_test("issue_predictor_with_null", None); }
-#[test] fn issue_scaled_glyph() { run_test("issue_scaled_glyph", None); }
-#[test] fn issue_stream_abbreviations() { run_test("issue_stream_abbreviations", Some(0..=0)); }
-#[test] fn page_media_box_bottom_left() { run_test("page_media_box_bottom_left", None); }
-#[test] fn page_media_box_bottom_right() { run_test("page_media_box_bottom_right", None); }
-#[test] fn page_media_box_top_left() { run_test("page_media_box_top_left", None); }
-#[test] fn page_media_box_top_right() { run_test("page_media_box_top_right", None); }
-#[test] fn page_media_box_zoomed_out() { run_test("page_media_box_zoomed_out", None); }
-#[test] fn page_rotation_180() { run_test("page_rotation_180", None); }
-#[test] fn page_rotation_270() { run_test("page_rotation_270", None); }
-#[test] fn page_rotation_90() { run_test("page_rotation_90", None); }
-#[test] fn page_rotation_none() { run_test("page_rotation_none", None); }
-#[test] fn path_rendering_1() { run_test("path_rendering_1", None); }
-#[test] fn path_rendering_10() { run_test("path_rendering_10", None); }
-#[test] fn path_rendering_11() { run_test("path_rendering_11", None); }
-#[test] fn path_rendering_12() { run_test("path_rendering_12", None); }
-#[test] fn path_rendering_13() { run_test("path_rendering_13", None); }
-#[test] fn path_rendering_14() { run_test("path_rendering_14", None); }
-#[test] fn path_rendering_15() { run_test("path_rendering_15", None); }
-#[test] fn path_rendering_16() { run_test("path_rendering_16", None); }
-#[test] fn path_rendering_17() { run_test("path_rendering_17", None); }
-#[test] fn path_rendering_2() { run_test("path_rendering_2", None); }
-#[test] fn path_rendering_3() { run_test("path_rendering_3", None); }
-#[test] fn path_rendering_4() { run_test("path_rendering_4", None); }
-#[test] fn path_rendering_5() { run_test("path_rendering_5", None); }
-#[test] fn path_rendering_6() { run_test("path_rendering_6", None); }
-#[test] fn path_rendering_7() { run_test("path_rendering_7", None); }
-#[test] fn path_rendering_8() { run_test("path_rendering_8", None); }
-#[test] fn path_rendering_9() { run_test("path_rendering_9", None); }
-#[test] fn path_rendering_dash_array_0_phase() { run_test("path_rendering_dash_array_0_phase", None); }
-#[test] fn pattern_shading_background() { run_test("pattern_shading_background", None); }
-#[test] fn pattern_shading_bbox() { run_test("pattern_shading_bbox", None); }
-#[test] fn pattern_shading_on_text() { run_test("pattern_shading_on_text", None); }
-#[test] fn pattern_shading_type0_7() { run_test("pattern_shading_type0_7", None); }
-#[test] fn pattern_shading_type1_1() { run_test("pattern_shading_type1_1", None); }
-#[test] fn pattern_shading_type1_2() { run_test("pattern_shading_type1_2", None); }
-#[test] fn pattern_shading_type1_3() { run_test("pattern_shading_type1_3", None); }
-#[test] fn pattern_shading_type1_4() { run_test("pattern_shading_type1_4", None); }
-#[test] fn pattern_shading_type1_5() { run_test("pattern_shading_type1_5", None); }
-#[test] fn pattern_shading_type1_6() { run_test("pattern_shading_type1_6", None); }
-#[test] fn pattern_shading_type1_transform() { run_test("pattern_shading_type1_transform", None); }
-#[test] fn pattern_shading_type2_1() { run_test("pattern_shading_type2_1", None); }
-#[test] fn pattern_shading_type2_2() { run_test("pattern_shading_type2_2", None); }
-#[test] fn pattern_shading_type2_3_stops() { run_test("pattern_shading_type2_3_stops", None); }
-#[test] fn pattern_shading_type2_many() { run_test("pattern_shading_type2_many", None); }
-#[test] fn pattern_shading_type2_no_extend() { run_test("pattern_shading_type2_no_extend", None); }
-#[test] fn pattern_shading_type2_no_extend_with_background() { run_test("pattern_shading_type2_no_extend_with_background", None); }
-#[test] fn pattern_shading_type2_out_of_viewport() { run_test("pattern_shading_type2_out_of_viewport", None); }
-#[test] fn pattern_shading_type2_slanted() { run_test("pattern_shading_type2_slanted", None); }
-#[test] fn pattern_shading_type3_1() { run_test("pattern_shading_type3_1", None); }
-#[test] fn pattern_shading_type3_2() { run_test("pattern_shading_type3_2", None); }
-#[test] fn pattern_shading_type3_3() { run_test("pattern_shading_type3_3", None); }
-#[test] fn pattern_shading_type3_4() { run_test("pattern_shading_type3_4", None); }
-#[test] fn pattern_shading_type3_collection() { run_test("pattern_shading_type3_collection", None); }
-#[test] fn pattern_shading_type4_1() { run_test("pattern_shading_type4_1", None); }
-#[test] fn pattern_shading_type4_2() { run_test("pattern_shading_type4_2", None); }
-#[test] fn pattern_shading_type5() { run_test("pattern_shading_type5", None); }
-#[test] fn rendering_conflation_artifacts() { run_test("rendering_conflation_artifacts", Some(2..=2)); }
-#[test] fn shading_operator_1() { run_test("shading_operator_1", None); }
-#[test] fn shading_operator_2() { run_test("shading_operator_2", None); }
-#[test] fn stream_ccit_not_enough_data() { run_test("stream_ccit_not_enough_data", None); }
-#[test] fn stream_flate_bpc_1() { run_test("stream_flate_bpc_1", Some(0..=0)); }
-#[test] fn stream_jpx_1() { run_test("stream_jpx_1", Some(2..=2)); }
-#[test] fn stream_jpx_3() { run_test("stream_jpx_3", Some(2..=2)); }
-#[test] fn stream_jpx_5() { run_test("stream_jpx_5", None); }
-#[test] fn stream_jpx_6() { run_test("stream_jpx_6", None); }
-#[test] fn text_filled_complex_paint() { run_test("text_filled_complex_paint", None); }
-#[test] fn text_rendering_1() { run_test("text_rendering_1", None); }
-#[test] fn text_rendering_2() { run_test("text_rendering_2", None); }
-#[test] fn text_rendering_3() { run_test("text_rendering_3", None); }
-#[test] fn text_rendering_4() { run_test("text_rendering_4", None); }
-#[test] fn text_rendering_5() { run_test("text_rendering_5", None); }
-#[test] fn text_rendering_clipping() { run_test("text_rendering_clipping", None); }
-#[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping", None); }
-#[test] fn text_stroked_complex_paint() { run_test("text_stroked_complex_paint", None); }
-#[test] fn text_with_rise() { run_test("text_with_rise", None); }
-#[test] fn xobject_1() { run_test("xobject_1", None); }
-#[test] fn xobject_matrix() { run_test("xobject_matrix", None); }
-#[test] fn xobject_with_fill_opacity() { run_test("xobject_with_fill_opacity", None); }
+#[test] fn clip_path_evenodd() { run_test("clip_path_evenodd", false, None); }
+#[test] fn clip_path_nested() { run_test("clip_path_nested", false, None); }
+#[test] fn color_separation_3() { run_test("color_separation_3", false, None); }
+#[test] fn color_space_calgray() { run_test("color_space_calgray", false, None); }
+#[test] fn color_space_calrgb() { run_test("color_space_calrgb", false, Some(0..=8)); }
+#[test] fn color_space_icc_gray() { run_test("color_space_icc_gray", false, None); }
+#[test] fn color_space_icc_invalid_profile() { run_test("color_space_icc_invalid_profile", false, None); }
+#[test] fn color_space_icc_srgb() { run_test("color_space_icc_srgb", false, None); }
+#[test] fn color_space_indexed() { run_test("color_space_indexed", false, None); }
+#[test] fn color_space_lab() { run_test("color_space_lab", false, None); }
+#[test] fn color_space_separation_1() { run_test("color_space_separation_1", false, None); }
+#[test] fn color_space_separation_2() { run_test("color_space_separation_2", false, None); }
+#[test] fn filter_tiff_predictor_gray() { run_test("filter_tiff_predictor_gray", false, None); }
+#[test] fn font_cid_1() { run_test("font_cid_1", false, None); }
+#[test] fn font_cid_2() { run_test("font_cid_2", false, Some(0..=0)); }
+#[test] fn font_cid_3() { run_test("font_cid_3", false, None); }
+#[test] fn font_cid_4() { run_test("font_cid_4", false, None); }
+#[test] fn font_cid_5() { run_test("font_cid_5", false, None); }
+#[test] fn font_cid_6() { run_test("font_cid_6", false, None); }
+#[test] fn font_cid_7() { run_test("font_cid_7", false, None); }
+#[test] fn font_mmtype1() { run_test("font_mmtype1", false, None); }
+#[test] fn font_standard_1() { run_test("font_standard_1", false, None); }
+#[test] fn font_standard_2() { run_test("font_standard_2", false, Some(0..=0)); }
+#[test] fn font_standard_all_glyphs() { run_test("font_standard_all_glyphs", false, None); }
+#[test] fn font_truetype_1() { run_test("font_truetype_1", false, None); }
+#[test] fn font_truetype_2() { run_test("font_truetype_2", false, None); }
+#[test] fn font_truetype_3() { run_test("font_truetype_3", false, None); }
+#[test] fn font_truetype_4() { run_test("font_truetype_4", false, None); }
+#[test] fn font_truetype_5() { run_test("font_truetype_5", false, None); }
+#[test] fn font_truetype_6() { run_test("font_truetype_6", false, None); }
+#[test] fn font_truetype_7() { run_test("font_truetype_7", false, Some(1..=1)); }
+#[test] fn font_truetype_8() { run_test("font_truetype_8", false, Some(0..=0)); }
+#[test] fn font_truetype_slow_post_lookup() { run_test("font_truetype_slow_post_lookup", false, Some(0..=0)); }
+#[test] fn font_type1_1() { run_test("font_type1_1", false, None); }
+#[test] fn font_type1_10() { run_test("font_type1_10", false, Some(0..=1)); }
+#[test] fn font_type1_11() { run_test("font_type1_11", false, None); }
+#[test] fn font_type1_12() { run_test("font_type1_12", false, None); }
+#[test] fn font_type1_2() { run_test("font_type1_2", false, None); }
+#[test] fn font_type1_3() { run_test("font_type1_3", false, None); }
+#[test] fn font_type1_4() { run_test("font_type1_4", false, None); }
+#[test] fn font_type1_5() { run_test("font_type1_5", false, None); }
+#[test] fn font_type1_6() { run_test("font_type1_6", false, None); }
+#[test] fn font_type1_7() { run_test("font_type1_7", false, None); }
+#[test] fn font_type1_8() { run_test("font_type1_8", false, None); }
+#[test] fn font_type1_9() { run_test("font_type1_9", false, None); }
+#[test] fn font_type1_cff_1() { run_test("font_type1_cff_1", false, None); }
+#[test] fn font_type1_cff_2() { run_test("font_type1_cff_2", false, None); }
+#[test] fn font_type1_cff_3() { run_test("font_type1_cff_3", false, None); }
+#[test] fn font_type1_cff_4() { run_test("font_type1_cff_4", false, None); }
+#[test] fn font_type1_cff_5() { run_test("font_type1_cff_5", false, None); }
+#[test] fn font_type1_cff_6() { run_test("font_type1_cff_6", false, None); }
+#[test] fn font_type3_widths_with_matrix() { run_test("font_type3_widths_with_matrix", false, None); }
+#[test] fn font_vertical() { run_test("font_vertical", false, None); }
+#[test] fn fonts_type1_latex() { run_test("fonts_type1_latex", false, None); }
+#[test] fn function_type0_1() { run_test("function_type0_1", false, None); }
+#[test] fn function_type0_2() { run_test("function_type0_2", false, None); }
+#[test] fn image_1_bit_per_component() { run_test("image_1_bit_per_component", false, None); }
+#[test] fn image_ccit_1() { run_test("image_ccit_1", false, None); }
+#[test] fn image_ccit_3() { run_test("image_ccit_3", false, None); }
+#[test] fn image_ccit_4() { run_test("image_ccit_4", false, None); }
+#[test] fn image_cmyk_icc_jpg() { run_test("image_cmyk_icc_jpg", false, None); }
+#[test] fn image_cmyk_jpg() { run_test("image_cmyk_jpg", false, None); }
+#[test] fn image_inline_2() { run_test("image_inline_2", false, None); }
+#[test] fn image_inline_3() { run_test("image_inline_3", false, None); }
+#[test] fn image_inline_4() { run_test("image_inline_4", false, None); }
+#[test] fn image_inline_5() { run_test("image_inline_5", false, None); }
+#[test] fn image_inline_6() { run_test("image_inline_6", false, None); }
+#[test] fn image_inline_7() { run_test("image_inline_7", false, None); }
+#[test] fn image_inline_8() { run_test("image_inline_8", false, Some(2..=2)); }
+#[test] fn image_lab() { run_test("image_lab", false, None); }
+#[test] fn image_luma16() { run_test("image_luma16", false, None); }
+#[test] fn image_luma8() { run_test("image_luma8", false, None); }
+#[test] fn image_luma8_icc() { run_test("image_luma8_icc", false, None); }
+#[test] fn image_luma8_jpg() { run_test("image_luma8_jpg", false, None); }
+#[test] fn image_mask() { run_test("image_mask", false, None); }
+#[test] fn image_mask_4() { run_test("image_mask_4", false, None); }
+#[test] fn image_mask_hairline() { run_test("image_mask_hairline", false, None); }
+#[test] fn image_mask_missing_bpc() { run_test("image_mask_missing_bpc", false, None); }
+#[test] fn image_rgb16() { run_test("image_rgb16", false, None); }
+#[test] fn image_rgb8() { run_test("image_rgb8", false, None); }
+#[test] fn image_rgb8_decode() { run_test("image_rgb8_decode", false, None); }
+#[test] fn image_rgb8_icc() { run_test("image_rgb8_icc", false, None); }
+#[test] fn image_rgb8_icc_jpg() { run_test("image_rgb8_icc_jpg", false, None); }
+#[test] fn image_rgb8_jpg() { run_test("image_rgb8_jpg", false, None); }
+#[test] fn image_rgba16() { run_test("image_rgba16", false, None); }
+#[test] fn image_rgba8() { run_test("image_rgba8", false, None); }
+#[test] fn image_rgba8_icc() { run_test("image_rgba8_icc", false, None); }
+#[test] fn integration_coat_of_arms() { run_test("integration_coat_of_arms", false, None); }
+#[test] fn integration_diagram() { run_test("integration_diagram", false, None); }
+#[test] fn integration_matplotlib_2() { run_test("integration_matplotlib_2", false, None); }
+#[test] fn issue_clipping_panic() { run_test("issue_clipping_panic", false, None); }
+#[test] fn issue_cmap_lookup() { run_test("issue_cmap_lookup", false, Some(0..=0)); }
+#[test] fn issue_cubic_start_end() { run_test("issue_cubic_start_end", false, None); }
+#[test] fn issue_predictor_with_null() { run_test("issue_predictor_with_null", false, None); }
+#[test] fn issue_scaled_glyph() { run_test("issue_scaled_glyph", false, None); }
+#[test] fn issue_stream_abbreviations() { run_test("issue_stream_abbreviations", false, Some(0..=0)); }
+#[test] fn page_media_box_bottom_left() { run_test("page_media_box_bottom_left", false, None); }
+#[test] fn page_media_box_bottom_right() { run_test("page_media_box_bottom_right", false, None); }
+#[test] fn page_media_box_top_left() { run_test("page_media_box_top_left", false, None); }
+#[test] fn page_media_box_top_right() { run_test("page_media_box_top_right", false, None); }
+#[test] fn page_media_box_zoomed_out() { run_test("page_media_box_zoomed_out", false, None); }
+#[test] fn page_rotation_180() { run_test("page_rotation_180", false, None); }
+#[test] fn page_rotation_270() { run_test("page_rotation_270", false, None); }
+#[test] fn page_rotation_90() { run_test("page_rotation_90", false, None); }
+#[test] fn page_rotation_none() { run_test("page_rotation_none", false, None); }
+#[test] fn path_rendering_1() { run_test("path_rendering_1", false, None); }
+#[test] fn path_rendering_10() { run_test("path_rendering_10", false, None); }
+#[test] fn path_rendering_11() { run_test("path_rendering_11", false, None); }
+#[test] fn path_rendering_12() { run_test("path_rendering_12", false, None); }
+#[test] fn path_rendering_13() { run_test("path_rendering_13", false, None); }
+#[test] fn path_rendering_14() { run_test("path_rendering_14", false, None); }
+#[test] fn path_rendering_15() { run_test("path_rendering_15", false, None); }
+#[test] fn path_rendering_16() { run_test("path_rendering_16", false, None); }
+#[test] fn path_rendering_17() { run_test("path_rendering_17", false, None); }
+#[test] fn path_rendering_2() { run_test("path_rendering_2", false, None); }
+#[test] fn path_rendering_3() { run_test("path_rendering_3", false, None); }
+#[test] fn path_rendering_4() { run_test("path_rendering_4", false, None); }
+#[test] fn path_rendering_5() { run_test("path_rendering_5", false, None); }
+#[test] fn path_rendering_6() { run_test("path_rendering_6", false, None); }
+#[test] fn path_rendering_7() { run_test("path_rendering_7", false, None); }
+#[test] fn path_rendering_8() { run_test("path_rendering_8", false, None); }
+#[test] fn path_rendering_9() { run_test("path_rendering_9", false, None); }
+#[test] fn path_rendering_dash_array_0_phase() { run_test("path_rendering_dash_array_0_phase", false, None); }
+#[test] fn pattern_shading_background() { run_test("pattern_shading_background", false, None); }
+#[test] fn pattern_shading_bbox() { run_test("pattern_shading_bbox", false, None); }
+#[test] fn pattern_shading_on_text() { run_test("pattern_shading_on_text", false, None); }
+#[test] fn pattern_shading_type0_7() { run_test("pattern_shading_type0_7", false, None); }
+#[test] fn pattern_shading_type1_1() { run_test("pattern_shading_type1_1", false, None); }
+#[test] fn pattern_shading_type1_2() { run_test("pattern_shading_type1_2", false, None); }
+#[test] fn pattern_shading_type1_3() { run_test("pattern_shading_type1_3", false, None); }
+#[test] fn pattern_shading_type1_4() { run_test("pattern_shading_type1_4", false, None); }
+#[test] fn pattern_shading_type1_5() { run_test("pattern_shading_type1_5", false, None); }
+#[test] fn pattern_shading_type1_6() { run_test("pattern_shading_type1_6", false, None); }
+#[test] fn pattern_shading_type1_transform() { run_test("pattern_shading_type1_transform", false, None); }
+#[test] fn pattern_shading_type2_1() { run_test("pattern_shading_type2_1", false, None); }
+#[test] fn pattern_shading_type2_2() { run_test("pattern_shading_type2_2", false, None); }
+#[test] fn pattern_shading_type2_3_stops() { run_test("pattern_shading_type2_3_stops", false, None); }
+#[test] fn pattern_shading_type2_many() { run_test("pattern_shading_type2_many", false, None); }
+#[test] fn pattern_shading_type2_no_extend() { run_test("pattern_shading_type2_no_extend", false, None); }
+#[test] fn pattern_shading_type2_no_extend_with_background() { run_test("pattern_shading_type2_no_extend_with_background", false, None); }
+#[test] fn pattern_shading_type2_out_of_viewport() { run_test("pattern_shading_type2_out_of_viewport", false, None); }
+#[test] fn pattern_shading_type2_slanted() { run_test("pattern_shading_type2_slanted", false, None); }
+#[test] fn pattern_shading_type3_1() { run_test("pattern_shading_type3_1", false, None); }
+#[test] fn pattern_shading_type3_2() { run_test("pattern_shading_type3_2", false, None); }
+#[test] fn pattern_shading_type3_3() { run_test("pattern_shading_type3_3", false, None); }
+#[test] fn pattern_shading_type3_4() { run_test("pattern_shading_type3_4", false, None); }
+#[test] fn pattern_shading_type3_collection() { run_test("pattern_shading_type3_collection", true, None); }
+#[test] fn pattern_shading_type4_1() { run_test("pattern_shading_type4_1", true, None); }
+#[test] fn pattern_shading_type4_2() { run_test("pattern_shading_type4_2", false, None); }
+#[test] fn pattern_shading_type5() { run_test("pattern_shading_type5", true, None); }
+#[test] fn rendering_conflation_artifacts() { run_test("rendering_conflation_artifacts", false, Some(2..=2)); }
+#[test] fn shading_operator_1() { run_test("shading_operator_1", false, None); }
+#[test] fn shading_operator_2() { run_test("shading_operator_2", false, None); }
+#[test] fn stream_ccit_not_enough_data() { run_test("stream_ccit_not_enough_data", false, None); }
+#[test] fn stream_flate_bpc_1() { run_test("stream_flate_bpc_1", false, Some(0..=0)); }
+#[test] fn stream_jpx_1() { run_test("stream_jpx_1", false, Some(2..=2)); }
+#[test] fn stream_jpx_3() { run_test("stream_jpx_3", false, Some(2..=2)); }
+#[test] fn stream_jpx_5() { run_test("stream_jpx_5", false, None); }
+#[test] fn stream_jpx_6() { run_test("stream_jpx_6", false, None); }
+#[test] fn text_filled_complex_paint() { run_test("text_filled_complex_paint", false, None); }
+#[test] fn text_rendering_1() { run_test("text_rendering_1", false, None); }
+#[test] fn text_rendering_2() { run_test("text_rendering_2", false, None); }
+#[test] fn text_rendering_3() { run_test("text_rendering_3", false, None); }
+#[test] fn text_rendering_4() { run_test("text_rendering_4", false, None); }
+#[test] fn text_rendering_5() { run_test("text_rendering_5", false, None); }
+#[test] fn text_rendering_clipping() { run_test("text_rendering_clipping", false, None); }
+#[test] fn text_rendering_stroking_clipping() { run_test("text_rendering_stroking_clipping", false, None); }
+#[test] fn text_stroked_complex_paint() { run_test("text_stroked_complex_paint", false, None); }
+#[test] fn text_with_rise() { run_test("text_with_rise", false, None); }
+#[test] fn xobject_1() { run_test("xobject_1", false, None); }
+#[test] fn xobject_matrix() { run_test("xobject_matrix", false, None); }
+#[test] fn xobject_with_fill_opacity() { run_test("xobject_with_fill_opacity", false, None); }

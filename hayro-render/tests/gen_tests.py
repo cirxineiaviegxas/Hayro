@@ -2,6 +2,7 @@ import os
 
 # Directory where your PDFs are located
 pdf_directory = os.path.join(os.path.dirname(__file__), '../assets')  # relative to current Python file
+downloads_directory = os.path.join(os.path.dirname(__file__), '../downloads')  # relative to current Python file
 # Output Rust file
 output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 
@@ -24,9 +25,10 @@ lengths = {
     "rendering_conflation_artifacts": "2..=2",
 }
 
-def generate_rust_function(file_stem):
+def generate_rust_function(file_stem, is_download):
     length = f"Some({lengths[file_stem]})" if file_stem in lengths else "None"
-    return f"#[test] fn {file_stem}() {{ run_test(\"{file_stem}\", {length}); }}"
+    is_download = str(is_download).lower()
+    return f"#[test] fn {file_stem}() {{ run_test(\"{file_stem}\", {is_download}, {length}); }}"
 
 def main():
     rust_functions = []
@@ -35,10 +37,11 @@ def main():
     names.sort()
 
     for filename in names:
-        if filename.endswith('.pdf'):
+        if filename.endswith('.link') | filename.endswith('.pdf'):
             file_stem = os.path.splitext(filename)[0]
             if file_stem not in ignore_list:
-                rust_functions.append(generate_rust_function(file_stem))
+                is_download = filename.endswith('.link')
+                rust_functions.append(generate_rust_function(file_stem, is_download))
 
     with open(output_file, 'w') as f:
         f.write('use crate::run_test;\n\n')

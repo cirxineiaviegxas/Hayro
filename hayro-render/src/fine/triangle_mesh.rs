@@ -1,9 +1,9 @@
 use crate::encode::EncodedTriangleMeshShading;
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
-use hayro_interpret::shading::{Triangle};
+use hayro_interpret::shading::Triangle;
 use kurbo::Point;
-use smallvec::{ToSmallVec};
+use smallvec::ToSmallVec;
 
 #[derive(Debug)]
 pub(crate) struct TriangleMeshShadingFiller<'a> {

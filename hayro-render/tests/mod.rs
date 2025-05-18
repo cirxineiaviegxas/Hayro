@@ -15,6 +15,7 @@ pub(crate) static WORKSPACE_PATH: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(""));
 
 pub(crate) static ASSETS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("assets"));
+pub(crate) static DOWNLOADS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("downloads"));
 pub(crate) static DIFFS_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let path = WORKSPACE_PATH.join("diffs");
     let _ = std::fs::remove_dir_all(&path);
@@ -106,8 +107,12 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     }
 }
 
-pub fn run_test(name: &str, range: Option<RangeInclusive<usize>>) {
-    let path = ASSETS_PATH.join(format!("{name}.pdf",));
+pub fn run_test(name: &str, is_download: bool, range: Option<RangeInclusive<usize>>) {
+    let path = if is_download {
+        DOWNLOADS_PATH.join(format!("{name}.pdf",))
+    } else {
+        ASSETS_PATH.join(format!("{name}.pdf",))
+    };
     let content = std::fs::read(&path).unwrap();
     let data = Data::new(&content);
     let pdf = Pdf::new(&data).unwrap();
