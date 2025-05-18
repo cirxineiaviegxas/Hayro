@@ -55,7 +55,7 @@ impl<'a> BitReader<'a> {
 
                 Some(item)
             }
-            9..=32 => {
+            0..=32 => {
                 let bit_pos = self.bit_pos();
                 let end_byte_pos = (bit_pos + bit_size.0 as usize - 1) / 8;
                 let mut read = [0u8; 8];
@@ -68,17 +68,6 @@ impl<'a> BitReader<'a> {
                     as u32
                     & bit_size.mask();
                 self.cur_pos += bit_size.0 as usize;
-
-                Some(item)
-            }
-            // TODO: This won't work correctly for powers not a multiple of 2.
-            0..=7 => {
-                let bit_pos = self.bit_pos();
-                let advance = bit_size.bits();
-                let item =
-                    (self.data[byte_pos] as u32 >> (8 - bit_pos - advance)) & bit_size.mask();
-
-                self.cur_pos += advance;
 
                 Some(item)
             }
@@ -497,5 +486,18 @@ mod tests {
         assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b0]);
         assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b1]);
         assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b0]);
+    }
+
+    #[test]
+    fn bit_reader_varying_bit_sizes() {
+        let data = [0b10011000, 0b00011111, 0b10101001];
+        let mut reader = BitReader::new(&data);
+        assert_eq!(reader.read(BS4).unwrap(), 0b1001);
+        assert_eq!(reader.read(BS1).unwrap(), 0b1);
+        assert_eq!(reader.read(BS4).unwrap(), 0b0000);
+        assert_eq!(reader.read(BitSize::from_u8(5).unwrap()).unwrap(), 0b00111);
+        assert_eq!(reader.read(BS1).unwrap(), 0b1);
+        assert_eq!(reader.read(BS2).unwrap(), 0b11);
+        assert_eq!(reader.read(BitSize::from_u8(7).unwrap()).unwrap(), 0b0101001);
     }
 }
