@@ -1,15 +1,15 @@
 use crate::encode::EncodedTriangleMeshShading;
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
-use hayro_interpret::shading::{Triangle, TriangleVertex};
+use hayro_interpret::shading::{Triangle};
 use kurbo::Point;
-use peniko::color::palette::css::{BLACK, TRANSPARENT};
-use smallvec::{ToSmallVec, smallvec};
+use smallvec::{ToSmallVec};
 
 #[derive(Debug)]
 pub(crate) struct TriangleMeshShadingFiller<'a> {
     cur_pos: Point,
     shading: &'a EncodedTriangleMeshShading,
+    current: Option<(&'a Triangle, Vec<f32>)>,
 }
 
 impl<'a> TriangleMeshShadingFiller<'a> {
@@ -20,6 +20,7 @@ impl<'a> TriangleMeshShadingFiller<'a> {
         Self {
             cur_pos,
             shading,
+            current: None,
         }
     }
 
@@ -29,34 +30,54 @@ impl<'a> TriangleMeshShadingFiller<'a> {
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
             .for_each(|column| {
+                let old_pos = self.cur_pos;
                 self.run_complex_column(column, &bg_color);
-                self.cur_pos += self.shading.x_advance;
+                self.cur_pos = old_pos + self.shading.x_advance;
             });
     }
 
+    fn get_color(&mut self) -> Option<Vec<f32>> {
+        if let Some((tri, color)) = &mut self.current {
+            if let Some(col) = interpolate_color(*tri, self.cur_pos) {
+                *color = col;
+            } else {
+                self.update_current();
+            }
+        } else {
+            self.update_current();
+        }
+
+        self.current.as_ref().map(|e| e.1.clone())
+    }
+
+    fn update_current(&mut self) {
+        for triangle in &self.shading.triangles {
+            if let Some(color) = interpolate_color(triangle, self.cur_pos) {
+                self.current = Some((triangle, color));
+
+                return;
+            }
+        }
+
+        self.current = None;
+    }
+
     fn run_complex_column(&mut self, col: &mut [f32], bg_color: &[f32; 4]) {
-        let mut pos = self.cur_pos;
-
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            let mut filled = false;
-            for triangle in &self.shading.triangles {
-                if let Some(color) = interpolate_color(triangle, pos) {
-                    let color = if let Some(function) = &self.shading.function {
-                        let val = function.eval(color.to_smallvec()).unwrap();
-                        self.shading.color_space.to_rgba(&val, 1.0)
-                    } else {
-                        self.shading.color_space.to_rgba(&color, 1.0)
-                    };
+            if let Some(color) = self.get_color() {
+                let color = if let Some(function) = &self.shading.function {
+                    let val = function.eval(color.to_smallvec()).unwrap();
+                    self.shading.color_space.to_rgba(&val, 1.0)
+                } else {
+                    self.shading.color_space.to_rgba(&color, 1.0)
+                };
 
-                    filled = true;
-                    pixel.copy_from_slice(&PremulColor::from_alpha_color(color).0);
-                }
+                pixel.copy_from_slice(&PremulColor::from_alpha_color(color).0);
+            } else {
+                pixel.copy_from_slice(bg_color);
             }
 
-            if !filled {
-                pixel.copy_from_slice(&PremulColor::from_alpha_color(TRANSPARENT).0);
-            }
-            pos += self.shading.y_advance;
+            self.cur_pos += self.shading.y_advance;
         }
     }
 }
@@ -81,10 +102,7 @@ fn interpolate_color(tri: &Triangle, pos: Point) -> Option<Vec<f32>> {
     Some(result)
 }
 
-fn barycentric_coords(
-    p: Point, 
-    tri: &Triangle,
-) -> Option<(f32, f32, f32)> {
+fn barycentric_coords(p: Point, tri: &Triangle) -> Option<(f32, f32, f32)> {
     let (a, b, c) = (tri.p0.point, tri.p1.point, tri.p2.point);
     let v0 = b - a;
     let v1 = c - a;
@@ -95,13 +113,13 @@ fn barycentric_coords(
     let d11 = v1.dot(v1);
     let d20 = v2.dot(v0);
     let d21 = v2.dot(v1);
-    
+
     let nudge = |val: f64| -> Option<f64> {
         const EPSILON: f64 = -1e-4;
 
         if val < EPSILON {
             None
-        }   else {
+        } else {
             Some(val.max(0.0))
         }
     };

@@ -235,10 +235,14 @@ fn read_free_form_triangles(
         }
 
         reader.align();
-        
+
         let point = Point::new(x as f64, y as f64);
 
-        Some(TriangleVertex { flag, point, colors })
+        Some(TriangleVertex {
+            flag,
+            point,
+            colors,
+        })
     };
 
     let mut a = None;
@@ -339,7 +343,7 @@ fn read_lattice_triangles(
         }
 
         reader.align();
-        
+
         let point = Point::new(x as f64, y as f64);
 
         Some(TriangleVertex {
