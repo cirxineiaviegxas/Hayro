@@ -16,7 +16,6 @@ use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::{Fill, ImageQuality};
-use std::borrow::Cow;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),

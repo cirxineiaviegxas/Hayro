@@ -3,7 +3,6 @@ use crate::convert::convert_transform;
 use crate::font::Font;
 use crate::state::{State, TextState};
 use crate::{FillProps, StrokeProps};
-use hayro_font_parser::Rect;
 use hayro_syntax::content::ops::Transform;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;

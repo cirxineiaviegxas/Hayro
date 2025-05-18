@@ -1,6 +1,5 @@
 use crate::file::xref::XRef;
 use crate::function::Values;
-use crate::object::dict::Dict;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::Reader;
@@ -53,7 +52,7 @@ impl Type4 {
         })
     }
 
-    pub(crate) fn eval(&self, mut input: Values) -> Option<Values> {
+    pub(crate) fn eval(&self, input: Values) -> Option<Values> {
         let mut arg_stack = ArgumentStack::new();
 
         for input in input {

@@ -23,7 +23,7 @@ impl Type2 {
         Some(Self { c0, c1, n })
     }
 
-    pub(crate) fn eval(&self, mut input: f32) -> Values {
+    pub(crate) fn eval(&self, input: f32) -> Values {
         let mut out = smallvec![0.0; self.c0.len()];
 
         for (c0, c1, out) in izip!(&self.c0, &self.c1, &mut out) {
@@ -37,7 +37,7 @@ impl Type2 {
 #[cfg(test)]
 mod tests {
     use crate::function::Function;
-    use crate::function::type2::Type2;
+    
     use crate::object::Object;
     use crate::object::dict::Dict;
     use crate::reader::Readable;

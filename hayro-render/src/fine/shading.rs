@@ -4,8 +4,7 @@
 use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading, RadialAxialParams};
 use crate::fine::{COLOR_COMPONENTS, FineType, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
-use kurbo::{Point, Vec2};
-use peniko::color::palette::css::PINK;
+use kurbo::Point;
 use smallvec::smallvec;
 
 #[derive(Debug)]

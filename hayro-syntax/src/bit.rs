@@ -1,7 +1,6 @@
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::fmt::Debug;
-use std::ops::Shr;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct BitSize(u8);

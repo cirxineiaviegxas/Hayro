@@ -5,7 +5,6 @@ use crate::file::xref::XRef;
 use crate::object::stream::Stream;
 use log::warn;
 use snafu::Whatever;
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::RwLock;
 

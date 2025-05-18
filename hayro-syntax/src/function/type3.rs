@@ -2,7 +2,7 @@ use crate::function::{DomainRange, Function, Values, interpolate, read_domain_ra
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{BOUNDS, ENCODE, FUNCTIONS, RANGE};
+use crate::object::dict::keys::{BOUNDS, ENCODE, FUNCTIONS};
 use smallvec::smallvec;
 
 /// Type 2 exponential interpolation function.
@@ -73,10 +73,10 @@ fn find_interval(bounds: &[f32], x: f32) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::function::type2::Type2;
-    use crate::function::{Clamper, FunctionType};
+    
+    
     use crate::reader::Readable;
-    use std::sync::Arc;
+    
 
     #[test]
     fn simple() {

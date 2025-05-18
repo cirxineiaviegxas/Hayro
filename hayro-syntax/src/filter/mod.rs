@@ -13,7 +13,6 @@ use crate::object::name::Name;
 use crate::object::name::names::*;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
-use jpeg2k::ImagePixelData;
 use log::warn;
 use snafu::{OptionExt, whatever};
 

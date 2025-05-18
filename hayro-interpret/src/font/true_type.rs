@@ -1,14 +1,13 @@
 use crate::font::Encoding;
 use crate::font::blob::OpenTypeFontBlob;
 use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN_INVERSE};
-use crate::font::standard::{StandardFont, select_standard_font};
 use crate::util::{CodeMapExt, OptionLog};
 use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{
-    BASE_ENCODING, BASE_FONT, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESC, FONT_FILE2,
+    BASE_ENCODING, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESC, FONT_FILE2,
     LAST_CHAR, MISSING_WIDTH, WIDTHS,
 };
 use hayro_syntax::object::name::Name;

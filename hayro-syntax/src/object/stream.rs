@@ -7,7 +7,6 @@ use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
-use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 
 /// A stream of arbitrary data.

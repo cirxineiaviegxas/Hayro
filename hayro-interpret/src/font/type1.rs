@@ -8,7 +8,7 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{FONT_DESC, FONT_FILE, FONT_FILE3};
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
-use skrifa::{GlyphId, MetadataProvider};
+use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;

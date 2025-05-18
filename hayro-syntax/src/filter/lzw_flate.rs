@@ -245,7 +245,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                     match predictor {
                         0 => {
                             // Just copy the data.
-                            let mut reader = BitReader::new(in_data, bit_size)?;
+                            let reader = BitReader::new(in_data, bit_size)?;
                             for data in reader {
                                 writer.write(data as u16);
                             }

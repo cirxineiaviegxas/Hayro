@@ -1,4 +1,3 @@
-use crate::Result;
 use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
@@ -7,7 +6,6 @@ use crate::object::null::Null;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::{Readable, Reader, Skippable};
-use snafu::whatever;
 use std::fmt::Debug;
 
 pub mod array;

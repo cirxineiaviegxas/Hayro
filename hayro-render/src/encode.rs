@@ -9,10 +9,9 @@ use hayro_interpret::color::ColorSpace;
 use hayro_interpret::pattern::ShadingPattern;
 use hayro_interpret::shading::ShadingType;
 use hayro_syntax::function::Function;
-use hayro_syntax::object::rect::Rect;
 use kurbo::{Affine, Point, Vec2};
 use peniko::ImageQuality;
-use peniko::color::palette::css::{GREEN, TRANSPARENT};
+use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;
 
@@ -77,7 +76,7 @@ impl EncodeExt for ShadingPattern {
 fn encode_axial_shading(
     sp: &ShadingPattern,
     paints: &mut Vec<EncodedPaint>,
-    mut transform: Affine,
+    transform: Affine,
     coords: [f32; 6],
     domain: [f32; 2],
     function: &Function,
@@ -86,8 +85,8 @@ fn encode_axial_shading(
 ) -> Paint {
     let idx = paints.len();
 
-    let mut p1;
-    let mut r;
+    let p1;
+    let r;
     let mut initial_transform = Affine::IDENTITY;
 
     let params = if is_axial {

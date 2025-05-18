@@ -1,5 +1,5 @@
 use crate::argstack::ArgumentsStack;
-use crate::cff::{f32_abs, CFFError, IsEven};
+use crate::cff::{CFFError, IsEven};
 use crate::type1::stream::Stream;
 use crate::Builder;
 
