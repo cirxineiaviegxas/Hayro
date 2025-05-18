@@ -18,7 +18,6 @@ pub mod object;
 pub mod pdf;
 pub mod reader;
 pub mod trivia;
-pub mod write;
 
 pub type Result<T> = std::result::Result<T, Whatever>;
 
