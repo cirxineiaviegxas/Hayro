@@ -283,7 +283,7 @@ fn read_lattice_triangles(
     let bp_cord = BitSize::from_u8(bp_cord)?;
     let bp_comp = BitSize::from_u8(bp_comp)?;
 
-    let mut triangles = vec![];
+    let mut lattices = vec![];
 
     let ([x_min, x_max, y_min, y_max], decode) =
         decode.split_first_chunk::<4>().map(|(a, b)| (*a, b))?;
@@ -339,30 +339,35 @@ fn read_lattice_triangles(
         Some(TriangleVertex { flag: 0, x, y, colors })
     };
 
-    loop {
-        // TODO: Spec says 2 is also valid? How does that work?
-        let Some(mut a) = read_single(&mut reader, function.is_some()) else { break; };
-        let Some(mut b) = read_single(&mut reader, function.is_some()) else { break; };
-        let Some(mut c) = read_single(&mut reader, function.is_some()) else { break; };
+    'outer: loop {
+        let mut single_row = vec![];
+        
+        for _ in 0..vertices_per_row {
+            let Some(next) = read_single(&mut reader, function.is_some()) else {
+                break 'outer;
+            };
 
-        triangles.push(Triangle {
-            p0: a.clone(),
-            p1: b.clone(),
-            p2: c.clone(),
-        });
+            single_row.push(next);
+        }
         
-        assert!(vertices_per_row >= 3);
-        
-        for _ in 0..(vertices_per_row - 3) {
-            a = b;
-            b = c;
-            c = read_single(&mut reader, function.is_some())?;
+        lattices.push(single_row);
+    }
+    
+    let mut triangles = vec![];
+    
+    for i in 0..(lattices.len() - 1) {
+        for j in 0..(vertices_per_row as usize - 1) {
+            triangles.push(Triangle {
+                p0: lattices[i][j].clone(),
+                p1: lattices[i + 1][j].clone(),
+                p2: lattices[i][j + 1].clone(),
+            });
 
             triangles.push(Triangle {
-                p0: a.clone(),
-                p1: b.clone(),
-                p2: c.clone(),
-            })
+                p0: lattices[i + 1][j + 1].clone(),
+                p1: lattices[i + 1][j].clone(),
+                p2: lattices[i][j + 1].clone(),
+            });
         }
     }
 

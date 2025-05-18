@@ -110,9 +110,23 @@ fn barycentric_coords(
     }
 
     let inv_denom = 1.0 / denom;
-    let v = (dot11 * dot02 - dot01 * dot12) * inv_denom;
-    let w = (dot00 * dot12 - dot01 * dot02) * inv_denom;
-    let u = 1.0 - v - w;
+    let mut v = (dot11 * dot02 - dot01 * dot12) * inv_denom;
+    let mut w = (dot00 * dot12 - dot01 * dot02) * inv_denom;
+    let mut u = 1.0 - v - w;
+
+    const EPSILON: f32 = -1e-4;
+    
+    if v >= EPSILON && v < 0.0 {
+        v = 0.0;
+    }
+    
+    if u >= EPSILON && u < 0.0 {
+        u = 0.0;
+    }
+    
+    if w >= EPSILON && w < 0.0 {
+        w = 0.0;
+    }
 
     if u >= 0.0 && v >= 0.0 && w >= 0.0 {
         Some((u, v, w))
