@@ -115,15 +115,15 @@ fn barycentric_coords(
     let mut u = 1.0 - v - w;
 
     const EPSILON: f32 = -1e-4;
-    
+
     if v >= EPSILON && v < 0.0 {
         v = 0.0;
     }
-    
+
     if u >= EPSILON && u < 0.0 {
         u = 0.0;
     }
-    
+
     if w >= EPSILON && w < 0.0 {
         w = 0.0;
     }

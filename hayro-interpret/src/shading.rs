@@ -4,7 +4,10 @@ use hayro_syntax::function::{Function, interpolate};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BACKGROUND, BBOX, BITS_PER_COMPONENT, BITS_PER_COORDINATE, BITS_PER_FLAG, COLORSPACE, COORDS, DECODE, DOMAIN, EXTEND, FUNCTION, MATRIX, SHADING_TYPE, VERTICES_PER_ROW};
+use hayro_syntax::object::dict::keys::{
+    BACKGROUND, BBOX, BITS_PER_COMPONENT, BITS_PER_COORDINATE, BITS_PER_FLAG, COLORSPACE, COORDS,
+    DECODE, DOMAIN, EXTEND, FUNCTION, MATRIX, SHADING_TYPE, VERTICES_PER_ROW,
+};
 use hayro_syntax::object::rect::Rect;
 use hayro_syntax::object::stream::Stream;
 use hayro_syntax::reader::Reader;
@@ -336,12 +339,17 @@ fn read_lattice_triangles(
 
         reader.align();
 
-        Some(TriangleVertex { flag: 0, x, y, colors })
+        Some(TriangleVertex {
+            flag: 0,
+            x,
+            y,
+            colors,
+        })
     };
 
     'outer: loop {
         let mut single_row = vec![];
-        
+
         for _ in 0..vertices_per_row {
             let Some(next) = read_single(&mut reader, function.is_some()) else {
                 break 'outer;
@@ -349,12 +357,12 @@ fn read_lattice_triangles(
 
             single_row.push(next);
         }
-        
+
         lattices.push(single_row);
     }
-    
+
     let mut triangles = vec![];
-    
+
     for i in 0..(lattices.len() - 1) {
         for j in 0..(vertices_per_row as usize - 1) {
             triangles.push(Triangle {
