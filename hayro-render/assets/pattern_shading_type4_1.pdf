@@ -1,0 +1,100 @@
+%PDF-1.7
+%µ¶
+
+1 0 obj
+<</Type/Catalog/Pages 2 0 R>>
+endobj
+
+2 0 obj
+<</Type/Pages/Kids[3 0 R]/Count 1>>
+endobj
+
+3 0 obj
+<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 520]/Contents 4 0 R/Resources<</Shading<</Sh1 5 0 R/Sh2 9 0 R>>>>>>
+endobj
+
+4 0 obj
+<</Length 38>>
+stream
+q
+1 0 0 1 0 240 cm
+/Sh1 sh
+Q
+
+/Sh2 sh
+
+endstream
+endobj
+
+5 0 obj
+<</ShadingType 4/ColorSpace/DeviceRGB/BitsPerCoordinate 16/BitsPerComponent 8/BitsPerFlag 8/Decode[50 250 40 240 0 1 0 1 0 1]/Length 246/Filter/ASCIIHexDecode>>
+stream
+00 0000 0000 ff 00 00
+00 0000 ffff 00 ff 00
+00 8000 0000 00 00 ff
+
+00 ffff ffff 00 ff ff
+00 ffff 0000 ff 00 ff
+00 8000 ffff ff ff 00
+
+00 0ccd ffff ff 80 00
+00 7333 ffff 80 00 ff
+00 4ccd 8000 00 80 80
+01 a666 0000 ff 00 80
+02 f332 0000 80 ff 00
+>
+
+endstream
+endobj
+
+6 0 obj
+<</FunctionType 2/Domain[0 1]/Range[0 1 0 1 0 1]/C0[1 0 0]/C1[0 1 0]/N 3>>
+endobj
+
+7 0 obj
+<</FunctionType 2/Domain[0 1]/Range[0 1 0 1 0 1]/C0[0 1 0]/C1[0 0 1]/N 3>>
+endobj
+
+8 0 obj
+<</FunctionType 3/Domain[0 1]/Functions[6 0 R 7 0 R]/Bounds[.5]/Encode[0 1 0 1]>>
+endobj
+
+9 0 obj
+<</ShadingType 4/ColorSpace/DeviceRGB/BitsPerCoordinate 16/BitsPerComponent 8/BitsPerFlag 8/Function 8 0 R/Decode[50 250 40 240 0 1]/Length 180/Filter/ASCIIHexDecode>>
+stream
+00 0000 0000 00
+00 0000 ffff 00
+00 8000 0000 80
+
+00 ffff ffff ff
+00 ffff 0000 ff
+00 8000 ffff 80
+
+00 0ccd ffff 0d
+00 7333 ffff 73
+00 4ccd 8000 4d
+01 a666 0000 a6
+02 f332 0000 f2
+>
+
+endstream
+endobj
+
+xref
+0 10
+0000000000 65536 f 
+0000000016 00000 n 
+0000000062 00000 n 
+0000000114 00000 n 
+0000000241 00000 n 
+0000000328 00000 n 
+0000000769 00000 n 
+0000000860 00000 n 
+0000000951 00000 n 
+0000001049 00000 n 
+
+trailer
+<</Size 10/Root 1 0 R>>
+startxref
+1431
+%%EOF
