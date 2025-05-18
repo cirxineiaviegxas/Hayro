@@ -65,7 +65,7 @@ impl EncodeExt for ShadingPattern {
             } => encode_axial_shading(
                 self, paints, transform, *coords, *domain, function, *extend, *axial,
             ),
-            ShadingType::FreeFormGouraud {
+            ShadingType::TriangleMesh {
                 triangles,
                 function,
             } => {
