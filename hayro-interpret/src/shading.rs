@@ -166,8 +166,7 @@ pub struct Triangle {
 #[derive(Clone, Debug)]
 pub struct TriangleVertex {
     flag: u32,
-    pub x: f32,
-    pub y: f32,
+    pub point: Point,
     pub colors: Vec<f32>,
 }
 
@@ -236,8 +235,10 @@ fn read_free_form_triangles(
         }
 
         reader.align();
+        
+        let point = Point::new(x as f64, y as f64);
 
-        Some(TriangleVertex { flag, x, y, colors })
+        Some(TriangleVertex { flag, point, colors })
     };
 
     let mut a = None;
@@ -338,11 +339,12 @@ fn read_lattice_triangles(
         }
 
         reader.align();
+        
+        let point = Point::new(x as f64, y as f64);
 
         Some(TriangleVertex {
             flag: 0,
-            x,
-            y,
+            point,
             colors,
         })
     };

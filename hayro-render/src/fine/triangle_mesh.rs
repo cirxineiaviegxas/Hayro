@@ -10,7 +10,6 @@ use smallvec::{ToSmallVec, smallvec};
 pub(crate) struct TriangleMeshShadingFiller<'a> {
     cur_pos: Point,
     shading: &'a EncodedTriangleMeshShading,
-    abort: bool,
 }
 
 impl<'a> TriangleMeshShadingFiller<'a> {
@@ -21,7 +20,6 @@ impl<'a> TriangleMeshShadingFiller<'a> {
         Self {
             cur_pos,
             shading,
-            abort: start_y < 40,
         }
     }
 
@@ -42,7 +40,7 @@ impl<'a> TriangleMeshShadingFiller<'a> {
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
             let mut filled = false;
             for triangle in &self.shading.triangles {
-                if let Some(color) = interpolate_color(triangle, pos.x as f32, pos.y as f32) {
+                if let Some(color) = interpolate_color(triangle, pos) {
                     let color = if let Some(function) = &self.shading.function {
                         let val = function.eval(color.to_smallvec()).unwrap();
                         self.shading.color_space.to_rgba(&val, 1.0)
@@ -69,12 +67,8 @@ impl Painter for TriangleMeshShadingFiller<'_> {
     }
 }
 
-fn interpolate_color(tri: &Triangle, px: f32, py: f32) -> Option<Vec<f32>> {
-    let (u, v, w) = barycentric_coords(px, py, &tri.p0, &tri.p1, &tri.p2)?;
-
-    if u < 0.0 || v < 0.0 || w < 0.0 {
-        return None;
-    }
+fn interpolate_color(tri: &Triangle, pos: Point) -> Option<Vec<f32>> {
+    let (u, v, w) = barycentric_coords(pos, &tri)?;
 
     let mut result = Vec::with_capacity(tri.p0.colors.len());
     for i in 0..tri.p0.colors.len() {
@@ -88,49 +82,34 @@ fn interpolate_color(tri: &Triangle, px: f32, py: f32) -> Option<Vec<f32>> {
 }
 
 fn barycentric_coords(
-    px: f32,
-    py: f32,
-    a: &TriangleVertex,
-    b: &TriangleVertex,
-    c: &TriangleVertex,
+    p: Point, 
+    tri: &Triangle,
 ) -> Option<(f32, f32, f32)> {
-    let v0 = (b.x - a.x, b.y - a.y);
-    let v1 = (c.x - a.x, c.y - a.y);
-    let v2 = (px - a.x, py - a.y);
+    let (a, b, c) = (tri.p0.point, tri.p1.point, tri.p2.point);
+    let v0 = b - a;
+    let v1 = c - a;
+    let v2 = p - a;
 
-    let dot00 = v0.0 * v0.0 + v0.1 * v0.1;
-    let dot01 = v0.0 * v1.0 + v0.1 * v1.1;
-    let dot02 = v0.0 * v2.0 + v0.1 * v2.1;
-    let dot11 = v1.0 * v1.0 + v1.1 * v1.1;
-    let dot12 = v1.0 * v2.0 + v1.1 * v2.1;
+    let d00 = v0.dot(v0);
+    let d01 = v0.dot(v1);
+    let d11 = v1.dot(v1);
+    let d20 = v2.dot(v0);
+    let d21 = v2.dot(v1);
+    
+    let nudge = |val: f64| -> Option<f64> {
+        const EPSILON: f64 = -1e-4;
 
-    let denom = dot00 * dot11 - dot01 * dot01;
-    if denom.abs() < f32::EPSILON {
-        return None;
-    }
+        if val < EPSILON {
+            None
+        }   else {
+            Some(val.max(0.0))
+        }
+    };
 
-    let inv_denom = 1.0 / denom;
-    let mut v = (dot11 * dot02 - dot01 * dot12) * inv_denom;
-    let mut w = (dot00 * dot12 - dot01 * dot02) * inv_denom;
-    let mut u = 1.0 - v - w;
+    let denom = d00 * d11 - d01 * d01;
+    let v = nudge((d11 * d20 - d01 * d21) / denom)?;
+    let w = nudge((d00 * d21 - d01 * d20) / denom)?;
+    let u = nudge(1.0 - v - w)? as f32;
 
-    const EPSILON: f32 = -1e-4;
-
-    if v >= EPSILON && v < 0.0 {
-        v = 0.0;
-    }
-
-    if u >= EPSILON && u < 0.0 {
-        u = 0.0;
-    }
-
-    if w >= EPSILON && w < 0.0 {
-        w = 0.0;
-    }
-
-    if u >= 0.0 && v >= 0.0 && w >= 0.0 {
-        Some((u, v, w))
-    } else {
-        None
-    }
+    Some((u, v as f32, w as f32))
 }
