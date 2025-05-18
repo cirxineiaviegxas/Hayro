@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
 use crate::object::stream::Stream;

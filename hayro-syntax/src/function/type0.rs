@@ -57,10 +57,6 @@ impl Type0 {
         })
     }
 
-    fn input_dimension(&self) -> usize {
-        self.domain.len()
-    }
-
     fn output_dimension(&self) -> usize {
         self.range.len()
     }
@@ -248,10 +244,6 @@ impl Key {
         self.increment_index(0)
     }
 
-    fn components(&self) -> &[u32] {
-        &self.parts
-    }
-
     fn increment_index(&mut self, index: usize) -> Option<()> {
         let size = self
             .sizes
@@ -267,53 +259,5 @@ impl Key {
         }
 
         Some(())
-    }
-
-    fn decrement(&mut self) {
-        self.decrement_index(0);
-    }
-
-    fn decrement_index(&mut self, index: usize) -> Option<()> {
-        let size = self.sizes.get(index)?;
-        let val = self.parts.get_mut(index)?;
-
-        if *val == 0 {
-            *val = *size - 1;
-            self.increment_index(index + 1)?;
-        } else {
-            *val -= 1;
-        }
-
-        Some(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn key_increment() {
-        let mut key = Key::new(&[3, 3, 2]);
-
-        assert_eq!(key.components(), &[0, 0, 0]);
-        key.increment();
-        assert_eq!(key.components(), &[1, 0, 0]);
-        key.increment();
-        assert_eq!(key.components(), &[2, 0, 0]);
-        key.increment();
-        assert_eq!(key.components(), &[0, 1, 0]);
-        key.increment();
-        assert_eq!(key.components(), &[1, 1, 0]);
-        key.increment();
-        assert_eq!(key.components(), &[2, 1, 0]);
-        key.increment();
-        assert_eq!(key.components(), &[0, 2, 0]);
-        key.increment();
-        key.increment();
-        key.increment();
-        assert_eq!(key.components(), &[0, 0, 1]);
-        key.increment();
-        assert_eq!(key.components(), &[1, 0, 1]);
     }
 }

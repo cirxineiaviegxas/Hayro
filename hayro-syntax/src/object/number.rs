@@ -52,11 +52,11 @@ impl Number {
         }
     }
 
-    pub(crate) fn from_f32(num: f32) -> Self {
+    pub fn from_f32(num: f32) -> Self {
         Self(InternalNumber::Real(num))
     }
 
-    pub(crate) fn from_i32(num: i32) -> Self {
+    pub fn from_i32(num: i32) -> Self {
         Self(InternalNumber::Integer(num))
     }
 }

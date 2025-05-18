@@ -113,10 +113,6 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
         };
     }
 
-    fn bl(num: f32) -> bool {
-        num != 0.0
-    }
-
     fn bf(cond: bool) -> f32 {
         (cond as i32) as f32
     }

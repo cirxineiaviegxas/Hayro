@@ -11,7 +11,6 @@ pub(crate) struct Type3 {
     functions: Vec<Function>,
     bounds: Vec<f32>,
     encode: DomainRange,
-    domain: (f32, f32),
 }
 
 impl Type3 {
@@ -34,7 +33,6 @@ impl Type3 {
             functions,
             bounds,
             encode,
-            domain,
         })
     }
 
