@@ -41,9 +41,18 @@ impl Type0 {
             .and_then(|a| read_domain_range(&a))
             .unwrap_or(range.clone());
 
-        let data = BitReader::new(&stream.decoded().ok()?, BitSize::from_u8(bits_per_sample)?)?
-            .into_iter()
-            .collect::<Vec<_>>();
+        let data = {
+            let decoded = stream.decoded().ok()?;
+            let mut buf = vec![];
+            let mut reader = BitReader::new(&decoded);
+
+            while let Some(data) = reader.read(BitSize::from_u8(bits_per_sample)?) {
+                buf.push(data);
+            }
+
+            buf
+        };
+
         let table = build_table(&data, &sizes, range.len())?;
 
         Some(Self {

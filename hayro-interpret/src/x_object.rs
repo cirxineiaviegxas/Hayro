@@ -271,13 +271,13 @@ impl<'a> ImageXObject<'a> {
             1 | 2 | 4 => {
                 let mut buf = vec![];
                 let bpc = BitSize::from_u8(self.bits_per_component).unwrap();
-                let mut reader = BitReader::new(self.decoded.as_ref(), bpc).unwrap();
+                let mut reader = BitReader::new(self.decoded.as_ref());
 
                 for _ in 0..self.height {
                     for _ in 0..self.width {
                         // See `stream_ccit_not_enough_data`, some images seemingly don't have
                         // enough data, so we just pad with zeroes in this case.
-                        let next = reader.next().unwrap_or(0) as u16;
+                        let next = reader.read(bpc).unwrap_or(0) as u16;
 
                         buf.push(next);
                     }

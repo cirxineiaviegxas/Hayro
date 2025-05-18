@@ -105,12 +105,12 @@ pub mod lzw {
         let mut table = Table::new(early_change);
 
         let bit_size = BitSize::from_u8(table.code_length())?;
-        let mut reader = BitReader::new(data, bit_size)?;
+        let mut reader = BitReader::new(data);
         let mut decoded = vec![];
         let mut prev = None;
 
         loop {
-            let next = reader.next()? as usize;
+            let next = reader.read(bit_size)? as usize;
 
             match next {
                 CLEAR_TABLE => {
@@ -245,8 +245,8 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                     match predictor {
                         0 => {
                             // Just copy the data.
-                            let reader = BitReader::new(in_data, bit_size)?;
-                            for data in reader {
+                            let mut reader = BitReader::new(in_data);
+                            while let Some(data) = reader.read(bit_size) {
                                 writer.write(data as u16);
                             }
                         }
@@ -339,8 +339,8 @@ fn apply<'a, T: Predictor>(
 
         prev_col = {
             let out_data = writer.get_data();
-            let mut reader = BitReader::new_with(&out_data, bit_size, old_pos)?;
-            BitChunk::from_reader(&mut reader, chunk_len).unwrap()
+            let mut reader = BitReader::new_with(&out_data, old_pos);
+            BitChunk::from_reader(&mut reader, bit_size, chunk_len).unwrap()
         };
 
         top_left = prev_row;
