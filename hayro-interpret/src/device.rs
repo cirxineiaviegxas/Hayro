@@ -24,7 +24,6 @@ pub trait Device {
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps);
     fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps);
     fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32);
-    fn apply_mask(&mut self, mask: &Mask);
     fn draw_rgba_image(
         &mut self,
         image_data: Vec<u8>,
@@ -64,9 +63,6 @@ pub(crate) enum ReplayInstruction {
         height: u32,
         is_stencil: bool,
         quality: ImageQuality,
-    },
-    ApplyMask {
-        mask: Mask,
     },
     PopClip,
 }

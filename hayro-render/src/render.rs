@@ -143,20 +143,6 @@ impl RenderContext {
         );
     }
 
-    /// Push a new opacity layer.
-    pub fn push_opacity_layer(&mut self, opacity: f32) {
-        self.push_layer(None, None, Some(opacity), None);
-    }
-
-    /// Push a new mask layer.
-    ///
-    /// Note that the mask, if provided, needs to have the same size as the render context. Otherwise,
-    /// it will be ignored. In addition to that, the mask will not be affected by the current
-    /// transformation matrix in place.
-    pub fn push_mask_layer(&mut self, mask: Mask) {
-        self.push_layer(None, None, None, Some(mask));
-    }
-
     /// Pop the last-pushed layer.
     pub fn pop_layer(&mut self) {
         self.wide.pop_layer();
@@ -172,20 +158,6 @@ impl RenderContext {
         self.paint = paint.into();
     }
 
-    /// Set the current paint transform.
-    ///
-    /// The paint transform is applied to the paint after the transform of the geometry the paint
-    /// is drawn in, i.e., the paint transform is applied after the global transform. This allows
-    /// transforming the paint independently from the drawn geometry.
-    pub fn set_paint_transform(&mut self, paint_transform: Affine) {
-        self.paint_transform = paint_transform;
-    }
-
-    /// Reset the current paint transform.
-    pub fn reset_paint_transform(&mut self) {
-        self.paint_transform = Affine::IDENTITY;
-    }
-
     /// Set the current fill rule.
     pub fn set_fill_rule(&mut self, fill_rule: Fill) {
         self.fill_rule = fill_rule;
@@ -194,11 +166,6 @@ impl RenderContext {
     /// Set the current transform.
     pub fn set_transform(&mut self, transform: Affine) {
         self.transform = transform;
-    }
-
-    /// Reset the current transform.
-    pub fn reset_transform(&mut self) {
-        self.transform = Affine::IDENTITY;
     }
 
     /// Reset the render context.

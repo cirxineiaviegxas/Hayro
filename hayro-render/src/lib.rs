@@ -25,7 +25,7 @@ mod flatten;
 mod mask;
 mod paint;
 mod pixmap;
-mod render;
+pub mod render;
 mod strip;
 mod tile;
 mod util;
@@ -114,10 +114,6 @@ impl Device for Renderer {
             .set_fill_rule(clip.map(|c| c.fill).unwrap_or(Fill::NonZero));
         self.0
             .push_layer(clip.map(|c| &c.path), None, Some(opacity), None)
-    }
-
-    fn apply_mask(&mut self, mask: &Mask) {
-        todo!()
     }
 
     fn draw_rgba_image(

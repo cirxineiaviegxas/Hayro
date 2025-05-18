@@ -15,9 +15,6 @@ use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;
 
-const DEGENERATE_THRESHOLD: f32 = 1.0e-6;
-const NUDGE_VAL: f32 = 1.0e-7;
-
 /// A trait for encoding gradients.
 pub(crate) trait EncodeExt {
     /// Encode the gradient and push it into a vector of encoded paints, returning

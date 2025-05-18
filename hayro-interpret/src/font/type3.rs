@@ -53,10 +53,6 @@ impl Device for Type3GlyphDescription {
         });
     }
 
-    fn apply_mask(&mut self, mask: &Mask) {
-        todo!()
-    }
-
     fn draw_rgba_image(
         &mut self,
         image_data: Vec<u8>,

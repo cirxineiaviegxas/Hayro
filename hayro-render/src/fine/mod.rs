@@ -4,7 +4,6 @@
 //! Fine rasterization runs the commands in each wide tile to determine the final RGBA value
 //! of each pixel and pack it into the pixmap.
 
-mod blend;
 mod image;
 mod shading;
 
@@ -27,9 +26,6 @@ pub const SCRATCH_BUF_SIZE: usize =
     WideTile::WIDTH as usize * Tile::HEIGHT as usize * COLOR_COMPONENTS;
 
 pub type ScratchBuf<F> = [F; SCRATCH_BUF_SIZE];
-
-pub type FineU8 = ScratchBuf<u8>;
-pub type FineF32 = ScratchBuf<f32>;
 
 #[derive(Debug)]
 #[doc(hidden)]
@@ -426,7 +422,7 @@ pub(crate) mod fill {
     // See https://www.w3.org/TR/compositing-1/#porterduffcompositingoperators for the
     // formulas.
 
-    use crate::fine::{COLOR_COMPONENTS, FineType, TILE_HEIGHT_COMPONENTS, blend};
+    use crate::fine::{COLOR_COMPONENTS, FineType, TILE_HEIGHT_COMPONENTS};
     use peniko::{BlendMode, Compose, Mix};
 
     pub(crate) fn blend<F: FineType, T: Iterator<Item = [F; COLOR_COMPONENTS]>>(
@@ -436,7 +432,7 @@ pub(crate) mod fill {
     ) {
         match (blend_mode.mix, blend_mode.compose) {
             (Mix::Normal, Compose::SrcOver) => alpha_composite(target, source),
-            _ => blend::fill::blend(target, source, blend_mode),
+            _ => unreachable!(),
         }
     }
 
@@ -469,7 +465,7 @@ pub(crate) mod fill {
 }
 
 pub(crate) mod strip {
-    use crate::fine::{COLOR_COMPONENTS, FineType, TILE_HEIGHT_COMPONENTS, Widened, blend};
+    use crate::fine::{COLOR_COMPONENTS, FineType, TILE_HEIGHT_COMPONENTS, Widened};
     use crate::tile::Tile;
     use peniko::{BlendMode, Compose, Mix};
 
@@ -485,7 +481,7 @@ pub(crate) mod strip {
     ) {
         match (blend_mode.mix, blend_mode.compose) {
             (Mix::Normal, Compose::SrcOver) => alpha_composite(target, source, alphas),
-            _ => blend::strip::blend(target, source, blend_mode, alphas),
+            _ => unreachable!()
         }
     }
 
@@ -515,28 +511,6 @@ pub(crate) mod strip {
             }
         }
     }
-
-    pub(crate) fn mask<F: FineType, A: Iterator<Item = [u8; Tile::HEIGHT as usize]>>(
-        target: &mut [F],
-        source: &mut [F],
-        mut alphas: A,
-    ) {
-        for strip in target.chunks_exact_mut(TILE_HEIGHT_COMPONENTS) {
-            let alphas = alphas.next().unwrap();
-            let mut masks = alphas.iter().copied().map(F::from_normalized_u8);
-
-            for (bg, src) in strip
-                .chunks_exact_mut(COLOR_COMPONENTS)
-                .zip(source.chunks_exact(COLOR_COMPONENTS))
-            {
-                let alpha = masks.next().unwrap();
-
-                for i in 0..COLOR_COMPONENTS {
-                    bg[i] = bg[i].normalized_mul(src[i]).normalized_mul(alpha);
-                }
-            }
-        }
-    }
 }
 
 trait Painter {
@@ -561,10 +535,6 @@ pub trait Widened<T: FineType>:
     fn clamp(self) -> Self;
     /// Normalize the current value to the range of the underlying narrowed type.
     fn normalize(self) -> Self;
-    /// Get the minimum between this number and another number.
-    fn min(self, other: Self) -> Self;
-    /// Get the maximum between this number and another number.
-    fn max(self, other: Self) -> Self;
     /// Perform a normalizing multiplication between this number and another number.
     fn normalized_mul(self, other: Self) -> Self;
     /// Cast the current type to its narrowed representation.
@@ -581,16 +551,6 @@ impl Widened<Self> for f32 {
     fn normalize(self) -> Self {
         // f32 values are always normalized between 0.0 and 1.0.
         self
-    }
-
-    #[inline(always)]
-    fn min(self, other: Self) -> Self {
-        Self::min(self, other)
-    }
-
-    #[inline(always)]
-    fn max(self, other: Self) -> Self {
-        Self::max(self, other)
     }
 
     #[inline(always)]
@@ -613,16 +573,6 @@ impl Widened<u8> for u16 {
     #[inline(always)]
     fn normalize(self) -> Self {
         div_255(self)
-    }
-
-    #[inline(always)]
-    fn min(self, other: Self) -> Self {
-        Ord::min(self, other)
-    }
-
-    #[inline(always)]
-    fn max(self, other: Self) -> Self {
-        Ord::max(self, other)
     }
 
     #[inline(always)]

@@ -732,9 +732,6 @@ fn run_t3_instructions(
                 device.push_layer(clip.as_ref(), *opacity)
             }
             ReplayInstruction::PopClip => device.pop(),
-            ReplayInstruction::ApplyMask { mask } => {
-                device.apply_mask(mask);
-            }
             ReplayInstruction::DrawImage {
                 image_data,
                 width,
