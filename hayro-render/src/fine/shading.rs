@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading, RadialAxialParams};
-use crate::fine::{COLOR_COMPONENTS, FineType, Painter, TILE_HEIGHT_COMPONENTS};
+use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use kurbo::Point;
 use smallvec::smallvec;
@@ -23,8 +23,10 @@ impl<'a> FunctionShadingFiller<'a> {
         }
     }
 
-    pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
-        let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
+    pub(super) fn run(mut self, target: &mut [f32]) {
+        let bg_color = PremulColor::from_alpha_color(self.shading.background)
+            .as_premul_f32()
+            .components;
 
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
@@ -34,7 +36,7 @@ impl<'a> FunctionShadingFiller<'a> {
             });
     }
 
-    fn run_complex_column<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4]) {
+    fn run_complex_column(&mut self, col: &mut [f32], bg_color: &[f32; 4]) {
         let mut pos = self.cur_pos;
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
@@ -48,7 +50,11 @@ impl<'a> FunctionShadingFiller<'a> {
                     .unwrap();
                 // TODO: CLamp out-of-range values.
                 let color = self.shading.color_space.to_rgba(&out, 1.0);
-                pixel.copy_from_slice(&F::extract_color(&PremulColor::from_alpha_color(color)));
+                pixel.copy_from_slice(
+                    &PremulColor::from_alpha_color(color)
+                        .as_premul_f32()
+                        .components,
+                );
             }
             pos += self.shading.y_advance;
         }
@@ -56,7 +62,7 @@ impl<'a> FunctionShadingFiller<'a> {
 }
 
 impl Painter for FunctionShadingFiller<'_> {
-    fn paint<F: FineType>(self, target: &mut [F]) {
+    fn paint(self, target: &mut [f32]) {
         self.run(target);
     }
 }
@@ -77,8 +83,10 @@ impl<'a> RadialAxialShadingFiller<'a> {
         }
     }
 
-    pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
-        let bg_color = F::extract_color(&PremulColor::from_alpha_color(self.shading.background));
+    pub(super) fn run(mut self, target: &mut [f32]) {
+        let bg_color = PremulColor::from_alpha_color(self.shading.background)
+            .as_premul_f32()
+            .components;
 
         let denom = match self.shading.params {
             RadialAxialParams::Axial { denom } => denom,
@@ -93,7 +101,7 @@ impl<'a> RadialAxialShadingFiller<'a> {
             });
     }
 
-    fn fill_axial<F: FineType>(&mut self, col: &mut [F], bg_color: &[F; 4], denom: f32) {
+    fn fill_axial(&mut self, col: &mut [f32], bg_color: &[f32; 4], denom: f32) {
         // TODO: If the
         // starting and ending coordinates are coincident (x0=x1 and y0=y1) nothing shall be
         // painted.
@@ -111,7 +119,14 @@ impl<'a> RadialAxialShadingFiller<'a> {
 
                 p1 / denom
             } else {
-                radial_pos(&pos, &self.shading.p1, self.shading.r, self.shading.extend[0], self.shading.extend[1]).unwrap_or(f32::MIN)
+                radial_pos(
+                    &pos,
+                    &self.shading.p1,
+                    self.shading.r,
+                    self.shading.extend[0],
+                    self.shading.extend[1],
+                )
+                .unwrap_or(f32::MIN)
             };
 
             if x == f32::MIN {
@@ -144,14 +159,24 @@ impl<'a> RadialAxialShadingFiller<'a> {
             let val = self.shading.function.eval(smallvec![t]).unwrap();
 
             let color = self.shading.color_space.to_rgba(&val, 1.0);
-            pixel.copy_from_slice(&F::extract_color(&PremulColor::from_alpha_color(color)));
+            pixel.copy_from_slice(
+                &PremulColor::from_alpha_color(color)
+                    .as_premul_f32()
+                    .components,
+            );
 
             pos += self.shading.y_advance;
         }
     }
 }
 
-fn radial_pos(pos: &Point, p1: &Point, r: Point, min_extend: bool, max_extend: bool) -> Option<f32> {
+fn radial_pos(
+    pos: &Point,
+    p1: &Point,
+    r: Point,
+    min_extend: bool,
+    max_extend: bool,
+) -> Option<f32> {
     // The values for a radial gradient can be calculated for any t as follow:
     // Let x(t) = (x_1 - x_0)*t + x_0 (since x_0 is always 0, this shortens to x_1 * t)
     // Let y(t) = (y_1 - y_0)*t + y_0 (since y_0 is always 0, this shortens to y_1 * t)
@@ -210,11 +235,11 @@ fn radial_pos(pos: &Point, p1: &Point, r: Point, min_extend: bool, max_extend: b
     let mut take_max = Some(max);
     let min = t1.min(t2);
     let mut take_min = Some(min);
-    
+
     if (!min_extend && min < 0.0) || r0 + dr * min < 0.0 {
         take_min = None;
     }
-    
+
     if (!max_extend && max > 1.0) || r0 + dr * max < 0.0 {
         take_max = None;
     }
@@ -228,7 +253,7 @@ fn radial_pos(pos: &Point, p1: &Point, r: Point, min_extend: bool, max_extend: b
 }
 
 impl Painter for RadialAxialShadingFiller<'_> {
-    fn paint<F: FineType>(self, target: &mut [F]) {
+    fn paint(self, target: &mut [f32]) {
         self.run(target);
     }
 }

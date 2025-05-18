@@ -5,7 +5,7 @@
 
 use crate::coarse::Wide;
 use crate::encode::{EncodeExt, EncodedPaint};
-use crate::fine::{Fine, FineType};
+use crate::fine::Fine;
 use crate::flatten::Line;
 use crate::mask::Mask;
 use crate::paint::{Paint, PaintType};
@@ -193,11 +193,7 @@ impl RenderContext {
             buffer.len(),
         );
 
-        let mut fine = Fine::<f32>::new(width, height);
-        self.do_fine(buffer, &mut fine);
-    }
-
-    fn do_fine<F: FineType>(&self, buffer: &mut [u8], fine: &mut Fine<F>) {
+        let mut fine = Fine::new(width, height);
         let width_tiles = self.wide.width_tiles();
         let height_tiles = self.wide.height_tiles();
         for y in 0..height_tiles {
@@ -205,7 +201,7 @@ impl RenderContext {
                 let wtile = self.wide.get(x, y);
                 fine.set_coords(x, y);
 
-                fine.clear(F::extract_color(&wtile.bg));
+                fine.clear(wtile.bg.as_premul_f32().components);
                 for cmd in &wtile.cmds {
                     fine.run_cmd(cmd, &self.alphas, &self.encoded_paints);
                 }

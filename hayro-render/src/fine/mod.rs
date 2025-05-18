@@ -13,7 +13,6 @@ use crate::fine::image::ImageFiller;
 use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
 use crate::paint::{Paint, PremulColor};
 use crate::tile::Tile;
-use crate::util::scalar::div_255;
 use core::fmt::Debug;
 use core::iter;
 use peniko::{BlendMode, Compose, Mix};
@@ -30,19 +29,19 @@ pub type ScratchBuf<F> = [F; SCRATCH_BUF_SIZE];
 #[derive(Debug)]
 #[doc(hidden)]
 /// This is an internal struct, do not access directly.
-pub struct Fine<F: FineType> {
+pub struct Fine {
     pub(crate) width: u16,
     pub(crate) height: u16,
     pub(crate) wide_coords: (u16, u16),
-    pub(crate) blend_buf: Vec<ScratchBuf<F>>,
-    pub(crate) color_buf: ScratchBuf<F>,
+    pub(crate) blend_buf: Vec<ScratchBuf<f32>>,
+    pub(crate) color_buf: ScratchBuf<f32>,
 }
 
-impl<F: FineType> Fine<F> {
+impl Fine {
     /// Create a new fine rasterizer.
     pub fn new(width: u16, height: u16) -> Self {
-        let blend_buf = [F::ZERO; SCRATCH_BUF_SIZE];
-        let color_buf = [F::ZERO; SCRATCH_BUF_SIZE];
+        let blend_buf = [0.0; SCRATCH_BUF_SIZE];
+        let color_buf = [0.0; SCRATCH_BUF_SIZE];
 
         Self {
             width,
@@ -58,7 +57,7 @@ impl<F: FineType> Fine<F> {
         self.wide_coords = (x, y);
     }
 
-    pub fn clear(&mut self, premul_color: [F; 4]) {
+    pub fn clear(&mut self, premul_color: [f32; 4]) {
         let blend_buf = self.blend_buf.last_mut().unwrap();
 
         if premul_color[0] == premul_color[1]
@@ -113,7 +112,7 @@ impl<F: FineType> Fine<F> {
                 );
             }
             Cmd::PushBuf => {
-                self.blend_buf.push([F::ZERO; SCRATCH_BUF_SIZE]);
+                self.blend_buf.push([0.0; SCRATCH_BUF_SIZE]);
             }
             Cmd::PopBuf => {
                 self.blend_buf.pop();
@@ -136,7 +135,7 @@ impl<F: FineType> Fine<F> {
                         .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
                         .for_each(|s| {
                             for c in s {
-                                *c = F::from_normalized_f32(*o).normalized_mul(*c);
+                                *c = *o * *c;
                             }
                         });
                 }
@@ -157,10 +156,10 @@ impl<F: FineType> Fine<F> {
                         let y = start_y + y as u16;
 
                         if x < m.width() && y < m.height() {
-                            let val = F::from_normalized_u8(m.sample(x, y));
+                            let val = m.sample(x, y) as f32 / 255.0;
 
                             for comp in pix.iter_mut() {
-                                *comp = comp.normalized_mul(val);
+                                *comp = *comp * val;
                             }
                         }
                     }
@@ -188,9 +187,9 @@ impl<F: FineType> Fine<F> {
 
         let default_blend = blend_mode == BlendMode::new(Mix::Normal, Compose::SrcOver);
 
-        fn fill_complex_paint<T: FineType>(
-            color_buf: &mut [T],
-            blend_buf: &mut [T],
+        fn fill_complex_paint(
+            color_buf: &mut [f32],
+            blend_buf: &mut [f32],
             has_opacities: bool,
             blend_mode: BlendMode,
             filler: impl Painter,
@@ -211,10 +210,10 @@ impl<F: FineType> Fine<F> {
 
         match fill {
             Paint::Solid(color) => {
-                let color = F::extract_color(color);
+                let color = color.as_premul_f32().components;
 
                 // If color is completely opaque we can just memcopy the colors.
-                if color[3] == F::ONE && default_blend {
+                if color[3] == 1.0 && default_blend {
                     for t in blend_buf.chunks_exact_mut(COLOR_COMPONENTS) {
                         t.copy_from_slice(&color);
                     }
@@ -275,7 +274,7 @@ impl<F: FineType> Fine<F> {
             Paint::Solid(color) => {
                 strip::blend(
                     blend_buf,
-                    iter::repeat(F::extract_color(color)),
+                    iter::repeat(color.as_premul_f32().components),
                     blend_mode,
                     alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                 );
@@ -385,9 +384,9 @@ impl<F: FineType> Fine<F> {
     }
 }
 
-fn pack<F: FineType>(
+fn pack(
     out_buf: &mut [u8],
-    scratch: &ScratchBuf<F>,
+    scratch: &ScratchBuf<f32>,
     width: usize,
     height: usize,
     x: usize,
@@ -411,9 +410,13 @@ fn pack<F: FineType>(
         let dest = &mut out_buf[line_ix..][..target_len];
 
         for i in 0..max_width {
-            let src = &scratch[(i * usize::from(Tile::HEIGHT) + j) * COLOR_COMPONENTS..]
-                [..COLOR_COMPONENTS];
-            dest[i * COLOR_COMPONENTS..][..COLOR_COMPONENTS].copy_from_slice(&F::to_rgba8(src));
+            let src = to_rgba8(
+                &scratch[(i * usize::from(Tile::HEIGHT) + j) * COLOR_COMPONENTS..]
+                    [..COLOR_COMPONENTS]
+                    .try_into()
+                    .unwrap(),
+            );
+            dest[i * COLOR_COMPONENTS..][..COLOR_COMPONENTS].copy_from_slice(&src);
         }
     }
 }
@@ -422,11 +425,11 @@ pub(crate) mod fill {
     // See https://www.w3.org/TR/compositing-1/#porterduffcompositingoperators for the
     // formulas.
 
-    use crate::fine::{COLOR_COMPONENTS, FineType, TILE_HEIGHT_COMPONENTS};
+    use crate::fine::{COLOR_COMPONENTS, TILE_HEIGHT_COMPONENTS};
     use peniko::{BlendMode, Compose, Mix};
 
-    pub(crate) fn blend<F: FineType, T: Iterator<Item = [F; COLOR_COMPONENTS]>>(
-        target: &mut [F],
+    pub(crate) fn blend<T: Iterator<Item = [f32; COLOR_COMPONENTS]>>(
+        target: &mut [f32],
         source: T,
         blend_mode: BlendMode,
     ) {
@@ -436,28 +439,15 @@ pub(crate) mod fill {
         }
     }
 
-    pub(crate) fn alpha_composite<F: FineType, T: Iterator<Item = [F; COLOR_COMPONENTS]>>(
-        target: &mut [F],
+    pub(crate) fn alpha_composite<T: Iterator<Item = [f32; COLOR_COMPONENTS]>>(
+        target: &mut [f32],
         mut source: T,
     ) {
         for strip in target.chunks_exact_mut(TILE_HEIGHT_COMPONENTS) {
             for bg_c in strip.chunks_exact_mut(COLOR_COMPONENTS) {
                 let src_c = source.next().unwrap();
                 for i in 0..COLOR_COMPONENTS {
-                    bg_c[i] = src_c[i].add(bg_c[i].normalized_mul(src_c[3].one_minus()));
-                }
-            }
-        }
-    }
-
-    pub(crate) fn mask<F: FineType>(target: &mut [F], source: &mut [F]) {
-        for strip in target.chunks_exact_mut(TILE_HEIGHT_COMPONENTS) {
-            for (bg, src) in strip
-                .chunks_exact_mut(COLOR_COMPONENTS)
-                .zip(source.chunks_exact(COLOR_COMPONENTS))
-            {
-                for i in 0..COLOR_COMPONENTS {
-                    bg[i] = bg[i].normalized_mul(src[i]);
+                    bg_c[i] = src_c[i] + (bg_c[i] * (1.0 - src_c[3]));
                 }
             }
         }
@@ -465,32 +455,30 @@ pub(crate) mod fill {
 }
 
 pub(crate) mod strip {
-    use crate::fine::{COLOR_COMPONENTS, FineType, TILE_HEIGHT_COMPONENTS, Widened};
+    use crate::fine::{COLOR_COMPONENTS, TILE_HEIGHT_COMPONENTS};
     use crate::tile::Tile;
     use peniko::{BlendMode, Compose, Mix};
 
     pub(crate) fn blend<
-        F: FineType,
-        T: Iterator<Item = [F; COLOR_COMPONENTS]>,
+        T: Iterator<Item = [f32; COLOR_COMPONENTS]>,
         A: Iterator<Item = [u8; Tile::HEIGHT as usize]>,
     >(
-        target: &mut [F],
+        target: &mut [f32],
         source: T,
         blend_mode: BlendMode,
         alphas: A,
     ) {
         match (blend_mode.mix, blend_mode.compose) {
             (Mix::Normal, Compose::SrcOver) => alpha_composite(target, source, alphas),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
     pub(crate) fn alpha_composite<
-        F: FineType,
-        T: Iterator<Item = [F; COLOR_COMPONENTS]>,
+        T: Iterator<Item = [f32; COLOR_COMPONENTS]>,
         A: Iterator<Item = [u8; Tile::HEIGHT as usize]>,
     >(
-        target: &mut [F],
+        target: &mut [f32],
         mut source: T,
         mut alphas: A,
     ) {
@@ -499,14 +487,14 @@ pub(crate) mod strip {
 
             for j in 0..usize::from(Tile::HEIGHT) {
                 let src_c = source.next().unwrap();
-                let mask_a = F::from_normalized_u8(masks[j]);
-                let inv_src_a_mask_a = mask_a.normalized_mul(src_c[3]).one_minus();
+                let mask_a = masks[j] as f32 / 255.0;
+                let inv_src_a_mask_a = 1.0 - (mask_a * src_c[3]);
 
                 for i in 0..COLOR_COMPONENTS {
-                    let p1 = bg_c[j * COLOR_COMPONENTS + i].widen() * inv_src_a_mask_a.widen();
-                    let p2 = src_c[i].widen() * mask_a.widen();
+                    let p1 = bg_c[j * COLOR_COMPONENTS + i] * inv_src_a_mask_a;
+                    let p2 = src_c[i] * mask_a;
 
-                    bg_c[j * COLOR_COMPONENTS + i] = (p1 + p2).normalize().narrow();
+                    bg_c[j * COLOR_COMPONENTS + i] = p1 + p2;
                 }
             }
         }
@@ -514,271 +502,24 @@ pub(crate) mod strip {
 }
 
 trait Painter {
-    fn paint<F: FineType>(self, target: &mut [F]);
+    fn paint(self, target: &mut [f32]);
 }
 
-/// A numeric type that can act as a substitute for another underlying type in case
-/// the results are too big. Currently, this is only used for u8, where certain operations
-/// are first cast to u16 and then cast back to u8.
-pub trait Widened<T: FineType>:
-    Sized
-    + Copy
-    + PartialEq<Self>
-    + PartialOrd<Self>
-    + Add<Self, Output = Self>
-    + Mul<Self, Output = Self>
-    + Sub<Self, Output = Self>
-    + Div<Self, Output = Self>
-    + Debug
-{
-    /// Clamp the current value to the boundaries **of the underlying narrowed type**.
-    fn clamp(self) -> Self;
-    /// Normalize the current value to the range of the underlying narrowed type.
-    fn normalize(self) -> Self;
-    /// Perform a normalizing multiplication between this number and another number.
-    fn normalized_mul(self, other: Self) -> Self;
-    /// Cast the current type to its narrowed representation.
-    fn narrow(self) -> T;
+pub(crate) fn to_rgba8(c: &[f32; 4]) -> [u8; 4] {
+    let mut rgba = [0u8; 4];
+
+    for i in 0..4 {
+        rgba[i] = (c[i] * 255.0 + 0.5) as u8;
+    }
+    rgba
 }
 
-impl Widened<Self> for f32 {
-    #[inline(always)]
-    fn clamp(self) -> Self {
-        Self::clamp(self, Self::ZERO, Self::ONE)
+pub(crate) fn from_rgba8(c: &[u8; 4]) -> [f32; 4] {
+    let mut rgba32 = [0f32; 4];
+
+    for i in 0..4 {
+        rgba32[i] = c[i] as f32 / 255.0;
     }
 
-    #[inline(always)]
-    fn normalize(self) -> Self {
-        // f32 values are always normalized between 0.0 and 1.0.
-        self
-    }
-
-    #[inline(always)]
-    fn normalized_mul(self, other: Self) -> Self {
-        self * other
-    }
-
-    #[inline(always)]
-    fn narrow(self) -> Self {
-        self
-    }
-}
-
-impl Widened<u8> for u16 {
-    #[inline(always)]
-    fn clamp(self) -> Self {
-        Ord::clamp(self, Self::from(u8::ZERO), Self::from(u8::ONE))
-    }
-
-    #[inline(always)]
-    fn normalize(self) -> Self {
-        div_255(self)
-    }
-
-    #[inline(always)]
-    fn normalized_mul(self, other: Self) -> Self {
-        (self * other).normalize()
-    }
-
-    #[inline(always)]
-    fn narrow(self) -> u8 {
-        debug_assert!(
-            self <= Self::from(u8::MAX),
-            "cannot narrow integers larger than u8::MAX"
-        );
-
-        self as u8
-    }
-}
-
-/// A type that can be used as the underlying storage for fine rasterization.
-pub trait FineType:
-    Sized
-    + Copy
-    + PartialEq<Self>
-    + PartialOrd<Self>
-    + Add<Self, Output = Self>
-    + Mul<Self, Output = Self>
-    + Sub<Self, Output = Self>
-    + Debug
-{
-    type Widened: Widened<Self>;
-
-    /// The number that is considered to be the minimum of the normalized range of this type.
-    const ZERO: Self;
-    /// The number that is considered to be in the "center" of the normalized range of this type.
-    const MID: Self;
-    /// The number considered to be the maximum of the normalized range of the type.
-    const ONE: Self;
-
-    /// Return the minimum number.
-    fn min(self, other: Self) -> Self;
-    /// Return the maximum number.
-    fn max(self, other: Self) -> Self;
-    /// Extract the underlying color from a premultiplied color.
-    fn extract_color(color: &PremulColor) -> [Self; COLOR_COMPONENTS];
-    /// Convert a normalized u8 integer to this type.
-    fn from_normalized_u8(num: u8) -> Self;
-    /// Convert a plain u8 integer to this type.
-    fn from_u8(num: u8) -> Self;
-    /// Convert this number to a normalized f32.
-    fn to_normalized_f32(self) -> f32;
-    /// Convert this number to a normalized u8.
-    fn to_normalized_u8(self) -> u8;
-    /// Convert to this number from a normalized f32.
-    fn from_normalized_f32(num: f32) -> Self;
-    /// Get the widened representation of the current number.
-    fn widen(self) -> Self::Widened;
-
-    /// Perform a normalized multiplication between this number and another
-    #[inline(always)]
-    fn normalized_mul(self, other: Self) -> Self {
-        (self.widen() * other.widen()).normalize().narrow()
-    }
-    /// Perform a widening multiplication and then divide by a third number.
-    #[inline(always)]
-    fn widened_mul_div(self, other: Self, other2: Self) -> Self::Widened {
-        (self.widen() * other.widen()) / other2.widen()
-    }
-    // TODO: These RGBA conversions should be sized to COLOR_COMPONENTS, but will leave that for
-    // the future.
-    /// Convert a slice to a RGBA8 slice.
-    #[inline(always)]
-    fn to_rgba8(src: &[Self]) -> [u8; COLOR_COMPONENTS] {
-        [
-            src[0].to_normalized_u8(),
-            src[1].to_normalized_u8(),
-            src[2].to_normalized_u8(),
-            src[3].to_normalized_u8(),
-        ]
-    }
-    /// Convert a RGBA8 slice to a slice of this type.
-    #[inline(always)]
-    fn from_rgba8(src: &[u8]) -> [Self; COLOR_COMPONENTS] {
-        [
-            Self::from_normalized_u8(src[0]),
-            Self::from_normalized_u8(src[1]),
-            Self::from_normalized_u8(src[2]),
-            Self::from_normalized_u8(src[3]),
-        ]
-    }
-    /// Convert a RGBAF32 slice to a slice of this type.
-    #[inline(always)]
-    fn from_rgbaf32(src: &[f32]) -> [Self; COLOR_COMPONENTS] {
-        [
-            Self::from_normalized_f32(src[0]),
-            Self::from_normalized_f32(src[1]),
-            Self::from_normalized_f32(src[2]),
-            Self::from_normalized_f32(src[3]),
-        ]
-    }
-    /// Calculate "one minus" this number, i.e., `Self::ONE - self`.
-    #[inline(always)]
-    fn one_minus(self) -> Self {
-        Self::ONE - self
-    }
-}
-
-impl FineType for u8 {
-    type Widened = u16;
-    const ZERO: Self = 0;
-    const MID: Self = 127;
-    const ONE: Self = 255;
-
-    #[inline(always)]
-    fn min(self, other: Self) -> Self {
-        Ord::min(self, other)
-    }
-
-    #[inline(always)]
-    fn max(self, other: Self) -> Self {
-        Ord::max(self, other)
-    }
-
-    #[inline(always)]
-    fn extract_color(color: &PremulColor) -> [Self; COLOR_COMPONENTS] {
-        color.as_premul_rgba8().to_u8_array()
-    }
-
-    #[inline(always)]
-    fn from_normalized_u8(num: u8) -> Self {
-        num
-    }
-
-    #[inline(always)]
-    fn from_u8(num: u8) -> Self {
-        num
-    }
-
-    #[inline(always)]
-    fn to_normalized_f32(self) -> f32 {
-        f32::from(self) / 255.0
-    }
-
-    #[inline(always)]
-    fn to_normalized_u8(self) -> u8 {
-        self
-    }
-
-    #[inline(always)]
-    fn from_normalized_f32(num: f32) -> Self {
-        (num * 255.0 + 0.5) as Self
-    }
-
-    #[inline(always)]
-    fn widen(self) -> Self::Widened {
-        u16::from(self)
-    }
-}
-
-impl FineType for f32 {
-    type Widened = Self;
-    const ZERO: Self = 0.0;
-    const MID: Self = 0.5;
-    const ONE: Self = 1.0;
-
-    #[inline(always)]
-    fn min(self, other: Self) -> Self {
-        Self::min(self, other)
-    }
-
-    #[inline(always)]
-    fn max(self, other: Self) -> Self {
-        Self::max(self, other)
-    }
-
-    #[inline(always)]
-    fn extract_color(color: &PremulColor) -> [Self; COLOR_COMPONENTS] {
-        color.as_premul_f32().components
-    }
-
-    #[inline(always)]
-    fn from_normalized_u8(num: u8) -> Self {
-        Self::from(num) / 255.0
-    }
-
-    #[inline(always)]
-    fn from_u8(num: u8) -> Self {
-        Self::from(num)
-    }
-
-    #[inline(always)]
-    fn to_normalized_f32(self) -> f32 {
-        self
-    }
-
-    #[inline(always)]
-    fn to_normalized_u8(self) -> u8 {
-        (self * 255.0 + 0.5) as u8
-    }
-
-    #[inline(always)]
-    fn from_normalized_f32(num: f32) -> Self {
-        num
-    }
-
-    #[inline(always)]
-    fn widen(self) -> Self::Widened {
-        self
-    }
+    rgba32
 }

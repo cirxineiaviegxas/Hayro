@@ -37,7 +37,7 @@ impl Type2 {
 #[cfg(test)]
 mod tests {
     use crate::function::Function;
-    
+
     use crate::object::Object;
     use crate::object::dict::Dict;
     use crate::reader::Readable;

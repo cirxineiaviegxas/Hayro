@@ -643,16 +643,30 @@ fn fill_path_impl(
     }
 }
 
-fn handle_paint(    context: &mut Context,
-                      device: &mut impl Device, base_transform: Affine, is_stroke: bool) -> bool {
+fn handle_paint(
+    context: &mut Context,
+    device: &mut impl Device,
+    base_transform: Affine,
+    is_stroke: bool,
+) -> bool {
     let (cs, pattern, color, alpha) = if is_stroke {
         let s = context.get();
-        (s.stroke_cs.clone(), s.stroke_pattern.clone(), s.stroke_color.clone(), s.stroke_alpha)
-    }   else {
+        (
+            s.stroke_cs.clone(),
+            s.stroke_pattern.clone(),
+            s.stroke_color.clone(),
+            s.stroke_alpha,
+        )
+    } else {
         let s = context.get();
-        (s.fill_cs.clone(), s.fill_pattern.clone(), s.fill_color.clone(), s.fill_alpha)
+        (
+            s.fill_cs.clone(),
+            s.fill_pattern.clone(),
+            s.fill_color.clone(),
+            s.fill_alpha,
+        )
     };
-    
+
     let clip_path = if matches!(cs, ColorSpace::Pattern) {
         let mut pattern = pattern.unwrap();
         pattern.matrix = *context.root_transform() * pattern.matrix;
@@ -661,11 +675,7 @@ fn handle_paint(    context: &mut Context,
 
         bbox
     } else {
-        let color = Color::from_pdf(
-            cs,
-            color,
-            alpha,
-        );
+        let color = Color::from_pdf(cs, color, alpha);
 
         device.set_paint(color);
 
@@ -685,7 +695,7 @@ fn handle_paint(    context: &mut Context,
         );
         device.set_transform(base_transform);
     }
-    
+
     clip_path.is_some()
 }
 

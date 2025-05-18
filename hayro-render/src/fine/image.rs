@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::encode::EncodedImage;
-use crate::fine::{COLOR_COMPONENTS, FineType, Painter, TILE_HEIGHT_COMPONENTS};
+use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS, from_rgba8};
 use kurbo::{Point, Vec2};
 use peniko::ImageQuality;
 
@@ -24,7 +24,7 @@ impl<'a> ImageFiller<'a> {
         }
     }
 
-    pub(super) fn run<F: FineType>(mut self, target: &mut [F]) {
+    pub(super) fn run(mut self, target: &mut [f32]) {
         // Fallback path.
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
@@ -34,7 +34,7 @@ impl<'a> ImageFiller<'a> {
             });
     }
 
-    fn run_complex_column<F: FineType>(&mut self, col: &mut [F]) {
+    fn run_complex_column(&mut self, col: &mut [f32]) {
         let extend_point = |mut point: Point| {
             // For the same reason as mentioned above, we always floor.
             point.x = f64::from(extend(
@@ -59,12 +59,12 @@ impl<'a> ImageFiller<'a> {
                 // Simply takes the nearest pixel to our current position.
                 ImageQuality::Low => {
                     let point = extend_point(pos);
-                    let sample = F::from_rgba8(
+                    let sample = from_rgba8(
                         &self
                             .image
                             .pixmap
                             .sample(point.x as u16, point.y as u16)
-                            .to_u8_array()[..],
+                            .to_u8_array(),
                     );
                     pixel.copy_from_slice(&sample);
                 }
@@ -149,7 +149,7 @@ impl<'a> ImageFiller<'a> {
                         interpolated_color[i] = f32_val;
                     }
 
-                    pixel.copy_from_slice(&F::from_rgbaf32(&interpolated_color[..]));
+                    pixel.copy_from_slice(&interpolated_color);
                 }
                 _ => unimplemented!(),
             };
@@ -179,7 +179,7 @@ fn extend(val: f32, extend: peniko::Extend, max: f32) -> f32 {
 }
 
 impl Painter for ImageFiller<'_> {
-    fn paint<F: FineType>(self, target: &mut [F]) {
+    fn paint(self, target: &mut [f32]) {
         self.run(target);
     }
 }
