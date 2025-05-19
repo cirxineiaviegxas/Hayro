@@ -7,7 +7,7 @@ use crate::paint::{Image, IndexedPaint, Paint};
 use crate::pixmap::Pixmap;
 use hayro_interpret::color::ColorSpace;
 use hayro_interpret::pattern::ShadingPattern;
-use hayro_interpret::shading::{ShadingType, Triangle};
+use hayro_interpret::shading::{CoonsPatch, ShadingType, Triangle};
 use hayro_syntax::function::Function;
 use kurbo::{Affine, Point, Vec2};
 use peniko::ImageQuality;
@@ -95,6 +95,29 @@ impl EncodeExt for ShadingPattern {
 
                 paints.push(EncodedPaint::TriangleMeshShading(encoded));
 
+                Paint::Indexed(IndexedPaint::new(idx))
+            }
+            ShadingType::CoonsPatchMesh { patches, function } => {
+                let idx = paints.len();
+                let full_transform = transform * self.matrix;
+                let inverse_transform = full_transform.inverse();
+                let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+                let cs = self.shading.color_space.clone();
+                let encoded = EncodedPatchMeshShading {
+                    patches: patches.clone(),
+                    function: function.clone(),
+                    x_advance,
+                    y_advance,
+                    color_space: cs.clone(),
+                    inverse_transform,
+                    background: self
+                        .shading
+                        .background
+                        .as_ref()
+                        .map(|b| cs.to_rgba(&b, 1.0))
+                        .unwrap_or(TRANSPARENT),
+                };
+                paints.push(EncodedPaint::PatchMeshShading(encoded));
                 Paint::Indexed(IndexedPaint::new(idx))
             }
             _ => unimplemented!(),
@@ -264,6 +287,17 @@ pub struct EncodedRadialAxialShading {
     pub axial: bool,
 }
 
+#[derive(Debug)]
+pub struct EncodedPatchMeshShading {
+    pub patches: Vec<CoonsPatch>,
+    pub function: Option<Function>,
+    pub x_advance: Vec2,
+    pub y_advance: Vec2,
+    pub color_space: ColorSpace,
+    pub inverse_transform: Affine,
+    pub background: AlphaColor<Srgb>,
+}
+
 /// An encoded paint.
 #[derive(Debug)]
 pub enum EncodedPaint {
@@ -272,6 +306,7 @@ pub enum EncodedPaint {
     FunctionShading(EncodedFunctionShading),
     AxialShading(EncodedRadialAxialShading),
     TriangleMeshShading(EncodedTriangleMeshShading),
+    PatchMeshShading(EncodedPatchMeshShading),
 }
 
 /// An encoded image.

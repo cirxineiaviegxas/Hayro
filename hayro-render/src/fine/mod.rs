@@ -5,12 +5,14 @@
 //! of each pixel and pack it into the pixmap.
 
 mod image;
+mod patch_mesh;
 mod shading;
 mod triangle_mesh;
 
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
+use crate::fine::patch_mesh::PatchMeshShadingFiller;
 use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
 use crate::fine::triangle_mesh::TriangleMeshShadingFiller;
 use crate::paint::Paint;
@@ -246,6 +248,10 @@ impl Fine {
                         let filler = TriangleMeshShadingFiller::new(s, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
+                    EncodedPaint::PatchMeshShading(p) => {
+                        let filler = PatchMeshShadingFiller::new(p, start_x, start_y);
+                        fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
+                    }
                 }
             }
         }
@@ -335,6 +341,17 @@ impl Fine {
                     }
                     EncodedPaint::TriangleMeshShading(s) => {
                         let filler = TriangleMeshShadingFiller::new(s, start_x, start_y);
+                        filler.paint(color_buf);
+
+                        strip::blend(
+                            blend_buf,
+                            color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                            blend_mode,
+                            alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                        );
+                    }
+                    EncodedPaint::PatchMeshShading(p) => {
+                        let filler = PatchMeshShadingFiller::new(p, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(

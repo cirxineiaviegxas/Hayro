@@ -150,6 +150,7 @@ use crate::run_test;
 #[test] fn pattern_shading_type4_1() { run_test("pattern_shading_type4_1", true, None); }
 #[test] fn pattern_shading_type4_2() { run_test("pattern_shading_type4_2", false, None); }
 #[test] fn pattern_shading_type5() { run_test("pattern_shading_type5", true, None); }
+#[test] fn pattern_shading_type6() { run_test("pattern_shading_type6", true, None); }
 #[test] fn rendering_conflation_artifacts() { run_test("rendering_conflation_artifacts", false, Some(2..=2)); }
 #[test] fn shading_operator_1() { run_test("shading_operator_1", false, None); }
 #[test] fn shading_operator_2() { run_test("shading_operator_2", false, None); }

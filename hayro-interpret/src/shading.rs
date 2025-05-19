@@ -34,7 +34,10 @@ pub enum ShadingType {
         function: Option<Function>,
     },
     LatticeFormGouraud,
-    CoonsPatchMesh,
+    CoonsPatchMesh {
+        patches: Vec<CoonsPatch>,
+        function: Option<Function>,
+    },
     TensorProductPatchMesh,
 }
 
@@ -136,7 +139,29 @@ impl Shading {
                     function,
                 }
             }
-            6 => ShadingType::CoonsPatchMesh,
+            6 => {
+                let stream = stream?;
+                let stream_data = stream.decoded().ok()?;
+                let bp_coord = dict.get::<u8>(BITS_PER_COORDINATE)?;
+                let bp_comp = dict.get::<u8>(BITS_PER_COMPONENT)?;
+                let bpf = dict.get::<u8>(BITS_PER_FLAG)?;
+                let function = dict.get::<Object>(FUNCTION).and_then(|o| Function::new(&o));
+                let decode = dict.get::<Array>(DECODE)?.iter::<f32>().collect::<Vec<_>>();
+
+                let patches = read_coons_patch_mesh(
+                    stream_data.as_ref(),
+                    bpf,
+                    bp_coord,
+                    bp_comp,
+                    function.as_ref(),
+                    &decode,
+                )?;
+
+                println!("{:?}", patches);
+                println!("{:?}", patches.len());
+
+                ShadingType::CoonsPatchMesh { patches, function }
+            }
             7 => ShadingType::TensorProductPatchMesh,
             _ => return None,
         };
@@ -168,6 +193,12 @@ pub struct TriangleVertex {
     flag: u32,
     pub point: Point,
     pub colors: Vec<f32>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CoonsPatch {
+    pub control_points: [Point; 12],
+    pub colors: Vec<Vec<f32>>,
 }
 
 fn read_free_form_triangles(
@@ -386,4 +417,170 @@ fn read_lattice_triangles(
     }
 
     Some(triangles)
+}
+
+fn read_coons_patch_mesh(
+    data: &[u8],
+    bpf: u8,
+    bp_coord: u8,
+    bp_comp: u8,
+    function: Option<&Function>,
+    decode: &[f32],
+) -> Option<Vec<CoonsPatch>> {
+    let bpf = BitSize::from_u8(bpf)?;
+    let bp_coord = BitSize::from_u8(bp_coord)?;
+    let bp_comp = BitSize::from_u8(bp_comp)?;
+
+    let ([x_min, x_max, y_min, y_max], decode) =
+        decode.split_first_chunk::<4>().map(|(a, b)| (*a, b))?;
+    let num_components = decode.len() / 2;
+
+    let mut reader = BitReader::new(data);
+
+    let interpolate_coord = |n: u32, d_min: f32, d_max: f32| {
+        interpolate(
+            n as f32,
+            0.0,
+            2.0f32.powi(bp_coord.bits() as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
+
+    let interpolate_comp = |n: u32, d_min: f32, d_max: f32| {
+        interpolate(
+            n as f32,
+            0.0,
+            2.0f32.powi(bp_comp.bits() as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
+
+    // Helper to read a single color (or t value)
+    let read_colors = |reader: &mut BitReader, has_function: bool| -> Option<Vec<f32>> {
+        let mut colors = vec![];
+        if has_function {
+            colors.push(interpolate_comp(
+                reader.read(bp_comp)?,
+                decode[0],
+                decode[1],
+            ));
+        } else {
+            for (_, decode) in (0..num_components).zip(decode.chunks_exact(2)) {
+                colors.push(interpolate_comp(
+                    reader.read(bp_comp)?,
+                    decode[0],
+                    decode[1],
+                ));
+            }
+        }
+        Some(colors)
+    };
+
+    // State for implicit control points/colors
+    let mut prev_patch: Option<CoonsPatch> = None;
+    let mut patches = vec![];
+
+    while let Some(flag) = reader.read(bpf) {
+        let mut control_points = [Point::ZERO; 12];
+        let mut colors = vec![vec![], vec![], vec![], vec![]];
+
+        match flag {
+            0 => {
+                // New patch, all explicit
+                for i in 0..12 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+                for i in 0..4 {
+                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                }
+                prev_patch = Some(CoonsPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            1 => {
+                // f = 1: Use previous patch for first 4 control points and first 2 colors
+                let prev = prev_patch.as_ref()?;
+                control_points[0] = prev.control_points[3]; // (x1, y1) = (x4, y4) prev
+                control_points[1] = prev.control_points[4]; // (x2, y2) = (x5, y5) prev
+                control_points[2] = prev.control_points[5]; // (x3, y3) = (x6, y6) prev
+                control_points[3] = prev.control_points[6]; // (x4, y4) = (x7, y7) prev
+                colors[0] = prev.colors[1].clone(); // c1 = c2 prev
+                colors[1] = prev.colors[2].clone(); // c2 = c3 prev
+                // Read explicit control points 6..11 (x5..x12, y5..y12)
+                for i in 4..12 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+                // Read explicit colors 2, 3 (c3, c4)
+                for i in 2..4 {
+                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                }
+                prev_patch = Some(CoonsPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            2 => {
+                // f = 2: Use previous patch for first 4 control points and first 2 colors
+                let prev = prev_patch.as_ref()?;
+                control_points[0] = prev.control_points[6]; // (x1, y1) = (x7, y7) prev
+                control_points[1] = prev.control_points[7]; // (x2, y2) = (x8, y8) prev
+                control_points[2] = prev.control_points[8]; // (x3, y3) = (x9, y9) prev
+                control_points[3] = prev.control_points[9]; // (x4, y4) = (x10, y10) prev
+                colors[0] = prev.colors[2].clone(); // c1 = c3 prev
+                colors[1] = prev.colors[3].clone(); // c2 = c4 prev
+                // Read explicit control points 4..11 (x5..x12, y5..y12)
+                for i in 4..12 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+                // Read explicit colors 2, 3 (c3, c4)
+                for i in 2..4 {
+                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                }
+                prev_patch = Some(CoonsPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            3 => {
+                // f = 3: Use previous patch for first 4 control points and first 2 colors
+                let prev = prev_patch.as_ref()?;
+                control_points[0] = prev.control_points[9]; // (x1, y1) = (x10, y10) prev
+                control_points[1] = prev.control_points[10]; // (x2, y2) = (x11, y11) prev
+                control_points[2] = prev.control_points[11]; // (x3, y3) = (x12, y12) prev
+                control_points[3] = prev.control_points[0]; // (x4, y4) = (x1, y1) prev
+                colors[0] = prev.colors[3].clone(); // c1 = c4 prev
+                colors[1] = prev.colors[0].clone(); // c2 = c1 prev
+                // Read explicit control points 4..11 (x5..x12, y5..y12)
+                for i in 4..12 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+                // Read explicit colors 2, 3 (c3, c4)
+                for i in 2..4 {
+                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                }
+                prev_patch = Some(CoonsPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            _ => break,
+        }
+
+        patches.push(CoonsPatch {
+            control_points,
+            colors,
+        });
+    }
+    Some(patches)
 }
