@@ -94,7 +94,7 @@ fn find_uv(patch: &CoonsPatch, target: Point) -> Option<(f64, f64)> {
     let mut best = None;
     let mut min_dist = f64::MAX;
 
-    const GRANULARITY: usize = 10;
+    const GRANULARITY: usize = 20;
 
     for i in 0..=GRANULARITY {
         for j in 0..=GRANULARITY {

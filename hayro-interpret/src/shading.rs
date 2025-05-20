@@ -157,9 +157,6 @@ impl Shading {
                     &decode,
                 )?;
 
-                println!("{:?}", patches);
-                println!("{:?}", patches.len());
-
                 ShadingType::CoonsPatchMesh { patches, function }
             }
             7 => ShadingType::TensorProductPatchMesh,
