@@ -1,22 +1,6 @@
-#[inline]
-fn sym_85(byte: u8) -> Option<u8> {
-    match byte {
-        b @ 0x21..=0x75 => Some(b - 0x21),
-        _ => None,
-    }
-}
+//! A decoder for ASCII-85-encoded streams.
 
-fn word_85([a, b, c, d, e]: [u8; 5]) -> Option<[u8; 4]> {
-    fn s(b: u8) -> Option<u64> {
-        sym_85(b).map(|n| n as u64)
-    }
-    let (a, b, c, d, e) = (s(a)?, s(b)?, s(c)?, s(d)?, s(e)?);
-    let q = (((a * 85 + b) * 85 + c) * 85 + d) * 85 + e;
-    // 85^5 > 256^4, the result might not fit in an u32.
-    let r = u32::try_from(q).ok()?;
-    Some(r.to_be_bytes())
-}
-
+/// Decode a ASCII-85-encoded stream.
 pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
     let mut decoded = vec![];
 
@@ -58,6 +42,24 @@ pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
         (Some(b'>'), None) => Some(decoded),
         _ => None,
     }
+}
+
+fn sym_85(byte: u8) -> Option<u8> {
+    match byte {
+        b @ 0x21..=0x75 => Some(b - 0x21),
+        _ => None,
+    }
+}
+
+fn word_85([a, b, c, d, e]: [u8; 5]) -> Option<[u8; 4]> {
+    fn s(b: u8) -> Option<u64> {
+        sym_85(b).map(|n| n as u64)
+    }
+    let (a, b, c, d, e) = (s(a)?, s(b)?, s(c)?, s(d)?, s(e)?);
+    let q = (((a * 85 + b) * 85 + c) * 85 + d) * 85 + e;
+    // 85^5 > 256^4, the result might not fit in an u32.
+    let r = u32::try_from(q).ok()?;
+    Some(r.to_be_bytes())
 }
 
 #[cfg(test)]

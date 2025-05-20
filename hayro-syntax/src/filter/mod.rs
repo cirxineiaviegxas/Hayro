@@ -33,7 +33,7 @@ pub enum Filter {
     Crypt,
 }
 
-pub enum ColorSpace {
+pub enum ImageColorSpace {
     Gray,
     Rgb,
     Cmyk,
@@ -41,7 +41,7 @@ pub enum ColorSpace {
 
 pub struct FilterResult {
     pub data: Vec<u8>,
-    pub color_space: Option<ColorSpace>,
+    pub color_space: Option<ImageColorSpace>,
     pub bits_per_component: Option<u8>,
 }
 

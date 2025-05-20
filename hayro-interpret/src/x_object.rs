@@ -191,9 +191,9 @@ impl<'a> ImageXObject<'a> {
                 .map(|c| ColorSpace::new(c))
                 .or_else(|| {
                     decoded.color_space.map(|c| match c {
-                        hayro_syntax::filter::ColorSpace::Gray => ColorSpace::DeviceGray,
-                        hayro_syntax::filter::ColorSpace::Rgb => ColorSpace::DeviceRgb,
-                        hayro_syntax::filter::ColorSpace::Cmyk => ColorSpace::DeviceCmyk,
+                        hayro_syntax::filter::ImageColorSpace::Gray => ColorSpace::DeviceGray,
+                        hayro_syntax::filter::ImageColorSpace::Rgb => ColorSpace::DeviceRgb,
+                        hayro_syntax::filter::ImageColorSpace::Cmyk => ColorSpace::DeviceCmyk,
                     })
                 })
                 .unwrap_or(ColorSpace::DeviceGray)

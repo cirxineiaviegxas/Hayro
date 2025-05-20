@@ -1,6 +1,9 @@
+//! A decoder for ASCII-hex-encoded streams.
+
 use crate::reader::Reader;
 use crate::trivia::is_white_space_character;
 
+/// Decode a ASCII-hex-encoded data stream.
 pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
     let mut end = 0;
     let mut needs_cleaning = false;

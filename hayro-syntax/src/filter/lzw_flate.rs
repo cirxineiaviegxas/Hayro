@@ -1,72 +1,16 @@
+//! A decoder for LZW and flate-encoded streams.
+
 use crate::bit::{BitChunk, BitChunks, BitReader, BitSize, BitWriter};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
 use itertools::izip;
 use log::warn;
 
-struct PredictorParams {
-    predictor: u8,
-    colors: u8,
-    bits_per_component: u8,
-    columns: usize,
-    early_change: bool,
-}
-
-impl PredictorParams {
-    fn bits_per_pixel(&self) -> u8 {
-        self.bits_per_component * self.colors
-    }
-
-    fn bytes_per_pixel(&self) -> u8 {
-        (self.bits_per_pixel() + 7) / 8
-    }
-
-    fn row_length_in_bytes(&self) -> usize {
-        let raw = self.columns * self.bytes_per_pixel() as usize;
-
-        match self.bits_per_component {
-            // TODO: Find tests for 2,4,16 bits.
-            1 => raw.div_ceil(8),
-            2 => raw.div_ceil(4),
-            4 => raw.div_ceil(2),
-            8 => raw,
-            16 => 2 * raw,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl Default for PredictorParams {
-    fn default() -> Self {
-        Self {
-            predictor: 1,
-            colors: 1,
-            bits_per_component: 8,
-            columns: 1,
-            early_change: true,
-        }
-    }
-}
-
-impl PredictorParams {
-    fn from_params(dict: &Dict) -> Self {
-        Self {
-            predictor: dict.get(PREDICTOR).unwrap_or(1),
-            colors: dict.get(COLORS).unwrap_or(1),
-            bits_per_component: dict.get(BITS_PER_COMPONENT).unwrap_or(8),
-            columns: dict.get(COLUMNS).unwrap_or(1),
-            early_change: dict
-                .get::<u8>(EARLY_CHANGE)
-                .map(|e| if e == 0 { false } else { true })
-                .unwrap_or(true),
-        }
-    }
-}
-
 pub mod flate {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
     use crate::object::dict::Dict;
 
+    /// Decode a flate-encoded stream.
     pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
         let decoded = zlib(data).or_else(|| deflate(data))?;
         let params = PredictorParams::from_params(&params);
@@ -88,6 +32,7 @@ pub mod lzw {
 
     use crate::object::dict::Dict;
 
+    /// Decode a LZW-encoded stream.
     pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
         let params = PredictorParams::from_params(&params);
 
@@ -204,6 +149,65 @@ pub mod lzw {
     }
 }
 
+struct PredictorParams {
+    predictor: u8,
+    colors: u8,
+    bits_per_component: u8,
+    columns: usize,
+    early_change: bool,
+}
+
+impl PredictorParams {
+    fn bits_per_pixel(&self) -> u8 {
+        self.bits_per_component * self.colors
+    }
+
+    fn bytes_per_pixel(&self) -> u8 {
+        (self.bits_per_pixel() + 7) / 8
+    }
+
+    fn row_length_in_bytes(&self) -> usize {
+        let raw = self.columns * self.bytes_per_pixel() as usize;
+
+        match self.bits_per_component {
+            // TODO: Find tests for 2,4,16 bits.
+            1 => raw.div_ceil(8),
+            2 => raw.div_ceil(4),
+            4 => raw.div_ceil(2),
+            8 => raw,
+            16 => 2 * raw,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Default for PredictorParams {
+    fn default() -> Self {
+        Self {
+            predictor: 1,
+            colors: 1,
+            bits_per_component: 8,
+            columns: 1,
+            early_change: true,
+        }
+    }
+}
+
+impl PredictorParams {
+    fn from_params(dict: &Dict) -> Self {
+        Self {
+            predictor: dict.get(PREDICTOR).unwrap_or(1),
+            colors: dict.get(COLORS).unwrap_or(1),
+            bits_per_component: dict.get(BITS_PER_COMPONENT).unwrap_or(8),
+            columns: dict.get(COLUMNS).unwrap_or(1),
+            early_change: dict
+                .get::<u8>(EARLY_CHANGE)
+                .map(|e| if e == 0 { false } else { true })
+                .unwrap_or(true),
+        }
+    }
+}
+
 fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
     match params.predictor {
         1 | 10 => Some(data),
@@ -211,28 +215,33 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
             let is_png_predictor = i >= 10;
 
             let row_len = params.row_length_in_bytes();
-            // + 1 Because each row must start with the predictor that is used for PNG predictors.
+
             let total_row_len = if is_png_predictor {
+                // + 1 Because each row must start with the predictor that is used for PNG predictors.
                 row_len + 1
             } else {
                 row_len
             };
+
             let num_rows = data.len() / total_row_len;
 
-            // Sanity check.
             if num_rows * total_row_len != data.len() {
+                warn!("data length didn't match");
+
+                return None;
+            }
+
+            if !matches!(params.bits_per_component, 1 | 2 | 4 | 8 | 16) {
+                warn!("invalid bits per component {}", params.bits_per_component);
+
                 return None;
             }
 
             let colors = params.colors as usize;
             let bit_size = BitSize::from_u8(params.bits_per_component)?;
-
             let zero_row = vec![0; row_len];
-
             let mut prev_row = BitChunks::new(&zero_row, bit_size, colors)?;
-
             let zero_col = BitChunk::new(0, colors);
-
             let mut out = vec![0; num_rows * row_len];
             let mut writer = BitWriter::new(&mut out, bit_size)?;
 
@@ -246,6 +255,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                         0 => {
                             // Just copy the data.
                             let mut reader = BitReader::new(in_data);
+
                             while let Some(data) = reader.read(bit_size) {
                                 writer.write(data as u16);
                             }
@@ -300,6 +310,8 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                     );
                 } else {
                     warn!("unknown predictor {}", i);
+
+                    return None;
                 }
 
                 let (data, new_writer) = writer.split_off();
@@ -331,8 +343,8 @@ fn apply<'a, T: Predictor>(
             top_left.iter()
         ) {
             // Note that the wrapping behavior when adding inside the predictors is dependent on the
-            // bit size, so it wouldn't be triggered for bits per component < 16. However, the bit
-            // writer will take care of masking out the superfluous bytes.
+            // bit size, so it wouldn't be triggered for bits per component < 16. So we mask out
+            // the bytes manually, which is equivalent to a wrapping add.
             writer
                 .write(T::predict(cur_row, prev_row, prev_col, top_left) & bit_size.mask() as u16);
         }

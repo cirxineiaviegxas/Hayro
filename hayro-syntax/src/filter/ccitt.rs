@@ -1,5 +1,3 @@
-//! A decoder for CCITT streams, translated from <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt.js>
-
 /* Copyright 2012 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +18,8 @@
  * of XPDF's implementation, made available under the Apache 2.0 open source
  * license.
  */
+
+//! A decoder for CCITT streams, translated from <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt.js>
 
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{
