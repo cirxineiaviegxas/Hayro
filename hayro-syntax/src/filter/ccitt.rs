@@ -1,3 +1,5 @@
+//! A decoder for CCITT streams, translated from <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt.js>
+
 /* Copyright 2012 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +23,43 @@
 
 #![allow(non_upper_case_globals)]
 
-// See <https://github.com/mozilla/pdf.js/blob/master/src/core/ccitt.js>
-
+use crate::object::dict::Dict;
+use crate::object::dict::keys::{
+    BLACK_IS_1, COLUMNS, ENCODED_BYTE_ALIGN, END_OF_BLOCK, END_OF_LINE, K, ROWS,
+};
+use crate::reader::Reader;
 use log::warn;
+
+pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
+    let dp = CCITTFaxDecoderOptions::default();
+
+    let params = CCITTFaxDecoderOptions {
+        k: params.get::<i32>(K).unwrap_or(dp.k),
+        end_of_line: params.get::<bool>(END_OF_LINE).unwrap_or(dp.end_of_line),
+        encoded_byte_align: params
+            .get::<bool>(ENCODED_BYTE_ALIGN)
+            .unwrap_or(dp.encoded_byte_align),
+        columns: params.get::<usize>(COLUMNS).unwrap_or(dp.columns),
+        rows: params.get::<usize>(ROWS).unwrap_or(dp.rows),
+        eoblock: params.get::<bool>(END_OF_BLOCK).unwrap_or(dp.eoblock),
+        black_is_1: params.get::<bool>(BLACK_IS_1).unwrap_or(dp.black_is_1),
+    };
+
+    let mut reader = Reader::new(data);
+    let mut decoder = CCITTFaxDecoder::new(&mut reader, params);
+    let mut out = vec![];
+
+    loop {
+        let byte = decoder.read_next_char();
+        if byte == -1 {
+            break;
+        }
+
+        out.push(byte as u8);
+    }
+
+    Some(out)
+}
 
 const ccittEOL: i32 = -2;
 const ccittEOF: i32 = -1;
@@ -1117,13 +1153,8 @@ static blackTable3: [[i32; 2]; 64] = [
     [2, 2],
 ];
 
-pub trait CcittFaxSource {
-    /// Returns the next byte, or None if EOF.
-    fn next(&mut self) -> Option<u8>;
-}
-
-pub struct CCITTFaxDecoder<S: CcittFaxSource> {
-    pub source: S,
+pub struct CCITTFaxDecoder<'a> {
+    pub source: &'a mut Reader<'a>,
     pub eof: bool,
     pub encoding: i32,
     pub eoline: bool,
@@ -1145,8 +1176,8 @@ pub struct CCITTFaxDecoder<S: CcittFaxSource> {
     pub err: bool,
 }
 
-impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
-    pub fn new(source: S, options: CCITTFaxDecoderOptions) -> Self {
+impl<'a> CCITTFaxDecoder<'a> {
+    pub fn new(source: &'a mut Reader<'a>, options: CCITTFaxDecoderOptions) -> Self {
         let k = options.k;
         let eoline = options.end_of_line;
         let byte_align = options.encoded_byte_align;
@@ -1204,7 +1235,7 @@ impl<S: CcittFaxSource> CCITTFaxDecoder<S> {
     fn look_bits(&mut self, n: usize) -> i32 {
         let mut c;
         while self.input_bits < n {
-            if let Some(byte) = self.source.next() {
+            if let Some(byte) = self.source.read_byte() {
                 c = byte;
             } else {
                 if self.input_bits == 0 {

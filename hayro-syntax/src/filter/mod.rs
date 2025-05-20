@@ -1,6 +1,5 @@
 mod ascii_85;
 mod ascii_hex;
-mod ccit_stream;
 mod ccitt;
 mod dct;
 mod jpx;
@@ -82,9 +81,7 @@ impl Filter {
             Filter::FlateDecode => {
                 lzw_flate::flate::decode(data, params).map(FilterResult::from_data)
             }
-            Filter::CcittFaxDecode => {
-                ccit_stream::decode(data, params).map(FilterResult::from_data)
-            }
+            Filter::CcittFaxDecode => ccitt::decode(data, params).map(FilterResult::from_data),
             Filter::JpxDecode => jpx::decode(data),
             _ => None,
         }
