@@ -1,7 +1,9 @@
-use crate::filter::{ColorSpace, FilterResult};
+use crate::filter::FilterResult;
 
 #[cfg(feature = "jpeg2000")]
 pub fn decode(data: &[u8]) -> Option<FilterResult> {
+    use crate::filter::ColorSpace;
+
     let image = jpeg2k::Image::from_bytes(data).unwrap();
     let components = image.components();
     let cs = match components.len() {

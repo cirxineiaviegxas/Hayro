@@ -131,7 +131,7 @@ impl<'a> Page<'a> {
 
     fn operations_impl(&self) -> Option<UntypedIter> {
         let convert_single = |s: Stream| {
-            let data = s.decoded().ok()?;
+            let data = s.decoded()?;
             Some(data.to_vec())
         };
 

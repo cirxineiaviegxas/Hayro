@@ -56,7 +56,7 @@ impl ColorSpace {
                     let dict = icc_stream.dict();
                     let num_components = dict.get::<usize>(N)?;
 
-                    return ICCProfile::new(icc_stream.decoded().ok()?.as_ref(), num_components)
+                    return ICCProfile::new(icc_stream.decoded()?.as_ref(), num_components)
                         .map(|p| ColorSpace::ICCColor(p))
                         .or_else(|| dict.get::<Object>(ALTERNATE).map(|o| ColorSpace::new(o)))
                         .or_else(|| match dict.get::<u8>(N) {
@@ -509,7 +509,7 @@ impl Indexed {
             let data = next
                 .clone()
                 .cast::<Stream>()
-                .and_then(|s| s.decoded().ok())
+                .and_then(|s| s.decoded())
                 .or_else(|| {
                     next.clone()
                         .cast::<string::String>()

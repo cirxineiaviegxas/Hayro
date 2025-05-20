@@ -154,12 +154,12 @@ impl FontType {
         // some leeway.
 
         if let Some(stream) = descriptor.get::<Stream>(FONT_FILE2) {
-            let decoded = stream.decoded().ok()?;
+            let decoded = stream.decoded()?;
             let data = Arc::new(decoded.to_vec());
 
             return Some(Self::TrueType(OpenTypeFontBlob::new(data, 0)?));
         } else if let Some(stream) = descriptor.get::<Stream>(FONT_FILE3) {
-            let decoded = stream.decoded().ok()?;
+            let decoded = stream.decoded()?;
 
             return match stream.dict().get::<Name>(SUBTYPE)?.as_ref() {
                 CID_FONT_TYPE_0C => {
@@ -203,7 +203,7 @@ impl CidToGIdMap {
                 None
             }
         } else if let Some(stream) = dict.get::<Stream>(CID_TO_GID_MAP) {
-            let decoded = stream.decoded().ok()?;
+            let decoded = stream.decoded()?;
             let mut map = HashMap::new();
 
             for (cid, gid) in decoded.chunks_exact(2).enumerate() {

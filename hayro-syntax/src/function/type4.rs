@@ -48,7 +48,7 @@ pub(crate) struct Type4 {
 impl Type4 {
     pub(crate) fn new(stream: &Stream) -> Option<Self> {
         Some(Self {
-            program: parse_procedure(&stream.decoded().ok()?)?,
+            program: parse_procedure(&stream.decoded()?)?,
         })
     }
 

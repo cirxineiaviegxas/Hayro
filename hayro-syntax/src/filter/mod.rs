@@ -7,7 +7,7 @@ mod jpx;
 mod lzw_flate;
 mod run_length;
 
-use crate::Result;
+use crate::OptionLog;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
 use crate::object::name::Name;
@@ -15,9 +15,8 @@ use crate::object::name::names::*;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use log::warn;
-use snafu::{OptionExt, whatever};
 
-pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Result<FilterResult> {
+pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Option<FilterResult> {
     filter.apply(data, params.cloned().unwrap_or_default())
 }
 
@@ -73,8 +72,8 @@ impl Filter {
         }
     }
 
-    pub fn apply(&self, data: &[u8], params: Dict) -> Result<FilterResult> {
-        let applied = match self {
+    pub fn apply(&self, data: &[u8], params: Dict) -> Option<FilterResult> {
+        match self {
             Filter::AsciiHexDecode => ascii_hex::decode(data).map(FilterResult::from_data),
             Filter::Ascii85Decode => ascii_85::decode(data).map(FilterResult::from_data),
             Filter::RunLengthDecode => run_length::decode(data).map(FilterResult::from_data),
@@ -87,13 +86,9 @@ impl Filter {
                 ccit_stream::decode(data, params).map(FilterResult::from_data)
             }
             Filter::JpxDecode => jpx::decode(data),
-            _ => {
-                whatever!("the {} filter is not supported", self.debug_name());
-            }
-        };
-
-        applied
-            .with_whatever_context(|| format!("failed to apply the {} filter", self.debug_name()))
+            _ => None,
+        }
+        .warn_none(&format!("failed to apply filter {}", self.debug_name()))
     }
 }
 

@@ -42,7 +42,7 @@ impl Type0 {
             .unwrap_or(range.clone());
 
         let data = {
-            let decoded = stream.decoded().ok()?;
+            let decoded = stream.decoded()?;
             let mut buf = vec![];
             let mut reader = BitReader::new(&decoded);
 

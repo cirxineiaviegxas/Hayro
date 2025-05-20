@@ -2,7 +2,6 @@ use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
 use crate::object::stream::Stream;
 use log::warn;
-use snafu::Whatever;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -16,8 +15,6 @@ pub mod object;
 pub mod pdf;
 pub mod reader;
 pub mod trivia;
-
-pub type Result<T> = std::result::Result<T, Whatever>;
 
 /// A structure for storing the data of the PDF.
 // To explain further: This crate uses a zero-parse approach, meaning that objects like
@@ -78,7 +75,7 @@ impl<'a> Data<'a> {
                 .entry(id)
                 .or_insert_with(|| {
                     let stream = xref.get::<Stream>(id)?;
-                    stream.decoded().ok()
+                    stream.decoded()
                 })
                 .as_ref()
                 .map(|b| {

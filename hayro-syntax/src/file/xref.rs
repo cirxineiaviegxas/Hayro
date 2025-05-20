@@ -1,3 +1,4 @@
+use crate::Data;
 use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
@@ -7,10 +8,8 @@ use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
-use crate::{Data, Result};
 use log::{error, warn};
 use rustc_hash::FxHashMap;
-use snafu::OptionExt;
 use std::cmp::max;
 use std::iter;
 use std::sync::Arc;
@@ -165,7 +164,7 @@ struct XRefEntry {
 }
 
 impl XRefEntry {
-    pub(crate) fn read(data: &[u8]) -> Result<XRefEntry> {
+    pub(crate) fn read(data: &[u8]) -> Option<XRefEntry> {
         #[inline(always)]
         fn parse_u32(data: &[u8]) -> Option<u32> {
             let mut accum = 0;
@@ -182,14 +181,12 @@ impl XRefEntry {
             Some(accum)
         }
 
-        let offset =
-            parse_u32(&data[0..10]).whatever_context("failed to parse xref offset")? as usize;
-        let gen_number =
-            parse_u32(&data[11..16]).whatever_context("failed to parse xref gen number")? as i32;
+        let offset = parse_u32(&data[0..10])? as usize;
+        let gen_number = parse_u32(&data[11..16])? as i32;
 
         let used = data[17] == b'n';
 
-        Ok(Self {
+        Some(Self {
             offset,
             gen_number,
             used,
@@ -266,7 +263,7 @@ fn populate_from_xref_table<'a>(
         for obj_number in start..end {
             max_obj = max(max_obj, obj_number);
             let bytes = reader.read_bytes(XREF_ENTRY_LEN)?;
-            let entry = XRefEntry::read(bytes).ok()?;
+            let entry = XRefEntry::read(bytes)?;
 
             // Specification says we should ignore any object number > SIZE, but probably
             // not important?
@@ -315,7 +312,7 @@ fn populate_from_xref_stream<'a>(
         warn!("first field in xref stream was longer than 1");
     }
 
-    let xref_data = stream.decoded().ok()?;
+    let xref_data = stream.decoded()?;
     let mut xref_reader = Reader::new(xref_data.as_ref());
 
     match stream.dict.get::<Array>(INDEX) {

@@ -1,4 +1,3 @@
-use crate::Result;
 use crate::file::xref::XRef;
 use crate::filter::{Filter, FilterResult, apply_filter};
 use crate::object::array::Array;
@@ -31,11 +30,11 @@ impl<'a> Stream<'a> {
     ///
     /// Note that the result of this method will not be cached, so calling it multiple
     /// times is expensive.
-    pub fn decoded(&self) -> Result<Vec<u8>> {
+    pub fn decoded(&self) -> Option<Vec<u8>> {
         self.decoded_image().map(|r| r.data)
     }
 
-    pub fn decoded_image(&self) -> Result<FilterResult> {
+    pub fn decoded_image(&self) -> Option<FilterResult> {
         if let Some(filter) = self
             .dict
             .get::<Filter>(FILTER)
@@ -46,7 +45,7 @@ impl<'a> Stream<'a> {
                 .get::<Dict>(DECODE_PARMS)
                 .or_else(|| self.dict.get::<Dict>(DP));
 
-            Ok(apply_filter(self.data, filter, params.as_ref())?)
+            Some(apply_filter(self.data, filter, params.as_ref())?)
         } else if let Some(filters) = self
             .dict
             .get::<Array>(FILTER)
@@ -78,13 +77,13 @@ impl<'a> Stream<'a> {
                 current = Some(new);
             }
 
-            Ok(current.unwrap_or(FilterResult {
+            Some(current.unwrap_or(FilterResult {
                 data: self.data.to_vec(),
                 color_space: None,
                 bits_per_component: None,
             }))
         } else {
-            Ok(FilterResult {
+            Some(FilterResult {
                 data: self.data.to_vec(),
                 color_space: None,
                 bits_per_component: None,
