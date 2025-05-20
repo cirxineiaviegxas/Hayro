@@ -133,6 +133,7 @@ pub mod names {
     name!(DEVICE_CMYK, b"DeviceCMYK");
     name!(DEVICE_GRAY, b"DeviceGray");
     name!(DEVICE_RGB, b"DeviceRGB");
+    name!(DEVICE_N, b"DeviceN");
     name!(FLATE_DECODE, b"FlateDecode");
     name!(G, b"G");
     name!(ICC_BASED, b"ICCBased");

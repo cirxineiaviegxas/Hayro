@@ -14,7 +14,7 @@ use once_cell::sync::Lazy;
 use peniko::color::palette::css::BLACK;
 use peniko::color::{AlphaColor, Srgb};
 use qcms::Transform;
-use smallvec::{SmallVec, smallvec};
+use smallvec::{SmallVec, ToSmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -32,6 +32,7 @@ pub enum ColorSpace {
     CalRgb(CalRgb),
     Lab(Lab),
     Separation(Separation),
+    DeviceN(DeviceN),
 }
 
 impl ColorSpace {
@@ -80,6 +81,7 @@ impl ColorSpace {
                 }
                 INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
                 SEPARATION => return Some(ColorSpace::Separation(Separation::new(&color_array)?)),
+                DEVICE_N => return Some(ColorSpace::DeviceN(DeviceN::new(&color_array)?)),
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
@@ -97,11 +99,7 @@ impl ColorSpace {
             DEVICE_CMYK | CMYK => Some(ColorSpace::DeviceCmyk),
             CAL_CMYK => Some(ColorSpace::DeviceCmyk),
             PATTERN => Some(ColorSpace::Pattern),
-            _ => {
-                warn!("unsupported color space: {}", name.as_str());
-
-                None
-            }
+            _ => None,
         }
     }
 
@@ -120,6 +118,7 @@ impl ColorSpace {
             ],
             ColorSpace::Indexed(_) => vec![(0.0, 2.0f32.powf(n) - 1.0)],
             ColorSpace::Separation(_) => vec![(0.0, 1.0)],
+            ColorSpace::DeviceN(d) => vec![(0.0, 1.0); d.0.num_components],
             // Not a valid image color space.
             ColorSpace::Pattern => vec![(0.0, 1.0)],
         }
@@ -144,6 +143,7 @@ impl ColorSpace {
             ColorSpace::Indexed(_) => components.push(0.0),
             ColorSpace::Separation(_) => components.push(1.0),
             ColorSpace::Pattern => components.push(0.0),
+            ColorSpace::DeviceN(d) => components.extend(vec![1.0; d.0.num_components]),
         }
     }
 
@@ -159,6 +159,7 @@ impl ColorSpace {
             ColorSpace::Indexed(_) => 1,
             ColorSpace::Separation(_) => 1,
             ColorSpace::Pattern => 1,
+            ColorSpace::DeviceN(d) => d.0.num_components as u8,
         }
     }
 
@@ -199,6 +200,7 @@ impl ColorSpace {
             ColorSpace::Indexed(i) => i.to_rgb(c[0], opacity),
             ColorSpace::Separation(s) => s.to_rgba(c[0], opacity),
             ColorSpace::Pattern => BLACK,
+            ColorSpace::DeviceN(d) => d.to_rgba(c, opacity),
         }
     }
 }
@@ -582,6 +584,48 @@ impl Separation {
 
             vals
         });
+        self.0.alternate_space.to_rgba(&res, opacity)
+    }
+}
+
+#[derive(Debug)]
+struct DeviceNRepr {
+    alternate_space: ColorSpace,
+    num_components: usize,
+    tint_transform: Function,
+}
+
+#[derive(Debug, Clone)]
+pub struct DeviceN(Arc<DeviceNRepr>);
+
+impl DeviceN {
+    pub fn new(array: &Array) -> Option<Self> {
+        let mut iter = array.iter::<Object>();
+        // Skip `/DeviceN`
+        let _ = iter.next()?;
+        // Skip `Name`. TODO: Handle `/None`.
+        let num_components = iter.next()?.cast::<Array>()?.iter::<Name>().count();
+        let alternate_space = ColorSpace::new(iter.next()?);
+        let tint_transform = Function::new(&iter.next()?)?;
+
+        Some(Self(Arc::new(DeviceNRepr {
+            alternate_space,
+            num_components,
+            tint_transform,
+        })))
+    }
+
+    pub fn to_rgba(&self, c: &[f32], opacity: f32) -> AlphaColor<Srgb> {
+        let res = self
+            .0
+            .tint_transform
+            .eval(c.to_smallvec())
+            .unwrap_or_else(|| {
+                let mut vals = smallvec![];
+                self.0.alternate_space.set_initial_color(&mut vals);
+
+                vals
+            });
         self.0.alternate_space.to_rgba(&res, opacity)
     }
 }

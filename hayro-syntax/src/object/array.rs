@@ -15,6 +15,7 @@ pub struct Array<'a> {
     xref: XRef<'a>,
 }
 
+// TODO: Add a length parameter
 // TODO: Is this alright to do?
 impl PartialEq for Array<'_> {
     fn eq(&self, other: &Self) -> bool {

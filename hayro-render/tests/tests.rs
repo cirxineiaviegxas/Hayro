@@ -5,6 +5,7 @@ use crate::run_test;
 #[test] fn color_separation_3() { run_test("color_separation_3", false, None); }
 #[test] fn color_space_calgray() { run_test("color_space_calgray", false, None); }
 #[test] fn color_space_calrgb() { run_test("color_space_calrgb", false, Some(0..=8)); }
+#[test] fn color_space_devicen_1() { run_test("color_space_devicen_1", false, None); }
 #[test] fn color_space_icc_gray() { run_test("color_space_icc_gray", false, None); }
 #[test] fn color_space_icc_invalid_profile() { run_test("color_space_icc_invalid_profile", false, None); }
 #[test] fn color_space_icc_srgb() { run_test("color_space_icc_srgb", false, None); }
