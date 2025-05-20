@@ -7,14 +7,12 @@ edition = "2024"
 hex = { workspace = true }
 log = { workspace = true }
 kurbo = { workspace = true }
-pdf-writer = { workspace = true }
 rustc-hash = { workspace = true }
 smallvec = { workspace = true }
 zune-jpeg = { workspace = true }
 miniz_oxide = { workspace = true }
 snafu = { workspace = true }
 itertools = { workspace = true }
-fax = "0.2.4"
 jpeg2k = { version = "0.9.1", default-features = false, features = ["openjp2"] }
 
 [dev-dependencies]

@@ -1,11 +1,17 @@
-The following points have been adapted/translated from the PDFBox library, available 
+The following parts of code have been adapted/translated from [PDFBox](https://github.com/apache/pdfbox), available 
 under the Apache 2.0 license.
  - The encoding maps for some of the standard fonts.
 
-The following points have been adapted/translated from the pdf.js library, available
+The following parts of code have been adapted/translated from [pdf.js](https://github.com/mozilla/pdf.js), available
 under the Apache 2.0 license:
 - The CalRGB and CalGray conversion code.
 - The code for decoding CCITFax images.
+
+The following pars of code have been adapted from [pdf-rs](https://github.com/pdf-rs/pdf), available under the
+Apache 2.0 license:
+- The ASCII85 decoder.
+
+The following parts of code have been adapted/translated from the 
 
                                  Apache License
                            Version 2.0, January 2004
