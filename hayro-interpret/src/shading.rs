@@ -10,9 +10,8 @@ use hayro_syntax::object::dict::keys::{
 };
 use hayro_syntax::object::rect::Rect;
 use hayro_syntax::object::stream::Stream;
-use hayro_syntax::reader::Reader;
 use kurbo::{Affine, Point};
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 use std::sync::Arc;
 
 #[derive(Debug)]

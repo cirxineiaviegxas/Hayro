@@ -1,13 +1,9 @@
 // Copyright 2025 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::encode::{
-    EncodedFunctionShading, EncodedRadialAxialShading, EncodedTriangleMeshShading,
-    RadialAxialParams,
-};
+use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading, RadialAxialParams};
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
-use hayro_interpret::shading::Triangle;
 use kurbo::Point;
 use smallvec::smallvec;
 

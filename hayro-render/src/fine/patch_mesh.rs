@@ -2,8 +2,7 @@ use crate::encode::EncodedPatchMeshShading;
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use hayro_interpret::shading::CoonsPatch;
-use kurbo::{CubicBez, ParamCurve, Point, Vec2};
-use peniko::color::palette::css::BLACK;
+use kurbo::{CubicBez, ParamCurve, Point};
 use smallvec::ToSmallVec;
 
 #[derive(Debug)]
@@ -166,9 +165,4 @@ fn eval_patch_surface(patch: &CoonsPatch, u: f64, v: f64) -> Point {
         + v * ((1.0 - u) * c2.eval(0.0).to_vec2() + u * c2.eval(1.0).to_vec2());
 
     (sc + sd - sb).to_point()
-}
-
-fn eval_bezier(control: [Point; 4], t: f64) -> Point {
-    let cubic_bez = CubicBez::new(control[0], control[1], control[2], control[3]);
-    cubic_bez.eval(t)
 }

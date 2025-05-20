@@ -3,7 +3,6 @@ use hayro_syntax::function::dict_or_stream;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{EXT_G_STATE, MATRIX, SHADING};
-use hayro_syntax::object::stream::Stream;
 use kurbo::Affine;
 use log::warn;
 use std::sync::Arc;
