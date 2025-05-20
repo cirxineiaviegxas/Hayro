@@ -3,6 +3,7 @@ mod ascii_hex;
 mod ccit_stream;
 mod ccitt;
 mod dct;
+mod jpx;
 mod lzw_flate;
 mod run_length;
 
@@ -85,43 +86,7 @@ impl Filter {
             Filter::CcittFaxDecode => {
                 ccit_stream::decode(data, params).map(FilterResult::from_data)
             }
-            Filter::JpxDecode => {
-                // TODO: Make dependency optional to allow compiling to WASM.
-                let image = jpeg2k::Image::from_bytes(data).unwrap();
-                let components = image.components();
-                let cs = match components.len() {
-                    1 => Some(ColorSpace::Gray),
-                    3 => Some(ColorSpace::Rgb),
-                    4 => Some(ColorSpace::Cmyk),
-                    _ => None,
-                };
-                let bpc = components
-                    .iter()
-                    .fold(std::u32::MIN, |max, c| max.max(c.precision()))
-                    as u8;
-                let mut components_iters = image
-                    .components()
-                    .iter()
-                    .map(|c| c.data_u8())
-                    .collect::<Vec<_>>();
-                let mut buf = vec![];
-
-                'outer: loop {
-                    for iter in &mut components_iters {
-                        if let Some(n) = iter.next() {
-                            buf.push(n);
-                        } else {
-                            break 'outer;
-                        }
-                    }
-                }
-
-                Some(FilterResult {
-                    data: buf,
-                    color_space: cs,
-                    bits_per_component: Some(bpc),
-                })
-            }
+            Filter::JpxDecode => jpx::decode(data),
             _ => {
                 whatever!("the {} filter is not supported", self.debug_name());
             }

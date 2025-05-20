@@ -13,7 +13,11 @@ zune-jpeg = { workspace = true }
 miniz_oxide = { workspace = true }
 snafu = { workspace = true }
 itertools = { workspace = true }
-jpeg2k = { version = "0.9.1", default-features = false, features = ["openjp2"] }
+jpeg2k = { version = "0.9.1", default-features = false, features = ["openjp2"], optional = true }
+
+[features]
+default = ["jpeg2000"]
+jpeg2000 = ["dep:jpeg2k"]
 
 [dev-dependencies]
 walkdir = "2.5.0"
