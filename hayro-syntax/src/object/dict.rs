@@ -133,7 +133,7 @@ fn read_inner<'a, const PLAIN: bool>(
     let mut offsets = HashMap::new();
 
     let data = {
-        // Inline image dictionaries don't start with '<<'
+        // Inline image dictionaries don't start with '<<'.
         if let Some(start_tag) = start_tag {
             r.forward_tag(start_tag)?;
         }
@@ -144,16 +144,17 @@ fn read_inner<'a, const PLAIN: bool>(
         loop {
             r.skip_white_spaces_and_comments();
 
-            // Normal dictionaries end with '>>', inlime image dictionaries end with BD
+            // Normal dictionaries end with '>>', inline image dictionaries end with BD.
             if let Some(()) = r.peek_tag(end_tag) {
                 let end_offset = r.offset() - start_offset;
                 r.forward_tag(end_tag)?;
+                
                 break &dict_data[..end_offset];
             } else {
                 let name = r.read_without_xref::<Name>()?;
                 r.skip_white_spaces_and_comments();
 
-                // Keys with null-objects should be treated as non-existing.
+                // Keys with null objects should be treated as non-existing.
                 let is_null = {
                     let mut nr = Reader::new(r.tail()?);
 

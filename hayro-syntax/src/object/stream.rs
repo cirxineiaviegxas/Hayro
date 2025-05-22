@@ -105,7 +105,9 @@ impl Debug for Stream<'_> {
 impl Skippable for Stream<'_> {
     fn skip<const PLAIN: bool>(_: &mut Reader<'_>) -> Option<()> {
         // A stream can never appear in a dict/array, so it should never be skipped.
-        unimplemented!()
+        warn!("attempted to skip a stream object");
+
+        None
     }
 }
 
@@ -119,7 +121,7 @@ impl<'a> Readable<'a> for Stream<'a> {
             return None;
         }
 
-        let length = dict.get::<i32>(LENGTH)?;
+        let length = dict.get::<u32>(LENGTH)?;
 
         r.skip_white_spaces_and_comments();
         r.forward_tag(b"stream")?;
@@ -135,7 +137,7 @@ impl<'a> Readable<'a> for Stream<'a> {
 impl<'a> TryFrom<Object<'a>> for Stream<'a> {
     type Error = ();
 
-    fn try_from(value: Object<'a>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: Object<'a>) -> Result<Self, Self::Error> {
         match value {
             Object::Stream(s) => Ok(s),
             _ => Err(()),

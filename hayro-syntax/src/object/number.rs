@@ -11,7 +11,7 @@ use std::str::FromStr;
 pub struct Number(pub(crate) InternalNumber);
 
 impl Number {
-    /// Returns the number as an f64.
+    /// Returns the number as a f64.
     pub fn as_f64(&self) -> f64 {
         match self.0 {
             InternalNumber::Real(r) => r as f64,
@@ -36,7 +36,7 @@ impl Number {
         }
     }
 
-    /// Returns the number as an i32, if possible.
+    /// Returns the number as an i32.
     pub fn as_i32(&self) -> i32 {
         match self.0 {
             InternalNumber::Real(r) => {
@@ -86,7 +86,8 @@ impl Skippable for Number {
 impl Readable<'_> for Number {
     fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
         // TODO: This function is probably the biggest bottleneck in content parsing, so
-        // worth optimizing.
+        // worth optimizing (i.e. reading the number directly from the bytes instead
+        // of first parsing it to a number).
 
         let data = r.skip::<PLAIN, Number>()?;
         let num = f32::from_str(std::str::from_utf8(data).ok()?).ok()?;
