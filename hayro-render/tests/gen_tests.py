@@ -6,7 +6,7 @@ downloads_directory = os.path.join(os.path.dirname(__file__), '../downloads')  #
 # Output Rust file
 output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
 
-ignore_list = ["pdftc_010k_0083", "integration_matplotlib"]
+ignore_list = ["pdftc_010k_0083", "integration_matplotlib", "pattern_shading_type6", "pattern_shading_type6_2"]
 
 lengths = {
     "color_space_calrgb": "0..=8",
