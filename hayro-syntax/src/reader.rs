@@ -276,7 +276,7 @@ where
         let u = U::read::<PLAIN>(r, xref)?;
         r.skip_white_spaces_and_comments();
         let v = V::read::<PLAIN>(r, xref)?;
-        
+
         Some((t, u, v))
     }
 }

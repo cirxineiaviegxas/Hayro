@@ -4,28 +4,22 @@ use crate::object::Object;
 use crate::reader::{Readable, Reader, Skippable};
 use crate::trivia::is_regular_character;
 use std::fmt::Debug;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::ops::Deref;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum Cow<'a> {
     Borrowed(&'a [u8]),
     Owned(Vec<u8>),
 }
 
 /// A PDF name.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Name<'a>(Cow<'a>);
 
 impl<'a> AsRef<Name<'a>> for Name<'a> {
     fn as_ref(&self) -> &Name<'a> {
         self
-    }
-}
-
-impl Hash for Name<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.deref().hash(state)
     }
 }
 
