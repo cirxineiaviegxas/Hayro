@@ -266,7 +266,7 @@ impl Cff {
 }
 
 #[derive(Debug)]
-struct GlyphSimulator {
+pub(crate) struct GlyphSimulator {
     // We simulate that Type1 glyphs have glyph IDs so we can handle them transparently
     // to OpenType fonts.
     glyph_to_string: RefCell<HashMap<GlyphId, String>>,
@@ -275,7 +275,7 @@ struct GlyphSimulator {
 }
 
 impl GlyphSimulator {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut glyph_to_string = HashMap::new();
         glyph_to_string.insert(GlyphId::NOTDEF, "notdef".to_string());
 
@@ -289,7 +289,7 @@ impl GlyphSimulator {
         }
     }
 
-    fn string_to_glyph(&self, string: &str) -> GlyphId {
+    pub(crate) fn string_to_glyph(&self, string: &str) -> GlyphId {
         if let Some(g) = self.string_to_glyph.borrow().get(string) {
             *g
         } else {
@@ -307,7 +307,7 @@ impl GlyphSimulator {
         }
     }
 
-    fn glyph_to_string(&self, glyph: GlyphId) -> Option<String> {
+    pub(crate) fn glyph_to_string(&self, glyph: GlyphId) -> Option<String> {
         self.glyph_to_string
             .borrow()
             .get(&glyph)

@@ -3,6 +3,7 @@ use crate::context::Context;
 use crate::device::{ClipPath, Device, ReplayInstruction};
 use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
+use crate::font::type1::GlyphSimulator;
 use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps, interpret};
 use hayro_syntax::content::{TypedIter, UntypedIter};
@@ -12,7 +13,6 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
 use peniko::ImageQuality;
 use skrifa::GlyphId;
-use std::cell::RefCell;
 use std::collections::HashMap;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
@@ -82,11 +82,7 @@ pub struct Type3<'a> {
     dict: Dict<'a>,
     // TODO: Don't automatically resolve glyph streams?
     char_procs: HashMap<String, Stream<'a>>,
-    // Similarly to Type1 fonts, we simulate that Type3 glyphs have glyph IDs
-    // so we can handle them transparently to OpenType fonts.
-    glyph_to_string: RefCell<HashMap<GlyphId, String>>,
-    string_to_glyph: RefCell<HashMap<String, GlyphId>>,
-    glyph_counter: RefCell<u32>,
+    glyph_simulator: GlyphSimulator,
     matrix: Affine,
 }
 
@@ -113,14 +109,9 @@ impl<'a> Type3<'a> {
             procs
         };
 
-        let glyph_to_string = HashMap::new();
-        let string_to_glyph = HashMap::new();
-
         Self {
-            glyph_to_string: RefCell::new(glyph_to_string),
-            string_to_glyph: RefCell::new(string_to_glyph),
+            glyph_simulator: GlyphSimulator::new(),
             char_procs,
-            glyph_counter: RefCell::new(1),
             widths,
             encodings,
             matrix,
@@ -128,28 +119,10 @@ impl<'a> Type3<'a> {
         }
     }
 
-    fn string_to_glyph(&self, string: &str) -> GlyphId {
-        if let Some(g) = self.string_to_glyph.borrow().get(string) {
-            *g
-        } else {
-            let gid = GlyphId::new(*self.glyph_counter.borrow());
-            self.string_to_glyph
-                .borrow_mut()
-                .insert(string.to_string(), gid);
-            self.glyph_to_string
-                .borrow_mut()
-                .insert(gid, string.to_string());
-
-            *self.glyph_counter.borrow_mut() += 1;
-
-            gid
-        }
-    }
-
     pub fn map_code(&self, code: u8) -> GlyphId {
         self.encodings
             .get(&code)
-            .map(|g| self.string_to_glyph(g))
+            .map(|g| self.glyph_simulator.string_to_glyph(g))
             .unwrap_or(GlyphId::NOTDEF)
     }
 
@@ -162,9 +135,8 @@ impl<'a> Type3<'a> {
         let mut t3 =
             Type3GlyphDescription::new(self.matrix * Affine::scale_non_uniform(1000.0, 1000.0));
 
-        let borrowed = self.glyph_to_string.borrow();
-        let name = borrowed.get(&glyph).unwrap();
-        let program = self.char_procs.get(name).unwrap();
+        let name = self.glyph_simulator.glyph_to_string(glyph).unwrap();
+        let program = self.char_procs.get(&name).unwrap();
         let decoded = program.decoded().unwrap();
         let resources = self.dict.get(RESOURCES).unwrap_or_default();
 
