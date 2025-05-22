@@ -47,7 +47,7 @@ impl ColorSpace {
             let name = iter.next()?.cast::<Name>()?;
 
             match name {
-                ICCBASED => {
+                ICC_BASED => {
                     // TODO: Cache this (test file: https://issues.apache.org/jira/projects/PDFBOX/issues/PDFBOX-6008?filter=allopenissues)
                     let icc_stream = iter.next()?.cast::<Stream>()?;
                     let dict = icc_stream.dict();
@@ -78,7 +78,7 @@ impl ColorSpace {
                 }
                 INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
                 SEPARATION => return Some(ColorSpace::Separation(Separation::new(&color_array)?)),
-                DEVICEN => return Some(ColorSpace::DeviceN(DeviceN::new(&color_array)?)),
+                DEVICE_N => return Some(ColorSpace::DeviceN(DeviceN::new(&color_array)?)),
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
@@ -91,9 +91,9 @@ impl ColorSpace {
 
     pub fn new_from_name(name: Name) -> Option<ColorSpace> {
         match name {
-            DEVICERGB | RGB => Some(ColorSpace::DeviceRgb),
-            DEVICEGRAY | G => Some(ColorSpace::DeviceGray),
-            DEVICECMYK | CMYK => Some(ColorSpace::DeviceCmyk),
+            DEVICE_RGB | RGB => Some(ColorSpace::DeviceRgb),
+            DEVICE_GRAY | G => Some(ColorSpace::DeviceGray),
+            DEVICE_CMYK | CMYK => Some(ColorSpace::DeviceCmyk),
             CALCMYK => Some(ColorSpace::DeviceCmyk),
             PATTERN => Some(ColorSpace::Pattern),
             _ => None,

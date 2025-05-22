@@ -493,10 +493,10 @@ pub mod keys {
     key!(DEST, b"Dest");
     key!(DEST_OUTPUT_PROFILE, b"DestOutputProfile");
     key!(DESTS, b"Dests");
-    key!(DEVICECMYK, b"DeviceCMYK");
-    key!(DEVICEGRAY, b"DeviceGray");
-    key!(DEVICEN, b"DeviceN");
-    key!(DEVICERGB, b"DeviceRGB");
+    key!(DEVICE_CMYK, b"DeviceCMYK");
+    key!(DEVICE_GRAY, b"DeviceGray");
+    key!(DEVICE_N, b"DeviceN");
+    key!(DEVICE_RGB, b"DeviceRGB");
     key!(DI, b"Di");
     key!(DIFFERENCE, b"Difference");
     key!(DIFFERENCES, b"Differences");
@@ -616,7 +616,7 @@ pub mod keys {
     // I
     key!(I, b"I");
     key!(IC, b"IC");
-    key!(ICCBASED, b"ICCBased");
+    key!(ICC_BASED, b"ICCBased");
     key!(ID, b"ID");
     key!(ID_TREE, b"IDTree");
     key!(IDENTITY, b"Identity");
