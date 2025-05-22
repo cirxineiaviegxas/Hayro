@@ -3,12 +3,8 @@ use crate::util::OptionLog;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    CID_TO_GID_MAP, DESCENDANT_FONTS, DW, DW2, ENCODING, FONT_DESC, FONT_FILE2, FONT_FILE3,
-    SUBTYPE, W, W2,
-};
+use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::{CID_FONT_TYPE_0C, IDENTITY, IDENTITY_H, OPEN_TYPE};
 use hayro_syntax::object::stream::Stream;
 use kurbo::{BezPath, Vec2};
 use log::warn;
@@ -35,7 +31,7 @@ impl Type0Font {
             .get::<Name>(ENCODING)
             .warn_none("CID fonts with custom encoding are currently unsupported")?;
 
-        let horizontal = encoding.as_ref() == IDENTITY_H;
+        let horizontal = encoding == IDENTITY_H;
 
         let descendant_font = dict.get::<Array>(DESCENDANT_FONTS)?.iter::<Dict>().next()?;
         let font_descriptor = descendant_font.get::<Dict>(FONT_DESC)?;
@@ -161,8 +157,8 @@ impl FontType {
         } else if let Some(stream) = descriptor.get::<Stream>(FONT_FILE3) {
             let decoded = stream.decoded()?;
 
-            return match stream.dict().get::<Name>(SUBTYPE)?.as_ref() {
-                CID_FONT_TYPE_0C => {
+            return match stream.dict().get::<Name>(SUBTYPE)? {
+                CID_FONT_TYPE0C => {
                     let data = Arc::new(decoded.to_vec());
 
                     Some(Self::Cff(CffFontBlob::new(data)?))
@@ -197,7 +193,7 @@ enum CidToGIdMap {
 impl CidToGIdMap {
     pub fn new(dict: &Dict) -> Option<Self> {
         if let Some(name) = dict.get::<Name>(CID_TO_GID_MAP) {
-            if name.as_ref() == IDENTITY {
+            if name == IDENTITY {
                 Some(CidToGIdMap::Identity)
             } else {
                 None

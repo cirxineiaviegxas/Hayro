@@ -9,6 +9,7 @@ use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::BASE_FONT;
 use hayro_syntax::object::name::Name;
+use std::ops::Deref;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum StandardFont {
@@ -83,7 +84,7 @@ impl StandardFont {
 
 pub(crate) fn select_standard_font(dict: &Dict) -> Option<StandardFont> {
     // See <https://github.com/apache/pdfbox/blob/4438b8fdc67a3a9ebfb194595d0e81f88b708a37/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/font/FontMapperImpl.java#L62-L102>
-    match dict.get::<Name>(BASE_FONT)?.as_ref() {
+    match dict.get::<Name>(BASE_FONT)?.deref() {
         b"Helvetica" | b"ArialMT" | b"Arial" | b"LiberationSans" | b"NimbusSanL-Regu" => {
             Some(StandardFont::Helvetica)
         }

@@ -6,12 +6,8 @@ use bitflags::bitflags;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    BASE_ENCODING, DIFFERENCES, ENCODING, FIRST_CHAR, FLAGS, FONT_DESC, FONT_FILE2, LAST_CHAR,
-    MISSING_WIDTH, WIDTHS,
-};
+use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::*;
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
 use log::warn;
@@ -211,9 +207,9 @@ pub(crate) fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
 }
 
 pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
-    fn get_encoding_base(dict: &Dict, name: &Name) -> Encoding {
-        match dict.get::<Name>(name) {
-            Some(n) => match n.as_ref() {
+    fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
+        match dict.get::<Name>(name.clone()) {
+            Some(n) => match n {
                 WIN_ANSI_ENCODING => Encoding::WinAnsi,
                 MAC_ROMAN_ENCODING => Encoding::MacRoman,
                 MAC_EXPERT_ENCODING => Encoding::MacExpert,

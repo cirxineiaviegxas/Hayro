@@ -2,9 +2,8 @@ use crate::content::{TypedIter, UntypedIter};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{CONTENTS, CROP_BOX, KIDS, MEDIA_BOX, RESOURCES, ROTATE, TYPE};
+use crate::object::dict::keys::*;
 use crate::object::name::Name;
-use crate::object::name::names::*;
 use crate::object::rect::Rect;
 use crate::object::stream::Stream;
 use log::warn;
@@ -67,7 +66,7 @@ fn resolve_pages<'a>(
     // TODO: Add inheritance of page attributes
 
     for dict in kids.iter::<Dict>() {
-        match dict.get::<Name>(TYPE)?.as_ref() {
+        match dict.get::<Name>(TYPE)? {
             PAGES => resolve_pages(dict, entries, ctx.clone())?,
             PAGE => entries.push(Page::new(dict, &ctx)),
             _ => return None,

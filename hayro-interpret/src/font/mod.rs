@@ -7,12 +7,13 @@ use crate::font::type3::{Type3, Type3GlyphDescription};
 use hayro_font_parser::OutlineBuilder;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
+use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::name::names::*;
 use kurbo::{BezPath, Vec2};
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::sync::Arc;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
@@ -30,8 +31,8 @@ pub struct Font<'a>(Arc<FontType<'a>>);
 
 impl<'a> Font<'a> {
     pub fn new(dict: &Dict<'a>) -> Option<Self> {
-        let f_type = match dict.get::<Name>(SUBTYPE)?.as_ref() {
-            TYPE1 | MMTYPE1 => FontType::Type1(Type1Font::new(dict)?),
+        let f_type = match dict.get::<Name>(SUBTYPE)? {
+            TYPE1 | MM_TYPE1 => FontType::Type1(Type1Font::new(dict)?),
             TRUE_TYPE => TrueTypeFont::new(dict)
                 .map(FontType::TrueType)
                 .or_else(|| Type1Font::new(dict).map(FontType::Type1))?,
@@ -40,7 +41,7 @@ impl<'a> Font<'a> {
             f => {
                 println!(
                     "unimplemented font type {:?}",
-                    std::str::from_utf8(f).unwrap()
+                    std::str::from_utf8(f.deref()).unwrap()
                 );
 
                 return None;

@@ -3,14 +3,25 @@ use crate::object;
 use crate::object::Object;
 use crate::reader::{Readable, Reader, Skippable};
 use crate::trivia::is_regular_character;
-use std::borrow::Cow;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Cow<'a> {
+    Borrowed(&'a [u8]),
+    Owned(Vec<u8>),
+}
+
 /// A PDF name.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Name<'a>(Cow<'a, [u8]>);
+pub struct Name<'a>(Cow<'a>);
+
+impl<'a> AsRef<Name<'a>> for Name<'a> {
+    fn as_ref(&self) -> &Name<'a> {
+        self
+    }
+}
 
 impl Hash for Name<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -22,7 +33,10 @@ impl Deref for Name<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
-        self.0.as_ref()
+        match &self.0 {
+            Cow::Borrowed(a) => a,
+            Cow::Owned(v) => v.as_ref(),
+        }
     }
 }
 
@@ -111,56 +125,6 @@ pub(crate) fn skip_name_like(r: &mut Reader, solidus: bool) -> Option<()> {
     }
 
     Some(())
-}
-
-pub mod names {
-    macro_rules! name {
-        ($i:ident, $e:expr) => {
-            pub const $i: &[u8] = $e;
-        };
-    }
-
-    name!(ASCII85_DECODE, b"ASCII85Decode");
-    name!(ASCII_HEX_DECODE, b"ASCIIHexDecode");
-    name!(CAL_CMYK, b"CalCMYK");
-    name!(CAL_GRAY, b"CalGray");
-    name!(CAL_RGB, b"CalRGB");
-    name!(CCITTFAX_DECODE, b"CCITTFaxDecode");
-    name!(CID_FONT_TYPE_0C, b"CIDFontType0C");
-    name!(CMYK, b"CMYK");
-    name!(CRYPT, b"Crypt");
-    name!(DCT_DECODE, b"DCTDecode");
-    name!(DEVICE_CMYK, b"DeviceCMYK");
-    name!(DEVICE_GRAY, b"DeviceGray");
-    name!(DEVICE_RGB, b"DeviceRGB");
-    name!(DEVICE_N, b"DeviceN");
-    name!(FLATE_DECODE, b"FlateDecode");
-    name!(G, b"G");
-    name!(ICC_BASED, b"ICCBased");
-    name!(INDEXED, b"Indexed");
-    name!(IDENTITY, b"Identity");
-    name!(IDENTITY_H, b"Identity-H");
-    name!(IDENTITY_V, b"Identity-V");
-    name!(JBIG2_DECODE, b"JBIG2Decode");
-    name!(JPX_DECODE, b"JPXDecode");
-    name!(LAB, b"Lab");
-    name!(LZW_DECODE, b"LZWDecode");
-    name!(MAC_EXPERT_ENCODING, b"MacExpertEncoding");
-    name!(MAC_ROMAN_ENCODING, b"MacRomanEncoding");
-    name!(MMTYPE1, b"MMType1");
-    name!(OPEN_TYPE, b"OpenType");
-    name!(PAGE, b"Page");
-    name!(PAGES, b"Pages");
-    name!(PATTERN, b"Pattern");
-    name!(RGB, b"RGB");
-    name!(RUN_LENGTH_DECODE, b"RunLengthDecode");
-    name!(SEPARATION, b"Separation");
-    name!(TYPE0, b"Type0");
-    name!(TYPE1, b"Type1");
-    name!(TYPE1_C, b"Type1C");
-    name!(TYPE3, b"Type3");
-    name!(TRUE_TYPE, b"TrueType");
-    name!(WIN_ANSI_ENCODING, b"WinAnsiEncoding");
 }
 
 #[cfg(test)]

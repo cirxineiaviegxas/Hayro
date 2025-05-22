@@ -9,8 +9,8 @@ mod run_length;
 use crate::OptionLog;
 use crate::file::xref::XRef;
 use crate::object::dict::Dict;
+use crate::object::dict::keys::*;
 use crate::object::name::Name;
-use crate::object::name::names::*;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use log::warn;
@@ -114,15 +114,15 @@ impl TryFrom<Name<'_>> for Filter {
     type Error = ();
 
     fn try_from(value: Name) -> std::result::Result<Self, Self::Error> {
-        match value.as_ref() {
-            ASCII_HEX_DECODE | b"AHx" => Ok(Filter::AsciiHexDecode),
-            ASCII85_DECODE | b"A85" => Ok(Filter::Ascii85Decode),
-            LZW_DECODE | b"LZW" => Ok(Filter::LzwDecode),
-            FLATE_DECODE | b"Fl" => Ok(Filter::FlateDecode),
-            RUN_LENGTH_DECODE | b"RL" => Ok(Filter::RunLengthDecode),
-            CCITTFAX_DECODE | b"CCF" => Ok(Filter::CcittFaxDecode),
+        match value {
+            ASCII_HEX_DECODE | ASCII_HEX_DECODE_ABBREVIATION => Ok(Filter::AsciiHexDecode),
+            ASCII85_DECODE | ASCII85_DECODE_ABBREVIATION => Ok(Filter::Ascii85Decode),
+            LZW_DECODE | LZW_DECODE_ABBREVIATION => Ok(Filter::LzwDecode),
+            FLATE_DECODE | FLATE_DECODE_ABBREVIATION => Ok(Filter::FlateDecode),
+            RUN_LENGTH_DECODE | RUN_LENGTH_DECODE_ABBREVIATION => Ok(Filter::RunLengthDecode),
+            CCITTFAX_DECODE | CCITTFAX_DECODE_ABBREVIATION => Ok(Filter::CcittFaxDecode),
             JBIG2_DECODE => Ok(Filter::Jbig2Decode),
-            DCT_DECODE | b"DCT" => Ok(Filter::DctDecode),
+            DCT_DECODE | DCT_DECODE_ABBREVIATION => Ok(Filter::DctDecode),
             JPX_DECODE => Ok(Filter::JpxDecode),
             CRYPT => Ok(Filter::Crypt),
             _ => {

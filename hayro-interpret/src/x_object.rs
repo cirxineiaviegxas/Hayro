@@ -8,10 +8,7 @@ use hayro_syntax::function::interpolate;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{
-    BBOX, BITS_PER_COMPONENT, BPC, COLORSPACE, CS, D, DECODE, H, HEIGHT, I, IM, IMAGE_MASK,
-    INTERPOLATE, MATRIX, RESOURCES, SMASK, SUBTYPE, W, WIDTH,
-};
+use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
@@ -25,9 +22,9 @@ pub enum XObject<'a> {
 impl<'a> XObject<'a> {
     pub fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
-        match dict.get::<Name>(SUBTYPE).unwrap().as_ref() {
-            b"Image" => Some(Self::ImageXObject(ImageXObject::new(stream)?)),
-            b"Form" => Some(Self::FormXObject(FormXObject::new(stream))),
+        match dict.get::<Name>(SUBTYPE).unwrap() {
+            IMAGE => Some(Self::ImageXObject(ImageXObject::new(stream)?)),
+            FORM => Some(Self::FormXObject(FormXObject::new(stream))),
             _ => unimplemented!(),
         }
     }

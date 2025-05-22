@@ -44,16 +44,16 @@ impl<'a> Dict<'a> {
     }
 
     /// Checks whether the dictionary contains an entry with a specific key.
-    pub fn contains_key(&self, key: &Name) -> bool {
-        self.0.offsets.contains_key(key)
+    pub fn contains_key<'b>(&self, key: impl AsRef<Name<'b>>) -> bool {
+        self.0.offsets.contains_key(key.as_ref())
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
-    pub fn get<T>(&self, key: &Name) -> Option<T>
+    pub fn get<'b, T>(&self, key: impl AsRef<Name<'b>>) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
-        self.get_raw::<T>(key)?.resolve(&self.0.xref)
+        self.get_raw::<T>(key.as_ref())?.resolve(&self.0.xref)
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
@@ -328,7 +328,7 @@ pub mod keys {
 
     macro_rules! key {
         ($i:ident, $e:expr) => {
-            pub const $i: &'static Name<'static> = &Name::from_unescaped($e);
+            pub const $i: Name<'static> = Name::from_unescaped($e);
         };
     }
 
@@ -413,6 +413,7 @@ pub mod keys {
     key!(CA_NS, b"ca");
     key!(CALGRAY, b"CalGray");
     key!(CALRGB, b"CalRGB");
+    key!(CALCMYK, b"CalCMYK");
     key!(CAP, b"Cap");
     key!(CAP_HEIGHT, b"CapHeight");
     key!(CATALOG, b"Catalog");
@@ -430,6 +431,7 @@ pub mod keys {
     key!(CI, b"CI");
     key!(CICI_SIGNIT, b"CICI.SignIt");
     key!(CID_FONT_TYPE0, b"CIDFontType0");
+    key!(CID_FONT_TYPE0C, b"CIDFontType0C");
     key!(CID_FONT_TYPE2, b"CIDFontType2");
     key!(CID_TO_GID_MAP, b"CIDToGIDMap");
     key!(CID_SET, b"CIDSet");
