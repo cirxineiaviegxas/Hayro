@@ -280,18 +280,3 @@ where
         Some((t, u, v))
     }
 }
-
-impl<'a, T> Readable<'a> for Vec<T>
-where
-    T: Readable<'a>,
-{
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        let mut v = vec![];
-
-        while let Some(t) = T::read::<PLAIN>(r, xref) {
-            v.push(t);
-        }
-
-        Some(v)
-    }
-}
