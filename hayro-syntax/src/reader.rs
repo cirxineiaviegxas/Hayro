@@ -255,7 +255,9 @@ where
     U: Readable<'a>,
 {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        r.skip_white_spaces_and_comments();
         let t = T::read::<PLAIN>(r, xref)?;
+        r.skip_white_spaces_and_comments();
         let u = U::read::<PLAIN>(r, xref)?;
         Some((t, u))
     }
@@ -268,9 +270,13 @@ where
     V: Readable<'a>,
 {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        r.skip_white_spaces_and_comments();
         let t = T::read::<PLAIN>(r, xref)?;
+        r.skip_white_spaces_and_comments();
         let u = U::read::<PLAIN>(r, xref)?;
+        r.skip_white_spaces_and_comments();
         let v = V::read::<PLAIN>(r, xref)?;
+        
         Some((t, u, v))
     }
 }
