@@ -64,8 +64,8 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns an iterator over all keys in the dictionary.
-    pub fn keys(&self) -> impl IntoIterator<Item = &Name> {
-        self.0.offsets.keys()
+    pub fn keys(&self) -> impl IntoIterator<Item = Name> {
+        self.0.offsets.keys().cloned()
     }
 
     pub(crate) fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
@@ -148,7 +148,7 @@ fn read_inner<'a, const PLAIN: bool>(
             if let Some(()) = r.peek_tag(end_tag) {
                 let end_offset = r.offset() - start_offset;
                 r.forward_tag(end_tag)?;
-                
+
                 break &dict_data[..end_offset];
             } else {
                 let name = r.read_without_xref::<Name>()?;

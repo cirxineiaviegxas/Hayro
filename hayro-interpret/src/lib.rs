@@ -567,7 +567,7 @@ fn show_glyph<'a>(
 
 fn handle_gs(dict: &Dict, context: &mut Context) {
     for key in dict.keys() {
-        handle_gs_single(dict, key, context).warn_none(&format!(
+        handle_gs_single(dict, &key, context).warn_none(&format!(
             "invalid value in graphics state for {}",
             key.as_str()
         ));

@@ -105,7 +105,7 @@ impl<'a> Type3<'a> {
             let dict = dict.get::<Dict>(CHAR_PROCS).unwrap_or_default();
 
             for name in dict.keys() {
-                let prog = dict.get::<Stream>(name).unwrap();
+                let prog = dict.get::<Stream>(&name).unwrap();
 
                 procs.insert(name.as_str().to_string(), prog.clone());
             }
