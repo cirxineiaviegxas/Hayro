@@ -571,7 +571,6 @@ dependencies = [
  "miniz_oxide",
  "rustc-hash",
  "smallvec",
- "walkdir",
  "zune-jpeg",
 ]
 

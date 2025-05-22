@@ -17,6 +17,3 @@ jpeg2k = { workspace = true, optional = true }
 [features]
 default = ["jpeg2000"]
 jpeg2000 = ["dep:jpeg2k"]
-
-[dev-dependencies]
-walkdir = "2.5.0"
