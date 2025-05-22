@@ -1,11 +1,10 @@
 use crate::util::OptionLog;
 use hayro_syntax::function::Function;
+use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
-use hayro_syntax::object::stream::Stream;
-use hayro_syntax::object::{Object, string};
 use log::warn;
 use once_cell::sync::Lazy;
 use peniko::color::palette::css::BLACK;
@@ -40,16 +39,16 @@ impl ColorSpace {
     }
 
     fn new_inner(object: Object) -> Option<ColorSpace> {
-        if let Some(name) = object.clone().cast::<Name>() {
+        if let Some(name) = object.clone().into_name() {
             return Self::new_from_name(name.clone());
-        } else if let Some(color_array) = object.clone().cast::<Array>() {
+        } else if let Some(color_array) = object.clone().into_array() {
             let mut iter = color_array.clone().iter::<Object>();
-            let name = iter.next()?.cast::<Name>()?;
+            let name = iter.next()?.into_name()?;
 
             match name {
                 ICC_BASED => {
                     // TODO: Cache this (test file: https://issues.apache.org/jira/projects/PDFBOX/issues/PDFBOX-6008?filter=allopenissues)
-                    let icc_stream = iter.next()?.cast::<Stream>()?;
+                    let icc_stream = iter.next()?.into_stream()?;
                     let dict = icc_stream.dict();
                     let num_components = dict.get::<usize>(N)?;
 
@@ -65,15 +64,15 @@ impl ColorSpace {
                 }
                 CALCMYK => return Some(ColorSpace::DeviceCmyk),
                 CALGRAY => {
-                    let cal_dict = iter.next()?.cast::<Dict>()?;
+                    let cal_dict = iter.next()?.into_dict()?;
                     return Some(ColorSpace::CalGray(CalGray::new(&cal_dict)?));
                 }
                 CALRGB => {
-                    let cal_dict = iter.next()?.cast::<Dict>()?;
+                    let cal_dict = iter.next()?.into_dict()?;
                     return Some(ColorSpace::CalRgb(CalRgb::new(&cal_dict)?));
                 }
                 LAB => {
-                    let lab_dict = iter.next()?.cast::<Dict>()?;
+                    let lab_dict = iter.next()?.into_dict()?;
                     return Some(ColorSpace::Lab(Lab::new(&lab_dict)?));
                 }
                 INDEXED => return Some(ColorSpace::Indexed(Indexed::new(&color_array)?)),
@@ -498,20 +497,16 @@ impl Indexed {
         // Skip name
         let _ = iter.next()?;
         let base_color_space = ColorSpace::new(iter.next()?);
-        let hival = iter.next()?.cast::<u8>()?;
+        let hival = iter.next()?.into_u8()?;
 
         let values = {
             let next = iter.next()?;
 
             let data = next
                 .clone()
-                .cast::<Stream>()
+                .into_stream()
                 .and_then(|s| s.decoded())
-                .or_else(|| {
-                    next.clone()
-                        .cast::<string::String>()
-                        .map(|s| s.get().to_vec())
-                })
+                .or_else(|| next.clone().into_string().map(|s| s.get().to_vec()))
                 .unwrap();
 
             let num_components = base_color_space.components();
@@ -559,7 +554,7 @@ impl Separation {
         let mut iter = array.iter::<Object>();
         // Skip `/Separation`
         let _ = iter.next()?;
-        let name = iter.next()?.cast::<Name>()?.as_str().to_owned();
+        let name = iter.next()?.into_name()?.as_str().to_owned();
         let alternate_space = ColorSpace::new(iter.next()?);
         let tint_transform = Function::new(&iter.next()?)?;
 
@@ -601,7 +596,7 @@ impl DeviceN {
         // Skip `/DeviceN`
         let _ = iter.next()?;
         // Skip `Name`. TODO: Handle `/None`.
-        let num_components = iter.next()?.cast::<Array>()?.iter::<Name>().count();
+        let num_components = iter.next()?.into_array()?.iter::<Name>().count();
         let alternate_space = ColorSpace::new(iter.next()?);
         let tint_transform = Function::new(&iter.next()?)?;
 

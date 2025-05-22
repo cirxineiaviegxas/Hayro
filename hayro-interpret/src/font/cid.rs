@@ -226,16 +226,16 @@ fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
     let mut map = HashMap::new();
     let mut iter = arr.iter::<Object>();
 
-    while let Some(mut first) = iter.next().and_then(|o| o.cast::<u16>()) {
+    while let Some(mut first) = iter.next().and_then(|o| o.into_u16()) {
         let second = iter.next()?;
 
-        if let Some(second) = second.clone().cast::<u16>() {
-            let width = iter.next().and_then(|o| o.cast::<f32>())?;
+        if let Some(second) = second.clone().into_u16() {
+            let width = iter.next().and_then(|o| o.into_f32())?;
 
             for i in first..=second {
                 map.insert(i, width);
             }
-        } else if let Some(range) = second.cast::<Array>() {
+        } else if let Some(range) = second.into_array() {
             for width in range.iter::<f32>() {
                 map.insert(first, width);
                 first = first.checked_add(1)?;
@@ -250,18 +250,18 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
     let mut map = HashMap::new();
     let mut iter = arr.iter::<Object>();
 
-    while let Some(mut first) = iter.next().and_then(|o| o.cast::<u16>()) {
+    while let Some(mut first) = iter.next().and_then(|o| o.into_u16()) {
         let second = iter.next()?;
 
-        if let Some(second) = second.clone().cast::<u16>() {
-            let w = iter.next().and_then(|o| o.cast::<f32>())?;
-            let v1 = iter.next().and_then(|o| o.cast::<f32>())?;
-            let v2 = iter.next().and_then(|o| o.cast::<f32>())?;
+        if let Some(second) = second.clone().into_u16() {
+            let w = iter.next().and_then(|o| o.into_f32())?;
+            let v1 = iter.next().and_then(|o| o.into_f32())?;
+            let v2 = iter.next().and_then(|o| o.into_f32())?;
 
             for i in first..=second {
                 map.insert(i, [w, v1, v2]);
             }
-        } else if let Some(range) = second.cast::<Array>() {
+        } else if let Some(range) = second.into_array() {
             let mut iter = range.iter::<f32>();
 
             while let Some(w) = iter.next() {

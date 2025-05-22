@@ -233,9 +233,9 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
             let mut code = 0;
 
             for obj in entries {
-                if let Some(num) = obj.clone().cast::<i32>() {
+                if let Some(num) = obj.clone().into_i32() {
                     code = num;
-                } else if let Some(name) = obj.cast::<Name>() {
+                } else if let Some(name) = obj.into_name() {
                     map.insert(code as u8, name.as_str().to_string());
                     code += 1;
                 }

@@ -66,11 +66,71 @@ pub enum Object<'a> {
 
 impl<'a> Object<'a> {
     /// Try casting the object to a specific subtype.
-    pub fn cast<T>(self) -> Option<T>
+    pub(crate) fn cast<T>(self) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
         self.try_into().ok()
+    }
+
+    #[inline(always)]
+    pub fn into_dict(self) -> Option<Dict<'a>> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_name(self) -> Option<Name<'a>> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_null(self) -> Option<Null> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_bool(self) -> Option<bool> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_string(self) -> Option<string::String<'a>> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_stream(self) -> Option<Stream<'a>> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_array(self) -> Option<Array<'a>> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_u8(self) -> Option<u8> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_u16(self) -> Option<u16> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_f32(self) -> Option<f32> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_i32(self) -> Option<i32> {
+        self.cast()
+    }
+
+    #[inline(always)]
+    pub fn into_number(self) -> Option<Number> {
+        self.cast()
     }
 }
 
