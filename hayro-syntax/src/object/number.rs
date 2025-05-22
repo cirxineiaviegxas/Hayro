@@ -142,9 +142,7 @@ macro_rules! int_num {
             }
         }
 
-        impl<'a> ObjectLike<'a> for $i {
-            const STATIC_NAME: &'static str = stringify!($i);
-        }
+        impl<'a> ObjectLike<'a> for $i {}
     };
 }
 
@@ -177,9 +175,7 @@ impl TryFrom<Object<'_>> for f32 {
     }
 }
 
-impl ObjectLike<'_> for f32 {
-    const STATIC_NAME: &'static str = "f32";
-}
+impl ObjectLike<'_> for f32 {}
 
 impl Skippable for f64 {
     fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
@@ -204,9 +200,7 @@ impl TryFrom<Object<'_>> for f64 {
     }
 }
 
-impl ObjectLike<'_> for f64 {
-    const STATIC_NAME: &'static str = "f64";
-}
+impl ObjectLike<'_> for f64 {}
 
 pub(crate) fn is_digit(byte: u8) -> bool {
     byte >= b'0' && byte <= b'9'

@@ -49,6 +49,4 @@ impl TryFrom<Object<'_>> for Rect {
     }
 }
 
-impl ObjectLike<'_> for Rect {
-    const STATIC_NAME: &'static str = "Rect";
-}
+impl ObjectLike<'_> for Rect {}

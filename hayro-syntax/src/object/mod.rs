@@ -21,15 +21,7 @@ pub mod stream;
 pub mod string;
 
 /// A trait for PDF objects.
-pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {
-    /// The static name of the object.
-    const STATIC_NAME: &'static str;
-
-    /// The dynamic name of the object.
-    fn dynamic_name(&self) -> &'static str {
-        Self::STATIC_NAME
-    }
-}
+pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {}
 
 #[macro_export]
 macro_rules! object {
@@ -45,9 +37,7 @@ macro_rules! object {
             }
         }
 
-        impl<'a> crate::object::ObjectLike<'a> for $t$(<$l>),* {
-            const STATIC_NAME: &'static str = stringify!($s);
-        }
+        impl<'a> crate::object::ObjectLike<'a> for $t$(<$l>),* {}
     };
 }
 
@@ -84,22 +74,7 @@ impl<'a> Object<'a> {
     }
 }
 
-impl<'a> ObjectLike<'a> for Object<'a> {
-    const STATIC_NAME: &'static str = "Object";
-
-    fn dynamic_name(&self) -> &'static str {
-        match self {
-            Object::Null(e) => e.dynamic_name(),
-            Object::Boolean(e) => e.dynamic_name(),
-            Object::Number(e) => e.dynamic_name(),
-            Object::String(e) => e.dynamic_name(),
-            Object::Name(e) => e.dynamic_name(),
-            Object::Dict(e) => e.dynamic_name(),
-            Object::Array(e) => e.dynamic_name(),
-            Object::Stream(e) => e.dynamic_name(),
-        }
-    }
-}
+impl<'a> ObjectLike<'a> for Object<'a> {}
 
 impl Skippable for Object<'_> {
     fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {

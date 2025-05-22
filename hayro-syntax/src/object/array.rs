@@ -1,5 +1,4 @@
 use crate::file::xref::XRef;
-use crate::object::null::Null;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
@@ -153,18 +152,11 @@ where
         self.reader.skip_white_spaces_and_comments();
 
         if !self.reader.at_end() {
-            let res = self.reader.read_with_xref::<MaybeRef<T>>(&self.xref);
-
-            if res.is_none() && self.reader.read_with_xref::<Null>(&self.xref).is_none() {
-                warn!("failed to read {} from array.", T::STATIC_NAME);
-            }
-
-            return match res? {
-                MaybeRef::Ref(r) => self.xref.get::<T>(r.into()).warn_none(&format!(
-                    "failed to resolve {:?} as {} in array.",
-                    r,
-                    T::STATIC_NAME
-                )),
+            return match self.reader.read_with_xref::<MaybeRef<T>>(&self.xref)? {
+                MaybeRef::Ref(r) => self
+                    .xref
+                    .get::<T>(r.into())
+                    .warn_none(&format!("failed to resolve {:?} in array.", r,)),
                 MaybeRef::NotRef(i) => Some(i),
             };
         }
@@ -214,9 +206,7 @@ impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> Readable<'a> for [T
     }
 }
 
-impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> ObjectLike<'a> for [T; C] {
-    const STATIC_NAME: &'static str = "Slice";
-}
+impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> ObjectLike<'a> for [T; C] {}
 
 #[cfg(test)]
 mod tests {

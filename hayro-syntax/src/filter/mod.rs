@@ -1,3 +1,5 @@
+//! Decoding filstreams
+
 mod ascii_85;
 mod ascii_hex;
 mod ccitt;
@@ -95,9 +97,7 @@ impl<'a> Readable<'a> for Filter {
     }
 }
 
-impl ObjectLike<'_> for Filter {
-    const STATIC_NAME: &'static str = "Filter";
-}
+impl ObjectLike<'_> for Filter {}
 
 impl TryFrom<Object<'_>> for Filter {
     type Error = ();
@@ -113,7 +113,7 @@ impl TryFrom<Object<'_>> for Filter {
 impl TryFrom<Name<'_>> for Filter {
     type Error = ();
 
-    fn try_from(value: Name) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: Name) -> Result<Self, Self::Error> {
         match value {
             ASCII_HEX_DECODE | ASCII_HEX_DECODE_ABBREVIATION => Ok(Filter::AsciiHexDecode),
             ASCII85_DECODE | ASCII85_DECODE_ABBREVIATION => Ok(Filter::Ascii85Decode),

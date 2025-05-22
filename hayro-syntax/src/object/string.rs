@@ -65,9 +65,7 @@ impl<'a> TryFrom<Object<'a>> for HexString<'a> {
     }
 }
 
-impl<'a> ObjectLike<'a> for HexString<'a> {
-    const STATIC_NAME: &'static str = "Hex String";
-}
+impl<'a> ObjectLike<'a> for HexString<'a> {}
 
 fn parse_hex(r: &mut Reader<'_>) -> Option<bool> {
     let mut has_whitespace = false;
@@ -183,9 +181,7 @@ impl<'a> TryFrom<Object<'a>> for LiteralString<'a> {
     }
 }
 
-impl<'a> ObjectLike<'a> for LiteralString<'a> {
-    const STATIC_NAME: &'static str = "Literal String";
-}
+impl<'a> ObjectLike<'a> for LiteralString<'a> {}
 
 fn parse_literal(r: &mut Reader<'_>) -> Option<bool> {
     r.forward_tag(b"(")?;

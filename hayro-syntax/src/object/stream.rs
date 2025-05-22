@@ -143,9 +143,7 @@ impl<'a> TryFrom<Object<'a>> for Stream<'a> {
     }
 }
 
-impl<'a> ObjectLike<'a> for Stream<'a> {
-    const STATIC_NAME: &'static str = "Stream";
-}
+impl<'a> ObjectLike<'a> for Stream<'a> {}
 
 #[cfg(test)]
 mod tests {
