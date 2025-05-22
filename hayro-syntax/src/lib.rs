@@ -1,9 +1,11 @@
+#![forbid(unsafe_code)]
+
 use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
 use crate::object::stream::Stream;
 use log::warn;
+use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
-use std::sync::RwLock;
 
 pub mod bit;
 pub mod content;
@@ -15,6 +17,8 @@ pub mod object;
 pub mod pdf;
 pub mod reader;
 pub mod trivia;
+
+const NUM_SLOTS: usize = 10000;
 
 /// A structure for storing the data of the PDF.
 // To explain further: This crate uses a zero-parse approach, meaning that objects like
@@ -28,15 +32,24 @@ pub mod trivia;
 // PDF objects that actually stem from different data sources.
 pub struct Data<'a> {
     data: &'a [u8],
-    map: RwLock<HashMap<ObjectIdentifier, Option<Vec<u8>>>>,
+    slots: Vec<OnceCell<Option<Vec<u8>>>>,
+    map: RefCell<HashMap<ObjectIdentifier, usize>>,
+    counter: RefCell<usize>,
 }
 
 impl<'a> Data<'a> {
     /// Create a new `Data` structure.
     pub fn new(data: &'a [u8]) -> Self {
-        let map = RwLock::new(HashMap::new());
+        let map = RefCell::new(HashMap::new());
+        let slots = vec![OnceCell::new(); NUM_SLOTS];
+        let counter = RefCell::new(0);
 
-        Self { data, map }
+        Self {
+            data,
+            slots,
+            map,
+            counter,
+        }
     }
 
     /// Get access to the original data of the PDF.
@@ -50,38 +63,23 @@ impl<'a> Data<'a> {
         id: ObjectIdentifier,
         xref: &XRef<'a>,
     ) -> Option<&'b [u8]> {
-        let read_lock = self.map.read().unwrap();
-
-        if let Some(b) = read_lock.get(&id) {
-            // SAFETY:
-            // We need `unsafe` for the below, because we are extending the lifetime of the
-            // data that is originally tied to the duration of the read lock, to the lifetime
-            // of the `self` reference. However, this is fine for the following reasons:
-            // - As mentioned, the data is assigned the lifetime of `self`, and thus
-            // no reference we give out can outlive the `Data` struct itself or its 'a
-            // lifetime.
-            // - Once we add data to `map`, we _never_ update or remove it in any way.
-            // We do insert new entries in the hashmap, but the underlying data itself
-            // stays at a stable memory location.
-            // - We do not hand out mutable references to the underlying data.
-            b.as_ref()
-                .map(|d| unsafe { std::slice::from_raw_parts(d.as_ptr(), d.len()) })
+        if let Some(idx) = self.map.borrow().get(&id) {
+            self.slots[*idx].get()?.as_deref()
         } else {
-            drop(read_lock);
+            let mut idx = self.counter.borrow_mut();
 
-            let mut write_lock = self.map.write().unwrap();
+            if *idx >= NUM_SLOTS {
+                None
+            } else {
+                self.map.borrow_mut().insert(id, *idx);
 
-            write_lock
-                .entry(id)
-                .or_insert_with(|| {
-                    let stream = xref.get::<Stream>(id)?;
-                    stream.decoded()
-                })
-                .as_ref()
-                .map(|b| {
-                    // SAFETY: See above.
-                    unsafe { std::slice::from_raw_parts(b.as_ptr(), b.len()) }
-                })
+                let stream = xref.get::<Stream>(id)?;
+                self.slots[*idx].set(stream.decoded()).unwrap();
+
+                *idx += 1;
+
+                self.slots[*idx].get()?.as_deref()
+            }
         }
     }
 }
