@@ -1,8 +1,8 @@
 use crate::file::xref::XRef;
+use crate::object;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
-use crate::{OptionLog, object};
 use log::warn;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -24,16 +24,20 @@ impl PartialEq for Array<'_> {
 
 impl<'a> Array<'a> {
     /// Returns an iterator over the objects of the array.
-    pub(crate) fn raw_iter(&self) -> ArrayIter<'a> {
+    fn raw_iter(&self) -> ArrayIter<'a> {
         ArrayIter::new(self.data, self.xref.clone())
     }
 
     /// Returns an iterator over the resolved objects of the array.
     pub fn iter<T>(&self) -> ResolvedArrayIter<'a, T>
     where
-        T: Readable<'a>,
+        T: ObjectLike<'a>,
     {
         ResolvedArrayIter::new(self.data, self.xref.clone())
+    }
+
+    pub fn flex_iter(&self) -> FlexArrayIter<'a> {
+        FlexArrayIter::new(self.data, self.xref.clone())
     }
 }
 
@@ -122,21 +126,15 @@ impl<'a> Iterator for ArrayIter<'a> {
     }
 }
 
-/// An iterator over the array, casting the objects to a specific type and
-/// automatically resolving object references. In case it's not possible to cast the type (for example
-/// because we encountered a boolean object, even though we are expecting numbers), the iterator
-/// will just silently fail (with a log warning) and return `None` prematurely.
 pub struct ResolvedArrayIter<'a, T> {
-    reader: Reader<'a>,
-    xref: XRef<'a>,
+    flex_iter: FlexArrayIter<'a>,
     phantom_data: PhantomData<T>,
 }
 
 impl<'a, T> ResolvedArrayIter<'a, T> {
     fn new(data: &'a [u8], xref: XRef<'a>) -> Self {
         Self {
-            reader: Reader::new(data),
-            xref,
+            flex_iter: FlexArrayIter::new(data, xref),
             phantom_data: PhantomData::default(),
         }
     }
@@ -149,14 +147,29 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
+        self.flex_iter.next::<T>()
+    }
+}
+
+pub struct FlexArrayIter<'a> {
+    reader: Reader<'a>,
+    xref: XRef<'a>,
+}
+
+impl<'a> FlexArrayIter<'a> {
+    fn new(data: &'a [u8], xref: XRef<'a>) -> Self {
+        Self {
+            reader: Reader::new(data),
+            xref,
+        }
+    }
+
+    pub fn next<T: ObjectLike<'a>>(&mut self) -> Option<T> {
         self.reader.skip_white_spaces_and_comments();
 
         if !self.reader.at_end() {
             return match self.reader.read_with_xref::<MaybeRef<T>>(&self.xref)? {
-                MaybeRef::Ref(r) => self
-                    .xref
-                    .get::<T>(r.into())
-                    .warn_none(&format!("failed to resolve {:?} in array.", r,)),
+                MaybeRef::Ref(r) => self.xref.get::<T>(r.into()),
                 MaybeRef::NotRef(i) => Some(i),
             };
         }
@@ -179,6 +192,8 @@ impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> TryFrom<Array<'a>> 
 
         if iter.next().is_some() {
             warn!("found excess elements in array");
+
+            return Err(());
         }
 
         Ok(val)
@@ -207,6 +222,34 @@ impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> Readable<'a> for [T
 }
 
 impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> ObjectLike<'a> for [T; C] {}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default> TryFrom<Array<'a>> for Vec<T> {
+    type Error = ();
+
+    fn try_from(value: Array<'a>) -> Result<Self, Self::Error> {
+        Ok(value.iter::<T>().collect())
+    }
+}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default> TryFrom<Object<'a>> for Vec<T> {
+    type Error = ();
+
+    fn try_from(value: Object<'a>) -> Result<Self, Self::Error> {
+        match value {
+            Object::Array(a) => a.try_into(),
+            _ => Err(()),
+        }
+    }
+}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default> Readable<'a> for Vec<T> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        let array = Array::read::<PLAIN>(r, xref)?;
+        array.try_into().ok()
+    }
+}
+
+impl<'a, T: ObjectLike<'a> + Copy + Default> ObjectLike<'a> for Vec<T> {}
 
 #[cfg(test)]
 mod tests {

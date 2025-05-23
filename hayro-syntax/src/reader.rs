@@ -248,35 +248,3 @@ pub trait Readable<'a>: Sized {
 pub trait Skippable {
     fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()>;
 }
-
-impl<'a, T, U> Readable<'a> for (T, U)
-where
-    T: Readable<'a>,
-    U: Readable<'a>,
-{
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        r.skip_white_spaces_and_comments();
-        let t = T::read::<PLAIN>(r, xref)?;
-        r.skip_white_spaces_and_comments();
-        let u = U::read::<PLAIN>(r, xref)?;
-        Some((t, u))
-    }
-}
-
-impl<'a, T, U, V> Readable<'a> for (T, U, V)
-where
-    T: Readable<'a>,
-    U: Readable<'a>,
-    V: Readable<'a>,
-{
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        r.skip_white_spaces_and_comments();
-        let t = T::read::<PLAIN>(r, xref)?;
-        r.skip_white_spaces_and_comments();
-        let u = U::read::<PLAIN>(r, xref)?;
-        r.skip_white_spaces_and_comments();
-        let v = V::read::<PLAIN>(r, xref)?;
-
-        Some((t, u, v))
-    }
-}
