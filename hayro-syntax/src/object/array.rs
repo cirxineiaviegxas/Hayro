@@ -4,6 +4,7 @@ use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
+use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
@@ -223,7 +224,7 @@ impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> Readable<'a> for [T
 
 impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> ObjectLike<'a> for [T; C] {}
 
-impl<'a, T: ObjectLike<'a> + Copy + Default> TryFrom<Array<'a>> for Vec<T> {
+impl<'a, T: ObjectLike<'a>> TryFrom<Array<'a>> for Vec<T> {
     type Error = ();
 
     fn try_from(value: Array<'a>) -> Result<Self, Self::Error> {
@@ -231,7 +232,7 @@ impl<'a, T: ObjectLike<'a> + Copy + Default> TryFrom<Array<'a>> for Vec<T> {
     }
 }
 
-impl<'a, T: ObjectLike<'a> + Copy + Default> TryFrom<Object<'a>> for Vec<T> {
+impl<'a, T: ObjectLike<'a>> TryFrom<Object<'a>> for Vec<T> {
     type Error = ();
 
     fn try_from(value: Object<'a>) -> Result<Self, Self::Error> {
@@ -242,14 +243,54 @@ impl<'a, T: ObjectLike<'a> + Copy + Default> TryFrom<Object<'a>> for Vec<T> {
     }
 }
 
-impl<'a, T: ObjectLike<'a> + Copy + Default> Readable<'a> for Vec<T> {
+impl<'a, T: ObjectLike<'a>> Readable<'a> for Vec<T> {
     fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
         let array = Array::read::<PLAIN>(r, xref)?;
         array.try_into().ok()
     }
 }
 
-impl<'a, T: ObjectLike<'a> + Copy + Default> ObjectLike<'a> for Vec<T> {}
+impl<'a, T: ObjectLike<'a>> ObjectLike<'a> for Vec<T> {}
+
+impl<'a, U: ObjectLike<'a>, T: ObjectLike<'a> + smallvec::Array<Item = U>> TryFrom<Array<'a>>
+    for SmallVec<T>
+{
+    type Error = ();
+
+    fn try_from(value: Array<'a>) -> Result<Self, Self::Error> {
+        Ok(value.iter::<U>().collect())
+    }
+}
+
+impl<'a, U: ObjectLike<'a>, T: ObjectLike<'a> + smallvec::Array<Item = U>> TryFrom<Object<'a>>
+    for SmallVec<T>
+{
+    type Error = ();
+
+    fn try_from(value: Object<'a>) -> Result<Self, Self::Error> {
+        match value {
+            Object::Array(a) => a.try_into(),
+            _ => Err(()),
+        }
+    }
+}
+
+impl<'a, U: ObjectLike<'a>, T: ObjectLike<'a> + smallvec::Array<Item = U>> Readable<'a>
+    for SmallVec<T>
+{
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+        let array = Array::read::<PLAIN>(r, xref)?;
+        array.try_into().ok()
+    }
+}
+
+impl<'a, U: ObjectLike<'a>, T: ObjectLike<'a> + smallvec::Array<Item = U>> ObjectLike<'a>
+    for SmallVec<T>
+where
+    U: Clone,
+    U: Debug,
+{
+}
 
 #[cfg(test)]
 mod tests {

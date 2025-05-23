@@ -1,5 +1,4 @@
 use crate::function::Values;
-use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{C0, C1, N};
 use crate::object::number::Number;
@@ -16,8 +15,8 @@ pub(crate) struct Type2 {
 
 impl Type2 {
     pub(crate) fn new(dict: &Dict) -> Option<Self> {
-        let c0 = dict.get::<Array>(C0)?.into();
-        let c1 = dict.get::<Array>(C1)?.into();
+        let c0 = dict.get::<Values>(C0)?;
+        let c1 = dict.get::<Values>(C1)?;
         let n = dict.get::<Number>(N)?.as_f32();
 
         Some(Self { c0, c1, n })

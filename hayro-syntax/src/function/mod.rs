@@ -11,7 +11,6 @@ use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DOMAIN, FUNCTION_TYPE, RANGE};
-use crate::object::number::Number;
 use crate::object::stream::Stream;
 use log::{error, warn};
 use smallvec::SmallVec;
@@ -113,15 +112,6 @@ impl Function {
 
 fn read_domain_range(array: &Array) -> Option<DomainRange> {
     Some(array.iter::<(f32, f32)>().collect())
-}
-
-impl From<Array<'_>> for Values {
-    fn from(value: Array) -> Self {
-        value
-            .iter::<Number>()
-            .map(|n| n.as_f32())
-            .collect::<Values>()
-    }
 }
 
 #[derive(Debug, Clone)]
