@@ -3,7 +3,6 @@
 use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
 use crate::object::stream::Stream;
-use log::warn;
 use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 
@@ -17,6 +16,7 @@ pub mod object;
 pub mod pdf;
 pub mod reader;
 pub mod trivia;
+pub(crate) mod util;
 
 const NUM_SLOTS: usize = 10000;
 
@@ -81,20 +81,5 @@ impl<'a> Data<'a> {
                 self.slots[*idx].get()?.as_deref()
             }
         }
-    }
-}
-
-pub(crate) trait OptionLog {
-    fn warn_none(self, f: &str) -> Self;
-}
-
-impl<T> OptionLog for Option<T> {
-    #[inline]
-    fn warn_none(self, f: &str) -> Self {
-        self.or_else(|| {
-            warn!("{}", f);
-
-            None
-        })
     }
 }

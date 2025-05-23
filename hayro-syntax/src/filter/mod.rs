@@ -8,10 +8,10 @@ mod jpx;
 mod lzw_flate;
 mod run_length;
 
-use crate::OptionLog;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::*;
 use crate::object::name::Name;
+use crate::util::OptionLog;
 use log::warn;
 
 pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Option<FilterResult> {
@@ -104,6 +104,6 @@ impl Filter {
             Filter::JpxDecode => jpx::decode(data),
             _ => None,
         }
-        .warn_none(&format!("failed to apply filter {}", self.debug_name()))
+        .error_none(&format!("failed to apply filter {}", self.debug_name()))
     }
 }

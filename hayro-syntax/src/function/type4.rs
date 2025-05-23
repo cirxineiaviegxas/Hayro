@@ -1,9 +1,10 @@
+use crate::content;
 use crate::file::xref::XRef;
 use crate::function::Values;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::Reader;
-use crate::{OptionLog, content};
+use crate::util::OptionLog;
 use log::error;
 use smallvec::{SmallVec, smallvec};
 use std::ops::Rem;
@@ -316,7 +317,7 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
 
 fn parse_procedure(data: &[u8]) -> Option<Vec<PostScriptOp>> {
     let mut r = Reader::new(data);
-    parse_procedure_inner(&mut r).warn_none("failed to read postscript program")
+    parse_procedure_inner(&mut r).error_none("failed to read postscript program")
 }
 
 fn parse_procedure_inner(r: &mut Reader) -> Option<Vec<PostScriptOp>> {

@@ -1,9 +1,9 @@
-use crate::OptionLog;
 use crate::bit::{BitReader, BitSize};
 use crate::function::{DomainRange, Values, interpolate, read_domain_range};
 use crate::object::array::Array;
 use crate::object::dict::keys::{BITS_PER_SAMPLE, DECODE, ENCODE, SIZE};
 use crate::object::stream::Stream;
+use crate::util::OptionLog;
 use itertools::izip;
 use log::warn;
 use smallvec::{SmallVec, ToSmallVec, smallvec};
@@ -257,7 +257,7 @@ impl Key {
         let size = self
             .sizes
             .get(index)
-            .warn_none("overflowed key in sampled function")?;
+            .error_none("overflowed key in sampled function")?;
         let val = self.parts.get_mut(index)?;
 
         if *val >= (*size - 1) {
