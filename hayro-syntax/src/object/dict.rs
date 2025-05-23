@@ -58,8 +58,8 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
-    pub fn get_ref(&self, key: &Name) -> Option<ObjRef> {
-        let offset = *self.0.offsets.get(key)?;
+    pub fn get_ref<'b>(&self, key: impl AsRef<Name<'b>>) -> Option<ObjRef> {
+        let offset = *self.0.offsets.get(key.as_ref())?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<ObjRef>(&self.0.xref)
     }
@@ -69,7 +69,7 @@ impl<'a> Dict<'a> {
         self.0.offsets.keys().cloned()
     }
 
-    pub(crate) fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
+    fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
     where
         T: Readable<'a>,
     {
