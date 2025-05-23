@@ -65,7 +65,7 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns an iterator over all keys in the dictionary.
-    pub fn keys(&self) -> impl IntoIterator<Item = Name> {
+    pub fn keys(&self) -> impl Iterator<Item = Name> {
         self.0.offsets.keys().cloned()
     }
 
