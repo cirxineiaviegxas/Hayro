@@ -20,7 +20,8 @@ impl Default for Dict<'_> {
     }
 }
 
-// TODO: Is this alright to do?
+// Note that this is not structural equality, i.e. two dictionaries with the same
+// items are still considered different if they have different whitespaces.
 impl PartialEq for Dict<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.0.data == other.0.data

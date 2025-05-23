@@ -14,8 +14,8 @@ pub struct Array<'a> {
     xref: XRef<'a>,
 }
 
-// TODO: Add a length parameter
-// TODO: Is this alright to do?
+// Note that this is not structural equality, i.e. two arrays with the same
+// items are still considered different if they have different whitespaces.
 impl PartialEq for Array<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.data == other.data
