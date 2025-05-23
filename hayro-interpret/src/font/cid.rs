@@ -1,6 +1,5 @@
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::util::OptionLog;
-use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::*;
@@ -39,18 +38,8 @@ impl Type0Font {
 
         let default_width = descendant_font.get::<f32>(DW).unwrap_or(1000.0);
         let dw2 = descendant_font
-            .get::<Array>(DW2)
-            .and_then(|a| {
-                let mut iter = a.iter::<f32>();
-
-                if let Some(first) = iter.next() {
-                    if let Some(second) = iter.next() {
-                        return Some((first, second));
-                    }
-                }
-
-                None
-            })
+            .get::<[f32; 2]>(DW2)
+            .map(|v| (v[0], v[1]))
             .unwrap_or((880.0, -1000.0));
 
         let widths = descendant_font
@@ -224,22 +213,20 @@ impl CidToGIdMap {
 
 fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
     let mut map = HashMap::new();
-    let mut iter = arr.iter::<Object>();
+    let mut iter = arr.flex_iter();
 
-    while let Some(mut first) = iter.next().and_then(|o| o.into_u16()) {
-        let second = iter.next()?;
-
-        if let Some(second) = second.clone().into_u16() {
-            let width = iter.next().and_then(|o| o.into_f32())?;
-
+    loop {
+        if let Some((first, second, width)) = iter.next::<(u16, u16, f32)>() {
             for i in first..=second {
                 map.insert(i, width);
             }
-        } else if let Some(range) = second.into_array() {
+        } else if let Some((mut first, range)) = iter.next::<(u16, Array)>() {
             for width in range.iter::<f32>() {
                 map.insert(first, width);
                 first = first.checked_add(1)?;
             }
+        } else {
+            break;
         }
     }
 
@@ -248,20 +235,14 @@ fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
 
 fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
     let mut map = HashMap::new();
-    let mut iter = arr.iter::<Object>();
+    let mut iter = arr.flex_iter();
 
-    while let Some(mut first) = iter.next().and_then(|o| o.into_u16()) {
-        let second = iter.next()?;
-
-        if let Some(second) = second.clone().into_u16() {
-            let w = iter.next().and_then(|o| o.into_f32())?;
-            let v1 = iter.next().and_then(|o| o.into_f32())?;
-            let v2 = iter.next().and_then(|o| o.into_f32())?;
-
+    loop {
+        if let Some((first, second, w, v1, v2)) = iter.next::<(u16, u16, f32, f32, f32)>() {
             for i in first..=second {
                 map.insert(i, [w, v1, v2]);
             }
-        } else if let Some(range) = second.into_array() {
+        } else if let Some((mut first, range)) = iter.next::<(u16, Array)>() {
             let mut iter = range.iter::<f32>();
 
             while let Some(w) = iter.next() {
@@ -270,6 +251,8 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
                 map.insert(first, [w, v1, v2]);
                 first = first.checked_add(1)?;
             }
+        } else {
+            break;
         }
     }
 

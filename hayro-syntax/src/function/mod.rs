@@ -14,7 +14,7 @@ use crate::object::dict::keys::{DOMAIN, FUNCTION_TYPE, RANGE};
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use log::{error, warn};
-use smallvec::{SmallVec, smallvec};
+use smallvec::SmallVec;
 use std::sync::Arc;
 
 type Values = SmallVec<[f32; 4]>;
@@ -112,16 +112,7 @@ impl Function {
 }
 
 fn read_domain_range(array: &Array) -> Option<DomainRange> {
-    let mut iter = array.iter::<f32>();
-    let mut vals = smallvec![];
-
-    while let Some(first) = iter.next() {
-        let second = iter.next()?;
-
-        vals.push((first, second));
-    }
-
-    Some(vals)
+    Some(array.iter::<(f32, f32)>().collect())
 }
 
 impl From<Array<'_>> for Values {

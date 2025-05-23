@@ -295,11 +295,7 @@ fn populate_from_xref_stream<'a>(
 
     let size = stream.dict.get::<u32>(SIZE)?;
 
-    let (f1_len, f2_len, f3_len) = {
-        let arr = stream.dict.get::<Array>(W)?;
-        let mut iter = arr.iter::<u8>().into_iter();
-        (iter.next()?, iter.next()?, iter.next()?)
-    };
+    let [f1_len, f2_len, f3_len] = stream.dict.get::<[u8; 3]>(W)?;
 
     if f2_len > size_of::<u32>() as u8 {
         error!("xref offset length is larger than the allowed limit");
@@ -315,8 +311,24 @@ fn populate_from_xref_stream<'a>(
     let xref_data = stream.decoded()?;
     let mut xref_reader = Reader::new(xref_data.as_ref());
 
-    match stream.dict.get::<Array>(INDEX) {
-        None => xref_stream_subsection(
+    if let Some(arr) = stream.dict.get::<Array>(INDEX) {
+        let mut iter = arr.iter::<u32>().into_iter();
+
+        while let Some(start) = iter.next() {
+            let num_elements = iter.next()?;
+
+            xref_stream_subsection(
+                &mut xref_reader,
+                start,
+                num_elements,
+                f1_len,
+                f2_len,
+                f3_len,
+                insert_map,
+            )?;
+        }
+    } else {
+        xref_stream_subsection(
             &mut xref_reader,
             0,
             size,
@@ -324,24 +336,7 @@ fn populate_from_xref_stream<'a>(
             f2_len,
             f3_len,
             insert_map,
-        )?,
-        Some(i) => {
-            let mut iter = i.iter::<u32>().into_iter();
-
-            while let Some(start) = iter.next() {
-                let num_elements = iter.next()?;
-
-                xref_stream_subsection(
-                    &mut xref_reader,
-                    start,
-                    num_elements,
-                    f1_len,
-                    f2_len,
-                    f3_len,
-                    insert_map,
-                )?;
-            }
-        }
+        )?;
     }
 
     Some(())

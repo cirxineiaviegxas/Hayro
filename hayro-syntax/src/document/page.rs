@@ -1,5 +1,4 @@
 use crate::content::{TypedIter, UntypedIter};
-use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::*;
@@ -137,26 +136,24 @@ impl<'a> Page<'a> {
         let stream = self
             .page_streams
             .get_or_init(|| {
-                match self.inner.get::<Object>(CONTENTS)? {
-                    Object::Stream(stream) => convert_single(stream),
-                    Object::Array(array) => {
-                        let streams = array.iter::<Stream>().flat_map(convert_single);
+                if let Some(stream) = self.inner.get::<Stream>(CONTENTS) {
+                    convert_single(stream)
+                } else if let Some(array) = self.inner.get::<Array>(CONTENTS) {
+                    let streams = array.iter::<Stream>().flat_map(convert_single);
 
-                        let mut collected = vec![];
+                    let mut collected = vec![];
 
-                        for stream in streams {
-                            collected.extend(stream);
-                            // Streams must have at least one whitespace in-between.
-                            collected.push(b' ')
-                        }
-
-                        Some(collected)
+                    for stream in streams {
+                        collected.extend(stream);
+                        // Streams must have at least one whitespace in-between.
+                        collected.push(b' ')
                     }
-                    _ => {
-                        warn!("contents entry of page was neither stream nor array of streams");
 
-                        return None;
-                    }
+                    Some(collected)
+                } else {
+                    warn!("contents entry of page was neither stream nor array of streams");
+
+                    return None;
                 }
             })
             .as_ref()?;
