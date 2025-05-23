@@ -188,8 +188,8 @@ enum_block = (
 dispatch_block = (
         "impl<'a> TypedOperation<'a> {\n"
         "    pub(crate) fn dispatch(operation: &Operation<'a>) -> Option<TypedOperation<'a>> {\n"
-        "        let op_name = operation.operator.get();\n"
-        "        Some(match op_name.as_ref() {\n"
+        "        let op_name = operation.operator.as_ref();\n"
+        "        Some(match op_name {\n"
         + "            " + "\n            ".join(dispatch_arms) + "\n"
                                                                   "            _ => return Self::Fallback.into(),\n"
                                                                   "        })\n"
