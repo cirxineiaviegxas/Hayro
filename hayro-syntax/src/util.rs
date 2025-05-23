@@ -1,4 +1,4 @@
-use log::{error, warn};
+use log::error;
 
 pub(crate) trait OptionLog {
     fn error_none(self, f: &str) -> Self;

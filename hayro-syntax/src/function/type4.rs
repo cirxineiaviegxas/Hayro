@@ -6,13 +6,19 @@ use crate::object::stream::Stream;
 use crate::reader::Reader;
 use crate::util::OptionLog;
 use log::error;
-use smallvec::{SmallVec, smallvec};
+use std::array;
 use std::ops::Rem;
 
 #[derive(Clone, Copy)]
 enum Argument {
     Float(f32),
     Bool(bool),
+}
+
+impl Default for Argument {
+    fn default() -> Self {
+        Argument::Float(0.0)
+    }
 }
 
 impl Argument {
@@ -37,9 +43,86 @@ impl Argument {
     }
 }
 
-// TODO: Stack should overflow for more
-type ArgumentStack = SmallVec<[Argument; 64]>;
-type ParseStack = SmallVec<[Vec<PostScriptOp>; 2]>;
+struct ArgumentsStack<T: Default, const C: usize> {
+    stack: [T; C],
+    len: usize,
+}
+
+impl<T: Default, const C: usize> ArgumentsStack<T, C> {
+    fn new() -> Self {
+        Self {
+            stack: array::from_fn(|_| T::default()),
+            len: 0,
+        }
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    #[inline]
+    fn push(&mut self, n: T) -> Option<()> {
+        if self.len == C {
+            error!("overflowed post script argument stack");
+
+            None
+        } else {
+            self.stack[self.len] = n;
+            self.len += 1;
+
+            Some(())
+        }
+    }
+
+    #[inline]
+    fn at(&self, index: usize) -> Option<&T> {
+        if index >= self.len {
+            None
+        } else {
+            Some(&self.stack[index])
+        }
+    }
+
+    #[inline]
+    fn last(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(&self.stack[self.len - 1])
+        }
+    }
+
+    #[inline]
+    fn pop(&mut self) -> Option<T> {
+        if self.is_empty() {
+            error!("underflowed post script argument stack");
+
+            None
+        } else {
+            self.len -= 1;
+            Some(std::mem::take(&mut self.stack[self.len]))
+        }
+    }
+
+    #[inline]
+    fn items(&self) -> &[T] {
+        &self.stack[..self.len]
+    }
+
+    #[inline]
+    fn items_mut(&mut self) -> &mut [T] {
+        &mut self.stack[..self.len]
+    }
+}
+
+type InterpreterStack = ArgumentsStack<Argument, 64>;
+type ParseStack = ArgumentsStack<Vec<PostScriptOp>, 2>;
 
 #[derive(Debug)]
 pub(crate) struct Type4 {
@@ -54,7 +137,7 @@ impl Type4 {
     }
 
     pub(crate) fn eval(&self, input: Values) -> Option<Values> {
-        let mut arg_stack = ArgumentStack::new();
+        let mut arg_stack = InterpreterStack::new();
 
         for input in input {
             arg_stack.push(Argument::Float(input));
@@ -64,7 +147,7 @@ impl Type4 {
 
         let mut out = Values::new();
 
-        for num in arg_stack {
+        for num in arg_stack.items() {
             out.push(num.as_f32());
         }
 
@@ -72,7 +155,7 @@ impl Type4 {
     }
 }
 
-fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Option<()> {
+fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut InterpreterStack) -> Option<()> {
     macro_rules! zero {
         ($eval:expr) => {
             arg_stack.push($eval);
@@ -120,7 +203,7 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
 
     for op in procedure {
         match op {
-            PostScriptOp::Number(n) => arg_stack.push(Argument::Float(n.as_f32())),
+            PostScriptOp::Number(n) => arg_stack.push(Argument::Float(n.as_f32()))?,
             PostScriptOp::Abs => {
                 one_f!(|n: f32| n.abs());
             }
@@ -277,7 +360,7 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
                 let n = arg_stack.pop()?.as_f32() as u32 as usize;
                 let start = arg_stack.len().checked_sub(n)?;
                 for i in start..arg_stack.len() {
-                    arg_stack.push(arg_stack[i]);
+                    arg_stack.push(*arg_stack.at(i)?);
                 }
             }
             PostScriptOp::Dup => {
@@ -294,7 +377,7 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
                 let n = arg_stack.pop()?.as_f32() as u32 as usize;
                 let n = arg_stack.len().checked_sub(n + 1)?;
 
-                arg_stack.push(arg_stack[n]);
+                arg_stack.push(*arg_stack.at(n)?);
             }
             PostScriptOp::Pop => {
                 arg_stack.pop()?;
@@ -304,9 +387,9 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut ArgumentStack) -> Opti
                 let n = arg_stack.pop()?.as_f32() as u32 as usize;
                 let n = arg_stack.len().checked_sub(n)?;
                 if j >= 0 {
-                    arg_stack[n..].rotate_right(j as usize);
+                    arg_stack.items_mut()[n..].rotate_right(j as usize);
                 } else {
-                    arg_stack[n..].rotate_left((-j) as usize);
+                    arg_stack.items_mut()[n..].rotate_left((-j) as usize);
                 }
             }
         }
@@ -321,7 +404,7 @@ fn parse_procedure(data: &[u8]) -> Option<Vec<PostScriptOp>> {
 }
 
 fn parse_procedure_inner(r: &mut Reader) -> Option<Vec<PostScriptOp>> {
-    let mut stack: ParseStack = smallvec![];
+    let mut stack = ParseStack::new();
 
     let mut ops = vec![];
     r.skip_white_spaces_and_comments();
