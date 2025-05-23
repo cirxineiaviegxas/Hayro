@@ -211,119 +211,6 @@ impl<'a> Readable<'a> for InlineImageDict<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::file::xref::XRef;
-    use crate::object::dict::{Dict, InlineImageDict};
-    use crate::object::name::Name;
-    use crate::object::number::Number;
-    use crate::object::string;
-    use crate::reader::Reader;
-
-    fn dict_impl(data: &[u8]) -> Option<Dict> {
-        Reader::new(data).read_with_xref::<Dict>(&XRef::dummy())
-    }
-
-    #[test]
-    fn empty_dict_1() {
-        let dict_data = b"<<>>";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 0);
-    }
-
-    #[test]
-    fn empty_dict_2() {
-        let dict_data = b"<<   \n >>";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 0);
-    }
-
-    #[test]
-    fn dict_1() {
-        let dict_data = b"<<  /Hi 34.0 >>";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 1);
-        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
-    }
-
-    #[test]
-    fn dict_2() {
-        let dict_data = b"<<  /Hi \n 34.0 /Second true >>";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 2);
-        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
-        assert!(dict.get::<bool>(&Name::new(b"Second")).is_some());
-    }
-
-    #[test]
-    fn dict_with_null() {
-        let dict_data = b"<<  /Entry null /Second (Hi) >>";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 1);
-    }
-
-    #[test]
-    fn dict_complex() {
-        let data = "<< /Type /Example
-/Subtype /DictionaryExample
-/Version 0.01
-/IntegerItem 12
-/StringItem ( a string )
-/Subdictionary << /Item1 0.4
-                /Item2 true
-                /LastItem ( not ! )
-                /VeryLastItem ( OK )
-                >>
->>";
-
-        let dict = Reader::new(data.as_bytes())
-            .read_with_xref::<Dict>(&XRef::dummy())
-            .unwrap();
-        assert_eq!(dict.len(), 6);
-        assert!(dict.get::<Name>(&Name::new(b"Type")).is_some());
-        assert!(dict.get::<Name>(&Name::new(b"Subtype")).is_some());
-        assert!(dict.get::<Number>(&Name::new(b"Version")).is_some());
-        assert!(dict.get::<i32>(&Name::new(b"IntegerItem")).is_some());
-        assert!(
-            dict.get::<string::String>(&Name::new(b"StringItem"))
-                .is_some()
-        );
-        assert!(dict.get::<Dict>(&Name::new(b"Subdictionary")).is_some());
-    }
-
-    #[test]
-    fn dict_with_trailing() {
-        let dict_data = b"<<  /Hi 67.0  >>trailing data";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 1);
-    }
-
-    #[test]
-    fn dict_with_comment() {
-        let dict_data = b"<<  /Hi % A comment \n 67.0 % Another comment \n >>";
-        let dict = dict_impl(dict_data).unwrap();
-
-        assert_eq!(dict.len(), 1);
-    }
-
-    #[test]
-    fn inline_dict() {
-        let dict_data = b"/W 17 /H 17 /CS /RGB /BPC 8 /F [ /A85 /LZW ] ID ";
-
-        let dict = Reader::new(&dict_data[..])
-            .read_with_xref::<InlineImageDict>(&XRef::dummy())
-            .unwrap();
-
-        assert_eq!(dict.get_dict().len(), 5);
-    }
-}
-
 /// A collection of possible keys in a PDF dictionary. Copied and adapted from PDFBox.
 pub mod keys {
     use crate::object::Name;
@@ -971,4 +858,117 @@ pub mod keys {
 
     // Z
     key!(ZA_DB, b"ZaDb");
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::file::xref::XRef;
+    use crate::object::dict::{Dict, InlineImageDict};
+    use crate::object::name::Name;
+    use crate::object::number::Number;
+    use crate::object::string;
+    use crate::reader::Reader;
+
+    fn dict_impl(data: &[u8]) -> Option<Dict> {
+        Reader::new(data).read_with_xref::<Dict>(&XRef::dummy())
+    }
+
+    #[test]
+    fn empty_dict_1() {
+        let dict_data = b"<<>>";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 0);
+    }
+
+    #[test]
+    fn empty_dict_2() {
+        let dict_data = b"<<   \n >>";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 0);
+    }
+
+    #[test]
+    fn dict_1() {
+        let dict_data = b"<<  /Hi 34.0 >>";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 1);
+        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
+    }
+
+    #[test]
+    fn dict_2() {
+        let dict_data = b"<<  /Hi \n 34.0 /Second true >>";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 2);
+        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
+        assert!(dict.get::<bool>(&Name::new(b"Second")).is_some());
+    }
+
+    #[test]
+    fn dict_with_null() {
+        let dict_data = b"<<  /Entry null /Second (Hi) >>";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 1);
+    }
+
+    #[test]
+    fn dict_complex() {
+        let data = "<< /Type /Example
+/Subtype /DictionaryExample
+/Version 0.01
+/IntegerItem 12
+/StringItem ( a string )
+/Subdictionary << /Item1 0.4
+                /Item2 true
+                /LastItem ( not ! )
+                /VeryLastItem ( OK )
+                >>
+>>";
+
+        let dict = Reader::new(data.as_bytes())
+            .read_with_xref::<Dict>(&XRef::dummy())
+            .unwrap();
+        assert_eq!(dict.len(), 6);
+        assert!(dict.get::<Name>(&Name::new(b"Type")).is_some());
+        assert!(dict.get::<Name>(&Name::new(b"Subtype")).is_some());
+        assert!(dict.get::<Number>(&Name::new(b"Version")).is_some());
+        assert!(dict.get::<i32>(&Name::new(b"IntegerItem")).is_some());
+        assert!(
+            dict.get::<string::String>(&Name::new(b"StringItem"))
+                .is_some()
+        );
+        assert!(dict.get::<Dict>(&Name::new(b"Subdictionary")).is_some());
+    }
+
+    #[test]
+    fn dict_with_trailing() {
+        let dict_data = b"<<  /Hi 67.0  >>trailing data";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 1);
+    }
+
+    #[test]
+    fn dict_with_comment() {
+        let dict_data = b"<<  /Hi % A comment \n 67.0 % Another comment \n >>";
+        let dict = dict_impl(dict_data).unwrap();
+
+        assert_eq!(dict.len(), 1);
+    }
+
+    #[test]
+    fn inline_dict() {
+        let dict_data = b"/W 17 /H 17 /CS /RGB /BPC 8 /F [ /A85 /LZW ] ID ";
+
+        let dict = Reader::new(&dict_data[..])
+            .read_with_xref::<InlineImageDict>(&XRef::dummy())
+            .unwrap();
+
+        assert_eq!(dict.get_dict().len(), 5);
+    }
 }
