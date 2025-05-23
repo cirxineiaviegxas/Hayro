@@ -3,6 +3,7 @@ use crate::filter::{Filter, FilterResult, apply_filter};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
+use crate::object::name::Name;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use log::warn;
@@ -37,8 +38,9 @@ impl<'a> Stream<'a> {
     pub fn decoded_image(&self) -> Option<FilterResult> {
         if let Some(filter) = self
             .dict
-            .get::<Filter>(FILTER)
-            .or_else(|| self.dict.get::<Filter>(F))
+            .get::<Name>(FILTER)
+            .or_else(|| self.dict.get::<Name>(F))
+            .and_then(|n| Filter::from_name(&n))
         {
             let params = self
                 .dict
@@ -53,7 +55,10 @@ impl<'a> Stream<'a> {
         {
             // TODO: Avoid allocation?
 
-            let filters = filters.iter::<Filter>().collect::<Vec<_>>();
+            let filters = filters
+                .iter::<Name>()
+                .map(|n| Filter::from_name(&n))
+                .collect::<Option<Vec<_>>>()?;
             let params = self
                 .dict
                 .get::<Array>(DECODE_PARMS)

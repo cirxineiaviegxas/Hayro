@@ -9,12 +9,9 @@ mod lzw_flate;
 mod run_length;
 
 use crate::OptionLog;
-use crate::file::xref::XRef;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::*;
 use crate::object::name::Name;
-use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader};
 use log::warn;
 
 pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Option<FilterResult> {
@@ -73,6 +70,26 @@ impl Filter {
         }
     }
 
+    pub fn from_name(name: &Name) -> Option<Self> {
+        match *name {
+            ASCII_HEX_DECODE | ASCII_HEX_DECODE_ABBREVIATION => Some(Filter::AsciiHexDecode),
+            ASCII85_DECODE | ASCII85_DECODE_ABBREVIATION => Some(Filter::Ascii85Decode),
+            LZW_DECODE | LZW_DECODE_ABBREVIATION => Some(Filter::LzwDecode),
+            FLATE_DECODE | FLATE_DECODE_ABBREVIATION => Some(Filter::FlateDecode),
+            RUN_LENGTH_DECODE | RUN_LENGTH_DECODE_ABBREVIATION => Some(Filter::RunLengthDecode),
+            CCITTFAX_DECODE | CCITTFAX_DECODE_ABBREVIATION => Some(Filter::CcittFaxDecode),
+            JBIG2_DECODE => Some(Filter::Jbig2Decode),
+            DCT_DECODE | DCT_DECODE_ABBREVIATION => Some(Filter::DctDecode),
+            JPX_DECODE => Some(Filter::JpxDecode),
+            CRYPT => Some(Filter::Crypt),
+            _ => {
+                warn!("unknown filter: {}", name.as_str());
+
+                None
+            }
+        }
+    }
+
     pub fn apply(&self, data: &[u8], params: Dict) -> Option<FilterResult> {
         match self {
             Filter::AsciiHexDecode => ascii_hex::decode(data).map(FilterResult::from_data),
@@ -88,48 +105,5 @@ impl Filter {
             _ => None,
         }
         .warn_none(&format!("failed to apply filter {}", self.debug_name()))
-    }
-}
-
-impl<'a> Readable<'a> for Filter {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
-        r.read::<PLAIN, Name>(xref).and_then(|n| n.try_into().ok())
-    }
-}
-
-impl ObjectLike<'_> for Filter {}
-
-impl TryFrom<Object<'_>> for Filter {
-    type Error = ();
-
-    fn try_from(value: Object<'_>) -> std::result::Result<Self, Self::Error> {
-        match value {
-            Object::Name(n) => n.try_into(),
-            _ => Err(()),
-        }
-    }
-}
-
-impl TryFrom<Name<'_>> for Filter {
-    type Error = ();
-
-    fn try_from(value: Name) -> Result<Self, Self::Error> {
-        match value {
-            ASCII_HEX_DECODE | ASCII_HEX_DECODE_ABBREVIATION => Ok(Filter::AsciiHexDecode),
-            ASCII85_DECODE | ASCII85_DECODE_ABBREVIATION => Ok(Filter::Ascii85Decode),
-            LZW_DECODE | LZW_DECODE_ABBREVIATION => Ok(Filter::LzwDecode),
-            FLATE_DECODE | FLATE_DECODE_ABBREVIATION => Ok(Filter::FlateDecode),
-            RUN_LENGTH_DECODE | RUN_LENGTH_DECODE_ABBREVIATION => Ok(Filter::RunLengthDecode),
-            CCITTFAX_DECODE | CCITTFAX_DECODE_ABBREVIATION => Ok(Filter::CcittFaxDecode),
-            JBIG2_DECODE => Ok(Filter::Jbig2Decode),
-            DCT_DECODE | DCT_DECODE_ABBREVIATION => Ok(Filter::DctDecode),
-            JPX_DECODE => Ok(Filter::JpxDecode),
-            CRYPT => Ok(Filter::Crypt),
-            _ => {
-                warn!("unknown filter: {}", value.as_str());
-
-                Err(())
-            }
-        }
     }
 }

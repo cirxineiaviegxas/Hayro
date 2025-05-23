@@ -312,11 +312,9 @@ fn populate_from_xref_stream<'a>(
     let mut xref_reader = Reader::new(xref_data.as_ref());
 
     if let Some(arr) = stream.dict.get::<Array>(INDEX) {
-        let mut iter = arr.iter::<u32>().into_iter();
+        let mut iter = arr.iter::<(u32, u32)>();
 
-        while let Some(start) = iter.next() {
-            let num_elements = iter.next()?;
-
+        while let Some((start, num_elements)) = iter.next() {
             xref_stream_subsection(
                 &mut xref_reader,
                 start,

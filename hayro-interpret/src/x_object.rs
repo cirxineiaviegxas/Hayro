@@ -198,10 +198,7 @@ impl<'a> ImageXObject<'a> {
         let decode = dict
             .get::<Array>(DECODE)
             .or_else(|| dict.get::<Array>(D))
-            .map(|a| {
-                let vals = a.iter::<f32>().collect::<Vec<_>>();
-                vals.chunks(2).map(|v| (v[0], v[1])).collect::<Vec<_>>()
-            })
+            .map(|a| a.iter::<(f32, f32)>().collect::<Vec<_>>())
             .unwrap_or(color_space.default_decode_arr(bits_per_component as f32));
         let width = dict
             .get::<u32>(WIDTH)
