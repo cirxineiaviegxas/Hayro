@@ -3,11 +3,11 @@ use crate::object::dict::Dict;
 use crate::object::dict::keys::{C0, C1, N};
 use crate::object::number::Number;
 use itertools::izip;
-use smallvec::smallvec;
+use smallvec::SmallVec;
 
-/// Type 2 exponential interpolation function.
+/// A type 2 function (exponential function).
 #[derive(Debug)]
-pub(crate) struct Type2 {
+pub struct Type2 {
     pub(crate) c0: Values,
     pub(crate) c1: Values,
     pub(crate) clamper: Clamper,
@@ -15,7 +15,8 @@ pub(crate) struct Type2 {
 }
 
 impl Type2 {
-    pub(crate) fn new(dict: &Dict) -> Option<Self> {
+    /// Create a new type 2 function.
+    pub fn new(dict: &Dict) -> Option<Self> {
         let c0 = dict.get::<Values>(C0)?;
         let c1 = dict.get::<Values>(C1)?;
         let clamper = Clamper::new(dict)?;
@@ -24,15 +25,14 @@ impl Type2 {
         Some(Self { c0, c1, clamper, n })
     }
 
-    pub(crate) fn eval(&self, input: f32) -> Values {
+    /// Evaluate the function with the given input.
+    pub fn eval(&self, input: f32) -> Values {
         let mut input = [input];
         self.clamper.clamp_input(&mut input);
 
-        let mut out = smallvec![0.0; self.c0.len()];
-
-        for (c0, c1, out) in izip!(&self.c0, &self.c1, &mut out) {
-            *out = *c0 + input[0].powf(self.n) * (*c1 - *c0);
-        }
+        let mut out = izip!(&self.c0, &self.c1)
+            .map(|(c0, c1)| *c0 + input[0].powf(self.n) * (*c1 - *c0))
+            .collect::<SmallVec<_>>();
 
         self.clamper.clamp_output(&mut out);
 

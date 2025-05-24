@@ -1,14 +1,13 @@
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
-use hayro_syntax::function::dict_or_stream;
-use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, SHADING, XOBJECT};
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::stream::Stream;
 use hayro_syntax::object::string::String;
+use hayro_syntax::object::{Object, dict_or_stream};
 use kurbo::{Affine, Cap, Join, Point, Shape, Vec2};
 use log::warn;
 use peniko::Fill;

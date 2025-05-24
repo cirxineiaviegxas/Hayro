@@ -6,8 +6,48 @@ use crate::object::stream::Stream;
 use crate::reader::Reader;
 use crate::util::OptionLog;
 use log::error;
+use smallvec::SmallVec;
 use std::array;
 use std::ops::Rem;
+
+/// A type 4 function (postscript function).
+#[derive(Debug)]
+pub struct Type4 {
+    program: Vec<PostScriptOp>,
+    clamper: Clamper,
+}
+
+impl Type4 {
+    /// Create a new type 4 function.
+    pub fn new(stream: &Stream) -> Option<Self> {
+        let dict = stream.dict().clone();
+        let clamper = Clamper::new(&dict)?;
+
+        Some(Self {
+            clamper,
+            program: parse_procedure(&stream.decoded()?)?,
+        })
+    }
+
+    /// Evaluate the function with the given input.
+    pub fn eval(&self, mut input: Values) -> Option<Values> {
+        self.clamper.clamp_input(&mut input);
+
+        let mut arg_stack = InterpreterStack::new();
+
+        for input in input {
+            arg_stack.push(Argument::Float(input));
+        }
+
+        eval_inner(&self.program, &mut arg_stack)?;
+
+        let mut out: SmallVec<_> = arg_stack.items().iter().map(|i| i.as_f32()).collect();
+
+        self.clamper.clamp_output(&mut out);
+
+        Some(out)
+    }
+}
 
 #[derive(Clone, Copy)]
 enum Argument {
@@ -123,46 +163,6 @@ impl<T: Default, const C: usize> ArgumentsStack<T, C> {
 
 type InterpreterStack = ArgumentsStack<Argument, 64>;
 type ParseStack = ArgumentsStack<Vec<PostScriptOp>, 2>;
-
-#[derive(Debug)]
-pub(crate) struct Type4 {
-    program: Vec<PostScriptOp>,
-    clamper: Clamper,
-}
-
-impl Type4 {
-    pub(crate) fn new(stream: &Stream) -> Option<Self> {
-        let dict = stream.dict().clone();
-        let clamper = Clamper::new(&dict)?;
-
-        Some(Self {
-            clamper,
-            program: parse_procedure(&stream.decoded()?)?,
-        })
-    }
-
-    pub(crate) fn eval(&self, mut input: Values) -> Option<Values> {
-        self.clamper.clamp_input(&mut input);
-
-        let mut arg_stack = InterpreterStack::new();
-
-        for input in input {
-            arg_stack.push(Argument::Float(input));
-        }
-
-        eval_inner(&self.program, &mut arg_stack)?;
-
-        let mut out = Values::new();
-
-        for num in arg_stack.items() {
-            out.push(num.as_f32());
-        }
-
-        self.clamper.clamp_output(&mut out);
-
-        Some(out)
-    }
-}
 
 fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut InterpreterStack) -> Option<()> {
     macro_rules! zero {

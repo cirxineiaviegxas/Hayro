@@ -1,6 +1,7 @@
 The following parts of code have been adapted/translated from [PDFBox](https://github.com/apache/pdfbox), available 
 under the Apache 2.0 license.
  - The encoding maps for some of the standard fonts.
+ - The evaluator for type 0 functions.
 
 The following parts of code have been adapted/translated from [pdf.js](https://github.com/mozilla/pdf.js), available
 under the Apache 2.0 license:

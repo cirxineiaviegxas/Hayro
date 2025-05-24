@@ -1,3 +1,8 @@
+//! PDF functions.
+//!
+//! PDF has the concept of functions, representing objects that take a certain number of values
+//! as input, do some processing on them and then return some output.
+
 mod type0;
 mod type2;
 mod type3;
@@ -7,15 +12,15 @@ use crate::function::type0::Type0;
 use crate::function::type2::Type2;
 use crate::function::type3::Type3;
 use crate::function::type4::Type4;
-use crate::object::Object;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DOMAIN, FUNCTION_TYPE, RANGE};
-use crate::object::stream::Stream;
+use crate::object::{Object, dict_or_stream};
 use log::warn;
 use smallvec::SmallVec;
 use std::sync::Arc;
 
-type Values = SmallVec<[f32; 4]>;
+/// The input/output type of functions.
+pub type Values = SmallVec<[f32; 4]>;
 type TupleVec = SmallVec<[(f32, f32); 4]>;
 
 #[derive(Debug)]
@@ -26,12 +31,14 @@ enum FunctionType {
     Type4(Type4),
 }
 
+/// A PDF function.
 #[derive(Debug, Clone)]
 pub struct Function {
     function_type: Arc<FunctionType>,
 }
 
 impl Function {
+    /// Create a new function.
     pub fn new(obj: &Object) -> Option<Function> {
         let (dict, stream) = dict_or_stream(obj)?;
 
@@ -48,6 +55,7 @@ impl Function {
         })
     }
 
+    /// Evaluate the function with the given input.
     pub fn eval(&self, input: Values) -> Option<Values> {
         match self.function_type.as_ref() {
             FunctionType::Type0(t0) => t0.eval(input),
@@ -65,14 +73,14 @@ struct Clamper {
 }
 
 impl Clamper {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    fn new(dict: &Dict) -> Option<Self> {
         let domain = dict.get::<TupleVec>(DOMAIN)?;
         let range = dict.get::<TupleVec>(RANGE);
 
         Some(Self { domain, range })
     }
 
-    pub(crate) fn clamp_input(&self, input: &mut [f32]) {
+    fn clamp_input(&self, input: &mut [f32]) {
         if input.len() != self.domain.len() {
             warn!("the domain of the function didn't match the input arguments");
         }
@@ -82,7 +90,7 @@ impl Clamper {
         }
     }
 
-    pub(crate) fn clamp_output(&self, output: &mut [f32]) {
+    fn clamp_output(&self, output: &mut [f32]) {
         if let Some(range) = &self.range {
             if range.len() != output.len() {
                 warn!("the range of the function didn't match the output arguments");
@@ -95,16 +103,8 @@ impl Clamper {
     }
 }
 
+/// Interpolate the value `x`, assuming that it lies within the range `x_min` and `x_max`,
+/// to the range `y_min` and `y_max`.
 pub fn interpolate(x: f32, x_min: f32, x_max: f32, y_min: f32, y_max: f32) -> f32 {
     y_min + (x - x_min) * (y_max - y_min) / (x_max - x_min)
-}
-
-pub fn dict_or_stream<'a>(obj: &Object<'a>) -> Option<(Dict<'a>, Option<Stream<'a>>)> {
-    if let Some(stream) = obj.clone().cast::<Stream>() {
-        Some((stream.dict().clone(), Some(stream)))
-    } else if let Some(dict) = obj.clone().cast::<Dict>() {
-        Some((dict, None))
-    } else {
-        None
-    }
 }

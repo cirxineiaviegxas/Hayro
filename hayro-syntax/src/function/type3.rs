@@ -5,9 +5,9 @@ use crate::object::dict::Dict;
 use crate::object::dict::keys::{BOUNDS, ENCODE, FUNCTIONS};
 use smallvec::smallvec;
 
-/// Type 2 exponential interpolation function.
+/// A type 3 function (stitching function).
 #[derive(Debug)]
-pub(crate) struct Type3 {
+pub struct Type3 {
     functions: Vec<Function>,
     bounds: Vec<f32>,
     encode: TupleVec,
@@ -15,7 +15,8 @@ pub(crate) struct Type3 {
 }
 
 impl Type3 {
-    pub(crate) fn new(dict: &Dict) -> Option<Self> {
+    /// Create a new type 3 function.
+    pub fn new(dict: &Dict) -> Option<Self> {
         let clamper = Clamper::new(dict)?;
 
         let functions = dict
@@ -38,7 +39,8 @@ impl Type3 {
         })
     }
 
-    pub(crate) fn eval(&self, input: f32) -> Option<Values> {
+    /// Evaluate the function with the given input.
+    pub fn eval(&self, input: f32) -> Option<Values> {
         let mut input = [input];
         self.clamper.clamp_input(&mut input);
 

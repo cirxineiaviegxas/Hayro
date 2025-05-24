@@ -212,6 +212,20 @@ impl Readable<'_> for ObjectIdentifier {
     }
 }
 
+/// A convenience function that extracts a dict and a stream from an object.
+/// If the object is just a dictionary, it will return `None` for the stream.
+/// If the object is a stream, it will return it's dictionary as well as the stream
+/// itself.
+pub fn dict_or_stream<'a>(obj: &Object<'a>) -> Option<(Dict<'a>, Option<Stream<'a>>)> {
+    if let Some(stream) = obj.clone().cast::<Stream>() {
+        Some((stream.dict().clone(), Some(stream)))
+    } else if let Some(dict) = obj.clone().cast::<Dict>() {
+        Some((dict, None))
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::file::xref::XRef;

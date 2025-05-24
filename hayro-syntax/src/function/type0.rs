@@ -9,9 +9,10 @@ use log::{error, warn};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 use std::collections::HashMap;
 
+/// A type 0 function (sampled function).
 #[derive(Debug)]
-pub(crate) struct Type0 {
-    sizes: Vec<u32>,
+pub struct Type0 {
+    sizes: IntVec,
     table: HashMap<Key, IntVec>,
     clamper: Clamper,
     range: TupleVec,
@@ -21,11 +22,10 @@ pub(crate) struct Type0 {
 }
 
 impl Type0 {
+    /// Create a new type 0 function.
     pub fn new(stream: &Stream) -> Option<Self> {
         let dict = stream.dict();
         let bits_per_sample = dict.get::<u8>(BITS_PER_SAMPLE)?;
-        let clamper = Clamper::new(dict)?;
-        let range = clamper.range.clone()?;
 
         if !matches!(bits_per_sample, 1 | 2 | 4 | 8 | 16 | 24 | 32) {
             error!("invalid bits per sample: {}", bits_per_sample);
@@ -33,7 +33,10 @@ impl Type0 {
             return None;
         }
 
-        let sizes = dict.get::<Array>(SIZE)?.iter::<u32>().collect::<Vec<_>>();
+        let clamper = Clamper::new(dict)?;
+        let range = clamper.range.clone()?;
+
+        let sizes = dict.get::<Array>(SIZE)?.iter::<u32>().collect::<IntVec>();
 
         let encode = dict
             .get::<TupleVec>(ENCODE)
@@ -66,7 +69,8 @@ impl Type0 {
         })
     }
 
-    pub(crate) fn eval(&self, mut input: Values) -> Option<Values> {
+    /// Evaluate a type 0 function with the given input.
+    pub fn eval(&self, mut input: Values) -> Option<Values> {
         if input.len() != self.sizes.len() {
             warn!("wrong number of arguments for sampled function");
 
@@ -90,15 +94,16 @@ impl Type0 {
             key.clone().to_smallvec(),
             in_prev,
             in_next,
-            self.sizes.to_smallvec(),
+            self.sizes.clone(),
             self.range.len(),
         );
 
         let interpolated = interpolator.interpolate(&self.table);
+
         let mut out = izip!(&interpolated, &self.decode)
             .map(|(x, decode)| {
                 interpolate(
-                    *x as f32,
+                    *x,
                     0.0,
                     (2u32.pow(self.bits_per_sample as u32) - 1) as f32,
                     decode.0,
@@ -116,7 +121,7 @@ impl Type0 {
 type FloatVec = SmallVec<[f32; 4]>;
 type IntVec = SmallVec<[u32; 4]>;
 
-// Taken from PDFBox
+// See <https://github.com/apache/pdfbox/blob/bb778d4784f354c36ce032e91a0cee2169a4c598/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/common/function/PDFunctionType0.java#L252>
 struct Interpolator {
     input: FloatVec,
     sizes: IntVec,
@@ -215,6 +220,7 @@ fn build_table(data: &[u32], sizes: &[u32], n: usize) -> Option<HashMap<Key, Int
     let mut table = HashMap::new();
 
     let mut first = true;
+
     for b in data.chunks(n) {
         if !first {
             key.increment();
@@ -228,6 +234,9 @@ fn build_table(data: &[u32], sizes: &[u32], n: usize) -> Option<HashMap<Key, Int
     Some(table)
 }
 
+/// A sampled function consists of a (possibly) multi-dimensional table that we can index
+/// into. We do this by representing the entries as a flat list of vectors, where each
+/// element in the vector represents the value of the key in that specific dimension.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Key {
     sizes: SmallVec<[u32; 4]>,
