@@ -1,11 +1,11 @@
 use crate::bit::{BitReader, BitSize};
-use crate::function::{DomainRange, Values, interpolate, read_domain_range};
+use crate::function::{Clamper, TupleVec, Values, interpolate};
 use crate::object::array::Array;
 use crate::object::dict::keys::{BITS_PER_SAMPLE, DECODE, ENCODE, SIZE};
 use crate::object::stream::Stream;
 use crate::util::OptionLog;
 use itertools::izip;
-use log::warn;
+use log::{error, warn};
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 use std::collections::HashMap;
 
@@ -13,33 +13,33 @@ use std::collections::HashMap;
 pub(crate) struct Type0 {
     sizes: Vec<u32>,
     table: HashMap<Key, IntVec>,
-    domain: DomainRange,
-    range: DomainRange,
+    clamper: Clamper,
+    range: TupleVec,
     bits_per_sample: u8,
-    encode: DomainRange,
-    decode: DomainRange,
+    encode: TupleVec,
+    decode: TupleVec,
 }
 
 impl Type0 {
-    pub fn new(stream: &Stream, domain: &DomainRange, range: &DomainRange) -> Option<Self> {
+    pub fn new(stream: &Stream) -> Option<Self> {
         let dict = stream.dict();
         let bits_per_sample = dict.get::<u8>(BITS_PER_SAMPLE)?;
+        let clamper = Clamper::new(dict)?;
+        let range = clamper.range.clone()?;
 
         if !matches!(bits_per_sample, 1 | 2 | 4 | 8 | 16 | 24 | 32) {
-            warn!("unsupported bits per sample: {}", bits_per_sample);
+            error!("invalid bits per sample: {}", bits_per_sample);
+
             return None;
         }
+
         let sizes = dict.get::<Array>(SIZE)?.iter::<u32>().collect::<Vec<_>>();
 
         let encode = dict
-            .get::<Array>(ENCODE)
-            .and_then(|a| read_domain_range(&a))
+            .get::<TupleVec>(ENCODE)
             .unwrap_or(sizes.iter().map(|s| (0.0, (*s - 1) as f32)).collect());
 
-        let decode = dict
-            .get::<Array>(DECODE)
-            .and_then(|a| read_domain_range(&a))
-            .unwrap_or(range.clone());
+        let decode = dict.get::<TupleVec>(DECODE).unwrap_or(range.clone());
 
         let data = {
             let decoded = stream.decoded()?;
@@ -57,8 +57,8 @@ impl Type0 {
 
         Some(Self {
             sizes,
-            domain: domain.clone(),
-            range: range.clone(),
+            clamper,
+            range,
             bits_per_sample,
             table,
             encode,
@@ -66,19 +66,19 @@ impl Type0 {
         })
     }
 
-    fn output_dimension(&self) -> usize {
-        self.range.len()
-    }
-
-    pub(crate) fn eval(&self, input: Values) -> Option<Values> {
+    pub(crate) fn eval(&self, mut input: Values) -> Option<Values> {
         if input.len() != self.sizes.len() {
             warn!("wrong number of arguments for sampled function");
 
             return None;
         }
 
+        self.clamper.clamp_input(&mut input);
+
         let mut key = input;
-        for (x, domain, encode, size) in izip!(&mut key, &self.domain, &self.encode, &self.sizes) {
+        for (x, domain, encode, size) in
+            izip!(&mut key, &self.clamper.domain, &self.encode, &self.sizes)
+        {
             *x = interpolate(*x, domain.0, domain.1, encode.0, encode.1);
             *x = x.max(0.0).min(*size as f32 - 1.0);
         }
@@ -95,17 +95,19 @@ impl Type0 {
         );
 
         let interpolated = interpolator.interpolate(&self.table);
-        let mut out = smallvec![0.0; self.output_dimension()];
+        let mut out = izip!(&interpolated, &self.decode)
+            .map(|(x, decode)| {
+                interpolate(
+                    *x as f32,
+                    0.0,
+                    (2u32.pow(self.bits_per_sample as u32) - 1) as f32,
+                    decode.0,
+                    decode.1,
+                )
+            })
+            .collect::<SmallVec<_>>();
 
-        for (x, decode, out) in izip!(&interpolated, &self.decode, &mut out) {
-            *out = interpolate(
-                *x as f32,
-                0.0,
-                (2u32.pow(self.bits_per_sample as u32) - 1) as f32,
-                decode.0,
-                decode.1,
-            );
-        }
+        self.clamper.clamp_output(&mut out);
 
         Some(out)
     }

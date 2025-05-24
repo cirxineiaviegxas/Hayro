@@ -1,4 +1,4 @@
-use crate::function::{DomainRange, Function, Values, interpolate, read_domain_range};
+use crate::function::{Clamper, Function, TupleVec, Values, interpolate};
 use crate::object::Object;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
@@ -10,34 +10,39 @@ use smallvec::smallvec;
 pub(crate) struct Type3 {
     functions: Vec<Function>,
     bounds: Vec<f32>,
-    encode: DomainRange,
+    encode: TupleVec,
+    clamper: Clamper,
 }
 
 impl Type3 {
-    pub(crate) fn new(dict: &Dict, domain: &DomainRange) -> Option<Self> {
+    pub(crate) fn new(dict: &Dict) -> Option<Self> {
+        let clamper = Clamper::new(dict)?;
+
         let functions = dict
             .get::<Array>(FUNCTIONS)
             .and_then(|d| d.iter::<Object>().map(|o| Function::new(&o)).collect())?;
-        let domain = *domain.get(0)?;
+        let domain = *clamper.domain.get(0)?;
         let mut bounds = vec![domain.0 - 0.0001];
         dict.get::<Array>(BOUNDS)
             .map(|a| bounds.extend(a.iter::<f32>()));
         // Add a small delta so that the interval is considered to be closed on the right.
         bounds.push(domain.1 + 0.0001);
 
-        let encode = dict
-            .get::<Array>(ENCODE)
-            .and_then(|a| read_domain_range(&a))?;
+        let encode = dict.get::<TupleVec>(ENCODE)?;
 
         Some(Self {
             functions,
+            clamper,
             bounds,
             encode,
         })
     }
 
     pub(crate) fn eval(&self, input: f32) -> Option<Values> {
-        let index = find_interval(&self.bounds, input)?;
+        let mut input = [input];
+        self.clamper.clamp_input(&mut input);
+
+        let index = find_interval(&self.bounds, input[0])?;
 
         let bounds_i = *self.bounds.get(index + 1)?;
         let bounds_i_minus_1 = *self.bounds.get(index)?;
@@ -45,9 +50,13 @@ impl Type3 {
         // - 1 because we inserted a dummy bound in the constructor.
         let encoding = self.encode.get(index)?;
         let function = self.functions.get(index)?;
-        let encoded = interpolate(input, bounds_i_minus_1, bounds_i, encoding.0, encoding.1);
+        let encoded = interpolate(input[0], bounds_i_minus_1, bounds_i, encoding.0, encoding.1);
 
-        function.eval(smallvec![encoded])
+        let mut evaluated = function.eval(smallvec![encoded])?;
+
+        self.clamper.clamp_output(&mut evaluated);
+
+        Some(evaluated)
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::content;
 use crate::file::xref::XRef;
-use crate::function::Values;
+use crate::function::{Clamper, Values};
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::Reader;
@@ -127,16 +127,23 @@ type ParseStack = ArgumentsStack<Vec<PostScriptOp>, 2>;
 #[derive(Debug)]
 pub(crate) struct Type4 {
     program: Vec<PostScriptOp>,
+    clamper: Clamper,
 }
 
 impl Type4 {
     pub(crate) fn new(stream: &Stream) -> Option<Self> {
+        let dict = stream.dict().clone();
+        let clamper = Clamper::new(&dict)?;
+
         Some(Self {
+            clamper,
             program: parse_procedure(&stream.decoded()?)?,
         })
     }
 
-    pub(crate) fn eval(&self, input: Values) -> Option<Values> {
+    pub(crate) fn eval(&self, mut input: Values) -> Option<Values> {
+        self.clamper.clamp_input(&mut input);
+
         let mut arg_stack = InterpreterStack::new();
 
         for input in input {
@@ -150,6 +157,8 @@ impl Type4 {
         for num in arg_stack.items() {
             out.push(num.as_f32());
         }
+
+        self.clamper.clamp_output(&mut out);
 
         Some(out)
     }
@@ -588,7 +597,13 @@ mod tests {
         let procedure = format!("{{{prog}}}");
         let procedure = parse_procedure(procedure.as_bytes()).unwrap();
 
-        let type4 = Type4 { program: procedure };
+        let type4 = Type4 {
+            program: procedure,
+            clamper: Clamper {
+                domain: Default::default(),
+                range: None,
+            },
+        };
 
         let res = type4.eval(Values::new()).unwrap();
 
@@ -870,9 +885,13 @@ mod tests {
         let procedure = parse_procedure(b"{  }").unwrap();
 
         let type4 = Function {
-            function_type: Arc::new(FunctionType::Type4(Type4 { program: procedure })),
-            domain: Clamper(smallvec![(-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)]),
-            range: None,
+            function_type: Arc::new(FunctionType::Type4(Type4 {
+                program: procedure,
+                clamper: Clamper {
+                    domain: smallvec![(-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)],
+                    range: None,
+                },
+            })),
         };
 
         let input = smallvec![-10.0, -2.0, 6.0];
@@ -880,7 +899,4 @@ mod tests {
 
         assert_eq!(res.as_slice(), &[-5.0, -2.0, 5.0]);
     }
-
-    // TODO: Refactor clamp for functions
-    // TODO Add test case for range
 }

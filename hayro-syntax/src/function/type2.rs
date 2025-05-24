@@ -1,4 +1,4 @@
-use crate::function::Values;
+use crate::function::{Clamper, Values};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{C0, C1, N};
 use crate::object::number::Number;
@@ -10,6 +10,7 @@ use smallvec::smallvec;
 pub(crate) struct Type2 {
     pub(crate) c0: Values,
     pub(crate) c1: Values,
+    pub(crate) clamper: Clamper,
     pub(crate) n: f32,
 }
 
@@ -17,17 +18,23 @@ impl Type2 {
     pub(crate) fn new(dict: &Dict) -> Option<Self> {
         let c0 = dict.get::<Values>(C0)?;
         let c1 = dict.get::<Values>(C1)?;
+        let clamper = Clamper::new(dict)?;
         let n = dict.get::<Number>(N)?.as_f32();
 
-        Some(Self { c0, c1, n })
+        Some(Self { c0, c1, clamper, n })
     }
 
     pub(crate) fn eval(&self, input: f32) -> Values {
+        let mut input = [input];
+        self.clamper.clamp_input(&mut input);
+
         let mut out = smallvec![0.0; self.c0.len()];
 
         for (c0, c1, out) in izip!(&self.c0, &self.c1, &mut out) {
-            *out = *c0 + input.powf(self.n) * (*c1 - *c0);
+            *out = *c0 + input[0].powf(self.n) * (*c1 - *c0);
         }
+
+        self.clamper.clamp_output(&mut out);
 
         out
     }
