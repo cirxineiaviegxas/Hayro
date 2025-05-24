@@ -2,7 +2,6 @@ use crate::Data;
 use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
-use crate::object::dict::Dict;
 use crate::object::dict::keys::{FIRST, INDEX, N, PREV, SIZE, W, XREF_STM};
 use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
@@ -25,13 +24,6 @@ pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
     let xref = XRef::new(data, xref_map);
 
     Some(xref)
-}
-
-/// Parse the "root" trailer from the PDF.
-pub(crate) fn root_trailer<'a>(data: &'a [u8], xref: &XRef<'a>) -> Option<Dict<'a>> {
-    let pos = find_last_xref_pos(data)?;
-
-    trailer::trailer_impl(data, pos, &xref)
 }
 
 /// An xref table.
@@ -347,7 +339,11 @@ fn xref_stream_num<'a>(data: &[u8]) -> Option<u32> {
         2 => u16::from_be_bytes(data[0..2].try_into().ok()?) as u32,
         3 => u32::from_be_bytes([0, data[0], data[1], data[2]]),
         4 => u32::from_be_bytes(data[0..4].try_into().ok()?),
-        _ => unreachable!(),
+        n => {
+            warn!("invalid xref stream number {}", n);
+
+            return None;
+        }
     })
 }
 

@@ -1,6 +1,7 @@
 use crate::Data;
 use crate::document::page::Pages;
-use crate::file::xref::{XRef, root_trailer, root_xref};
+use crate::file::trailer::root_trailer;
+use crate::file::xref::{XRef, root_xref};
 use crate::object::Object;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{ENCRYPT, PAGES, ROOT};

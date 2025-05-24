@@ -9,7 +9,7 @@ use std::collections::HashMap;
 pub mod bit;
 pub mod content;
 pub mod document;
-pub mod file;
+pub(crate) mod file;
 pub mod filter;
 pub mod function;
 pub mod object;
