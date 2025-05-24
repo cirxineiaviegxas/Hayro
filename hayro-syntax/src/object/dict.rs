@@ -50,6 +50,10 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
+    #[allow(
+        private_bounds,
+        reason = "users shouldn't be able to implement `ObjectLike` for custom objects."
+    )]
     pub fn get<'b, T>(&self, key: impl AsRef<Name<'b>>) -> Option<T>
     where
         T: ObjectLike<'a>,

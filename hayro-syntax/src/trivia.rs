@@ -1,3 +1,5 @@
+//! Comments and white spaces.
+
 use crate::file::xref::XRef;
 use crate::reader::{Readable, Reader, Skippable};
 

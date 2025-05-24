@@ -28,7 +28,7 @@ pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
 
 /// An xref table.
 #[derive(Clone)]
-pub struct XRef<'a>(Inner<'a>);
+pub(crate) struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
     fn new(data: &'a Data<'a>, xref_map: XrefMap) -> Self {

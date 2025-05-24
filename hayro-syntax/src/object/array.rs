@@ -30,6 +30,10 @@ impl<'a> Array<'a> {
     }
 
     /// Returns an iterator over the resolved objects of the array.
+    #[allow(
+        private_bounds,
+        reason = "users shouldn't be able to implement `ObjectLike` for custom objects."
+    )]
     pub fn iter<T>(&self) -> ResolvedArrayIter<'a, T>
     where
         T: ObjectLike<'a>,
@@ -165,6 +169,10 @@ impl<'a> FlexArrayIter<'a> {
         }
     }
 
+    #[allow(
+        private_bounds,
+        reason = "users shouldn't be able to implement `ObjectLike` for custom objects."
+    )]
     pub fn next<T: ObjectLike<'a>>(&mut self) -> Option<T> {
         self.reader.skip_white_spaces_and_comments();
 

@@ -22,7 +22,7 @@ pub mod string;
 mod tuple;
 
 /// A trait for PDF objects.
-pub trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {}
+pub(crate) trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {}
 
 #[macro_export]
 macro_rules! object {
