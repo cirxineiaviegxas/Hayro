@@ -1,3 +1,8 @@
+//! PDF content operators.
+//!
+//! This module provides facilities to read and interpret PDF content streams using
+//! high-level types.
+
 pub mod ops;
 
 use crate::content::ops::TypedOperation;
@@ -19,7 +24,7 @@ const OPERANDS_THRESHOLD: usize = 6;
 
 impl Debug for Operator<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", std::str::from_utf8(self.deref()).unwrap())
+        write!(f, "{}", self.0.as_str())
     }
 }
 
@@ -58,12 +63,15 @@ impl<'a> Readable<'a> for Operator<'a> {
     }
 }
 
+/// An iterator over PDF content streams that provides access to the operators
+/// in a raw manner by only exposing the operator name and its arguments on the stack.
 pub struct UntypedIter<'a> {
     reader: Reader<'a>,
     stack: Stack<'a>,
 }
 
 impl<'a> UntypedIter<'a> {
+    /// Create a new untyped iterator.
     pub fn new(data: &'a [u8]) -> UntypedIter<'a> {
         Self {
             reader: Reader::new(data),
@@ -71,6 +79,7 @@ impl<'a> UntypedIter<'a> {
         }
     }
 
+    /// Create a new empty untyped iterator.
     pub fn empty() -> UntypedIter<'a> {
         Self {
             reader: Reader::new(&[]),
@@ -98,13 +107,14 @@ impl<'a> Iterator for UntypedIter<'a> {
                 let operator = match self.reader.read_without_xref::<Operator>() {
                     Some(o) => o,
                     None => {
-                        warn!("failed to read operator");
+                        warn!("failed to read operator in content stream");
 
                         self.reader.jump_to_end();
                         return None;
                     }
                 };
 
+                // Inline images need special casing...
                 if operator.as_ref() == b"BI" {
                     // The ID operator will already be consumed by this.
                     let inline_dict = self.reader.read_without_xref::<InlineImageDict>()?;
@@ -121,8 +131,22 @@ impl<'a> Iterator for UntypedIter<'a> {
                             let end_offset = self.reader.offset() - start_offset;
                             let image_data = &stream_data[..end_offset];
 
-                            self.stack
-                                .push(Object::Stream(Stream::from_raw(image_data, dict)));
+                            let stream = Stream::from_raw(image_data, dict.clone());
+
+                            // Note that there is a possibility that the encoded stream data
+                            // contains the "EI" operator as part of the data, in which case we
+                            // cannot confidently know whether we have hit the actual end of the
+                            // stream. See also <https://github.com/pdf-association/pdf-issues/issues/543>
+                            // PDF 2.0 does have a `/Length` attribute we can read, but since it's relatively
+                            // new we don't bother trying to read it.
+                            // Because of this, we instead try to decode the data we currently have,
+                            // and if it doesn't work we assume that the `EI` is not the one we are
+                            // looking for and we keep searching.
+                            if stream.decoded().is_none() {
+                                continue;
+                            }
+
+                            self.stack.push(Object::Stream(stream));
 
                             self.reader.read_bytes(2)?;
                             self.reader.skip_white_spaces();
@@ -147,6 +171,8 @@ impl<'a> Iterator for UntypedIter<'a> {
     }
 }
 
+/// An iterator over PDF content streams that provide access to the operators
+/// in a typed fashion.
 pub struct TypedIter<'a> {
     untyped: UntypedIter<'a>,
 }
@@ -167,21 +193,27 @@ impl<'a> Iterator for TypedIter<'a> {
     }
 }
 
+/// An operation in a content stream.
 pub struct Operation<'a> {
+    /// The operands of the operator.
     pub operands: Stack<'a>,
+    /// The actual operator.
     pub operator: Operator<'a>,
 }
 
 impl<'a> Operation<'a> {
+    /// An iterator over the operands of the operation.
     pub fn operands(self) -> OperandIterator<'a> {
         OperandIterator::new(self.operands)
     }
 }
 
+/// A stack holding the values for an operation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Stack<'a>(SmallVec<[Object<'a>; OPERANDS_THRESHOLD]>);
 
 impl<'a> Stack<'a> {
+    /// Create a new, empty stack.
     pub fn new() -> Self {
         Self(SmallVec::new())
     }
@@ -220,6 +252,7 @@ impl<'a> Stack<'a> {
     }
 }
 
+/// An iterator over the operands of an operations.
 pub struct OperandIterator<'a> {
     stack: Stack<'a>,
     cur_index: usize,
@@ -256,103 +289,106 @@ where
     fn from_stack(stack: &Stack<'a>) -> Option<Self>;
 }
 
-#[macro_export]
-macro_rules! op_impl {
-    ($t:ident $(<$l:lifetime>),*, $e:expr, $n:expr, $body:expr) => {
-        impl<'a> OperatorTrait<'a> for $t$(<$l>),* {
-            const OPERATOR: &'static str = $e;
+mod macros {
+    macro_rules! op_impl {
+        ($t:ident $(<$l:lifetime>),*, $e:expr, $n:expr, $body:expr) => {
+            impl<'a> OperatorTrait<'a> for $t$(<$l>),* {
+                const OPERATOR: &'static str = $e;
 
-            fn from_stack(stack: &Stack<'a>) -> Option<Self> {
-                if $n != u8::MAX as usize {
-                    if stack.len() != $n {
-                        warn!("wrong stack length {} for operator {}, expected {}", stack.len(), Self::OPERATOR, $n);
+                fn from_stack(stack: &Stack<'a>) -> Option<Self> {
+                    if $n != u8::MAX as usize {
+                        if stack.len() != $n {
+                            warn!("wrong stack length {} for operator {}, expected {}", stack.len(), Self::OPERATOR, $n);
 
-                        return None;
+                            return None;
+                        }
+                    }
+
+                    $body(stack).or_else(|| {
+                        warn!("failed to convert operands for operator {}", Self::OPERATOR);
+
+                        None
+                    })
+                }
+            }
+
+            impl<'a> From<$t$(<$l>),*> for TypedOperation<'a> {
+                fn from(value: $t$(<$l>),*) -> Self {
+                    TypedOperation::$t(value)
+                }
+            }
+
+            impl<'a> TryFrom<TypedOperation<'a>> for $t$(<$l>),* {
+                type Error = ();
+
+                fn try_from(value: TypedOperation<'a>) -> std::result::Result<Self, Self::Error> {
+                    match value {
+                        TypedOperation::$t(e) => Ok(e),
+                        _ => Err(())
                     }
                 }
-
-                $body(stack).or_else(|| {
-                    warn!("failed to convert operands for operator {}", Self::OPERATOR);
-
-                    None
-                })
             }
+        };
+    }
+
+    macro_rules! op0 {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, 0, |_| Some(Self));
         }
+    }
 
-        impl<'a> From<$t$(<$l>),*> for TypedOperation<'a> {
-            fn from(value: $t$(<$l>),*) -> Self {
-                TypedOperation::$t(value)
-            }
+    macro_rules! op1 {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, 1, |stack: &Stack<'a>|
+            Some(Self(stack.get(0)?)));
         }
+    }
 
-        impl<'a> TryFrom<TypedOperation<'a>> for $t$(<$l>),* {
-            type Error = ();
-
-            fn try_from(value: TypedOperation<'a>) -> std::result::Result<Self, Self::Error> {
-                match value {
-                    TypedOperation::$t(e) => Ok(e),
-                    _ => Err(())
-                }
-            }
+    macro_rules! op_all {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, u8::MAX as usize, |stack: &Stack<'a>|
+            Some(Self(stack.get_all()?)));
         }
-    };
-}
-
-#[macro_export]
-macro_rules! op0 {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 0, |_| Some(Self));
     }
-}
 
-#[macro_export]
-macro_rules! op1 {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 1, |stack: &Stack<'a>|
-        Some(Self(stack.get(0)?)));
+    macro_rules! op2 {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, 2, |stack: &Stack<'a>|
+            Some(Self(stack.get(0)?, stack.get(1)?)));
+        }
     }
-}
 
-#[macro_export]
-macro_rules! op_all {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, u8::MAX as usize, |stack: &Stack<'a>|
-        Some(Self(stack.get_all()?)));
+    macro_rules! op3 {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, 3, |stack: &Stack<'a>|
+            Some(Self(stack.get(0)?, stack.get(1)?,
+            stack.get(2)?)));
+        }
     }
-}
 
-#[macro_export]
-macro_rules! op2 {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 2, |stack: &Stack<'a>|
-        Some(Self(stack.get(0)?, stack.get(1)?)));
+    macro_rules! op4 {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, 4, |stack: &Stack<'a>|
+            Some(Self(stack.get(0)?, stack.get(1)?,
+            stack.get(2)?, stack.get(3)?)));
+        }
     }
-}
 
-#[macro_export]
-macro_rules! op3 {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 3, |stack: &Stack<'a>|
-        Some(Self(stack.get(0)?, stack.get(1)?,
-        stack.get(2)?)));
+    macro_rules! op6 {
+        ($t:ident $(<$l:lifetime>),*, $e:expr) => {
+            crate::content::macros::op_impl!($t$(<$l>),*, $e, 6, |stack: &Stack<'a>|
+            Some(Self(stack.get(0)?, stack.get(1)?,
+            stack.get(2)?, stack.get(3)?,
+            stack.get(4)?, stack.get(5)?)));
+        }
     }
-}
 
-#[macro_export]
-macro_rules! op4 {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 4, |stack: &Stack<'a>|
-        Some(Self(stack.get(0)?, stack.get(1)?,
-        stack.get(2)?, stack.get(3)?)));
-    }
-}
-
-#[macro_export]
-macro_rules! op6 {
-    ($t:ident $(<$l:lifetime>),*, $e:expr) => {
-        crate::op_impl!($t$(<$l>),*, $e, 6, |stack: &Stack<'a>|
-        Some(Self(stack.get(0)?, stack.get(1)?,
-        stack.get(2)?, stack.get(3)?,
-        stack.get(4)?, stack.get(5)?)));
-    }
+    pub(crate) use op_all;
+    pub(crate) use op_impl;
+    pub(crate) use op0;
+    pub(crate) use op1;
+    pub(crate) use op2;
+    pub(crate) use op3;
+    pub(crate) use op4;
+    pub(crate) use op6;
 }

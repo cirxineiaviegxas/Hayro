@@ -1,5 +1,3 @@
-// Compatibility operators
-
 use crate::content::{OPERANDS_THRESHOLD, Operation, OperatorTrait, Stack};
 use crate::object::Object;
 use crate::object::array::Array;
@@ -9,12 +7,12 @@ use crate::object::stream::Stream;
 use crate::object::string;
 use smallvec::{SmallVec, smallvec};
 
-use crate::{op_all, op_impl, op0, op1, op2, op3, op4, op6};
+use crate::content::macros::{op_all, op_impl, op0, op1, op2, op3, op4, op6};
 use log::warn;
 
 include!("ops_generated.rs");
 
-// Need to special-case those becaues they have variable arguments
+// Need to special-case those because they have variable arguments
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StrokeColorNamed<'a>(
