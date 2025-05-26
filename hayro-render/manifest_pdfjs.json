@@ -12,6 +12,13 @@
     "file": "pdfs/devicen.pdf"
   },
   {
+    "id": "issue2642",
+    "file": "pdfs/issue2642.link",
+    "md5": "b6679861fdce3bbab0c1fa51bb7f5077",
+    "link": true,
+    "last_page": 0
+  },
+  {
     "id": "calgray",
     "file": "pdfs/calgray.pdf"
   },

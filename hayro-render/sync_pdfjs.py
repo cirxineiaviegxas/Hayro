@@ -28,7 +28,7 @@ class PDFJSSync:
             "standard_fonts",
             "jbig2_symbol_offset",
             # "IndexedCS_negative_and_high",  # Regular PDF test
-            # "issue2642",                    # Link file test
+            "issue2642",                    # Link file test
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:

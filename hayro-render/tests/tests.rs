@@ -96,5 +96,6 @@ use crate::run_test;
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }
 #[test] fn devicen() { run_test("devicen", false, None); }
+#[test] fn issue2642() { run_test("issue2642", true, Some("..=0")); }
 #[test] fn calgray() { run_test("calgray", false, None); }
 #[test] fn calrgb() { run_test("calrgb", false, Some("..=7")); }

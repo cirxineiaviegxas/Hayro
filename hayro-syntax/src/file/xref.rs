@@ -397,9 +397,11 @@ fn xref_stream_subsection<'a>(
                     xref_stream_num(data)?
                 };
                 let gen_number = 0;
-                let index = {
+                let index = if f3_len > 0 {
                     let data = xref_reader.read_bytes(f3_len as usize)?;
                     xref_stream_num(data)?
+                } else {
+                    0
                 };
 
                 insert_map.insert(
