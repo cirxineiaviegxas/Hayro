@@ -7,6 +7,7 @@ use crate::font::type1::GlyphSimulator;
 use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps, interpret};
 use hayro_syntax::content::{TypedIter, UntypedIter};
+use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
 use hayro_syntax::object::stream::Stream;
@@ -138,7 +139,12 @@ impl<'a> Type3<'a> {
         let name = self.glyph_simulator.glyph_to_string(glyph).unwrap();
         let program = self.char_procs.get(&name).unwrap();
         let decoded = program.decoded().unwrap();
-        let resources = self.dict.get(RESOURCES).unwrap_or_default();
+        // TODO: Can resources be inherited?
+        let resources = Resources::new(
+            self.dict.get(RESOURCES).unwrap_or_default(),
+            None,
+            context.xref().clone(),
+        );
 
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
 

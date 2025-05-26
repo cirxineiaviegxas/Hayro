@@ -27,8 +27,8 @@ pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
 }
 
 /// An xref table.
-#[derive(Clone)]
-pub(crate) struct XRef<'a>(Inner<'a>);
+#[derive(Clone, Debug)]
+pub struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
     fn new(data: &'a Data<'a>, xref_map: XrefMap) -> Self {
@@ -135,12 +135,13 @@ enum EntryType {
 type XrefMap = FxHashMap<ObjectIdentifier, EntryType>;
 
 /// Representation of a proper xref table.
+#[derive(Debug)]
 struct SomeRepr<'a> {
     xref_map: XrefMap,
     data: &'a Data<'a>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Inner<'a> {
     /// A dummy xref table that doesn't have any entries.
     Dummy,

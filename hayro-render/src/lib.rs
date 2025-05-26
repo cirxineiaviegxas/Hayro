@@ -165,6 +165,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     let mut state = Context::new(
         initial_transform,
         kurbo::Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
+        page.xref().clone(),
     );
     let mut device = Renderer(RenderContext::new(pix_width, pix_height));
 

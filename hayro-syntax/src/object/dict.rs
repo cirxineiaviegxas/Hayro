@@ -73,13 +73,17 @@ impl<'a> Dict<'a> {
         self.0.offsets.keys().cloned()
     }
 
-    fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
+    pub fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
     where
         T: Readable<'a>,
     {
         let offset = *self.0.offsets.get(key)?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
+    }
+
+    pub fn xref(&self) -> &XRef<'a> {
+        &self.0.xref
     }
 }
 

@@ -4,6 +4,8 @@ use crate::font::Font;
 use crate::state::{State, TextState};
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
+use hayro_syntax::document::page::Resources;
+use hayro_syntax::file::xref::XRef;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::name::Name;
@@ -23,10 +25,11 @@ pub struct Context<'a> {
     root_transforms: Vec<Affine>,
     bbox: Vec<kurbo::Rect>,
     color_space_cache: HashMap<ObjRef, ColorSpace>,
+    xref: XRef<'a>,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(initial_transform: Affine, bbox: kurbo::Rect) -> Self {
+    pub fn new(initial_transform: Affine, bbox: kurbo::Rect, xref: XRef<'a>) -> Self {
         let line_width = 1.0;
         let line_cap = Cap::Butt;
         let line_join = Join::Miter;
@@ -53,6 +56,7 @@ impl<'a> Context<'a> {
                 stroke_pattern: None,
                 fill_pattern: None,
             }],
+            xref,
             root_transforms: vec![initial_transform],
             last_point: Point::default(),
             sub_path_start: Point::default(),
@@ -137,33 +141,47 @@ impl<'a> Context<'a> {
         self.get_mut().affine *= transform;
     }
 
-    pub(crate) fn get_font(&mut self, resources: &Dict<'a>, name: Name) -> Font<'a> {
-        let font_ref = resources.get_ref(&name).unwrap();
-
-        self.font_cache
-            .entry(font_ref)
-            .or_insert_with(|| {
-                let font_dict = resources.get::<Dict>(&name).unwrap();
-
-                Font::new(&font_dict).unwrap()
-            })
-            .clone()
+    pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Font<'a> {
+        resources
+            .get_font(
+                &name,
+                |ref_| {
+                    Some(
+                        self.font_cache
+                            .entry(ref_)
+                            .or_insert_with(|| {
+                                resources
+                                    .resolve_ref::<Dict>(ref_)
+                                    .map(|o| Font::new(&o).unwrap())
+                                    .unwrap()
+                            })
+                            .clone(),
+                    )
+                },
+                |c| Font::new(&c),
+            )
+            .unwrap()
     }
 
-    pub(crate) fn get_color_space(&mut self, resources: &Dict, name: Name) -> ColorSpace {
+    pub(crate) fn get_color_space(&mut self, resources: &Resources, name: Name) -> ColorSpace {
         resources
-            .get_ref(&name)
-            .map(|cs_ref| {
-                self.color_space_cache
-                    .entry(cs_ref)
-                    .or_insert_with(|| {
-                        let obj = resources.get::<Object>(&name).unwrap();
-
-                        ColorSpace::new(obj)
-                    })
-                    .clone()
-            })
-            .or_else(|| resources.get::<Object>(&name).map(|c| ColorSpace::new(c)))
+            .get_color_space(
+                &name,
+                |ref_| {
+                    Some(
+                        self.color_space_cache
+                            .entry(ref_)
+                            .or_insert_with(|| {
+                                resources
+                                    .resolve_ref::<Object>(ref_)
+                                    .map(|o| ColorSpace::new(o))
+                                    .unwrap()
+                            })
+                            .clone(),
+                    )
+                },
+                |c| Some(ColorSpace::new(c)),
+            )
             .unwrap()
     }
 
@@ -186,5 +204,9 @@ impl<'a> Context<'a> {
         FillProps {
             fill_rule: state.fill,
         }
+    }
+
+    pub fn xref(&self) -> &XRef<'a> {
+        &self.xref
     }
 }

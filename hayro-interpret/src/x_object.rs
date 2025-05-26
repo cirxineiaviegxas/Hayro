@@ -4,6 +4,7 @@ use crate::device::{ClipPath, Device};
 use crate::interpret;
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
+use hayro_syntax::document::page::Resources;
 use hayro_syntax::function::interpolate;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
@@ -61,11 +62,12 @@ impl<'a> FormXObject<'a> {
 
 pub(crate) fn draw_xobject<'a>(
     x_object: &XObject<'a>,
+    resources: &Resources<'a>,
     context: &mut Context<'a>,
     device: &mut impl Device,
 ) {
     match x_object {
-        XObject::FormXObject(f) => draw_form_xobject(f, context, device),
+        XObject::FormXObject(f) => draw_form_xobject(resources, f, context, device),
         XObject::ImageXObject(i) => {
             draw_image_xobject(i, context, device);
         }
@@ -73,6 +75,7 @@ pub(crate) fn draw_xobject<'a>(
 }
 
 pub(crate) fn draw_form_xobject<'a>(
+    resources: &Resources<'a>,
     x_object: &FormXObject<'a>,
     context: &mut Context<'a>,
     device: &mut impl Device,
@@ -97,7 +100,13 @@ pub(crate) fn draw_form_xobject<'a>(
         }),
         context.get().fill_alpha,
     );
-    interpret(iter, &x_object.resources, context, device);
+    // TODO: XObjects inherit from page resources?
+    interpret(
+        iter,
+        &Resources::from_parent(x_object.resources.clone(), resources.clone()),
+        context,
+        device,
+    );
     device.pop();
     context.pop_root_transform();
     context.restore_state();

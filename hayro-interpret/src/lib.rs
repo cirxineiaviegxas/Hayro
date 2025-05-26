@@ -1,6 +1,7 @@
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::{ClipPath, Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
+use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{COLORSPACE, EXT_G_STATE, FONT, PATTERN, SHADING, XOBJECT};
 use hayro_syntax::object::name::Name;
@@ -52,17 +53,10 @@ pub struct FillProps {
 
 pub fn interpret<'a, 'b>(
     ops: impl Iterator<Item = TypedOperation<'b>>,
-    resources: &Dict<'a>,
+    resources: &Resources<'a>,
     context: &mut Context<'a>,
     device: &mut impl Device,
 ) {
-    let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
-    let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
-    let color_spaces = resources.get::<Dict>(COLORSPACE).unwrap_or_default();
-    let x_objects = resources.get::<Dict>(XOBJECT).unwrap_or_default();
-    let patterns = resources.get::<Dict>(PATTERN).unwrap_or_default();
-    let shadings = resources.get::<Dict>(SHADING).unwrap_or_default();
-
     save_sate(context);
 
     for op in ops {
@@ -203,10 +197,10 @@ pub fn interpret<'a, 'b>(
                 *(context.last_point_mut()) = *context.sub_path_start();
             }
             TypedOperation::SetGraphicsState(gs) => {
-                let gs = ext_g_states
-                    .get::<Dict>(&gs.0)
+                let gs = resources
+                    .get_ext_g_state::<Dict>(&gs.0, |_| None, |d| Some(d))
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
-                    .unwrap_or_default();
+                    .unwrap();
 
                 handle_gs(&gs, context);
             }
@@ -260,7 +254,7 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(&color_spaces, c.0)
+                    context.get_color_space(&resources, c.0)
                 };
 
                 cs.set_initial_color(&mut context.get_mut().stroke_color);
@@ -270,7 +264,7 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(&color_spaces, c.0)
+                    context.get_color_space(&resources, c.0)
                 };
 
                 cs.set_initial_color(&mut context.get_mut().fill_color);
@@ -289,8 +283,9 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::NonStrokeColorNamed(n) => {
                 if let Some(name) = n.1 {
-                    let pattern =
-                        ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
+                    let pattern = resources
+                        .get_pattern(&name, |_| None, |d| ShadingPattern::new(&d))
+                        .unwrap();
                     context.get_mut().fill_pattern = Some(pattern);
                 } else {
                     context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
@@ -298,8 +293,9 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::StrokeColorNamed(n) => {
                 if let Some(name) = n.1 {
-                    let pattern =
-                        ShadingPattern::new(&patterns.get::<Dict>(&name).unwrap()).unwrap();
+                    let pattern = resources
+                        .get_pattern(&name, |_| None, |d| ShadingPattern::new(&d))
+                        .unwrap();
                     context.get_mut().stroke_pattern = Some(pattern);
                 } else {
                     context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
@@ -350,7 +346,7 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.clip_paths.truncate(0);
             }
             TypedOperation::TextFont(t) => {
-                let font = context.get_font(&fonts, t.0);
+                let font = context.get_font(&resources, t.0);
                 context.get_mut().text_state.font = Some((font, t.1.as_f32()));
             }
             TypedOperation::ShowText(s) => {
@@ -422,8 +418,9 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
-                if let Some(x_object) = XObject::new(&x_objects.get::<Stream>(&x.0).unwrap()) {
-                    draw_xobject(&x_object, context, device);
+                if let Some(x_object) = resources.get_x_object(&x.0, |_| None, |s| XObject::new(&s))
+                {
+                    draw_xobject(&x_object, &resources, context, device);
                 }
             }
             TypedOperation::InlineImage(i) => {
@@ -435,7 +432,7 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.rise = t.0.as_f32();
             }
             TypedOperation::Shading(s) => {
-                let shading_obj = shadings.get::<Object>(&s.0).unwrap();
+                let shading_obj = resources.get_shading(&s.0, |_| None, |d| Some(d)).unwrap();
                 let shading_pattern = {
                     let (dict, stream) = dict_or_stream(&shading_obj).unwrap();
                     let shading = Shading::new(&dict, stream.as_ref()).unwrap();

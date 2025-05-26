@@ -5,11 +5,12 @@ use crate::file::xref::XRef;
 use crate::object::stream::Stream;
 use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
 
 pub mod bit;
 pub mod content;
 pub mod document;
-pub(crate) mod file;
+pub mod file;
 pub mod filter;
 pub mod function;
 pub mod object;
@@ -35,6 +36,12 @@ pub struct Data<'a> {
     slots: Vec<OnceCell<Option<Vec<u8>>>>,
     map: RefCell<HashMap<ObjectIdentifier, usize>>,
     counter: RefCell<usize>,
+}
+
+impl Debug for Data<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Data {{ ... }}")
+    }
 }
 
 impl<'a> Data<'a> {

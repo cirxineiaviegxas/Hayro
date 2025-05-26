@@ -1,10 +1,13 @@
 use crate::content::{TypedIter, UntypedIter};
+use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::*;
 use crate::object::name::Name;
 use crate::object::rect::Rect;
+use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::stream::Stream;
+use crate::object::{Object, ObjectLike};
 use log::warn;
 use std::cell::OnceCell;
 
@@ -30,10 +33,15 @@ impl PagesContext {
 }
 
 impl<'a> Pages<'a> {
-    pub fn new(pages_dict: Dict<'a>) -> Option<Pages<'a>> {
+    pub fn new(pages_dict: Dict<'a>, xref: XRef<'a>) -> Option<Pages<'a>> {
         let mut pages = vec![];
         let ctx = PagesContext::new();
-        resolve_pages(pages_dict, &mut pages, ctx)?;
+        resolve_pages(
+            pages_dict,
+            &mut pages,
+            ctx,
+            Resources::new(Dict::empty(), None, xref),
+        )?;
 
         Some(Self { pages })
     }
@@ -47,6 +55,7 @@ fn resolve_pages<'a>(
     pages_dict: Dict<'a>,
     entries: &mut Vec<Page<'a>>,
     mut ctx: PagesContext,
+    resources: Resources<'a>,
 ) -> Option<()> {
     if let Some(media_box) = pages_dict.get::<Rect>(MEDIA_BOX) {
         ctx.media_box = Some(media_box);
@@ -60,14 +69,19 @@ fn resolve_pages<'a>(
         ctx.rotate = Some(rotate);
     }
 
+    let resources = Resources::from_parent(
+        pages_dict.get::<Dict>(RESOURCES).unwrap_or_default(),
+        resources.clone(),
+    );
+
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
 
     // TODO: Add inheritance of page attributes
 
     for dict in kids.iter::<Dict>() {
         match dict.get::<Name>(TYPE)? {
-            PAGES => resolve_pages(dict, entries, ctx.clone())?,
-            PAGE => entries.push(Page::new(dict, &ctx)),
+            PAGES => resolve_pages(dict, entries, ctx.clone(), resources.clone())?,
+            PAGE => entries.push(Page::new(dict, &ctx, resources.clone())),
             _ => return None,
         }
     }
@@ -89,10 +103,12 @@ pub struct Page<'a> {
     crop_box: kurbo::Rect,
     rotation: Rotation,
     page_streams: OnceCell<Option<Vec<u8>>>,
+    resources: Resources<'a>,
+    xref: XRef<'a>,
 }
 
 impl<'a> Page<'a> {
-    fn new(dict: Dict<'a>, ctx: &PagesContext) -> Page<'a> {
+    fn new(dict: Dict<'a>, ctx: &PagesContext, resources: Resources<'a>) -> Page<'a> {
         let media_box = dict
             .get::<Rect>(MEDIA_BOX)
             .or_else(|| ctx.media_box)
@@ -112,6 +128,10 @@ impl<'a> Page<'a> {
             _ => Rotation::None,
         };
 
+        let xref = resources.xref.clone();
+        let resources =
+            Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
+
         let crop_box = crop_box.get().intersect(media_box.get());
 
         Self {
@@ -120,11 +140,9 @@ impl<'a> Page<'a> {
             crop_box,
             rotation,
             page_streams: OnceCell::new(),
+            resources,
+            xref,
         }
-    }
-
-    pub fn resources(&self) -> Dict<'a> {
-        self.inner.get::<Dict>(RESOURCES).unwrap_or_default()
     }
 
     fn operations_impl(&self) -> Option<UntypedIter> {
@@ -163,6 +181,10 @@ impl<'a> Page<'a> {
         Some(iter)
     }
 
+    pub fn resources(&self) -> &Resources {
+        &self.resources
+    }
+
     pub fn media_box(&self) -> kurbo::Rect {
         self.media_box
     }
@@ -179,7 +201,136 @@ impl<'a> Page<'a> {
         self.operations_impl().unwrap_or(UntypedIter::empty())
     }
 
+    pub fn xref(&self) -> &XRef<'a> {
+        &self.xref
+    }
+
     pub fn typed_operations(&self) -> TypedIter {
         TypedIter::new(self.operations().into_iter())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Resources<'a> {
+    parent: Option<Box<Resources<'a>>>,
+    xref: XRef<'a>,
+    ext_g_states: Dict<'a>,
+    fonts: Dict<'a>,
+    color_spaces: Dict<'a>,
+    x_objects: Dict<'a>,
+    patterns: Dict<'a>,
+    shadings: Dict<'a>,
+}
+
+impl<'a> Resources<'a> {
+    pub fn from_parent(resources: Dict<'a>, parent: Resources<'a>) -> Resources<'a> {
+        let xref = parent.xref.clone();
+
+        Self::new(resources, Some(parent), xref)
+    }
+
+    pub fn new(
+        resources: Dict<'a>,
+        parent: Option<Resources<'a>>,
+        xref: XRef<'a>,
+    ) -> Resources<'a> {
+        let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
+        let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
+        let color_spaces = resources.get::<Dict>(COLORSPACE).unwrap_or_default();
+        let x_objects = resources.get::<Dict>(XOBJECT).unwrap_or_default();
+        let patterns = resources.get::<Dict>(PATTERN).unwrap_or_default();
+        let shadings = resources.get::<Dict>(SHADING).unwrap_or_default();
+
+        let parent = parent.map(|r| Box::new(r));
+
+        Self {
+            parent,
+            ext_g_states,
+            fonts,
+            color_spaces,
+            x_objects,
+            patterns,
+            shadings,
+            xref,
+        }
+    }
+
+    pub fn resolve_ref<T: ObjectLike<'a>>(&self, ref_: ObjRef) -> Option<T> {
+        self.xref.get(ref_.into())
+    }
+
+    pub fn get_resource<T: ObjectLike<'a>, U>(
+        &self,
+        name: &Name,
+        dict: &Dict<'a>,
+        mut cache: impl FnMut(ObjRef) -> Option<U>,
+        mut resolve: impl FnMut(T) -> Option<U>,
+    ) -> Option<U> {
+        // TODO: Cache non-ref resources as well
+
+        match dict.get_raw::<T>(name) {
+            Some(MaybeRef::Ref(ref_)) => {
+                cache(ref_).or_else(|| self.xref.get::<T>(ref_.into()).and_then(|t| resolve(t)))
+            }
+            Some(MaybeRef::NotRef(i)) => resolve(i),
+            None => self
+                .parent
+                .as_ref()
+                .and_then(|p| p.get_resource::<T, U>(name, dict, cache, resolve)),
+        }
+    }
+
+    pub fn get_ext_g_state<U>(
+        &self,
+        name: &Name,
+        cache: impl FnMut(ObjRef) -> Option<U>,
+        resolve: impl FnMut(Dict<'a>) -> Option<U>,
+    ) -> Option<U> {
+        self.get_resource::<Dict, U>(name, &self.ext_g_states, cache, resolve)
+    }
+
+    pub fn get_color_space<U>(
+        &self,
+        name: &Name,
+        cache: impl FnMut(ObjRef) -> Option<U>,
+        resolve: impl FnMut(Object<'a>) -> Option<U>,
+    ) -> Option<U> {
+        self.get_resource::<Object, U>(name, &self.color_spaces, cache, resolve)
+    }
+
+    pub fn get_font<U>(
+        &self,
+        name: &Name,
+        cache: impl FnMut(ObjRef) -> Option<U>,
+        resolve: impl FnMut(Dict<'a>) -> Option<U>,
+    ) -> Option<U> {
+        self.get_resource::<Dict, U>(name, &self.fonts, cache, resolve)
+    }
+
+    pub fn get_pattern<U>(
+        &self,
+        name: &Name,
+        cache: impl FnMut(ObjRef) -> Option<U>,
+        resolve: impl FnMut(Dict<'a>) -> Option<U>,
+    ) -> Option<U> {
+        self.get_resource::<Dict, U>(name, &self.patterns, cache, resolve)
+    }
+
+    pub fn get_x_object<U>(
+        &self,
+        name: &Name,
+        cache: impl FnMut(ObjRef) -> Option<U>,
+        resolve: impl FnMut(Stream<'a>) -> Option<U>,
+    ) -> Option<U> {
+        self.get_resource::<Stream, U>(name, &self.x_objects, cache, resolve)
+    }
+
+    pub fn get_shading<U>(
+        &self,
+        name: &Name,
+        cache: impl FnMut(ObjRef) -> Option<U>,
+        resolve: impl FnMut(Object<'a>) -> Option<U>,
+    ) -> Option<U> {
+        self.get_resource::<Object, U>(name, &self.shadings, cache, resolve)
     }
 }
