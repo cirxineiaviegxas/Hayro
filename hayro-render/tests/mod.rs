@@ -14,7 +14,7 @@ const REPLACE: Option<&str> = option_env!("REPLACE");
 pub(crate) static WORKSPACE_PATH: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(""));
 
-pub(crate) static ASSETS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("assets"));
+pub(crate) static ASSETS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("pdfs"));
 pub(crate) static DOWNLOADS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("downloads"));
 pub(crate) static DIFFS_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let path = WORKSPACE_PATH.join("diffs");
@@ -107,7 +107,34 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     }
 }
 
-pub fn run_test(name: &str, is_download: bool, range: Option<RangeInclusive<usize>>) {
+fn parse_range(range_str: &str) -> Option<RangeInclusive<usize>> {
+    if range_str.contains("..=") {
+        // Handle "3..=7" or "..=7"
+        let parts: Vec<&str> = range_str.split("..=").collect();
+        if parts.len() == 2 {
+            if parts[0].is_empty() {
+                // "..=7" - from start to 7
+                if let Ok(end) = parts[1].parse::<usize>() {
+                    return Some(0..=end);
+                }
+            } else {
+                // "3..=7" - from 3 to 7
+                if let (Ok(start), Ok(end)) = (parts[0].parse::<usize>(), parts[1].parse::<usize>()) {
+                    return Some(start..=end);
+                }
+            }
+        }
+    } else if range_str.ends_with("..") {
+        // Handle "3.." - from 3 to end
+        let start_str = &range_str[..range_str.len()-2];
+        if let Ok(start) = start_str.parse::<usize>() {
+            return Some(start..=usize::MAX);
+        }
+    }
+    None
+}
+
+pub fn run_test(name: &str, is_download: bool, range_str: Option<&str>) {
     let path = if is_download {
         DOWNLOADS_PATH.join(format!("{name}.pdf",))
     } else {
@@ -117,6 +144,7 @@ pub fn run_test(name: &str, is_download: bool, range: Option<RangeInclusive<usiz
     let data = Data::new(&content);
     let pdf = Pdf::new(&data).unwrap();
 
+    let range = range_str.and_then(parse_range);
     check_render(name, hayro_render::render_png(&pdf, 1.0, range));
 }
 

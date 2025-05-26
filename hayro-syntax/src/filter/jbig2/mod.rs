@@ -39,11 +39,11 @@ use crate::object::dict::keys::JBIG2_GLOBALS;
 use crate::object::stream::Stream;
 use crate::reader::Reader as CrateReader;
 use log::warn;
+use once_cell::sync::Lazy;
 use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
-use once_cell::sync::Lazy;
 
 pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
     let globals = params.get::<Stream>(JBIG2_GLOBALS);
@@ -156,7 +156,7 @@ pub struct Chunk {
     pub end: usize,
 }
 
-// Header structure for file organization information  
+// Header structure for file organization information
 #[derive(Debug)]
 struct Jbig2Header {
     random_access: bool,
@@ -183,14 +183,14 @@ fn read_segments(
 
     while position < end {
         let segment_header = read_segment_header(data, position)?;
-        
+
         position = segment_header.header_end;
 
         let mut segment = Segment {
             header: segment_header.clone(),
             data: owned_data.clone(), // Share reference to original data like JS
-            start: 0,           // Will be set below
-            end: 0,             // Will be set below
+            start: 0,                 // Will be set below
+            end: 0,                   // Will be set below
         };
 
         if !header.random_access {
@@ -309,7 +309,6 @@ impl ArithmeticDecoder {
 
     // C.3.2 Decoding a decision (DECODE)
     fn read_bit(&mut self, contexts: &mut [i8], pos: usize) -> u8 {
-
         // Contexts are packed into 1 byte:
         // highest 7 bits carry cx.index, lowest bit carries cx.mps
         let mut cx_index = (contexts[pos] >> 1) as usize;
@@ -737,7 +736,7 @@ impl HuffmanTreeNode {
         let bit = reader.read_bit()? as usize;
         match &self.children[bit] {
             Some(node) => node.decode_node(reader),
-            None => Err(Jbig2Error::new("invalid Huffman data"))
+            None => Err(Jbig2Error::new("invalid Huffman data")),
         }
     }
 }
@@ -935,7 +934,9 @@ impl Jbig2Image {
         let end = chunk.end;
 
         // Parse file header if present (first 9 bytes for file organization)
-        let header = if position + 9 <= data.len() && data[position..position + 4] == [0x97, 0x4A, 0x42, 0x32] {
+        let header = if position + 9 <= data.len()
+            && data[position..position + 4] == [0x97, 0x4A, 0x42, 0x32]
+        {
             // Read file header flags
             let file_organization_flags = data[position + 8];
             let random_access = (file_organization_flags & 1) != 0;
@@ -947,11 +948,11 @@ impl Jbig2Image {
 
         // Read segments using extracted function like JavaScript implementation
         let segments = read_segments(&header, data, position, end)?;
-        
+
         for segment in segments {
             self.segments.push(segment);
         }
-        
+
         // println!("{:?}", self.segments);
 
         Ok(())
@@ -1138,13 +1139,16 @@ impl SimpleSegmentVisitor {
         end: usize,
     ) -> Result<(), Jbig2Error> {
         let (huffman_tables, huffman_input) = if dictionary.huffman {
-            (Some(self.get_symbol_dictionary_huffman_tables(dictionary, referred_segments)?), Some(Reader::new(data, start, end)))  
-        }   else {
+            (
+                Some(self.get_symbol_dictionary_huffman_tables(dictionary, referred_segments)?),
+                Some(Reader::new(data, start, end)),
+            )
+        } else {
             (None, None)
         };
-        
+
         let symbols = &mut self.symbols;
-        
+
         // Collect input symbols from referred segments
         let mut input_symbols = Vec::new();
         for &referred_segment in referred_segments {
@@ -1169,11 +1173,11 @@ impl SimpleSegmentVisitor {
             &mut decoding_context,
             huffman_input.as_ref(),
         )?;
-        
+
         // println!("current segment {current_segment}, {:?}", new_symbols);
         if let Some(entry) = symbols.get_mut(&current_segment) {
             entry.extend(new_symbols)
-        }   else {
+        } else {
             symbols.insert(current_segment, new_symbols);
         }
 
@@ -1195,7 +1199,7 @@ impl SimpleSegmentVisitor {
                 input_symbols.extend(referred_symbols.iter().cloned());
             }
         }
-        
+
         let (huffman_input, huffman_table) = if region.huffman {
             let huffman_input = Reader::new(data, start, end);
             let huffman_table = self.get_text_region_huffman_tables_with_reader(
@@ -1206,7 +1210,7 @@ impl SimpleSegmentVisitor {
             )?;
 
             (Some(huffman_input), Some(huffman_table))
-        }   else {
+        } else {
             (None, None)
         };
 
@@ -1256,7 +1260,7 @@ impl SimpleSegmentVisitor {
             dictionary.template,
             &mut decoding_context,
         )?;
-        
+
         for p in &patterns {
             // print_bitmap(p);
         }
@@ -1275,7 +1279,7 @@ impl SimpleSegmentVisitor {
     ) -> Result<(), Jbig2Error> {
         // Collect patterns from referred segments
         let mut patterns = self.patterns[&referred_segments[0]].clone();
-        
+
         if patterns.is_empty() {
             return Err(Jbig2Error::new("no patterns available for halftone region"));
         }
@@ -1578,7 +1582,7 @@ fn decode_mmr_bitmap(
         eoblock: end_of_block,
         ..Default::default()
     };
-    
+
     let mut borrowed = reader.0.borrow_mut();
 
     let mut reader = CrateReader::new_with(&borrowed.data[borrowed.position..borrowed.end], 0);
@@ -1621,11 +1625,11 @@ fn decode_mmr_bitmap(
             }
         }
     }
-    
+
     borrowed.position += decoder.source.offset();
 
     // println!("\n\n");
-    
+
     Ok(bitmap.into_iter().map(|i| i.borrow().clone()).collect())
 }
 
@@ -1640,14 +1644,14 @@ fn read_uncompressed_bitmap(
     for _ in 0..height {
         let mut row = Rc::new(RefCell::new(Vec::with_capacity(width)));
         bitmap.push(row.clone());
-        
+
         for _ in 0..width {
             let bit = reader.read_bit()?;
             row.borrow_mut().push(bit);
         }
         reader.byte_align();
     }
-    
+
     Ok(bitmap.into_iter().map(|i| i.borrow().clone()).collect())
 }
 
@@ -1663,7 +1667,7 @@ fn process_segment(
 
     const REGION_SEGMENT_INFORMATION_FIELD_LENGTH: usize = 17;
     // println!("visiting segment {:?}", header);
-    
+
     match header.segment_type {
         0 => {
             // SymbolDictionary
@@ -1686,7 +1690,7 @@ fn process_segment(
             let refinement_template = ((dictionary_flags >> 12) & 1) as usize;
 
             position += 2;
-            
+
             let mut at = Vec::new();
             if !huffman {
                 let at_length = if template == 0 { 4 } else { 1 };
@@ -2064,10 +2068,8 @@ fn process_segments(
     Ok(())
 }
 
-
-
 // ============================================================================
-// HUFFMAN TABLE DECODING FUNCTIONS  
+// HUFFMAN TABLE DECODING FUNCTIONS
 // ============================================================================
 // These functions handle Huffman table construction and decoding for JBIG2
 // Ported from JavaScript implementation in jbig2.js

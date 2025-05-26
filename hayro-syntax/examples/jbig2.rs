@@ -5,12 +5,11 @@ fn main() {
         log::set_max_level(log::LevelFilter::Trace);
     }
 
-    
     let data = std::fs::read("out.jb2").unwrap();
     let globals_data = std::fs::read("globals_data.jb2").unwrap();
-    
+
     let mut image = Jbig2Image::new();
-    
+
     let chunks = vec![
         Chunk {
             data: globals_data.clone(),
@@ -21,9 +20,9 @@ fn main() {
             data: data.clone(),
             start: 0,
             end: data.len(),
-        }
+        },
     ];
-    
+
     let res = image.parse_chunks(&chunks).unwrap();
     for (idx, b) in res.iter().enumerate() {
         // println!("{idx}, {}", b);

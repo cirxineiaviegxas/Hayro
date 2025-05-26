@@ -1,0 +1,23 @@
+[
+  {
+    "id": "mmtype1",
+    "file": "pdfs/mmtype1.pdf"
+  },
+  {
+    "id": "jbig2_symbol_offset",
+    "file": "pdfs/jbig2_symbol_offset.pdf"
+  },
+  {
+    "id": "devicen",
+    "file": "pdfs/devicen.pdf"
+  },
+  {
+    "id": "calgray",
+    "file": "pdfs/calgray.pdf"
+  },
+  {
+    "id": "calrgb",
+    "file": "pdfs/calrgb.pdf",
+    "last_page": 7
+  }
+]

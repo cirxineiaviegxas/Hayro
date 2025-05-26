@@ -1,10 +1,10 @@
-use once_cell::sync::Lazy;
 use crate::filter::jbig2::{HuffmanLine, HuffmanTable, Jbig2Error};
+use once_cell::sync::Lazy;
 
 pub fn get_standard_table(number: u32) -> Result<HuffmanTable, Jbig2Error> {
     if number == 0 || number > 15 {
         return Err(Jbig2Error::new("invalid standard table"));
-    }   else {
+    } else {
         Ok(Lazy::force(&STANDARD_TABLES[number as usize - 1]).clone())
     }
 }
@@ -244,7 +244,7 @@ fn build_standard_table(number: u32) -> HuffmanTable {
             vec![-25, 7, 32, 0x7e, -1], // lower
             vec![25, 7, 32, 0x7f],      // upper
         ],
-        _ => unreachable!()
+        _ => unreachable!(),
     };
 
     // Convert to HuffmanLine objects using unified constructor
@@ -254,6 +254,6 @@ fn build_standard_table(number: u32) -> HuffmanTable {
     }
 
     let table = HuffmanTable::new(lines, true);
-    
+
     table
 }
