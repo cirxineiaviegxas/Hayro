@@ -198,7 +198,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::SetGraphicsState(gs) => {
                 let gs = resources
-                    .get_ext_g_state::<Dict>(&gs.0, |_| None, |d| Some(d))
+                    .get_ext_g_state::<Dict>(&gs.0, Box::new(|_| None), Box::new(|d| Some(d)))
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap();
 
@@ -284,7 +284,11 @@ pub fn interpret<'a, 'b>(
             TypedOperation::NonStrokeColorNamed(n) => {
                 if let Some(name) = n.1 {
                     let pattern = resources
-                        .get_pattern(&name, |_| None, |d| ShadingPattern::new(&d))
+                        .get_pattern(
+                            &name,
+                            Box::new(|_| None),
+                            Box::new(|d| ShadingPattern::new(&d)),
+                        )
                         .unwrap();
                     context.get_mut().fill_pattern = Some(pattern);
                 } else {
@@ -294,7 +298,11 @@ pub fn interpret<'a, 'b>(
             TypedOperation::StrokeColorNamed(n) => {
                 if let Some(name) = n.1 {
                     let pattern = resources
-                        .get_pattern(&name, |_| None, |d| ShadingPattern::new(&d))
+                        .get_pattern(
+                            &name,
+                            Box::new(|_| None),
+                            Box::new(|d| ShadingPattern::new(&d)),
+                        )
                         .unwrap();
                     context.get_mut().stroke_pattern = Some(pattern);
                 } else {
@@ -418,7 +426,8 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
-                if let Some(x_object) = resources.get_x_object(&x.0, |_| None, |s| XObject::new(&s))
+                if let Some(x_object) =
+                    resources.get_x_object(&x.0, Box::new(|_| None), Box::new(|s| XObject::new(&s)))
                 {
                     draw_xobject(&x_object, &resources, context, device);
                 }
@@ -432,7 +441,9 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.rise = t.0.as_f32();
             }
             TypedOperation::Shading(s) => {
-                let shading_obj = resources.get_shading(&s.0, |_| None, |d| Some(d)).unwrap();
+                let shading_obj = resources
+                    .get_shading(&s.0, Box::new(|_| None), Box::new(|d| Some(d)))
+                    .unwrap();
                 let shading_pattern = {
                     let (dict, stream) = dict_or_stream(&shading_obj).unwrap();
                     let shading = Shading::new(&dict, stream.as_ref()).unwrap();

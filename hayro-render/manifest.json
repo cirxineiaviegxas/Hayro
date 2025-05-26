@@ -420,5 +420,9 @@
   {
     "id": "xobject_with_fill_opacity",
     "file": "pdfs/xobject_with_fill_opacity.pdf"
+  },
+  {
+    "id": "OverlappingGlyphClipping",
+    "file": "pdfs/OverlappingGlyphClipping.pdf"
   }
 ]

@@ -145,7 +145,7 @@ impl<'a> Context<'a> {
         resources
             .get_font(
                 &name,
-                |ref_| {
+                Box::new(|ref_| {
                     Some(
                         self.font_cache
                             .entry(ref_)
@@ -157,8 +157,8 @@ impl<'a> Context<'a> {
                             })
                             .clone(),
                     )
-                },
-                |c| Font::new(&c),
+                }),
+                Box::new(|c| Font::new(&c)),
             )
             .unwrap()
     }
@@ -167,7 +167,7 @@ impl<'a> Context<'a> {
         resources
             .get_color_space(
                 &name,
-                |ref_| {
+                Box::new(|ref_| {
                     Some(
                         self.color_space_cache
                             .entry(ref_)
@@ -179,8 +179,8 @@ impl<'a> Context<'a> {
                             })
                             .clone(),
                     )
-                },
-                |c| Some(ColorSpace::new(c)),
+                }),
+                Box::new(|c| Some(ColorSpace::new(c))),
             )
             .unwrap()
     }
