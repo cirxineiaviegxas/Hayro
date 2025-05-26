@@ -2,7 +2,7 @@ from pathlib import Path
 import requests
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ASSETS_DIR = SCRIPT_DIR / 'assets'
+ASSETS_DIR = SCRIPT_DIR / 'pdfs'
 DOWNLOADS_DIR = SCRIPT_DIR / 'downloads'
 
 def ensure_downloads_dir():

@@ -1,7 +1,7 @@
 import os
 
 # Directory where your PDFs are located
-pdf_directory = os.path.join(os.path.dirname(__file__), '../assets')  # relative to current Python file
+pdf_directory = os.path.join(os.path.dirname(__file__), '../pdfs')  # relative to current Python file
 downloads_directory = os.path.join(os.path.dirname(__file__), '../downloads')  # relative to current Python file
 # Output Rust file
 output_file = os.path.join(os.path.dirname(__file__), 'tests.rs')
