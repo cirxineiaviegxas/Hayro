@@ -119,14 +119,15 @@ fn parse_range(range_str: &str) -> Option<RangeInclusive<usize>> {
                 }
             } else {
                 // "3..=7" - from 3 to 7
-                if let (Ok(start), Ok(end)) = (parts[0].parse::<usize>(), parts[1].parse::<usize>()) {
+                if let (Ok(start), Ok(end)) = (parts[0].parse::<usize>(), parts[1].parse::<usize>())
+                {
                     return Some(start..=end);
                 }
             }
         }
     } else if range_str.ends_with("..") {
         // Handle "3.." - from 3 to end
-        let start_str = &range_str[..range_str.len()-2];
+        let start_str = &range_str[..range_str.len() - 2];
         if let Ok(start) = start_str.parse::<usize>() {
             return Some(start..=usize::MAX);
         }

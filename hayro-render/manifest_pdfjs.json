@@ -4,12 +4,32 @@
     "file": "pdfs/mmtype1.pdf"
   },
   {
+    "id": "colorspace_sin",
+    "file": "pdfs/colorspace_sin.pdf"
+  },
+  {
     "id": "jbig2_symbol_offset",
     "file": "pdfs/jbig2_symbol_offset.pdf"
   },
   {
+    "id": "simpletype3font",
+    "file": "pdfs/simpletype3font.pdf"
+  },
+  {
+    "id": "IndexedCS_negative_and_high",
+    "file": "pdfs/IndexedCS_negative_and_high.pdf"
+  },
+  {
+    "id": "colorspace_cos",
+    "file": "pdfs/colorspace_cos.pdf"
+  },
+  {
     "id": "devicen",
     "file": "pdfs/devicen.pdf"
+  },
+  {
+    "id": "cmykjpeg",
+    "file": "pdfs/cmykjpeg.pdf"
   },
   {
     "id": "issue2642",
@@ -17,6 +37,30 @@
     "md5": "b6679861fdce3bbab0c1fa51bb7f5077",
     "link": true,
     "last_page": 0
+  },
+  {
+    "id": "images_1bit_grayscale",
+    "file": "pdfs/images_1bit_grayscale.pdf"
+  },
+  {
+    "id": "colorspace_atan",
+    "file": "pdfs/colorspace_atan.pdf"
+  },
+  {
+    "id": "cid_cff",
+    "file": "pdfs/cid_cff.pdf"
+  },
+  {
+    "id": "gradientfill",
+    "file": "pdfs/gradientfill.pdf"
+  },
+  {
+    "id": "bigboundingbox",
+    "file": "pdfs/bigboundingbox.pdf"
+  },
+  {
+    "id": "clippath",
+    "file": "pdfs/clippath.pdf"
   },
   {
     "id": "calgray",

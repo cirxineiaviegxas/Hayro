@@ -27,8 +27,32 @@ class PDFJSSync:
             "mmtype1",
             "standard_fonts",
             "jbig2_symbol_offset",
-            # "IndexedCS_negative_and_high",  # Regular PDF test
-            "issue2642",                    # Link file test
+            "colorspace_atan",
+            "colorspace_cos",
+            "colorspace_sin",
+            "issue2642", 
+            # TODO: Takes very long?
+            # "ccitt_EndOfBlock_false",
+            "cid_cff",
+            "cmykjpeg",
+            "colors",
+            "images_1bit_grayscale",
+            "arabiccidtruetype-pdf",
+            "clippath",
+            # "close-path-bug",
+            "complex_ttf_font",
+            "german-umlaut-r",
+            "gradientfill",
+            # "helloworld-bad",
+            "jp2k-resetprob",
+            "rotated",
+            # "ShowText-ShadingPattern",
+            "simpletype3font",
+            "bigboundingbox",
+            # "Type3WordSpacing",
+            # "xobject-image",
+            # "ZapfDingbats",
+            "IndexedCS_negative_and_high",  # Regular PDF test
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:

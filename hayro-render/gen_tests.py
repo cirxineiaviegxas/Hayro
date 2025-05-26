@@ -35,7 +35,7 @@ class TestGenerator:
             if expected_md5:
                 actual_md5 = self.calculate_md5(dest_path)
                 if actual_md5 == expected_md5:
-                    print(f"✔ {stem} exists with correct MD5")
+                    # print(f"✔ {stem} exists with correct MD5")
                     return True
                 else:
                     print(f"⚠ {stem} exists but MD5 mismatch. Re-downloading...")
@@ -156,7 +156,9 @@ class TestGenerator:
             # No page range specified
             length = "None"
             
-        return f"#[test] fn {entry_id}() {{ run_test(\"{entry_id}\", {str(is_link).lower()}, {length}); }}"
+        func_name = entry_id.replace('-', '_')
+            
+        return f"#[test] fn {func_name}() {{ run_test(\"{entry_id}\", {str(is_link).lower()}, {length}); }}"
         
     def generate_tests(self):
         """Main function to generate tests from manifest."""
