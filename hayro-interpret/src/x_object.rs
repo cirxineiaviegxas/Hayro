@@ -174,26 +174,26 @@ impl<'a> ImageXObject<'a> {
 
         let decoded = stream.decoded_image()?;
         let interpolate = dict
-            .get::<bool>(INTERPOLATE)
-            .or_else(|| dict.get::<bool>(I))
+            .get::<bool>(I)
+            .or_else(|| dict.get::<bool>(INTERPOLATE))
             .unwrap_or(false);
         let image_mask = dict
-            .get::<bool>(IMAGE_MASK)
-            .or_else(|| dict.get::<bool>(IM))
+            .get::<bool>(IM)
+            .or_else(|| dict.get::<bool>(IMAGE_MASK))
             .unwrap_or(false);
         let bits_per_component = if image_mask {
             1
         } else {
-            dict.get::<u8>(BITS_PER_COMPONENT)
-                .or_else(|| dict.get::<u8>(BPC))
+            dict.get::<u8>(BPC)
+                .or_else(|| dict.get::<u8>(BITS_PER_COMPONENT))
                 .or_else(|| decoded.bits_per_component)
                 .unwrap_or(8)
         };
         let color_space = if image_mask {
             ColorSpace::DeviceGray
         } else {
-            dict.get::<Object>(COLORSPACE)
-                .or_else(|| dict.get::<Object>(CS))
+            dict.get::<Object>(CS)
+                .or_else(|| dict.get::<Object>(COLORSPACE))
                 .map(|c| ColorSpace::new(c))
                 .or_else(|| {
                     decoded.color_space.map(|c| match c {
@@ -205,17 +205,17 @@ impl<'a> ImageXObject<'a> {
                 .unwrap_or(ColorSpace::DeviceGray)
         };
         let decode = dict
-            .get::<Array>(DECODE)
-            .or_else(|| dict.get::<Array>(D))
+            .get::<Array>(D)
+            .or_else(|| dict.get::<Array>(DECODE))
             .map(|a| a.iter::<(f32, f32)>().collect::<Vec<_>>())
             .unwrap_or(color_space.default_decode_arr(bits_per_component as f32));
         let width = dict
-            .get::<u32>(WIDTH)
-            .or_else(|| dict.get::<u32>(W))
+            .get::<u32>(W)
+            .or_else(|| dict.get::<u32>(WIDTH))
             .unwrap();
         let height = dict
-            .get::<u32>(HEIGHT)
-            .or_else(|| dict.get::<u32>(H))
+            .get::<u32>(H)
+            .or_else(|| dict.get::<u32>(HEIGHT))
             .unwrap();
 
         Some(Self {

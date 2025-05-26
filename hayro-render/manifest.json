@@ -424,5 +424,13 @@
   {
     "id": "OverlappingGlyphClipping",
     "file": "pdfs/OverlappingGlyphClipping.pdf"
+  },
+  {
+    "id": "InlineAbbreviations",
+    "file": "pdfs/InlineAbbreviations.pdf"
+  },
+  {
+    "id": "TextClippingModeChanges",
+    "file": "pdfs/TextClippingModeChanges.pdf"
   }
 ]

@@ -143,6 +143,7 @@ impl<'a> Iterator for UntypedIter<'a> {
                             // and if it doesn't work we assume that the `EI` is not the one we are
                             // looking for and we keep searching.
                             if stream.decoded().is_none() {
+                                self.reader.read_bytes(2);
                                 continue;
                             }
 

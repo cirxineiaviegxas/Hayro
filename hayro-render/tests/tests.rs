@@ -94,6 +94,8 @@ use crate::run_test;
 #[test] fn xobject_matrix() { run_test("xobject_matrix", false, None); }
 #[test] fn xobject_with_fill_opacity() { run_test("xobject_with_fill_opacity", false, None); }
 #[test] fn OverlappingGlyphClipping() { run_test("OverlappingGlyphClipping", false, None); }
+#[test] fn InlineAbbreviations() { run_test("InlineAbbreviations", false, None); }
+#[test] fn TextClippingModeChanges() { run_test("TextClippingModeChanges", false, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }

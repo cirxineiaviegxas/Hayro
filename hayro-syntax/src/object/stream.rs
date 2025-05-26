@@ -38,20 +38,20 @@ impl<'a> Stream<'a> {
     pub fn decoded_image(&self) -> Option<FilterResult> {
         if let Some(filter) = self
             .dict
-            .get::<Name>(FILTER)
-            .or_else(|| self.dict.get::<Name>(F))
+            .get::<Name>(F)
+            .or_else(|| self.dict.get::<Name>(FILTER))
             .and_then(|n| Filter::from_name(&n))
         {
             let params = self
                 .dict
-                .get::<Dict>(DECODE_PARMS)
-                .or_else(|| self.dict.get::<Dict>(DP));
+                .get::<Dict>(DP)
+                .or_else(|| self.dict.get::<Dict>(DECODE_PARMS));
 
             Some(apply_filter(self.data, filter, params.as_ref())?)
         } else if let Some(filters) = self
             .dict
-            .get::<Array>(FILTER)
-            .or_else(|| self.dict.get::<Array>(F))
+            .get::<Array>(F)
+            .or_else(|| self.dict.get::<Array>(FILTER))
         {
             // TODO: Avoid allocation?
 
@@ -61,8 +61,8 @@ impl<'a> Stream<'a> {
                 .collect::<Option<Vec<_>>>()?;
             let params = self
                 .dict
-                .get::<Array>(DECODE_PARMS)
-                .or_else(|| self.dict.get::<Array>(DP))
+                .get::<Array>(DP)
+                .or_else(|| self.dict.get::<Array>(DECODE_PARMS))
                 .map(|a| a.iter::<Object>().collect())
                 .unwrap_or(vec![]);
 
