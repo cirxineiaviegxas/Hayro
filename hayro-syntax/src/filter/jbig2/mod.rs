@@ -233,8 +233,8 @@ struct ArithmeticDecoder {
     data: Vec<u8>,
     bp: usize,
     data_end: usize,
-    chigh: u32,
-    clow: u32,
+    pub chigh: u32,
+    pub clow: u32,
     ct: i32,
     a: u32,
     counter: usize,
@@ -308,6 +308,7 @@ impl ArithmeticDecoder {
 
     // C.3.2 Decoding a decision (DECODE)
     fn read_bit(&mut self, contexts: &mut [i8], pos: usize) -> u8 {
+        // println!("Before: {}", self.chigh);
         // Contexts are packed into 1 byte:
         // highest 7 bits carry cx.index, lowest bit carries cx.mps
         let mut cx_index = (contexts[pos] >> 1) as usize;
@@ -373,6 +374,7 @@ impl ArithmeticDecoder {
 
         self.a = a;
         contexts[pos] = ((cx_index << 1) | (cx_mps as usize)) as i8;
+        // println!("After: {}", self.chigh);
         d
     }
 }

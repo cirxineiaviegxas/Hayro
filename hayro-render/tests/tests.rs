@@ -182,6 +182,7 @@ use crate::run_test;
 #[test] fn image_jbig2_9() { run_test("image_jbig2_9", true, None); }
 #[test] fn image_jbig2_10() { run_test("image_jbig2_10", true, None); }
 #[test] fn image_jbig2_11() { run_test("image_jbig2_11", true, None); }
+#[test] fn image_jbig2_12() { run_test("image_jbig2_12", true, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }

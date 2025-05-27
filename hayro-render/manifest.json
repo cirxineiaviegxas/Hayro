@@ -795,5 +795,11 @@
     "file": "pdfs/image_jbig2_11.link",
     "md5": "3fcc05c7ed4001492981776e9424c645",
     "link": true
+  },
+  {
+    "id": "image_jbig2_12",
+    "file": "pdfs/image_jbig2_12.link",
+    "md5": "87ac5f108e3729383b4c7b03d021b4d2",
+    "link": true
   }
 ]

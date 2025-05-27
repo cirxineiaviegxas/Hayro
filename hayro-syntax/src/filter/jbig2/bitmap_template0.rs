@@ -33,13 +33,14 @@ pub(crate) fn decode_bitmap_template0(
         // At the beginning of each row:
         // Fill contextLabel with pixels that are above/right of (X)
         let mut context_label = (row2.borrow()[0] as u32) << 13
-            | (row2.borrow()[1] as u32) << 12
-            | (row2.borrow()[1] as u32) << 11
-            | (row1.borrow()[0] as u32) << 7
-            | (row1.borrow()[1] as u32) << 6
-            | (row1.borrow()[2] as u32) << 5
-            | (row1.borrow()[3] as u32) << 4;
+            | (row2.borrow().get(1).copied().unwrap_or(0) as u32) << 12
+            | (row2.borrow().get(2).copied().unwrap_or(0) as u32) << 11
+            | (row1.borrow().get(0).copied().unwrap_or(0) as u32) << 7
+            | (row1.borrow().get(1).copied().unwrap_or(0) as u32) << 6
+            | (row1.borrow().get(2).copied().unwrap_or(0) as u32) << 5
+            | (row1.borrow().get(3).copied().unwrap_or(0) as u32) << 4;
 
+        // println!("Before: {}", context_label);
         for j in 0..width {
             let pixel = decoder.read_bit(contexts, context_label as usize);
             row.borrow_mut()[j] = pixel;
@@ -64,6 +65,7 @@ pub(crate) fn decode_bitmap_template0(
                 }
                 | pixel as u32;
         }
+        // println!("After: {}", context_label);
     }
 
     bitmap.iter().map(|i| i.borrow().clone()).collect()

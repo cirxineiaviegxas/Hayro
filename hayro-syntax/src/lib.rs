@@ -83,9 +83,10 @@ impl<'a> Data<'a> {
                 let stream = xref.get::<Stream>(id)?;
                 self.slots[*idx].set(stream.decoded()).unwrap();
 
+                let val = self.slots[*idx].get().unwrap().as_deref();
                 *idx += 1;
 
-                self.slots[*idx].get()?.as_deref()
+                val
             }
         }
     }
