@@ -43,6 +43,10 @@
     "last_page": 0
   },
   {
+    "id": "issue4379",
+    "file": "pdfs/issue4379.pdf"
+  },
+  {
     "id": "images_1bit_grayscale",
     "file": "pdfs/images_1bit_grayscale.pdf"
   },

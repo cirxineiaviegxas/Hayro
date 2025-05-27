@@ -245,11 +245,42 @@ impl<'a> ImageXObject<'a> {
                 })
                 .collect()
         } else {
-            let s_mask = self
+            let s_mask = if let Some(s_mask) = self
                 .dict
-                .get::<Stream>(SMASK)
-                .and_then(|s| ImageXObject::new(&s).map(|s| s.decode_raw()))
-                .unwrap_or(vec![1.0; self.width as usize * self.height as usize]);
+                .get::<Stream>(SMASK){
+                ImageXObject::new(&s_mask).map(|s| s.decode_raw())
+            }   else if let Some(mask) = self.dict.get::<Stream>(MASK) {
+                if let Some(obj) = ImageXObject::new(&mask) {
+                    let mut mask_data = obj.decode_raw();
+                    
+                    // Mask doesn't necessarily have the same dimensions.
+                    if obj.width != self.width || obj.height != self.height {
+                        let mut output = Vec::with_capacity(self.width as usize * self.height as usize);
+                        for y in 0..self.width {
+                            for x in 0..self.height {
+                                if y < obj.height && x < obj.width {
+                                    let index = y * obj.width + x;
+                                    output.push(mask_data[index as usize]);
+                                } else {
+                                    output.push(1.0);
+                                }
+                            }
+                        }
+                        
+                        mask_data = output;
+                    }
+                    
+                    mask_data = mask_data.iter().map(|v| 1.0 - *v).collect();
+                    
+                    Some(mask_data)
+                }   else {
+                    None
+                }
+            }   else {
+                None
+            };
+            
+            let s_mask = s_mask.unwrap_or_else(|| vec![1.0; self.width as usize * self.height as usize]);
 
             self.decode_raw()
                 .chunks(self.color_space.components() as usize)

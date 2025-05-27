@@ -56,6 +56,7 @@ class PDFJSSync:
             # "ZapfDingbats",
             "IndexedCS_negative_and_high",  # Regular PDF test
             "operator-in-TJ-array",
+            "issue4379",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
