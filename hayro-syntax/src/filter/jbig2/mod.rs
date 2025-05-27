@@ -2090,11 +2090,9 @@ fn decode_symbol_id_huffman_table(
     }
 
     // Assign Huffman codes for RUNCODEs
-    let run_codes_table = HuffmanTable::new(codes, false);
+    let run_codes_table = HuffmanTable::new(codes.clone(), false);
 
-    // Read a Huffman code using the assignment above
-    // Interpret the RUNCODE codes and the additional bits (if any)
-    let mut symbol_codes: Vec<HuffmanLine> = Vec::new();
+    codes.truncate(0);
     let mut i = 0;
     while i < number_of_symbols {
         let code_length = run_codes_table
@@ -2108,7 +2106,7 @@ fn decode_symbol_id_huffman_table(
                         return Err(Jbig2Error::new("no previous value in symbol ID table"));
                     }
                     let repeats = reader.read_bits(2)? + 3;
-                    let prev_length = symbol_codes[i - 1].prefix_length as i32;
+                    let prev_length = codes[i - 1].prefix_length as i32;
                     (prev_length, repeats)
                 }
                 33 => {
@@ -2123,23 +2121,17 @@ fn decode_symbol_id_huffman_table(
             };
 
             for _ in 0..number_of_repeats {
-                // Only add lines with non-zero prefix length (skip entries with length 0)
-                if repeated_length > 0 {
-                    symbol_codes.push(HuffmanLine::new(&[i as i32, repeated_length, 0, 0]));
-                }
+                codes.push(HuffmanLine::new(&[i as i32, repeated_length, 0, 0]));
                 i += 1;
             }
         } else {
-            // Only add lines with non-zero prefix length (skip entries with length 0)
-            if code_length > 0 {
-                symbol_codes.push(HuffmanLine::new(&[i as i32, code_length, 0, 0]));
-            }
+            codes.push(HuffmanLine::new(&[i as i32, code_length, 0, 0]));
             i += 1;
         }
     }
 
     reader.byte_align();
-    Ok(HuffmanTable::new(symbol_codes, false))
+    Ok(HuffmanTable::new(codes, false))
 }
 
 /// Tables segment decoding - ported from decodeTablesSegment function
