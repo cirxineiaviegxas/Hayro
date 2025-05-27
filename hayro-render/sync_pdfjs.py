@@ -39,7 +39,7 @@ class PDFJSSync:
             "images_1bit_grayscale",
             "arabiccidtruetype-pdf",
             "clippath",
-            # "close-path-bug",
+            "close-path-bug",
             "complex_ttf_font",
             "german-umlaut-r",
             "gradientfill",

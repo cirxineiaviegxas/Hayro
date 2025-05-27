@@ -1,7 +1,7 @@
 use crate::Data;
 use crate::document::page::Pages;
 use crate::file::trailer::root_trailer;
-use crate::file::xref::{XRef, root_xref};
+use crate::file::xref::{XRef, fallback, root_xref};
 use crate::object::Object;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{ENCRYPT, PAGES, ROOT};
@@ -21,8 +21,18 @@ pub enum PdfError {
 
 impl<'a> Pdf<'a> {
     pub fn new(data: &'a Data<'a>) -> Result<Self, PdfError> {
-        let xref = root_xref(data).ok_or(OtherError)?;
-        let trailer = root_trailer(data.get(), &xref).ok_or(OtherError)?;
+        let (xref, trailer) = root_xref(data)
+            .and_then(|xref| {
+                let trailer = root_trailer(data.get(), &xref);
+
+                if let Some(trailer) = trailer {
+                    Some((xref, trailer))
+                } else {
+                    None
+                }
+            })
+            .or_else(|| fallback(data))
+            .ok_or(OtherError)?;
 
         if trailer.contains_key(ENCRYPT) {
             return Err(EncryptionError);

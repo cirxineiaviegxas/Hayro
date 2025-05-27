@@ -2,7 +2,8 @@ use crate::Data;
 use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
-use crate::object::dict::keys::{FIRST, INDEX, N, PREV, SIZE, W, XREF_STM};
+use crate::object::dict::Dict;
+use crate::object::dict::keys::{FIRST, INDEX, N, PREV, ROOT, SIZE, W, XREF_STM};
 use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
@@ -24,6 +25,49 @@ pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
     let xref = XRef::new(data, xref_map);
 
     Some(xref)
+}
+
+/// Try to manually parse the PDF to build an xref table and trailer dictionary.
+pub(crate) fn fallback<'a>(data: &'a Data<'a>) -> Option<(XRef<'a>, Dict<'a>)> {
+    warn!("trying to construct xref");
+
+    let mut xref_map = FxHashMap::default();
+    let mut trailer_offset = None;
+
+    let mut r = Reader::new(data.data);
+
+    loop {
+        let cur_pos = r.offset();
+
+        if let Some(obj) = r.read_without_xref::<ObjectIdentifier>() {
+            xref_map.insert(obj, EntryType::Normal(cur_pos));
+        } else if let Some(dict) = r.read::<false, Dict>(&XRef::dummy()) {
+            if dict.contains_key(SIZE) && dict.contains_key(ROOT) {
+                trailer_offset = Some(cur_pos);
+            }
+        } else {
+            r.read_byte();
+        }
+
+        if r.at_end() {
+            break;
+        }
+    }
+
+    if let Some(trailer_offset) = trailer_offset {
+        warn!("rebuild xref table with {} entries", xref_map.len());
+        let xref = XRef::new(data, xref_map);
+
+        let mut r = Reader::new(data.data);
+        r.jump(trailer_offset);
+        let dict = r.read::<false, Dict>(&xref)?;
+
+        Some((xref, dict))
+    } else {
+        warn!("couldn't find trailer dictionary, failed to rebuild xref table");
+
+        None
+    }
 }
 
 /// An xref table.

@@ -20,6 +20,10 @@
     "file": "pdfs/IndexedCS_negative_and_high.pdf"
   },
   {
+    "id": "close-path-bug",
+    "file": "pdfs/close-path-bug.pdf"
+  },
+  {
     "id": "colorspace_cos",
     "file": "pdfs/colorspace_cos.pdf"
   },
