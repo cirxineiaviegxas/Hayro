@@ -192,3 +192,4 @@ use crate::run_test;
 #[test] fn clippath() { run_test("clippath", false, None); }
 #[test] fn calgray() { run_test("calgray", false, None); }
 #[test] fn calrgb() { run_test("calrgb", false, Some("..=7")); }
+#[test] fn operator_in_TJ_array() { run_test("operator-in-TJ-array", false, None); }

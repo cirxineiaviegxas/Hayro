@@ -1,7 +1,7 @@
 use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::name::Name;
+use crate::object::name::{Name, skip_name_like};
 use crate::object::null::Null;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
@@ -151,7 +151,9 @@ impl Skippable for Object<'_> {
             b'(' => string::String::skip::<PLAIN>(r),
             b'.' | b'+' | b'-' | b'0'..=b'9' => Number::skip::<PLAIN>(r),
             b'[' => Array::skip::<PLAIN>(r),
-            _ => None,
+            // See test case operator-in-TJ-array-0: Be lenient and skip content operators in
+            // array
+            _ => skip_name_like(r, false),
         }
     }
 }
@@ -181,7 +183,11 @@ impl<'a> Readable<'a> for Object<'a> {
             b'(' => Self::String(string::String::read::<PLAIN>(r, xref)?),
             b'.' | b'+' | b'-' | b'0'..=b'9' => Self::Number(Number::read::<PLAIN>(r, xref)?),
             b'[' => Self::Array(Array::read::<PLAIN>(r, xref)?),
-            _ => return None,
+            // See the comment in `skip`.
+            _ => {
+                skip_name_like(r, false)?;
+                Self::Null(Null)
+            }
         };
 
         Some(object)

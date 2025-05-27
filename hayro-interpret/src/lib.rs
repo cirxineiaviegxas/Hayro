@@ -58,6 +58,8 @@ pub fn interpret<'a, 'b>(
     save_sate(context);
 
     for op in ops {
+        println!("{:?}", op);
+
         match op {
             TypedOperation::SaveState(_) => save_sate(context),
             TypedOperation::StrokeColorDeviceRgb(s) => {

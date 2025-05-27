@@ -1,6 +1,7 @@
 use crate::file::xref::XRef;
 use crate::object::{ObjectIdentifier, ObjectLike};
 use crate::reader::{Readable, Reader};
+use crate::util::OptionLog;
 
 pub(crate) struct IndirectObject<T> {
     id: ObjectIdentifier,
@@ -26,7 +27,8 @@ where
         r.skip_white_spaces_and_comments();
         let inner = r.read_with_xref::<T>(xref)?;
         r.skip_white_spaces_and_comments();
-        r.forward_tag(b"endobj")?;
+        r.forward_tag(b"endobj")
+            .warn_none("missing `endobj` keyword");
 
         Some(Self { id, inner })
     }
