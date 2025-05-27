@@ -759,5 +759,41 @@
     "file": "pdfs/image_jbig2_5.link",
     "md5": "22ab33f869ed862dea8285ded2e52787",
     "link": true
+  },
+  {
+    "id": "image_jbig2_6",
+    "file": "pdfs/image_jbig2_6.link",
+    "md5": "3298d93eb9ef69d5d5470f0c42c6df57",
+    "link": true
+  },
+  {
+    "id": "image_jbig2_7",
+    "file": "pdfs/image_jbig2_7.link",
+    "md5": "80cefe27f02ee53d846a6f84db7af20f",
+    "link": true
+  },
+  {
+    "id": "image_jbig2_8",
+    "file": "pdfs/image_jbig2_8.link",
+    "md5": "740ca024f33d089807d1eedf9a46649d",
+    "link": true
+  },
+  {
+    "id": "image_jbig2_9",
+    "file": "pdfs/image_jbig2_9.link",
+    "md5": "28377dc96ad36f3f78042e9787470271",
+    "link": true
+  },
+  {
+    "id": "image_jbig2_10",
+    "file": "pdfs/image_jbig2_10.link",
+    "md5": "72fde39ef3e668a4176f6281f534e62c",
+    "link": true
+  },
+  {
+    "id": "image_jbig2_11",
+    "file": "pdfs/image_jbig2_11.link",
+    "md5": "3fcc05c7ed4001492981776e9424c645",
+    "link": true
   }
 ]
