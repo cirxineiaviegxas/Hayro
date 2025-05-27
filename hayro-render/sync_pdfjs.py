@@ -43,7 +43,7 @@ class PDFJSSync:
             "complex_ttf_font",
             "german-umlaut-r",
             "gradientfill",
-            # "helloworld-bad",
+            "helloworld-bad",
             "jp2k-resetprob",
             "rotated",
             # "ShowText-ShadingPattern",

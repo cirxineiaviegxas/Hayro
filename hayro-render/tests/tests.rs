@@ -110,6 +110,7 @@ use crate::run_test;
 #[test] fn colorspace_atan() { run_test("colorspace_atan", false, None); }
 #[test] fn cid_cff() { run_test("cid_cff", false, None); }
 #[test] fn gradientfill() { run_test("gradientfill", false, None); }
+#[test] fn helloworld_bad() { run_test("helloworld-bad", false, None); }
 #[test] fn bigboundingbox() { run_test("bigboundingbox", false, None); }
 #[test] fn clippath() { run_test("clippath", false, None); }
 #[test] fn calgray() { run_test("calgray", false, None); }

@@ -29,7 +29,7 @@ pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
 
 /// Try to manually parse the PDF to build an xref table and trailer dictionary.
 pub(crate) fn fallback<'a>(data: &'a Data<'a>) -> Option<(XRef<'a>, Dict<'a>)> {
-    warn!("trying to construct xref");
+    warn!("xref table was invalid, trying to manually build xref table");
 
     let mut xref_map = FxHashMap::default();
     let mut trailer_offset = None;

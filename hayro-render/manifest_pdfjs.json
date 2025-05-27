@@ -59,6 +59,10 @@
     "file": "pdfs/gradientfill.pdf"
   },
   {
+    "id": "helloworld-bad",
+    "file": "pdfs/helloworld-bad.pdf"
+  },
+  {
     "id": "bigboundingbox",
     "file": "pdfs/bigboundingbox.pdf"
   },
