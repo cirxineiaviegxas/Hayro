@@ -1,7 +1,6 @@
 use crate::filter::jbig2::bitmap::decode_bitmap;
 use crate::filter::jbig2::{
     Bitmap, DecodingContext, Jbig2Error, Reader, TemplatePixel, decode_mmr_bitmap, log2,
-    print_bitmap,
 };
 
 // Halftone region decoding - ported from decodeHalftoneRegion function
@@ -77,7 +76,7 @@ pub(crate) fn decode_halftone_region(
         None
     };
 
-    for _i in (0..bits_per_value) {
+    for _i in 0..bits_per_value {
         let bitmap = if mmr {
             // MMR bit planes are in one continuous stream. Only EOFB codes indicate
             // the end of each bitmap, so EOFBs must be decoded.

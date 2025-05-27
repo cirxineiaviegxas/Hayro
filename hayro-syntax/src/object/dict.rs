@@ -73,6 +73,7 @@ impl<'a> Dict<'a> {
         self.0.offsets.keys().cloned()
     }
 
+    #[allow(private_bounds)]
     pub fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
     where
         T: Readable<'a>,

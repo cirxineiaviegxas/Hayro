@@ -162,12 +162,12 @@ fn parse_fallback<'a>(r: &mut Reader<'a>, dict: &Dict<'a>) -> Option<Stream<'a>>
 
     r.forward_tag(b"\n").or_else(|| r.forward_tag(b"\r\n"))?;
 
-    let mut data_start = r.tail()?;
+    let data_start = r.tail()?;
     let start = r.offset();
 
     loop {
         if r.peek_byte()?.is_ascii_whitespace() {
-            let mut length = r.offset() - start;
+            let length = r.offset() - start;
             let data = data_start.get(..length)?;
 
             r.skip_white_spaces();

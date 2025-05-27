@@ -255,6 +255,7 @@ impl<'a> Resources<'a> {
         }
     }
 
+    #[allow(private_bounds)]
     pub fn resolve_ref<T: ObjectLike<'a>>(&self, ref_: ObjRef) -> Option<T> {
         self.xref.get(ref_.into())
     }

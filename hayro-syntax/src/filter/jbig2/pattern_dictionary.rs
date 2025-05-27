@@ -1,5 +1,5 @@
 use crate::filter::jbig2::bitmap::decode_bitmap;
-use crate::filter::jbig2::{Bitmap, DecodingContext, Jbig2Error, TemplatePixel, decode_mmr_bitmap};
+use crate::filter::jbig2::{Bitmap, DecodingContext, Jbig2Error, TemplatePixel};
 
 // Pattern dictionary decoding - ported from decodePatternDictionary function
 pub(crate) fn decode_pattern_dictionary(

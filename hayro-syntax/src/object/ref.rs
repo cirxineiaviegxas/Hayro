@@ -50,16 +50,17 @@ impl Readable<'_> for ObjRef {
     }
 }
 
-pub(crate) enum MaybeRef<T> {
+pub enum MaybeRef<T> {
     Ref(ObjRef),
     NotRef(T),
 }
 
+#[allow(private_bounds)]
 impl<'a, T> MaybeRef<T>
 where
     T: ObjectLike<'a>,
 {
-    pub(crate) fn resolve(self, xref: &XRef<'a>) -> Option<T> {
+    pub fn resolve(self, xref: &XRef<'a>) -> Option<T> {
         match self {
             MaybeRef::Ref(r) => xref.get::<T>(r.into()),
             MaybeRef::NotRef(t) => Some(t),

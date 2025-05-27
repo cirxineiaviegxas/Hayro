@@ -25,25 +25,21 @@ mod text_region;
 
 use crate::filter::ccitt::{CCITTFaxDecoder, CCITTFaxDecoderOptions};
 use crate::filter::jbig2::bitmap::decode_bitmap;
-use crate::filter::jbig2::bitmap_template0::decode_bitmap_template0;
 use crate::filter::jbig2::halftone_region::decode_halftone_region;
 use crate::filter::jbig2::pattern_dictionary::decode_pattern_dictionary;
-use crate::filter::jbig2::refinement::decode_refinement;
 use crate::filter::jbig2::segment_header::read_segment_header;
 use crate::filter::jbig2::standard_table::get_standard_table;
 use crate::filter::jbig2::symbol_dictionary::decode_symbol_dictionary;
-use crate::filter::jbig2::tables::{QE_TABLE, SEGMENT_TYPES};
+use crate::filter::jbig2::tables::QE_TABLE;
 use crate::filter::jbig2::text_region::decode_text_region;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::JBIG2_GLOBALS;
 use crate::object::stream::Stream;
 use crate::reader::Reader as CrateReader;
 use log::warn;
-use once_cell::sync::Lazy;
-use std::cell::{OnceCell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Arc;
 
 pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
     let globals = params.get::<Stream>(JBIG2_GLOBALS);
@@ -1261,9 +1257,9 @@ impl SimpleSegmentVisitor {
             &mut decoding_context,
         )?;
 
-        for p in &patterns {
-            // print_bitmap(p);
-        }
+        // for p in &patterns {
+        // print_bitmap(p);
+        // }
 
         self.patterns.insert(current_segment, patterns);
         Ok(())
@@ -1278,7 +1274,7 @@ impl SimpleSegmentVisitor {
         end: usize,
     ) -> Result<(), Jbig2Error> {
         // Collect patterns from referred segments
-        let mut patterns = self.patterns[&referred_segments[0]].clone();
+        let patterns = self.patterns[&referred_segments[0]].clone();
 
         if patterns.is_empty() {
             return Err(Jbig2Error::new("no patterns available for halftone region"));
@@ -1591,7 +1587,7 @@ fn decode_mmr_bitmap(
     let mut eof = false;
 
     for _ in 0..height {
-        let mut row = Rc::new(RefCell::new(vec![]));
+        let row = Rc::new(RefCell::new(vec![]));
         bitmap.push(row.clone());
         let mut shift = -1i32;
         let mut current_byte = 0u8;
@@ -1642,7 +1638,7 @@ fn read_uncompressed_bitmap(
     let mut bitmap = Vec::new();
 
     for _ in 0..height {
-        let mut row = Rc::new(RefCell::new(Vec::with_capacity(width)));
+        let row = Rc::new(RefCell::new(Vec::with_capacity(width)));
         bitmap.push(row.clone());
 
         for _ in 0..width {

@@ -17,7 +17,7 @@ pub(crate) fn decode_bitmap_template0(
     const OLD_PIXEL_MASK: u32 = 0x7bf7; // 01111 0111111 0111
 
     for i in 0..height {
-        let mut row = Rc::new(RefCell::new(vec![0u8; width]));
+        let row = Rc::new(RefCell::new(vec![0u8; width]));
         bitmap.push(row.clone());
         let row1 = if i < 1 {
             row.clone()

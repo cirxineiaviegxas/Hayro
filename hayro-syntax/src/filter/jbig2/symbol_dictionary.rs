@@ -20,7 +20,7 @@ pub(crate) fn decode_symbol_dictionary(
     refinement_template_index: usize,
     refinement_at: &[TemplatePixel],
     decoding_context: &mut DecodingContext,
-    mut huffman_input: Option<&Reader>,
+    huffman_input: Option<&Reader>,
 ) -> Result<Vec<Bitmap>, Jbig2Error> {
     if huffman && refinement {
         return Err(Jbig2Error::new(

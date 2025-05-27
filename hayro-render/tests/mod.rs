@@ -7,6 +7,7 @@ use std::ops::RangeInclusive;
 use std::path::PathBuf;
 
 #[rustfmt::skip]
+#[allow(non_snake_case)]
 mod tests;
 
 const REPLACE: Option<&str> = option_env!("REPLACE");

@@ -62,7 +62,7 @@ pub(crate) fn decode_refinement(
             }
         }
 
-        let mut row = Rc::new(RefCell::new(vec![0u8; width]));
+        let row = Rc::new(RefCell::new(vec![0u8; width]));
         bitmap.push(row.clone());
 
         for j in 0..width {
