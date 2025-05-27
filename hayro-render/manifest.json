@@ -743,5 +743,21 @@
   {
     "id": "xobject_with_fill_opacity",
     "file": "pdfs/xobject_with_fill_opacity.pdf"
+  },
+  {
+    "id": "image_jbig2_4",
+    "file": "pdfs/image_jbig2_4.link",
+    "md5": "93ccd85c5686bea27d3e6c3b41921b21",
+    "link": true
+  },
+  {
+    "id": "image_jbig2_crash",
+    "file": "pdfs/image_jbig2_crash.pdf"
+  },
+  {
+    "id": "image_jbig2_5",
+    "file": "pdfs/image_jbig2_5.link",
+    "md5": "22ab33f869ed862dea8285ded2e52787",
+    "link": true
   }
 ]

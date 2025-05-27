@@ -96,7 +96,6 @@ pub(crate) fn decode_refinement(
             let pixel = decoder.read_bit(contexts, context_label as usize);
             row.borrow_mut()[j] = pixel;
         }
-        bitmap.push(row);
     }
 
     Ok(bitmap.into_iter().map(|i| i.borrow().clone()).collect())

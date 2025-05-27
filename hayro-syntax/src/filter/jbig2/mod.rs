@@ -45,8 +45,11 @@ pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
     let globals = params.get::<Stream>(JBIG2_GLOBALS);
 
     let mut chunks = Vec::new();
+    
+    // std::fs::write("out.jb2", data);
 
     if let Some(globals_data) = globals.and_then(|g| g.decoded()) {
+        // std::fs::write("globals_data.jb2", &globals_data);
         chunks.push(Chunk {
             data: globals_data.clone(),
             start: 0,
@@ -2058,6 +2061,7 @@ fn process_segments(
     visitor: &mut SimpleSegmentVisitor,
 ) -> Result<(), Jbig2Error> {
     for segment in segments {
+        // println!("{:?}", segment);
         process_segment(segment, visitor)?;
         // println!("{:?}", visitor.buffer.as_ref().map(|b| &b[122..=125]));
     }

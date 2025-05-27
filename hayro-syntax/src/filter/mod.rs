@@ -103,7 +103,7 @@ impl Filter {
             }
             Filter::CcittFaxDecode => ccitt::decode(data, params).map(FilterResult::from_data),
             Filter::Jbig2Decode => Some(FilterResult::from_data(
-                jbig2::decode(data, params).unwrap(),
+                jbig2::decode(data, params)?,
             )),
             Filter::JpxDecode => jpx::decode(data),
             _ => None,

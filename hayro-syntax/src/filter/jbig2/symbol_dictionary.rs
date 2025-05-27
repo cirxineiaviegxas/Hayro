@@ -4,7 +4,7 @@ use crate::filter::jbig2::standard_table::get_standard_table;
 use crate::filter::jbig2::text_region::decode_text_region;
 use crate::filter::jbig2::{
     Bitmap, DecodingContext, Jbig2Error, Reader, SymbolDictionaryHuffmanTables, TemplatePixel,
-    decode_mmr_bitmap, log2, read_uncompressed_bitmap,
+    decode_mmr_bitmap, log2, print_bitmap, read_uncompressed_bitmap,
 };
 
 // 6.5.5 Decoding the symbol dictionary
@@ -133,6 +133,7 @@ pub(crate) fn decode_symbol_dictionary(
                         &new_symbols[symbol_id - symbols.len()]
                     };
 
+                    // print_bitmap(&symbol);
                     decode_refinement(
                         current_width as usize,
                         current_height as usize,
@@ -145,6 +146,7 @@ pub(crate) fn decode_symbol_dictionary(
                         decoding_context,
                     )?
                 };
+                // print_bitmap(&bitmap);
                 new_symbols.push(bitmap);
             } else if huffman {
                 // Store only symbol width and decode a collective bitmap when the height class is done.

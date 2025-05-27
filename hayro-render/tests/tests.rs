@@ -173,6 +173,9 @@ use crate::run_test;
 #[test] fn xobject_1() { run_test("xobject_1", false, None); }
 #[test] fn xobject_matrix() { run_test("xobject_matrix", false, None); }
 #[test] fn xobject_with_fill_opacity() { run_test("xobject_with_fill_opacity", false, None); }
+#[test] fn image_jbig2_4() { run_test("image_jbig2_4", true, None); }
+#[test] fn image_jbig2_crash() { run_test("image_jbig2_crash", false, None); }
+#[test] fn image_jbig2_5() { run_test("image_jbig2_5", true, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }

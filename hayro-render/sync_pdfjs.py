@@ -27,6 +27,8 @@ class PDFJSSync:
             "mmtype1",
             "standard_fonts",
             "jbig2_symbol_offset",
+            # "jbig2_huffman_1", (Already included in our test suite)
+            # "jbig2_huffman_2", BLank test from what I can tell (the specific page range)
             "colorspace_atan",
             "colorspace_cos",
             "colorspace_sin",
