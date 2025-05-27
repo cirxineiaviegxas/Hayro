@@ -253,17 +253,20 @@ impl<'a> ImageXObject<'a> {
                 if let Some(obj) = ImageXObject::new(&mask) {
                     let mut mask_data = obj.decode_raw();
                     
+                    // TODO: This is a temporary hack, we should implement resized masks
+                    // properly in hayro-render
+                    
                     // Mask doesn't necessarily have the same dimensions.
                     if obj.width != self.width || obj.height != self.height {
+                        let x_factor = obj.width as f32 / self.width as f32;
+                        let y_factor = obj.height as f32 / self.height as f32;
                         let mut output = Vec::with_capacity(self.width as usize * self.height as usize);
-                        for y in 0..self.width {
-                            for x in 0..self.height {
-                                if y < obj.height && x < obj.width {
-                                    let index = y * obj.width + x;
-                                    output.push(mask_data[index as usize]);
-                                } else {
-                                    output.push(1.0);
-                                }
+                        for y in 0..self.height {
+                            let y = (y as f32 * y_factor).floor() as u32;
+                            for x in 0..self.width {
+                                let x = (x as f32 * x_factor).floor() as u32;
+                                let index = y * obj.width + x;
+                                output.push(mask_data[index as usize]);
                             }
                         }
                         
