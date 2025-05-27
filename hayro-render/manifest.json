@@ -1,13 +1,296 @@
 [
   {
+    "id": "InlineAbbreviations",
+    "file": "pdfs/InlineAbbreviations.pdf"
+  },
+  {
+    "id": "OverlappingGlyphClipping",
+    "file": "pdfs/OverlappingGlyphClipping.pdf"
+  },
+  {
+    "id": "TextClippingModeChanges",
+    "file": "pdfs/TextClippingModeChanges.pdf"
+  },
+  {
+    "id": "clip_path_evenodd",
+    "file": "pdfs/clip_path_evenodd.pdf"
+  },
+  {
+    "id": "clip_path_nested",
+    "file": "pdfs/clip_path_nested.pdf"
+  },
+  {
+    "id": "color_separation_3",
+    "file": "pdfs/color_separation_3.pdf"
+  },
+  {
     "id": "color_space_device_n_2",
     "file": "pdfs/color_space_device_n_2.pdf"
+  },
+  {
+    "id": "color_space_icc_gray",
+    "file": "pdfs/color_space_icc_gray.pdf"
+  },
+  {
+    "id": "color_space_icc_invalid_profile",
+    "file": "pdfs/color_space_icc_invalid_profile.pdf"
+  },
+  {
+    "id": "color_space_icc_srgb",
+    "file": "pdfs/color_space_icc_srgb.pdf"
+  },
+  {
+    "id": "color_space_indexed",
+    "file": "pdfs/color_space_indexed.pdf"
+  },
+  {
+    "id": "color_space_lab",
+    "file": "pdfs/color_space_lab.pdf"
+  },
+  {
+    "id": "color_space_separation_1",
+    "file": "pdfs/color_space_separation_1.pdf"
+  },
+  {
+    "id": "color_space_separation_2",
+    "file": "pdfs/color_space_separation_2.pdf"
+  },
+  {
+    "id": "filter_tiff_predictor_gray",
+    "file": "pdfs/filter_tiff_predictor_gray.pdf"
+  },
+  {
+    "id": "font_cid_1",
+    "file": "pdfs/font_cid_1.pdf"
+  },
+  {
+    "id": "font_cid_2",
+    "file": "pdfs/font_cid_2.pdf",
+    "last_page": 0
+  },
+  {
+    "id": "font_cid_3",
+    "file": "pdfs/font_cid_3.pdf"
+  },
+  {
+    "id": "font_cid_4",
+    "file": "pdfs/font_cid_4.pdf"
+  },
+  {
+    "id": "font_cid_5",
+    "file": "pdfs/font_cid_5.pdf"
+  },
+  {
+    "id": "font_cid_6",
+    "file": "pdfs/font_cid_6.pdf"
+  },
+  {
+    "id": "font_cid_7",
+    "file": "pdfs/font_cid_7.pdf"
+  },
+  {
+    "id": "font_standard_1",
+    "file": "pdfs/font_standard_1.pdf"
+  },
+  {
+    "id": "font_standard_2",
+    "file": "pdfs/font_standard_2.pdf",
+    "last_page": 0
+  },
+  {
+    "id": "font_truetype_1",
+    "file": "pdfs/font_truetype_1.pdf"
+  },
+  {
+    "id": "font_truetype_2",
+    "file": "pdfs/font_truetype_2.pdf"
+  },
+  {
+    "id": "font_truetype_3",
+    "file": "pdfs/font_truetype_3.pdf"
+  },
+  {
+    "id": "font_truetype_4",
+    "file": "pdfs/font_truetype_4.pdf"
+  },
+  {
+    "id": "font_truetype_5",
+    "file": "pdfs/font_truetype_5.pdf"
+  },
+  {
+    "id": "font_truetype_6",
+    "file": "pdfs/font_truetype_6.pdf"
+  },
+  {
+    "id": "font_truetype_7",
+    "file": "pdfs/font_truetype_7.pdf",
+    "first_page": 1,
+    "last_page": 1
+  },
+  {
+    "id": "font_truetype_8",
+    "file": "pdfs/font_truetype_8.pdf",
+    "last_page": 0
+  },
+  {
+    "id": "font_truetype_slow_post_lookup",
+    "file": "pdfs/font_truetype_slow_post_lookup.pdf",
+    "last_page": 0
+  },
+  {
+    "id": "font_type1_1",
+    "file": "pdfs/font_type1_1.pdf"
+  },
+  {
+    "id": "font_type1_10",
+    "file": "pdfs/font_type1_10.pdf",
+    "first_page": 0,
+    "last_page": 1
+  },
+  {
+    "id": "font_type1_11",
+    "file": "pdfs/font_type1_11.pdf"
+  },
+  {
+    "id": "font_type1_12",
+    "file": "pdfs/font_type1_12.pdf"
+  },
+  {
+    "id": "font_type1_2",
+    "file": "pdfs/font_type1_2.pdf"
+  },
+  {
+    "id": "font_type1_3",
+    "file": "pdfs/font_type1_3.pdf"
+  },
+  {
+    "id": "font_type1_4",
+    "file": "pdfs/font_type1_4.pdf"
+  },
+  {
+    "id": "font_type1_5",
+    "file": "pdfs/font_type1_5.pdf"
+  },
+  {
+    "id": "font_type1_6",
+    "file": "pdfs/font_type1_6.pdf"
+  },
+  {
+    "id": "font_type1_7",
+    "file": "pdfs/font_type1_7.pdf"
+  },
+  {
+    "id": "font_type1_8",
+    "file": "pdfs/font_type1_8.pdf"
+  },
+  {
+    "id": "font_type1_9",
+    "file": "pdfs/font_type1_9.pdf"
+  },
+  {
+    "id": "font_type1_cff_1",
+    "file": "pdfs/font_type1_cff_1.pdf"
+  },
+  {
+    "id": "font_type1_cff_2",
+    "file": "pdfs/font_type1_cff_2.pdf"
+  },
+  {
+    "id": "font_type1_cff_3",
+    "file": "pdfs/font_type1_cff_3.pdf"
+  },
+  {
+    "id": "font_type1_cff_4",
+    "file": "pdfs/font_type1_cff_4.pdf"
+  },
+  {
+    "id": "font_type1_cff_5",
+    "file": "pdfs/font_type1_cff_5.pdf"
+  },
+  {
+    "id": "font_type1_cff_6",
+    "file": "pdfs/font_type1_cff_6.pdf"
+  },
+  {
+    "id": "font_type3_widths_with_matrix",
+    "file": "pdfs/font_type3_widths_with_matrix.pdf"
+  },
+  {
+    "id": "font_vertical",
+    "file": "pdfs/font_vertical.pdf"
+  },
+  {
+    "id": "fonts_type1_latex",
+    "file": "pdfs/fonts_type1_latex.pdf"
+  },
+  {
+    "id": "function_type0_1",
+    "file": "pdfs/function_type0_1.pdf"
+  },
+  {
+    "id": "function_type0_2",
+    "file": "pdfs/function_type0_2.pdf"
+  },
+  {
+    "id": "image_1_bit_per_component",
+    "file": "pdfs/image_1_bit_per_component.pdf"
+  },
+  {
+    "id": "image_ccit_1",
+    "file": "pdfs/image_ccit_1.pdf"
+  },
+  {
+    "id": "image_ccit_3",
+    "file": "pdfs/image_ccit_3.pdf"
+  },
+  {
+    "id": "image_ccit_4",
+    "file": "pdfs/image_ccit_4.pdf"
+  },
+  {
+    "id": "image_cmyk_icc_jpg",
+    "file": "pdfs/image_cmyk_icc_jpg.pdf"
+  },
+  {
+    "id": "image_cmyk_jpg",
+    "file": "pdfs/image_cmyk_jpg.pdf"
+  },
+  {
+    "id": "image_inline_2",
+    "file": "pdfs/image_inline_2.pdf"
+  },
+  {
+    "id": "image_inline_3",
+    "file": "pdfs/image_inline_3.pdf"
+  },
+  {
+    "id": "image_inline_4",
+    "file": "pdfs/image_inline_4.pdf"
+  },
+  {
+    "id": "image_inline_5",
+    "file": "pdfs/image_inline_5.pdf"
+  },
+  {
+    "id": "image_inline_6",
+    "file": "pdfs/image_inline_6.pdf"
+  },
+  {
+    "id": "image_inline_7",
+    "file": "pdfs/image_inline_7.pdf"
+  },
+  {
+    "id": "image_inline_8",
+    "file": "pdfs/image_inline_8.pdf",
+    "first_page": 2,
+    "last_page": 2
   },
   {
     "id": "image_jbig2_2",
     "file": "pdfs/image_jbig2_2.link",
     "md5": "e730a0439253cb913ecec99ff580a5eb",
     "link": true,
+    "first_page": 0,
     "last_page": 4
   },
   {
@@ -16,6 +299,78 @@
     "md5": "2ac5f90159feba3aab04091c5026fef6",
     "link": true,
     "ignore": true
+  },
+  {
+    "id": "image_lab",
+    "file": "pdfs/image_lab.pdf"
+  },
+  {
+    "id": "image_luma16",
+    "file": "pdfs/image_luma16.pdf"
+  },
+  {
+    "id": "image_luma8",
+    "file": "pdfs/image_luma8.pdf"
+  },
+  {
+    "id": "image_luma8_icc",
+    "file": "pdfs/image_luma8_icc.pdf"
+  },
+  {
+    "id": "image_luma8_jpg",
+    "file": "pdfs/image_luma8_jpg.pdf"
+  },
+  {
+    "id": "image_mask",
+    "file": "pdfs/image_mask.pdf"
+  },
+  {
+    "id": "image_mask_4",
+    "file": "pdfs/image_mask_4.pdf"
+  },
+  {
+    "id": "image_mask_hairline",
+    "file": "pdfs/image_mask_hairline.pdf"
+  },
+  {
+    "id": "image_mask_missing_bpc",
+    "file": "pdfs/image_mask_missing_bpc.pdf"
+  },
+  {
+    "id": "image_rgb16",
+    "file": "pdfs/image_rgb16.pdf"
+  },
+  {
+    "id": "image_rgb8",
+    "file": "pdfs/image_rgb8.pdf"
+  },
+  {
+    "id": "image_rgb8_decode",
+    "file": "pdfs/image_rgb8_decode.pdf"
+  },
+  {
+    "id": "image_rgb8_icc",
+    "file": "pdfs/image_rgb8_icc.pdf"
+  },
+  {
+    "id": "image_rgb8_icc_jpg",
+    "file": "pdfs/image_rgb8_icc_jpg.pdf"
+  },
+  {
+    "id": "image_rgb8_jpg",
+    "file": "pdfs/image_rgb8_jpg.pdf"
+  },
+  {
+    "id": "image_rgba16",
+    "file": "pdfs/image_rgba16.pdf"
+  },
+  {
+    "id": "image_rgba8",
+    "file": "pdfs/image_rgba8.pdf"
+  },
+  {
+    "id": "image_rgba8_icc",
+    "file": "pdfs/image_rgba8_icc.pdf"
   },
   {
     "id": "integration_coat_of_arms",
@@ -61,30 +416,6 @@
     "last_page": 0
   },
   {
-    "id": "image_mask_missing_bpc",
-    "file": "pdfs/image_mask_missing_bpc.pdf"
-  },
-  {
-    "id": "image_rgb16",
-    "file": "pdfs/image_rgb16.pdf"
-  },
-  {
-    "id": "image_rgb8",
-    "file": "pdfs/image_rgb8.pdf"
-  },
-  {
-    "id": "image_rgba16",
-    "file": "pdfs/image_rgba16.pdf"
-  },
-  {
-    "id": "image_rgba8",
-    "file": "pdfs/image_rgba8.pdf"
-  },
-  {
-    "id": "image_rgba8_icc",
-    "file": "pdfs/image_rgba8_icc.pdf"
-  },
-  {
     "id": "page_media_box_bottom_left",
     "file": "pdfs/page_media_box_bottom_left.pdf"
   },
@@ -125,38 +456,6 @@
     "file": "pdfs/path_rendering_1.pdf"
   },
   {
-    "id": "path_rendering_2",
-    "file": "pdfs/path_rendering_2.pdf"
-  },
-  {
-    "id": "path_rendering_3",
-    "file": "pdfs/path_rendering_3.pdf"
-  },
-  {
-    "id": "path_rendering_4",
-    "file": "pdfs/path_rendering_4.pdf"
-  },
-  {
-    "id": "path_rendering_5",
-    "file": "pdfs/path_rendering_5.pdf"
-  },
-  {
-    "id": "path_rendering_6",
-    "file": "pdfs/path_rendering_6.pdf"
-  },
-  {
-    "id": "path_rendering_7",
-    "file": "pdfs/path_rendering_7.pdf"
-  },
-  {
-    "id": "path_rendering_8",
-    "file": "pdfs/path_rendering_8.pdf"
-  },
-  {
-    "id": "path_rendering_9",
-    "file": "pdfs/path_rendering_9.pdf"
-  },
-  {
     "id": "path_rendering_10",
     "file": "pdfs/path_rendering_10.pdf"
   },
@@ -187,6 +486,38 @@
   {
     "id": "path_rendering_17",
     "file": "pdfs/path_rendering_17.pdf"
+  },
+  {
+    "id": "path_rendering_2",
+    "file": "pdfs/path_rendering_2.pdf"
+  },
+  {
+    "id": "path_rendering_3",
+    "file": "pdfs/path_rendering_3.pdf"
+  },
+  {
+    "id": "path_rendering_4",
+    "file": "pdfs/path_rendering_4.pdf"
+  },
+  {
+    "id": "path_rendering_5",
+    "file": "pdfs/path_rendering_5.pdf"
+  },
+  {
+    "id": "path_rendering_6",
+    "file": "pdfs/path_rendering_6.pdf"
+  },
+  {
+    "id": "path_rendering_7",
+    "file": "pdfs/path_rendering_7.pdf"
+  },
+  {
+    "id": "path_rendering_8",
+    "file": "pdfs/path_rendering_8.pdf"
+  },
+  {
+    "id": "path_rendering_9",
+    "file": "pdfs/path_rendering_9.pdf"
   },
   {
     "id": "path_rendering_dash_array_0_phase",
@@ -319,14 +650,6 @@
     "ignore": true
   },
   {
-    "id": "pdfjs_issue2642",
-    "file": "pdfs/pdfjs_issue2642.link",
-    "md5": "b6679861fdce3bbab0c1fa51bb7f5077",
-    "link": true,
-    "ignore": true,
-    "last_page": 0
-  },
-  {
     "id": "rendering_conflation_artifacts",
     "file": "pdfs/rendering_conflation_artifacts.pdf",
     "first_page": 2,
@@ -420,17 +743,5 @@
   {
     "id": "xobject_with_fill_opacity",
     "file": "pdfs/xobject_with_fill_opacity.pdf"
-  },
-  {
-    "id": "OverlappingGlyphClipping",
-    "file": "pdfs/OverlappingGlyphClipping.pdf"
-  },
-  {
-    "id": "InlineAbbreviations",
-    "file": "pdfs/InlineAbbreviations.pdf"
-  },
-  {
-    "id": "TextClippingModeChanges",
-    "file": "pdfs/TextClippingModeChanges.pdf"
   }
 ]
