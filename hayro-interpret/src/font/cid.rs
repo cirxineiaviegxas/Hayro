@@ -216,14 +216,14 @@ fn read_widths(arr: &Array) -> Option<HashMap<u16, f32>> {
     let mut iter = arr.flex_iter();
 
     loop {
-        if let Some((first, second, width)) = iter.next::<(u16, u16, f32)>() {
-            for i in first..=second {
-                map.insert(i, width);
-            }
-        } else if let Some((mut first, range)) = iter.next::<(u16, Array)>() {
+        if let Some((mut first, range)) = iter.next::<(u16, Array)>() {
             for width in range.iter::<f32>() {
                 map.insert(first, width);
                 first = first.checked_add(1)?;
+            }
+        } else if let Some((first, second, width)) = iter.next::<(u16, u16, f32)>() {
+            for i in first..=second {
+                map.insert(i, width);
             }
         } else {
             break;
@@ -238,11 +238,7 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
     let mut iter = arr.flex_iter();
 
     loop {
-        if let Some((first, second, w, v1, v2)) = iter.next::<(u16, u16, f32, f32, f32)>() {
-            for i in first..=second {
-                map.insert(i, [w, v1, v2]);
-            }
-        } else if let Some((mut first, range)) = iter.next::<(u16, Array)>() {
+        if let Some((mut first, range)) = iter.next::<(u16, Array)>() {
             let mut iter = range.iter::<f32>();
 
             while let Some(w) = iter.next() {
@@ -250,6 +246,10 @@ fn read_widths2(arr: &Array) -> Option<HashMap<u16, [f32; 3]>> {
                 let v2 = iter.next()?;
                 map.insert(first, [w, v1, v2]);
                 first = first.checked_add(1)?;
+            }
+        } else if let Some((first, second, w, v1, v2)) = iter.next::<(u16, u16, f32, f32, f32)>() {
+            for i in first..=second {
+                map.insert(i, [w, v1, v2]);
             }
         } else {
             break;
