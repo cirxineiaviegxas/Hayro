@@ -181,7 +181,7 @@ impl<'a> Page<'a> {
         Some(iter)
     }
 
-    pub fn resources(&self) -> &Resources {
+    pub fn resources(&self) -> &Resources<'a> {
         &self.resources
     }
 

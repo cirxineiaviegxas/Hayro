@@ -12,7 +12,7 @@ use log::{error, warn};
 use rustc_hash::FxHashMap;
 use std::cmp::max;
 use std::iter;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
 
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
@@ -76,7 +76,11 @@ pub struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
     fn new(data: &'a Data<'a>, xref_map: XrefMap) -> Self {
-        Self(Inner::Some(Arc::new(SomeRepr { data, xref_map })))
+        Self(Inner::Some(Arc::new(RwLock::new(SomeRepr {
+            data,
+            xref_map,
+            repaired: false,
+        }))))
     }
 
     pub(crate) fn dummy() -> Self {
@@ -86,21 +90,20 @@ impl<'a> XRef<'a> {
     pub(crate) fn len(&self) -> usize {
         match &self.0 {
             Inner::Dummy => 0,
-            Inner::Some(s) => s.xref_map.len(),
+            Inner::Some(s) => s.read().unwrap().xref_map.len(),
         }
     }
 
     pub(crate) fn objects(&'_ self) -> impl IntoIterator<Item = Object<'a>> + '_ {
-        let mut keys_iter = match &self.0 {
-            Inner::Dummy => None,
-            Inner::Some(s) => Some(s.xref_map.keys()),
-        };
+        match &self.0 {
+            Inner::Dummy => unimplemented!(),
+            Inner::Some(s) => iter::from_fn(move || {
+                let locked = s.read().unwrap();
+                let mut iter = locked.xref_map.keys();
 
-        iter::from_fn(move || {
-            keys_iter
-                .as_mut()
-                .and_then(|iter| iter.next().and_then(|k| self.get(*k)))
-        })
+                iter.next().and_then(|k| self.get(*k))
+            }),
+        }
     }
 
     pub(crate) fn get<T>(&self, id: ObjectIdentifier) -> Option<T>
@@ -111,9 +114,11 @@ impl<'a> XRef<'a> {
             return None;
         };
 
-        let mut r = Reader::new(s.data.get());
+        let locked = s.read().unwrap();
 
-        match *s.xref_map.get(&id).or_else(|| {
+        let mut r = Reader::new(locked.data.get());
+
+        match *locked.xref_map.get(&id).or_else(|| {
             // An indirect reference to an undefined object shall not be considered an error by a PDF processor; it
             // shall be treated as a reference to the null object.
             None
@@ -136,7 +141,7 @@ impl<'a> XRef<'a> {
                 let id = ObjectIdentifier::new(id as i32, 0);
 
                 let stream = self.get::<Stream>(id)?;
-                let data = s.data.get_with(id, self)?;
+                let data = locked.data.get_with(id, self)?;
                 let object_stream = ObjectStream::new(stream, data, self.clone())?;
                 object_stream.get(index)
             }
@@ -183,6 +188,7 @@ type XrefMap = FxHashMap<ObjectIdentifier, EntryType>;
 struct SomeRepr<'a> {
     xref_map: XrefMap,
     data: &'a Data<'a>,
+    repaired: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -190,7 +196,7 @@ enum Inner<'a> {
     /// A dummy xref table that doesn't have any entries.
     Dummy,
     /// A proper xref table.
-    Some(Arc<SomeRepr<'a>>),
+    Some(Arc<RwLock<SomeRepr<'a>>>),
 }
 
 #[derive(Debug)]
@@ -540,7 +546,7 @@ startxref
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
-        let map = &s.xref_map;
+        let map = &s.read().unwrap().xref_map;
 
         assert_eq!(
             *map.get(&ObjectIdentifier::new(1, 0)).unwrap(),
@@ -598,7 +604,7 @@ startxref
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
-        let map = &s.xref_map;
+        let map = &s.read().unwrap().xref_map;
 
         assert_eq!(
             *map.get(&ObjectIdentifier::new(1, 0)).unwrap(),
@@ -644,7 +650,7 @@ startxref
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
-        let map = &s.xref_map;
+        let map = &s.read().unwrap().xref_map;
 
         assert_eq!(
             *map.get(&ObjectIdentifier::new(3, 0)).unwrap(),
@@ -684,7 +690,7 @@ startxref
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
-        let map = &s.xref_map;
+        let map = &s.read().unwrap().xref_map;
 
         assert_eq!(
             *map.get(&ObjectIdentifier::new(3, 0)).unwrap(),
@@ -736,7 +742,7 @@ startxref
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
         };
-        let map = &s.xref_map;
+        let map = &s.read().unwrap().xref_map;
 
         assert_eq!(
             *map.get(&ObjectIdentifier::new(1, 0)).unwrap(),
