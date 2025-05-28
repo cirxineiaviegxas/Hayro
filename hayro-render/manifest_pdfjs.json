@@ -47,6 +47,10 @@
     "file": "pdfs/issue4379.pdf"
   },
   {
+    "id": "zerowidthline",
+    "file": "pdfs/zerowidthline.pdf"
+  },
+  {
     "id": "images_1bit_grayscale",
     "file": "pdfs/images_1bit_grayscale.pdf"
   },

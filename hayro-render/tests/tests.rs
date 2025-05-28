@@ -198,6 +198,7 @@ use crate::run_test;
 #[test] fn cmykjpeg() { run_test("cmykjpeg", false, None); }
 #[test] fn issue2642() { run_test("issue2642", true, Some("..=0")); }
 #[test] fn issue4379() { run_test("issue4379", false, None); }
+#[test] fn zerowidthline() { run_test("zerowidthline", false, None); }
 #[test] fn images_1bit_grayscale() { run_test("images_1bit_grayscale", false, None); }
 #[test] fn colorspace_atan() { run_test("colorspace_atan", false, None); }
 #[test] fn cid_cff() { run_test("cid_cff", false, None); }

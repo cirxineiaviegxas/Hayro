@@ -10,7 +10,7 @@ use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
-use kurbo::{Affine, BezPath, Rect};
+use kurbo::{Affine, BezPath, Point, Rect};
 use peniko::color::palette::css::WHITE;
 use peniko::color::{AlphaColor, Srgb};
 use peniko::{Fill, ImageQuality};
@@ -83,8 +83,17 @@ impl Device for Renderer {
     }
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
+        // Best-effort attempt to ensure a line width of at least 1.
+        let min_factor = min_factor(&self.0.transform);
+        let mut line_width = stroke_props.line_width.max(0.01);
+        let transformed_width = line_width * min_factor;
+        
+        if transformed_width < 1.0 {
+            line_width = line_width / transformed_width;
+        }
+        
         let stroke = kurbo::Stroke {
-            width: stroke_props.line_width as f64,
+            width: line_width as f64,
             join: stroke_props.line_join,
             miter_limit: stroke_props.miter_limit as f64,
             start_cap: stroke_props.line_cap,
@@ -218,4 +227,16 @@ pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -
             Some(png_data)
         })
         .collect()
+}
+
+pub(crate) fn min_factor(transform: &Affine) -> f32 {
+    let scale_skew_transform = {
+        let c = transform.as_coeffs();
+        Affine::new([c[0], c[1], c[2], c[3], 0.0, 0.0])
+    };
+
+    let x_advance = scale_skew_transform * Point::new(1.0, 0.0);
+    let y_advance = scale_skew_transform * Point::new(0.0, 1.0);
+
+    x_advance.to_vec2().length().min(y_advance.to_vec2().length()) as f32
 }

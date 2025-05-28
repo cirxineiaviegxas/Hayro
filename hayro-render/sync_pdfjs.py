@@ -57,6 +57,7 @@ class PDFJSSync:
             "IndexedCS_negative_and_high",  # Regular PDF test
             "operator-in-TJ-array",
             "issue4379",
+            "zerowidthline",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
