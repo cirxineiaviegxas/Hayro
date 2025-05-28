@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-hayro-syntax = { workspace = true }
+hayro-syntax = { path = "../hayro-syntax", default-features = false }
 kurbo = { workspace = true }
 peniko = { workspace = true }
 smallvec = { workspace = true }
@@ -16,3 +16,7 @@ skrifa = { workspace = true }
 yoke = { workspace = true, features = ["derive"]}
 hayro-font-parser = { workspace = true }
 bitflags = "2.9.0"
+
+[features]
+default = ["jpeg2000"]
+jpeg2000 = ["hayro-syntax/jpeg2000"]

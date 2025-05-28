@@ -45,7 +45,7 @@ pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
     let globals = params.get::<Stream>(JBIG2_GLOBALS);
 
     let mut chunks = Vec::new();
-    
+
     // std::fs::write("out.jb2", data);
 
     if let Some(globals_data) = globals.and_then(|g| g.decoded()) {

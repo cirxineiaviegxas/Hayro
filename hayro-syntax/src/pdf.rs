@@ -70,9 +70,7 @@ impl<'a> Pdf<'a> {
     pub fn pages(&self) -> Result<Pages<'a>, PdfError> {
         self.catalog
             .get::<Dict>(PAGES)
-            .and_then(|p| {
-                Pages::new(p, self.xref.clone())
-            })
+            .and_then(|p| Pages::new(p, self.xref.clone()))
             .ok_or(OtherError)
     }
 }

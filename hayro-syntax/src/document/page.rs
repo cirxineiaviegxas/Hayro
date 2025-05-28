@@ -80,12 +80,8 @@ fn resolve_pages<'a>(
 
     for dict in kids.iter::<Dict>() {
         match dict.get::<Name>(TYPE)? {
-            PAGES => {
-                resolve_pages(dict, entries, ctx.clone(), resources.clone())?
-            },
-            PAGE => {
-                entries.push(Page::new(dict, &ctx, resources.clone()))
-            },
+            PAGES => resolve_pages(dict, entries, ctx.clone(), resources.clone())?,
+            PAGE => entries.push(Page::new(dict, &ctx, resources.clone())),
             _ => return None,
         }
     }

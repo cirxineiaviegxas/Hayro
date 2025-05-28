@@ -5,8 +5,8 @@ edition = "2024"
 autotests = false
 
 [dependencies]
-hayro-syntax = { workspace = true }
-hayro-interpret = { workspace = true }
+hayro-syntax = { path = "../hayro-syntax", default-features = false }
+hayro-interpret = { path = "../hayro-interpret", default-features = false }
 kurbo = { workspace = true }
 peniko = { workspace = true }
 image = "0.25.6"
@@ -14,6 +14,9 @@ once_cell = "1.21.3"
 bytemuck = "1.23.0"
 smallvec = { workspace = true }
 
+[features]
+default = ["jpeg2000"]
+jpeg2000 = ["hayro-interpret/jpeg2000"]
 
 [[test]]
 name = "tests"

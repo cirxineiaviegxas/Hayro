@@ -1,0 +1,199 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+    overflow: hidden;
+}
+
+#app {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#file-selector {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#drop-zone {
+    width: 400px;
+    height: 300px;
+    border: 3px dashed rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+#drop-zone:hover {
+    border-color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+#drop-zone.dragover {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.2);
+    transform: scale(1.1);
+}
+
+.drop-content {
+    text-align: center;
+    color: white;
+}
+
+.drop-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.drop-content p {
+    font-size: 1.5rem;
+    margin: 0;
+    font-weight: 300;
+    opacity: 0.9;
+}
+
+#viewer {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2c2c2c;
+    position: relative;
+    overflow: auto;
+}
+
+#pdf-canvas {
+    max-width: 90vw;
+    max-height: 90vh;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+#floating-controls {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 50px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+#floating-controls button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#floating-controls button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+#floating-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#floating-controls button:disabled:hover {
+    background: transparent;
+    transform: none;
+}
+
+#page-input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: white;
+    width: 50px;
+    height: 30px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0 8px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+#page-input:focus {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+#page-input::-webkit-outer-spin-button,
+#page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#page-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+#page-info, #zoom-info {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 50px;
+    text-align: center;
+}
+
+.separator {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#zoom-out, #zoom-in {
+    font-weight: bold;
+    font-size: 20px;
+}
+
+/* Scrollbar styling for viewer */
+#viewer::-webkit-scrollbar {
+    width: 8px;
+}
+
+#viewer::-webkit-scrollbar-track {
+    background: #2c2c2c;
+}
+
+#viewer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+#viewer::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+} 

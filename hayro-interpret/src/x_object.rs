@@ -25,7 +25,7 @@ impl<'a> XObject<'a> {
         let dict = stream.dict();
         match dict.get::<Name>(SUBTYPE).unwrap() {
             IMAGE => Some(Self::ImageXObject(ImageXObject::new(stream)?)),
-            FORM => Some(Self::FormXObject(FormXObject::new(stream))),
+            FORM => Some(Self::FormXObject(FormXObject::new(stream)?)),
             _ => unimplemented!(),
         }
     }
@@ -39,10 +39,10 @@ pub struct FormXObject<'a> {
 }
 
 impl<'a> FormXObject<'a> {
-    fn new(stream: &Stream<'a>) -> Self {
+    fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
 
-        let decoded = stream.decoded().unwrap();
+        let decoded = stream.decoded()?;
         let resources = dict.get::<Dict>(RESOURCES).unwrap_or_default();
 
         let matrix = Affine::new(
@@ -51,12 +51,12 @@ impl<'a> FormXObject<'a> {
         );
         let bbox = dict.get::<[f32; 4]>(BBOX).unwrap();
 
-        Self {
+        Some(Self {
             decoded,
             matrix,
             bbox,
             resources,
-        }
+        })
     }
 }
 
@@ -245,22 +245,21 @@ impl<'a> ImageXObject<'a> {
                 })
                 .collect()
         } else {
-            let s_mask = if let Some(s_mask) = self
-                .dict
-                .get::<Stream>(SMASK){
+            let s_mask = if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
                 ImageXObject::new(&s_mask).map(|s| s.decode_raw())
-            }   else if let Some(mask) = self.dict.get::<Stream>(MASK) {
+            } else if let Some(mask) = self.dict.get::<Stream>(MASK) {
                 if let Some(obj) = ImageXObject::new(&mask) {
                     let mut mask_data = obj.decode_raw();
-                    
+
                     // TODO: This is a temporary hack, we should implement resized masks
                     // properly in hayro-render
-                    
+
                     // Mask doesn't necessarily have the same dimensions.
                     if obj.width != self.width || obj.height != self.height {
                         let x_factor = obj.width as f32 / self.width as f32;
                         let y_factor = obj.height as f32 / self.height as f32;
-                        let mut output = Vec::with_capacity(self.width as usize * self.height as usize);
+                        let mut output =
+                            Vec::with_capacity(self.width as usize * self.height as usize);
                         for y in 0..self.height {
                             let y = (y as f32 * y_factor).floor() as u32;
                             for x in 0..self.width {
@@ -269,21 +268,22 @@ impl<'a> ImageXObject<'a> {
                                 output.push(mask_data[index as usize]);
                             }
                         }
-                        
+
                         mask_data = output;
                     }
-                    
+
                     mask_data = mask_data.iter().map(|v| 1.0 - *v).collect();
-                    
+
                     Some(mask_data)
-                }   else {
+                } else {
                     None
                 }
-            }   else {
+            } else {
                 None
             };
-            
-            let s_mask = s_mask.unwrap_or_else(|| vec![1.0; self.width as usize * self.height as usize]);
+
+            let s_mask =
+                s_mask.unwrap_or_else(|| vec![1.0; self.width as usize * self.height as usize]);
 
             self.decode_raw()
                 .chunks(self.color_space.components() as usize)
