@@ -24,7 +24,7 @@ impl PdfViewer {
     pub fn load_pdf(&mut self, data: &[u8]) -> Result<(), JsValue> {
         // Store the data
         let pdf = Pdf::new(Arc::new(data.to_vec()))
-            .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+            .unwrap();
         self.total_pages = pdf.pages().unwrap().pages.len();
         self.pdf = Some(pdf);
 
