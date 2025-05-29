@@ -22,7 +22,7 @@ pub(crate) fn root_xref<'a>(data: &'a Data) -> Option<XRef<'a>> {
     let pos = find_last_xref_pos(data.get())?;
     populate_xref_impl(data.get(), pos, &mut xref_map)?;
 
-    let xref = XRef::new(data, xref_map);
+    let xref = XRef::new(data, xref_map, false);
 
     Some(xref)
 }
@@ -56,7 +56,7 @@ pub(crate) fn fallback<'a>(data: &'a Data) -> Option<(XRef<'a>, Dict<'a>)> {
 
     if let Some(trailer_offset) = trailer_offset {
         warn!("rebuild xref table with {} entries", xref_map.len());
-        let xref = XRef::new(data, xref_map);
+        let xref = XRef::new(data, xref_map, true);
 
         let mut r = Reader::new(data.get());
         r.jump(trailer_offset);
@@ -75,11 +75,11 @@ pub(crate) fn fallback<'a>(data: &'a Data) -> Option<(XRef<'a>, Dict<'a>)> {
 pub struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
-    fn new(data: &'a Data, xref_map: XrefMap) -> Self {
+    fn new(data: &'a Data, xref_map: XrefMap, repaired: bool) -> Self {
         Self(Inner::Some(Arc::new(RwLock::new(SomeRepr {
             data,
             xref_map,
-            repaired: false,
+            repaired,
         }))))
     }
 
