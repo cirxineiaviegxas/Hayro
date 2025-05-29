@@ -223,7 +223,7 @@ pub(crate) struct BitChunk {
 }
 
 impl BitChunk {
-    pub fn bits(&self) -> &[u16] {
+    fn bits(&self) -> &[u16] {
         &self.bits
     }
 
