@@ -186,6 +186,9 @@ use crate::run_test;
 #[test] fn image_jbig2_15() { run_test("image_jbig2_15", true, None); }
 #[test] fn image_jbig2_16() { run_test("image_jbig2_16", true, None); }
 #[test] fn xref_invalid_offsets() { run_test("xref_invalid_offsets", false, None); }
+#[test] fn pdfbox_3562() { run_test("pdfbox-3562", true, None); }
+#[test] fn pdfbox_3647() { run_test("pdfbox-3647", true, None); }
+#[test] fn pdfbox_2217() { run_test("pdfbox-2217", true, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }
