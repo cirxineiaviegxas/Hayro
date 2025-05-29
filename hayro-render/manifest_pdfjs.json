@@ -12,6 +12,10 @@
     "file": "pdfs/jbig2_symbol_offset.pdf"
   },
   {
+    "id": "issue14297",
+    "file": "pdfs/issue14297.pdf"
+  },
+  {
     "id": "simpletype3font",
     "file": "pdfs/simpletype3font.pdf"
   },
@@ -34,6 +38,14 @@
   {
     "id": "cmykjpeg",
     "file": "pdfs/cmykjpeg.pdf"
+  },
+  {
+    "id": "issue840",
+    "file": "pdfs/issue840.pdf"
+  },
+  {
+    "id": "type4psfunc",
+    "file": "pdfs/type4psfunc.pdf"
   },
   {
     "id": "issue2642",

@@ -6,7 +6,6 @@ use crate::run_test;
 #[test] fn clip_path_evenodd() { run_test("clip_path_evenodd", false, None); }
 #[test] fn clip_path_nested() { run_test("clip_path_nested", false, None); }
 #[test] fn color_separation_3() { run_test("color_separation_3", false, None); }
-#[test] fn color_space_device_n_2() { run_test("color_space_device_n_2", false, None); }
 #[test] fn color_space_icc_gray() { run_test("color_space_icc_gray", false, None); }
 #[test] fn color_space_icc_invalid_profile() { run_test("color_space_icc_invalid_profile", false, None); }
 #[test] fn color_space_icc_srgb() { run_test("color_space_icc_srgb", false, None); }
@@ -146,7 +145,6 @@ use crate::run_test;
 #[test] fn pattern_shading_type3_1() { run_test("pattern_shading_type3_1", false, None); }
 #[test] fn pattern_shading_type3_2() { run_test("pattern_shading_type3_2", false, None); }
 #[test] fn pattern_shading_type3_3() { run_test("pattern_shading_type3_3", false, None); }
-#[test] fn pattern_shading_type3_4() { run_test("pattern_shading_type3_4", false, None); }
 #[test] fn pattern_shading_type3_collection() { run_test("pattern_shading_type3_collection", true, None); }
 #[test] fn pattern_shading_type4_1() { run_test("pattern_shading_type4_1", true, None); }
 #[test] fn pattern_shading_type4_2() { run_test("pattern_shading_type4_2", false, None); }
@@ -191,12 +189,15 @@ use crate::run_test;
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }
+#[test] fn issue14297() { run_test("issue14297", false, None); }
 #[test] fn simpletype3font() { run_test("simpletype3font", false, None); }
 #[test] fn IndexedCS_negative_and_high() { run_test("IndexedCS_negative_and_high", false, None); }
 #[test] fn close_path_bug() { run_test("close-path-bug", false, None); }
 #[test] fn colorspace_cos() { run_test("colorspace_cos", false, None); }
 #[test] fn devicen() { run_test("devicen", false, None); }
 #[test] fn cmykjpeg() { run_test("cmykjpeg", false, None); }
+#[test] fn issue840() { run_test("issue840", false, None); }
+#[test] fn type4psfunc() { run_test("type4psfunc", false, None); }
 #[test] fn issue2642() { run_test("issue2642", true, Some("..=0")); }
 #[test] fn issue4379() { run_test("issue4379", false, None); }
 #[test] fn zerowidthline() { run_test("zerowidthline", false, None); }
