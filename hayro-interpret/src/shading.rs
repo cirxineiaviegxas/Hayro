@@ -1,7 +1,7 @@
 /// PDF shadings.
 use crate::color::{ColorComponents, ColorSpace};
 use hayro_syntax::bit::{BitReader, BitSize};
-use hayro_syntax::function::{Function, interpolate};
+use hayro_syntax::function::{Function, Values, interpolate};
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
@@ -12,8 +12,38 @@ use hayro_syntax::object::dict::keys::{
 use hayro_syntax::object::rect::Rect;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Point};
+use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
+
+/// The function supplied to a shading.
+#[derive(Debug, Clone)]
+pub enum ShadingFunction {
+    /// A single function, which should be used to evaluate all components of the shading.
+    Single(Function),
+    /// Multiple functions, one for each color component.
+    Multiple(SmallVec<[Function; 4]>),
+}
+
+impl ShadingFunction {
+    /// Evaluate the shading function.
+    pub fn eval(&self, input: &Values) -> Option<Values> {
+        match self {
+            ShadingFunction::Single(s) => s.eval(input.clone()),
+            ShadingFunction::Multiple(m) => {
+                // 1-in, 1-out function for each color component.
+
+                let mut out = smallvec![];
+
+                for func in m {
+                    out.push(*func.eval(input.clone())?.get(0)?);
+                }
+
+                Some(out)
+            }
+        }
+    }
+}
 
 /// A type of shading
 #[derive(Debug)]
@@ -25,7 +55,7 @@ pub enum ShadingType {
         /// A transform to apply to the shading.
         matrix: Affine,
         /// The function that should be used to evaluate the shading.
-        function: Function,
+        function: ShadingFunction,
     },
     /// A radial-axial shading.
     RadialAxial {
@@ -40,7 +70,7 @@ pub enum ShadingType {
         /// The domain of the shading.
         domain: [f32; 2],
         /// The function forming the basis of the shading.
-        function: Function,
+        function: ShadingFunction,
         /// The extends in the left/right direction of the shading.
         extend: [bool; 2],
         /// Whether the shading is axial or radial.
@@ -51,14 +81,14 @@ pub enum ShadingType {
         /// The triangles making up the shading.
         triangles: Vec<Triangle>,
         /// An optional function used for calculating the sampled color values.
-        function: Option<Function>,
+        function: Option<ShadingFunction>,
     },
     /// A coons-patch-mesh shading.
     CoonsPatchMesh {
         /// The patches that make up the shading.
         patches: Vec<CoonsPatch>,
         /// An optional function used for calculating the sampled color values.
-        function: Option<Function>,
+        function: Option<ShadingFunction>,
     },
 }
 
@@ -79,6 +109,8 @@ impl Shading {
     pub fn new(dict: &Dict, stream: Option<&Stream>) -> Option<Self> {
         let shading_num = dict.get::<u8>(SHADING_TYPE)?;
 
+        let color_space = ColorSpace::new(dict.get(COLORSPACE)?);
+
         let shading_type = match shading_num {
             1 => {
                 let domain = dict.get::<[f32; 4]>(DOMAIN).unwrap_or([0.0, 1.0, 0.0, 1.0]);
@@ -86,10 +118,8 @@ impl Shading {
                     .get::<[f64; 6]>(MATRIX)
                     .map(|f| Affine::new(f))
                     .unwrap_or_default();
-                // TODO: Array of functions is permissible as well.
-                let function = dict
-                    .get::<Object>(FUNCTION)
-                    .and_then(|f| Function::new(&f))?;
+                let function = read_function(dict, &color_space)?;
+
                 ShadingType::FunctionBased {
                     domain,
                     matrix,
@@ -98,10 +128,7 @@ impl Shading {
             }
             2 | 3 => {
                 let domain = dict.get::<[f32; 2]>(DOMAIN).unwrap_or([0.0, 1.0]);
-                // TODO: Array of functions is permissible as well.
-                let function = dict
-                    .get::<Object>(FUNCTION)
-                    .and_then(|f| Function::new(&f))?;
+                let function = read_function(dict, &color_space)?;
                 let extend = dict.get::<[bool; 2]>(EXTEND).unwrap_or([false, false]);
                 let coords = if shading_num == 2 {
                     let read = dict.get::<[f32; 4]>(COORDS)?;
@@ -126,7 +153,7 @@ impl Shading {
                 let bp_coord = dict.get::<u8>(BITS_PER_COORDINATE)?;
                 let bp_comp = dict.get::<u8>(BITS_PER_COMPONENT)?;
                 let bpf = dict.get::<u8>(BITS_PER_FLAG)?;
-                let function = dict.get::<Object>(FUNCTION).and_then(|o| Function::new(&o));
+                let function = read_function(dict, &color_space);
                 let decode = dict.get::<Array>(DECODE)?.iter::<f32>().collect::<Vec<_>>();
 
                 let triangles = read_free_form_triangles(
@@ -134,7 +161,7 @@ impl Shading {
                     bpf,
                     bp_coord,
                     bp_comp,
-                    function.as_ref(),
+                    function.is_some(),
                     &decode,
                 )?;
 
@@ -148,7 +175,7 @@ impl Shading {
                 let stream_data = stream.decoded()?;
                 let bp_coord = dict.get::<u8>(BITS_PER_COORDINATE)?;
                 let bp_comp = dict.get::<u8>(BITS_PER_COMPONENT)?;
-                let function = dict.get::<Object>(FUNCTION).and_then(|o| Function::new(&o));
+                let function = read_function(dict, &color_space);
                 let decode = dict.get::<Array>(DECODE)?.iter::<f32>().collect::<Vec<_>>();
                 let vertices_per_row = dict.get::<u32>(VERTICES_PER_ROW)?;
 
@@ -156,7 +183,7 @@ impl Shading {
                     stream_data.as_ref(),
                     bp_coord,
                     bp_comp,
-                    function.as_ref(),
+                    function.is_some(),
                     vertices_per_row,
                     &decode,
                 )?;
@@ -172,7 +199,7 @@ impl Shading {
                 let bp_coord = dict.get::<u8>(BITS_PER_COORDINATE)?;
                 let bp_comp = dict.get::<u8>(BITS_PER_COMPONENT)?;
                 let bpf = dict.get::<u8>(BITS_PER_FLAG)?;
-                let function = dict.get::<Object>(FUNCTION).and_then(|o| Function::new(&o));
+                let function = read_function(dict, &color_space);
                 let decode = dict.get::<Array>(DECODE)?.iter::<f32>().collect::<Vec<_>>();
 
                 let patches = read_coons_patch_mesh(
@@ -180,7 +207,7 @@ impl Shading {
                     bpf,
                     bp_coord,
                     bp_comp,
-                    function.as_ref(),
+                    function.is_some(),
                     &decode,
                 )?;
 
@@ -189,7 +216,6 @@ impl Shading {
             _ => return None,
         };
 
-        let color_space = ColorSpace::new(dict.get(COLORSPACE)?);
         let bbox = dict.get::<Rect>(BBOX);
         let background = dict
             .get::<Array>(BACKGROUND)
@@ -239,7 +265,7 @@ fn read_free_form_triangles(
     bpf: u8,
     bp_cord: u8,
     bp_comp: u8,
-    function: Option<&Function>,
+    has_function: bool,
     decode: &[f32],
 ) -> Option<Vec<Triangle>> {
     let bpf = BitSize::from_u8(bpf)?;
@@ -274,7 +300,7 @@ fn read_free_form_triangles(
         )
     };
 
-    let read_single = |reader: &mut BitReader, has_function: bool| -> Option<TriangleVertex> {
+    let read_single = |reader: &mut BitReader| -> Option<TriangleVertex> {
         let flag = reader.read(bpf)?;
         let x = interpolate_coord(reader.read(bp_cord)?, x_min, x_max);
         let y = interpolate_coord(reader.read(bp_cord)?, y_min, y_max);
@@ -314,13 +340,13 @@ fn read_free_form_triangles(
     let mut c = None;
 
     loop {
-        let Some(first) = read_single(&mut reader, function.is_some()) else {
+        let Some(first) = read_single(&mut reader) else {
             break;
         };
 
         if first.flag == 0 {
-            let second = read_single(&mut reader, function.is_some())?;
-            let third = read_single(&mut reader, function.is_some())?;
+            let second = read_single(&mut reader)?;
+            let third = read_single(&mut reader)?;
 
             a = Some(first.clone());
             b = Some(second.clone());
@@ -348,7 +374,7 @@ fn read_lattice_triangles(
     data: &[u8],
     bp_cord: u8,
     bp_comp: u8,
-    function: Option<&Function>,
+    has_function: bool,
     vertices_per_row: u32,
     decode: &[f32],
 ) -> Option<Vec<Triangle>> {
@@ -383,7 +409,7 @@ fn read_lattice_triangles(
         )
     };
 
-    let read_single = |reader: &mut BitReader, has_function: bool| -> Option<TriangleVertex> {
+    let read_single = |reader: &mut BitReader| -> Option<TriangleVertex> {
         let x = interpolate_coord(reader.read(bp_cord)?, x_min, x_max);
         let y = interpolate_coord(reader.read(bp_cord)?, y_min, y_max);
 
@@ -421,7 +447,7 @@ fn read_lattice_triangles(
         let mut single_row = vec![];
 
         for _ in 0..vertices_per_row {
-            let Some(next) = read_single(&mut reader, function.is_some()) else {
+            let Some(next) = read_single(&mut reader) else {
                 break 'outer;
             };
 
@@ -457,7 +483,7 @@ fn read_coons_patch_mesh(
     bpf: u8,
     bp_coord: u8,
     bp_comp: u8,
-    function: Option<&Function>,
+    has_function: bool,
     decode: &[f32],
 ) -> Option<Vec<CoonsPatch>> {
     let bpf = BitSize::from_u8(bpf)?;
@@ -491,7 +517,7 @@ fn read_coons_patch_mesh(
     };
 
     // Helper to read a single color (or t value)
-    let read_colors = |reader: &mut BitReader, has_function: bool| -> Option<ColorComponents> {
+    let read_colors = |reader: &mut BitReader| -> Option<ColorComponents> {
         let mut colors = smallvec![];
         if has_function {
             colors.push(interpolate_comp(
@@ -528,7 +554,7 @@ fn read_coons_patch_mesh(
                 }
 
                 for i in 0..4 {
-                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                    colors[i] = read_colors(&mut reader)?;
                 }
 
                 prev_patch = Some(CoonsPatch {
@@ -552,7 +578,7 @@ fn read_coons_patch_mesh(
                 }
 
                 for i in 2..4 {
-                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                    colors[i] = read_colors(&mut reader)?;
                 }
 
                 prev_patch = Some(CoonsPatch {
@@ -576,7 +602,7 @@ fn read_coons_patch_mesh(
                 }
 
                 for i in 2..4 {
-                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                    colors[i] = read_colors(&mut reader)?;
                 }
 
                 prev_patch = Some(CoonsPatch {
@@ -600,7 +626,7 @@ fn read_coons_patch_mesh(
                 }
 
                 for i in 2..4 {
-                    colors[i] = read_colors(&mut reader, function.is_some())?;
+                    colors[i] = read_colors(&mut reader)?;
                 }
 
                 prev_patch = Some(CoonsPatch {
@@ -617,4 +643,23 @@ fn read_coons_patch_mesh(
         });
     }
     Some(patches)
+}
+
+fn read_function(dict: &Dict, color_space: &ColorSpace) -> Option<ShadingFunction> {
+    if let Some(arr) = dict.get::<Array>(FUNCTION) {
+        let arr: Option<SmallVec<_>> = arr.iter::<Object>().map(|o| Function::new(&o)).collect();
+        let arr = arr?;
+
+        if arr.len() != color_space.num_components() as usize {
+            warn!("function array of shading has wrong size");
+
+            return None;
+        }
+
+        Some(ShadingFunction::Multiple(arr))
+    } else if let Some(obj) = dict.get::<Object>(FUNCTION) {
+        Some(ShadingFunction::Single(Function::new(&obj)?))
+    } else {
+        None
+    }
 }

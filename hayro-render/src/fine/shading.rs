@@ -44,7 +44,7 @@ impl<'a> FunctionShadingFiller<'a> {
                 let out = self
                     .shading
                     .function
-                    .eval(smallvec![pos.x as f32, pos.y as f32])
+                    .eval(&smallvec![pos.x as f32, pos.y as f32])
                     .unwrap();
                 // TODO: CLamp out-of-range values.
                 let color = self.shading.color_space.to_rgba(&out, 1.0);
@@ -148,7 +148,7 @@ impl<'a> RadialAxialShadingFiller<'a> {
 
             let t = t0 + (t1 - t0) * x;
 
-            let val = self.shading.function.eval(smallvec![t]).unwrap();
+            let val = self.shading.function.eval(&smallvec![t]).unwrap();
 
             let color = self.shading.color_space.to_rgba(&val, 1.0);
             pixel.copy_from_slice(&PremulColor::from_alpha_color(color).0);

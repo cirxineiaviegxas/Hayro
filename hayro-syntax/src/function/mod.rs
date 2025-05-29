@@ -33,9 +33,7 @@ enum FunctionType {
 
 /// A PDF function.
 #[derive(Debug, Clone)]
-pub struct Function {
-    function_type: Arc<FunctionType>,
-}
+pub struct Function(Arc<FunctionType>);
 
 impl Function {
     /// Create a new function.
@@ -50,14 +48,12 @@ impl Function {
             _ => return None,
         };
 
-        Some(Self {
-            function_type: Arc::new(function_type),
-        })
+        Some(Self(Arc::new(function_type)))
     }
 
     /// Evaluate the function with the given input.
     pub fn eval(&self, input: Values) -> Option<Values> {
-        match self.function_type.as_ref() {
+        match self.0.as_ref() {
             FunctionType::Type0(t0) => t0.eval(input),
             FunctionType::Type2(t2) => Some(t2.eval(*input.get(0)?)),
             FunctionType::Type3(t3) => t3.eval(*input.get(0)?),

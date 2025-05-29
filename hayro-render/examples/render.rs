@@ -11,7 +11,7 @@ fn main() {
     let data = Arc::new(file);
     let pdf = Pdf::new(data).unwrap();
 
-    let pixmaps = render_png(&pdf, 1.0, None);
+    let pixmaps = render_png(&pdf, 5.0, None);
 
     std::fs::write("out.png", &pixmaps[0]).unwrap();
 }

@@ -464,7 +464,7 @@ pub fn interpret<'a, 'b>(
                     );
 
                     context.restore_state();
-                }   else {
+                } else {
                     warn!("failed to process shading");
                 }
             }

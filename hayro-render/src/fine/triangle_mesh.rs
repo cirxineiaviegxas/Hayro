@@ -66,7 +66,7 @@ impl<'a> TriangleMeshShadingFiller<'a> {
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
             if let Some(color) = self.get_color() {
                 let color = if let Some(function) = &self.shading.function {
-                    let val = function.eval(color.to_smallvec()).unwrap();
+                    let val = function.eval(&color.to_smallvec()).unwrap();
                     self.shading.color_space.to_rgba(&val, 1.0)
                 } else {
                     self.shading.color_space.to_rgba(&color, 1.0)

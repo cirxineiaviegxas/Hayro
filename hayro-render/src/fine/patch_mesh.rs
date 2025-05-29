@@ -40,7 +40,7 @@ impl<'a> PatchMeshShadingFiller<'a> {
                     let t_or_color = bilinear_color(patch, u, v);
 
                     let final_color = if let Some(function) = &self.shading.function {
-                        let val = function.eval(t_or_color.to_smallvec()).unwrap();
+                        let val = function.eval(&t_or_color.to_smallvec()).unwrap();
                         self.shading.color_space.to_rgba(&val, 1.0)
                     } else {
                         self.shading.color_space.to_rgba(&t_or_color, 1.0)

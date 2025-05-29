@@ -71,6 +71,13 @@
     "file": "pdfs/helloworld-bad.pdf"
   },
   {
+    "id": "issue2006",
+    "file": "pdfs/issue2006.link",
+    "md5": "71ec73831ece9b508ad20efa6ff28642",
+    "link": true,
+    "last_page": 0
+  },
+  {
     "id": "bigboundingbox",
     "file": "pdfs/bigboundingbox.pdf"
   },

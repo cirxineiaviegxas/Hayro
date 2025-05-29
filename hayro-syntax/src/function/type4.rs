@@ -884,15 +884,13 @@ mod tests {
     fn domain() {
         let procedure = parse_procedure(b"{  }").unwrap();
 
-        let type4 = Function {
-            function_type: Arc::new(FunctionType::Type4(Type4 {
-                program: procedure,
-                clamper: Clamper {
-                    domain: smallvec![(-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)],
-                    range: None,
-                },
-            })),
-        };
+        let type4 = Function(Arc::new(FunctionType::Type4(Type4 {
+            program: procedure,
+            clamper: Clamper {
+                domain: smallvec![(-5.0, 5.0), (-5.0, 5.0), (-5.0, 5.0)],
+                range: None,
+            },
+        })));
 
         let input = smallvec![-10.0, -2.0, 6.0];
         let res = type4.eval(input).unwrap();

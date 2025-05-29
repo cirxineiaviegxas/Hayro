@@ -7,8 +7,7 @@ use crate::paint::{Image, IndexedPaint, Paint};
 use crate::pixmap::Pixmap;
 use hayro_interpret::color::ColorSpace;
 use hayro_interpret::pattern::ShadingPattern;
-use hayro_interpret::shading::{CoonsPatch, ShadingType, Triangle};
-use hayro_syntax::function::Function;
+use hayro_interpret::shading::{CoonsPatch, ShadingFunction, ShadingType, Triangle};
 use kurbo::{Affine, Point, Vec2};
 use peniko::ImageQuality;
 use peniko::color::palette::css::TRANSPARENT;
@@ -130,7 +129,7 @@ fn encode_axial_shading(
     transform: Affine,
     coords: [f32; 6],
     domain: [f32; 2],
-    function: &Function,
+    function: &ShadingFunction,
     extend: [bool; 2],
     is_axial: bool,
 ) -> Paint {
@@ -203,7 +202,7 @@ fn encode_function_shading(
     transform: Affine,
     domain: &[f32; 4],
     matrix: &Affine,
-    function: &Function,
+    function: &ShadingFunction,
 ) -> Paint {
     let idx = paints.len();
 
@@ -246,7 +245,7 @@ fn encode_function_shading(
 pub struct EncodedFunctionShading {
     pub domain: kurbo::Rect,
     pub inverse_transform: Affine,
-    pub function: Function,
+    pub function: ShadingFunction,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
     pub color_space: ColorSpace,
@@ -256,7 +255,7 @@ pub struct EncodedFunctionShading {
 #[derive(Debug)]
 pub struct EncodedTriangleMeshShading {
     pub triangles: Vec<Triangle>,
-    pub function: Option<Function>,
+    pub function: Option<ShadingFunction>,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
     pub color_space: ColorSpace,
@@ -273,7 +272,7 @@ pub enum RadialAxialParams {
 #[derive(Debug)]
 pub struct EncodedRadialAxialShading {
     pub inverse_transform: Affine,
-    pub function: Function,
+    pub function: ShadingFunction,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
     pub color_space: ColorSpace,
@@ -289,7 +288,7 @@ pub struct EncodedRadialAxialShading {
 #[derive(Debug)]
 pub struct EncodedPatchMeshShading {
     pub patches: Vec<CoonsPatch>,
-    pub function: Option<Function>,
+    pub function: Option<ShadingFunction>,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
     pub color_space: ColorSpace,

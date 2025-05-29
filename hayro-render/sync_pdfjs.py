@@ -58,6 +58,7 @@ class PDFJSSync:
             "operator-in-TJ-array",
             "issue4379",
             "zerowidthline",
+            "issue2006",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
