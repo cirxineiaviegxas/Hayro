@@ -825,5 +825,9 @@
     "file": "pdfs/image_jbig2_16.link",
     "md5": "ffef0c24bed7abb258082a85b891f753",
     "link": true
+  },
+  {
+    "id": "xref_invalid_offsets",
+    "file": "pdfs/xref_invalid_offsets.pdf"
   }
 ]

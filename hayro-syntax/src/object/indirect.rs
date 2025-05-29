@@ -1,6 +1,6 @@
 use crate::file::xref::XRef;
 use crate::object::{ObjectIdentifier, ObjectLike};
-use crate::reader::{Readable, Reader};
+use crate::reader::{Readable, Reader, Skippable};
 use crate::util::OptionLog;
 
 pub(crate) struct IndirectObject<T> {
@@ -27,9 +27,25 @@ where
         r.skip_white_spaces_and_comments();
         let inner = r.read_with_xref::<T>(xref)?;
         r.skip_white_spaces_and_comments();
-        r.forward_tag(b"endobj")
-            .warn_none("missing `endobj` keyword");
+        // We are lenient and don't require it.
+        r.forward_tag(b"endobj");
 
         Some(Self { id, inner })
+    }
+}
+
+impl<T> Skippable for IndirectObject<T>
+where
+    T: Skippable,
+{
+    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+        r.skip_plain::<ObjectIdentifier>()?;
+        r.skip_white_spaces_and_comments();
+        r.skip_non_plain::<T>()?;
+        r.skip_white_spaces_and_comments();
+        // We are lenient and don't require it.
+        r.forward_tag(b"endobj");
+
+        Some(())
     }
 }

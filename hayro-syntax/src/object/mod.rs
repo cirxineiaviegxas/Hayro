@@ -218,6 +218,18 @@ impl Readable<'_> for ObjectIdentifier {
     }
 }
 
+impl Skippable for ObjectIdentifier {
+    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+        r.skip_plain::<i32>()?;
+        r.skip_white_spaces_and_comments();
+        r.skip_plain::<i32>()?;
+        r.skip_white_spaces_and_comments();
+        r.forward_tag(b"obj")?;
+
+        Some(())
+    }
+}
+
 /// A convenience function that extracts a dict and a stream from an object.
 /// If the object is just a dictionary, it will return `None` for the stream.
 /// If the object is a stream, it will return it's dictionary as well as the stream

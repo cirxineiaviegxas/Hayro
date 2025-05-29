@@ -30,7 +30,25 @@ pub(crate) fn root_xref<'a>(data: &'a Data) -> Option<XRef<'a>> {
 /// Try to manually parse the PDF to build an xref table and trailer dictionary.
 pub(crate) fn fallback<'a>(data: &'a Data) -> Option<(XRef<'a>, Dict<'a>)> {
     warn!("xref table was invalid, trying to manually build xref table");
+    let (xref_map, trailer_offset) = fallback_xref_map(data);
 
+    if let Some(trailer_offset) = trailer_offset {
+        warn!("rebuild xref table with {} entries", xref_map.len());
+        let xref = XRef::new(data, xref_map, true);
+
+        let mut r = Reader::new(data.get());
+        r.jump(trailer_offset);
+        let dict = r.read::<false, Dict>(&xref)?;
+
+        Some((xref, dict))
+    } else {
+        warn!("couldn't find trailer dictionary, failed to rebuild xref table");
+
+        None
+    }
+}
+
+pub(crate) fn fallback_xref_map(data: &Data) -> (XrefMap, Option<usize>) {
     let mut xref_map = FxHashMap::default();
     let mut trailer_offset = None;
 
@@ -54,20 +72,7 @@ pub(crate) fn fallback<'a>(data: &'a Data) -> Option<(XRef<'a>, Dict<'a>)> {
         }
     }
 
-    if let Some(trailer_offset) = trailer_offset {
-        warn!("rebuild xref table with {} entries", xref_map.len());
-        let xref = XRef::new(data, xref_map, true);
-
-        let mut r = Reader::new(data.get());
-        r.jump(trailer_offset);
-        let dict = r.read::<false, Dict>(&xref)?;
-
-        Some((xref, dict))
-    } else {
-        warn!("couldn't find trailer dictionary, failed to rebuild xref table");
-
-        None
-    }
+    (xref_map, trailer_offset)
 }
 
 /// An xref table.
@@ -106,6 +111,19 @@ impl<'a> XRef<'a> {
         }
     }
 
+    pub(crate) fn repair(&self) {
+        let Inner::Some(s) = &self.0 else {
+            unreachable!();
+        };
+
+        let mut locked = s.write().unwrap();
+        assert!(!locked.repaired);
+
+        let (xref_map, _) = fallback_xref_map(locked.data);
+        locked.xref_map = xref_map;
+        locked.repaired = true;
+    }
+
     pub(crate) fn get<T>(&self, id: ObjectIdentifier) -> Option<T>
     where
         T: ObjectLike<'a>,
@@ -114,7 +132,7 @@ impl<'a> XRef<'a> {
             return None;
         };
 
-        let locked = s.read().unwrap();
+        let mut locked = s.read().unwrap();
 
         let mut r = Reader::new(locked.data.get());
 
@@ -126,15 +144,40 @@ impl<'a> XRef<'a> {
             EntryType::Normal(offset) => {
                 r.jump(offset);
 
-                let obj = r.read_with_xref::<IndirectObject<T>>(self)?;
+                let mut broken_xref = false;
 
-                if obj.id() != &id {
-                    error!("xref table is broken");
+                if let Some(object) = r.read_with_xref::<IndirectObject<T>>(self) {
+                    if object.id() != &id {
+                        broken_xref = true;
+                    } else {
+                        return Some(object.get());
+                    }
+                } else {
+                    // There is a valid object at the offset, it's just not of the type the caller
+                    // expected, which is fine.
+                    if r.skip_non_plain::<IndirectObject<Object>>().is_some() {
+                        return None;
+                    } else {
+                        broken_xref = true;
+                    }
+                };
 
-                    return None;
+                if locked.repaired {
+                    error!(
+                        "attempt was made at repairing xref, but object {:?} still couldn't be read",
+                        id
+                    );
+
+                    None
+                } else {
+                    warn!("broken xref, attempting to repair");
+
+                    drop(locked);
+                    self.repair();
+
+                    // Now try reading again.
+                    self.get::<T>(id)
                 }
-
-                Some(obj.get())
             }
             EntryType::ObjStream(id, index) => {
                 // Generation number is implicitly 0.
