@@ -23,8 +23,7 @@ impl PdfViewer {
     #[wasm_bindgen]
     pub fn load_pdf(&mut self, data: &[u8]) -> Result<(), JsValue> {
         // Store the data
-        let pdf = Pdf::new(Arc::new(data.to_vec()))
-            .unwrap();
+        let pdf = Pdf::new(Arc::new(data.to_vec())).unwrap();
         self.total_pages = pdf.pages().unwrap().pages.len();
         self.pdf = Some(pdf);
 

@@ -55,7 +55,10 @@ impl ColorSpaceType {
 
                     return ICCProfile::new(icc_stream.decoded()?.as_ref(), num_components)
                         .map(|p| ColorSpaceType::ICCBased(p))
-                        .or_else(|| dict.get::<Object>(ALTERNATE).map(|o| ColorSpaceType::new(o)))
+                        .or_else(|| {
+                            dict.get::<Object>(ALTERNATE)
+                                .map(|o| ColorSpaceType::new(o))
+                        })
                         .or_else(|| match dict.get::<u8>(N) {
                             Some(1) => Some(ColorSpaceType::DeviceGray),
                             Some(3) => Some(ColorSpaceType::DeviceRgb),
@@ -77,7 +80,9 @@ impl ColorSpaceType {
                     return Some(ColorSpaceType::Lab(Lab::new(&lab_dict)?));
                 }
                 INDEXED => return Some(ColorSpaceType::Indexed(Indexed::new(&color_array)?)),
-                SEPARATION => return Some(ColorSpaceType::Separation(Separation::new(&color_array)?)),
+                SEPARATION => {
+                    return Some(ColorSpaceType::Separation(Separation::new(&color_array)?));
+                }
                 DEVICE_N => return Some(ColorSpaceType::DeviceN(DeviceN::new(&color_array)?)),
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
@@ -91,9 +96,9 @@ impl ColorSpaceType {
 
     fn new_from_name(name: Name) -> Option<Self> {
         match name {
-            DEVICE_RGB | RGB =>Some(ColorSpaceType::DeviceRgb),
-            DEVICE_GRAY | G =>Some(ColorSpaceType::DeviceGray),
-            DEVICE_CMYK | CMYK =>Some(ColorSpaceType::DeviceCmyk),
+            DEVICE_RGB | RGB => Some(ColorSpaceType::DeviceRgb),
+            DEVICE_GRAY | G => Some(ColorSpaceType::DeviceGray),
+            DEVICE_CMYK | CMYK => Some(ColorSpaceType::DeviceCmyk),
             CALCMYK => Some(ColorSpaceType::DeviceCmyk),
             PATTERN => Some(ColorSpaceType::Pattern),
             _ => None,
@@ -115,15 +120,15 @@ impl ColorSpace {
     pub fn new_from_name(name: Name) -> Option<ColorSpace> {
         ColorSpaceType::new_from_name(name).map(|c| Self(Arc::new(c)))
     }
-    
+
     pub fn device_gray() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceGray))
     }
-    
+
     pub fn device_rgb() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceRgb))
     }
-    
+
     pub fn device_cmyk() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceCmyk))
     }
@@ -131,7 +136,7 @@ impl ColorSpace {
     pub fn pattern() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::Pattern))
     }
-    
+
     pub fn is_pattern(&self) -> bool {
         matches!(self.0.as_ref(), ColorSpaceType::Pattern)
     }
@@ -204,8 +209,12 @@ impl ColorSpace {
 
     fn to_rgba_inner(&self, c: &[f32], opacity: f32) -> Option<AlphaColor<Srgb>> {
         let color = match self.0.as_ref() {
-            ColorSpaceType::DeviceRgb => AlphaColor::new([*c.get(0)?, *c.get(1)?, *c.get(2)?, opacity]),
-            ColorSpaceType::DeviceGray => AlphaColor::new([*c.get(0)?, *c.get(0)?, *c.get(0)?, opacity]),
+            ColorSpaceType::DeviceRgb => {
+                AlphaColor::new([*c.get(0)?, *c.get(1)?, *c.get(2)?, opacity])
+            }
+            ColorSpaceType::DeviceGray => {
+                AlphaColor::new([*c.get(0)?, *c.get(0)?, *c.get(0)?, opacity])
+            }
             ColorSpaceType::DeviceCmyk => {
                 let opacity = f32_to_u8(opacity);
                 let srgb = CMYK_TRANSFORM.to_rgb(c)?;
@@ -241,7 +250,7 @@ impl ColorSpace {
             ColorSpaceType::Pattern => BLACK,
             ColorSpaceType::DeviceN(d) => d.to_rgba(c, opacity),
         };
-        
+
         Some(color)
     }
 }
@@ -260,7 +269,7 @@ impl CalGray {
         let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let gamma = dict.get::<f32>(GAMMA).unwrap_or(1.0);
 
-        Some(Self  {
+        Some(Self {
             white_point,
             black_point,
             gamma,
@@ -485,7 +494,6 @@ impl Lab {
     }
 
     pub(crate) fn to_rgb(&self, c: [f32; 3]) -> [u8; 3] {
-
         let (l, a, b) = (c[0], c[1], c[2]);
 
         let m = (l + 16.0) / 116.0;
@@ -596,8 +604,11 @@ impl Separation {
 
     pub fn to_rgba(&self, c: f32, opacity: f32) -> AlphaColor<Srgb> {
         // TODO: Handle /All and /None
-        let res = self.tint_transform.eval(smallvec![c]).unwrap_or(self.alternate_space.initial_color());
-        
+        let res = self
+            .tint_transform
+            .eval(smallvec![c])
+            .unwrap_or(self.alternate_space.initial_color());
+
         self.alternate_space.to_rgba(&res, opacity)
     }
 }
@@ -687,9 +698,16 @@ impl ICCProfile {
         let mut srgb = [0, 0, 0];
 
         match self.0.number_components {
-            1 => self.0.transform.convert(&[f32_to_u8(*c.get(0)?)], &mut srgb),
+            1 => self
+                .0
+                .transform
+                .convert(&[f32_to_u8(*c.get(0)?)], &mut srgb),
             3 => self.0.transform.convert(
-                &[f32_to_u8(*c.get(0)?), f32_to_u8(*c.get(1)?), f32_to_u8(*c.get(2)?)],
+                &[
+                    f32_to_u8(*c.get(0)?),
+                    f32_to_u8(*c.get(1)?),
+                    f32_to_u8(*c.get(2)?),
+                ],
                 &mut srgb,
             ),
             4 => self.0.transform.convert(
