@@ -208,6 +208,7 @@ use crate::run_test;
 #[test] fn helloworld_bad() { run_test("helloworld-bad", false, None); }
 #[test] fn issue2006() { run_test("issue2006", true, Some("..=0")); }
 #[test] fn bigboundingbox() { run_test("bigboundingbox", false, None); }
+#[test] fn bug1260585() { run_test("bug1260585", true, Some("..=0")); }
 #[test] fn clippath() { run_test("clippath", false, None); }
 #[test] fn calgray() { run_test("calgray", false, None); }
 #[test] fn calrgb() { run_test("calrgb", false, Some("..=7")); }

@@ -63,6 +63,9 @@ class PDFJSSync:
             "issue14297",
             "type4psfunc",
             "issue6296",
+            "bug1260585",
+            # "issue2948",
+            # "issue17848",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:

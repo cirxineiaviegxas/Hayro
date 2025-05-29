@@ -94,6 +94,13 @@
     "file": "pdfs/bigboundingbox.pdf"
   },
   {
+    "id": "bug1260585",
+    "file": "pdfs/bug1260585.link",
+    "md5": "9415b1eb00a43c97c15328cd4c8d136a",
+    "link": true,
+    "last_page": 0
+  },
+  {
     "id": "clippath",
     "file": "pdfs/clippath.pdf"
   },

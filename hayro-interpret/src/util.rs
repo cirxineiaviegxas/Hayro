@@ -1,3 +1,4 @@
+use std::ops::Sub;
 use log::warn;
 use skrifa::GlyphId;
 use skrifa::raw::tables::cmap::CmapSubtable;
@@ -34,5 +35,49 @@ impl CodeMapExt for CmapSubtable<'_> {
                 None
             }
         }
+    }
+}
+
+const SCALAR_NEARLY_ZERO: f32 = 1.0 / (1 << 12) as f32;
+
+/// A number of useful methods for f32 numbers.
+pub(crate) trait FloatExt: Sized + Sub<f32, Output = f32> + Copy {
+    /// Whether the number is approximately 0.
+    fn is_nearly_zero(&self) -> bool {
+        self.is_nearly_zero_within_tolerance(SCALAR_NEARLY_ZERO)
+    }
+    
+    fn is_nearly_equal(&self, other: f32) -> bool {
+        (*self - other).is_nearly_zero()
+    }
+
+    /// Whether the number is approximately 0, with a given tolerance.
+    fn is_nearly_zero_within_tolerance(&self, tolerance: f32) -> bool;
+}
+
+impl FloatExt for f32 {
+    fn is_nearly_zero_within_tolerance(&self, tolerance: f32) -> bool {
+        debug_assert!(tolerance >= 0.0, "tolerance must be positive");
+
+        self.abs() <= tolerance
+    }
+}
+
+pub(crate) trait PointExt: Sized {
+    fn x(&self) -> f32;
+    fn y(&self) -> f32;
+    
+    fn nearly_same(&self, other: Self) -> bool {
+        self.x().is_nearly_equal(other.x()) && self.y().is_nearly_equal(other.y())
+    }
+}
+
+impl PointExt for kurbo::Point {
+    fn x(&self) -> f32 {
+        self.x as f32
+    }
+
+    fn y(&self) -> f32 {
+        self.y as f32
     }
 }

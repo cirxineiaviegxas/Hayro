@@ -15,6 +15,7 @@ use kurbo::{Affine, Point};
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
+use crate::util::PointExt;
 
 /// The function supplied to a shading.
 #[derive(Debug, Clone)]
@@ -358,6 +359,12 @@ fn read_free_form_triangles(
         } else if first.flag == 2 {
             b = Some(c.clone()?);
             c = Some(first);
+        }
+        
+        let (p0, p1, p2) = (a.clone()?, b.clone()?, c.clone()?);
+        
+        if p0.point.nearly_same(p1.point) || p1.point.nearly_same(p2.point) {
+            return None;
         }
 
         triangles.push(Triangle {
