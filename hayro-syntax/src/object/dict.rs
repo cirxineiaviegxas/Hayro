@@ -1,4 +1,6 @@
-use crate::object;
+//! Dictionary objects.
+
+use crate::object::macros::object;
 use crate::object::name::Name;
 use crate::object::null::Null;
 use crate::object::r#ref::{MaybeRef, ObjRef};
@@ -29,6 +31,7 @@ impl PartialEq for Dict<'_> {
 }
 
 impl<'a> Dict<'a> {
+    /// Create a new empty dictionary.
     pub fn empty() -> Dict<'a> {
         let repr = Repr {
             data: &[],
@@ -39,7 +42,7 @@ impl<'a> Dict<'a> {
         Self(Arc::new(repr))
     }
 
-    pub fn data(&self) -> &'a [u8] {
+    pub(crate) fn data(&self) -> &'a [u8] {
         self.0.data
     }
 
@@ -77,6 +80,7 @@ impl<'a> Dict<'a> {
         self.0.offsets.keys().cloned()
     }
 
+    /// Return the raw entry for a specific key.
     #[allow(private_bounds)]
     pub fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
     where
@@ -85,10 +89,6 @@ impl<'a> Dict<'a> {
         let offset = *self.0.offsets.get(key)?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
-    }
-
-    pub fn xref(&self) -> &'a XRef {
-        self.0.xref
     }
 }
 
@@ -210,10 +210,10 @@ struct Repr<'a> {
     xref: &'a XRef,
 }
 
-pub struct InlineImageDict<'a>(Dict<'a>);
+pub(crate) struct InlineImageDict<'a>(Dict<'a>);
 
 impl<'a> InlineImageDict<'a> {
-    pub fn get_dict(&self) -> &Dict<'a> {
+    pub(crate) fn get_dict(&self) -> &Dict<'a> {
         &self.0
     }
 }
@@ -225,6 +225,7 @@ impl<'a> Readable<'a> for InlineImageDict<'a> {
 }
 
 /// A collection of possible keys in a PDF dictionary. Copied and adapted from PDFBox.
+#[allow(missing_docs)]
 pub mod keys {
     use crate::object::Name;
 

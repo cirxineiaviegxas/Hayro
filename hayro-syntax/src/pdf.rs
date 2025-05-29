@@ -1,26 +1,23 @@
+//! The starting point for reading PDF files.
+
 use crate::PdfData;
 use crate::document::page::Pages;
 use crate::object::Object;
-use crate::pdf::PdfError::OtherError;
 use crate::xref::{XRef, fallback, root_xref};
 
+/// A PDF file.
 pub struct Pdf {
     xref: XRef,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum PdfError {
-    EncryptionError,
-    OtherError,
-}
-
 impl Pdf {
-    pub fn new(data: PdfData) -> Result<Self, PdfError> {
-        let xref = root_xref(data.clone())
-            .or_else(|| fallback(data))
-            .ok_or(OtherError)?;
+    /// Try to read the given PDF file.
+    ///
+    /// Returns `None` if it was unable to read it.
+    pub fn new(data: PdfData) -> Option<Self> {
+        let xref = root_xref(data.clone()).or_else(|| fallback(data))?;
 
-        Ok(Self { xref })
+        Some(Self { xref })
     }
 
     /// Return the number of objects present in the PDF file.
@@ -33,10 +30,10 @@ impl Pdf {
         self.xref.objects()
     }
 
-    pub fn pages(&self) -> Result<Pages, PdfError> {
+    /// Return the pages of the PDF file.
+    pub fn pages(&self) -> Option<Pages> {
         self.xref
             .get(self.xref.trailer_data().pages_ref)
             .and_then(|p| Pages::new(p, &self.xref))
-            .ok_or(OtherError)
     }
 }

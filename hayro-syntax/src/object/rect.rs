@@ -1,12 +1,16 @@
+//! Rectangles.
+
 use crate::object::array::Array;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use crate::xref::XRef;
 
+/// A rectangle.
 #[derive(Clone, Copy, Debug)]
 pub struct Rect(pub(crate) kurbo::Rect);
 
 impl Rect {
+    /// Get the inner `kurbo` rectangle.
     pub fn get(&self) -> kurbo::Rect {
         self.0
     }

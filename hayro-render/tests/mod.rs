@@ -1,4 +1,3 @@
-use hayro_syntax::Data;
 use hayro_syntax::pdf::Pdf;
 use image::{Rgba, RgbaImage, load_from_memory};
 use once_cell::sync::Lazy;

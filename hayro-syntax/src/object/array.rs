@@ -1,4 +1,6 @@
-use crate::object;
+//! Array objects.
+
+use crate::object::macros::object;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
@@ -41,6 +43,7 @@ impl<'a> Array<'a> {
         ResolvedArrayIter::new(self.data, self.xref)
     }
 
+    /// Return a flex iterator over the items in the array.
     pub fn flex_iter(&self) -> FlexArrayIter<'a> {
         FlexArrayIter::new(self.data, self.xref)
     }
@@ -131,6 +134,7 @@ impl<'a> Iterator for ArrayIter<'a> {
     }
 }
 
+/// An iterator over the array that resolves object of a specific type.
 pub struct ResolvedArrayIter<'a, T> {
     flex_iter: FlexArrayIter<'a>,
     phantom_data: PhantomData<T>,
@@ -156,6 +160,7 @@ where
     }
 }
 
+/// An iterator over the array that allows reading a different object in each turn.
 pub struct FlexArrayIter<'a> {
     reader: Reader<'a>,
     xref: &'a XRef,
@@ -173,6 +178,7 @@ impl<'a> FlexArrayIter<'a> {
         private_bounds,
         reason = "users shouldn't be able to implement `ObjectLike` for custom objects."
     )]
+    /// Try reading the next item as a specific object from the array.
     pub fn next<T: ObjectLike<'a>>(&mut self) -> Option<T> {
         self.reader.skip_white_spaces_and_comments();
 

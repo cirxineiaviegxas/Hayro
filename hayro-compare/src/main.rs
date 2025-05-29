@@ -1,4 +1,3 @@
-use hayro_syntax::Data;
 use hayro_syntax::pdf::Pdf;
 use sitro::RenderOptions;
 use std::path::{Path, PathBuf};

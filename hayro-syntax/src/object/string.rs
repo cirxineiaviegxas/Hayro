@@ -1,4 +1,6 @@
-use crate::object;
+//! String objects.
+
+use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::trivia::is_white_space_character;

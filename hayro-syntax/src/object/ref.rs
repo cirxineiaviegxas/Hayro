@@ -1,3 +1,5 @@
+//! Object references.
+
 use crate::object::ObjectIdentifier;
 use crate::object::ObjectLike;
 use crate::reader::{Readable, Reader, Skippable};
@@ -7,11 +9,14 @@ use std::fmt::{Debug, Formatter};
 /// A reference to an object.
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct ObjRef {
+    /// The object number.
     pub obj_number: i32,
+    /// The generation nunber.
     pub gen_number: i32,
 }
 
 impl ObjRef {
+    /// Create a new object reference.
     pub fn new(obj_number: i32, gen_number: i32) -> Self {
         Self {
             obj_number,
@@ -50,8 +55,11 @@ impl Readable<'_> for ObjRef {
     }
 }
 
+/// A struct that is either an object or a reference to an object.
 pub enum MaybeRef<T> {
+    /// A reference to an object.
     Ref(ObjRef),
+    /// An object.
     NotRef(T),
 }
 
@@ -60,6 +68,7 @@ impl<'a, T> MaybeRef<T>
 where
     T: ObjectLike<'a>,
 {
+    /// Resolve the `MaybeRef` object with the given xref table.
     pub fn resolve(self, xref: &'a XRef) -> Option<T> {
         match self {
             MaybeRef::Ref(r) => xref.get::<T>(r.into()),

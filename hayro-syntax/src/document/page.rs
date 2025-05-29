@@ -107,6 +107,7 @@ pub enum Rotation {
     FlippedHorizontal,
 }
 
+/// A PDF page.
 pub struct Page<'a> {
     inner: Dict<'a>,
     media_box: kurbo::Rect,

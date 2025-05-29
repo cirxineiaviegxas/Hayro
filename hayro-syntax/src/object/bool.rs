@@ -1,5 +1,7 @@
-use crate::object;
+//! Boolean objects.
+
 use crate::object::Object;
+use crate::object::macros::object;
 use crate::reader::{Readable, Reader, Skippable};
 use crate::xref::XRef;
 

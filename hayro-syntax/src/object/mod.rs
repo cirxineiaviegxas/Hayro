@@ -1,3 +1,5 @@
+//! Parsing and reading from PDF objects.
+
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::name::{Name, skip_name_like};
@@ -23,24 +25,6 @@ mod tuple;
 
 /// A trait for PDF objects.
 pub(crate) trait ObjectLike<'a>: TryFrom<Object<'a>> + Readable<'a> + Debug + Clone {}
-
-#[macro_export]
-macro_rules! object {
-    ($t:ident $(<$l:lifetime>),*, $s:ident) => {
-        impl<'a> TryFrom<Object<'a>> for $t$(<$l>),* {
-            type Error = ();
-
-            fn try_from(value: Object<'a>) -> std::result::Result<Self, Self::Error> {
-                match value {
-                    Object::$s(b) => Ok(b),
-                    _ => Err(()),
-                }
-            }
-        }
-
-        impl<'a> crate::object::ObjectLike<'a> for $t$(<$l>),* {}
-    };
-}
 
 /// A primitive PDF object.
 #[derive(Debug, Clone, PartialEq)]
@@ -74,61 +58,73 @@ impl<'a> Object<'a> {
         self.try_into().ok()
     }
 
+    /// Try casting the object to a dict.
     #[inline(always)]
     pub fn into_dict(self) -> Option<Dict<'a>> {
         self.cast()
     }
 
+    /// Try casting the object to a name.
     #[inline(always)]
     pub fn into_name(self) -> Option<Name<'a>> {
         self.cast()
     }
 
+    /// Try casting the object to the null object.
     #[inline(always)]
     pub fn into_null(self) -> Option<Null> {
         self.cast()
     }
 
+    /// Try casting the object to a bool.
     #[inline(always)]
     pub fn into_bool(self) -> Option<bool> {
         self.cast()
     }
 
+    /// Try casting the object to a string.
     #[inline(always)]
     pub fn into_string(self) -> Option<string::String<'a>> {
         self.cast()
     }
 
+    /// Try casting the object to a stream.
     #[inline(always)]
     pub fn into_stream(self) -> Option<Stream<'a>> {
         self.cast()
     }
 
+    /// Try casting the object to an array.
     #[inline(always)]
     pub fn into_array(self) -> Option<Array<'a>> {
         self.cast()
     }
 
+    /// Try casting the object to a u8.
     #[inline(always)]
     pub fn into_u8(self) -> Option<u8> {
         self.cast()
     }
 
+    /// Try casting the object to a u16.
     #[inline(always)]
     pub fn into_u16(self) -> Option<u16> {
         self.cast()
     }
 
+    /// Try casting the object to a f32.
     #[inline(always)]
     pub fn into_f32(self) -> Option<f32> {
         self.cast()
     }
 
+    /// Try casting the object to a i32.
     #[inline(always)]
     pub fn into_i32(self) -> Option<i32> {
         self.cast()
     }
 
+    /// Try casting the object to a number.
     #[inline(always)]
     pub fn into_number(self) -> Option<Number> {
         self.cast()
@@ -242,6 +238,27 @@ pub fn dict_or_stream<'a>(obj: &Object<'a>) -> Option<(Dict<'a>, Option<Stream<'
     } else {
         None
     }
+}
+
+mod macros {
+    macro_rules! object {
+        ($t:ident $(<$l:lifetime>),*, $s:ident) => {
+            impl<'a> TryFrom<Object<'a>> for $t$(<$l>),* {
+                type Error = ();
+
+                fn try_from(value: Object<'a>) -> std::result::Result<Self, Self::Error> {
+                    match value {
+                        Object::$s(b) => Ok(b),
+                        _ => Err(()),
+                    }
+                }
+            }
+
+            impl<'a> crate::object::ObjectLike<'a> for $t$(<$l>),* {}
+        };
+    }
+
+    pub(crate) use object;
 }
 
 #[cfg(test)]

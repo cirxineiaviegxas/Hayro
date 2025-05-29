@@ -1,5 +1,7 @@
-use crate::object;
+//! Name objects.
+
 use crate::object::Object;
+use crate::object::macros::object;
 use crate::reader::{Readable, Reader, Skippable};
 use crate::trivia::is_regular_character;
 use crate::xref::XRef;
@@ -69,7 +71,7 @@ impl<'a> Name<'a> {
         Self(data)
     }
 
-    pub const fn from_unescaped(data: &'a [u8]) -> Name<'a> {
+    pub(crate) const fn from_unescaped(data: &'a [u8]) -> Name<'a> {
         Self(Cow::Borrowed(data))
     }
 

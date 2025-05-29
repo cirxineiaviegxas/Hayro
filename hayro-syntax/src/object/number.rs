@@ -1,4 +1,6 @@
-use crate::object;
+//! Number objects.
+
+use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::xref::XRef;
@@ -52,10 +54,12 @@ impl Number {
         }
     }
 
+    /// Create a new `Number` from a f32 number.
     pub fn from_f32(num: f32) -> Self {
         Self(InternalNumber::Real(num))
     }
 
+    /// Create a new `Number` from a i32 number.
     pub fn from_i32(num: i32) -> Self {
         Self(InternalNumber::Integer(num))
     }

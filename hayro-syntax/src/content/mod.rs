@@ -3,6 +3,7 @@
 //! This module provides facilities to read and interpret PDF content streams using
 //! high-level types.
 
+#[allow(missing_docs)]
 pub mod ops;
 
 use crate::content::ops::TypedOperation;
@@ -28,6 +29,7 @@ impl Debug for Operator<'_> {
     }
 }
 
+/// A content stream operator.
 pub struct Operator<'a>(Name<'a>);
 
 impl Deref for Operator<'_> {
@@ -179,6 +181,7 @@ pub struct TypedIter<'a> {
 }
 
 impl<'a> TypedIter<'a> {
+    /// Create a new typed iterator.
     pub fn new(untyped: UntypedIter<'a>) -> TypedIter<'a> {
         Self { untyped }
     }

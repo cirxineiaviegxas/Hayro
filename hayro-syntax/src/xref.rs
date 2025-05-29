@@ -1,3 +1,5 @@
+//! Reading and querying the xref table of a PDF file.
+
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
 use crate::object::dict::Dict;

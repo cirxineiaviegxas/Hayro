@@ -1,3 +1,5 @@
+//! Stream objects.
+
 use crate::filter::{Filter, FilterResult};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
@@ -56,8 +58,6 @@ impl<'a> Stream<'a> {
             .get::<Array>(F)
             .or_else(|| self.dict.get::<Array>(FILTER))
         {
-            // TODO: Avoid allocation?
-
             let filters = filters
                 .iter::<Name>()
                 .map(|n| Filter::from_name(&n))
@@ -98,7 +98,7 @@ impl<'a> Stream<'a> {
         }
     }
 
-    pub fn from_raw(data: &'a [u8], dict: Dict<'a>) -> Self {
+    pub(crate) fn from_raw(data: &'a [u8], dict: Dict<'a>) -> Self {
         Self { dict, data }
     }
 }

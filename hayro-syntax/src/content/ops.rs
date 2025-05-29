@@ -1,3 +1,5 @@
+//! Content stream operators
+
 use crate::content::{OPERANDS_THRESHOLD, Operation, OperatorTrait, Stack};
 use crate::object::Object;
 use crate::object::array::Array;

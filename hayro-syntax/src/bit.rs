@@ -1,38 +1,49 @@
+//! A bit reader that supports reading numbers from a bit stream, with a number of bits
+//! up to 32.
+
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::fmt::Debug;
 
+/// A bit size.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct BitSize(u8);
 
 impl BitSize {
+    /// Create a new `BitSize`. Returns `None` if the number is bigger than 32.
     pub fn from_u8(value: u8) -> Option<Self> {
         if value > 32 { None } else { Some(Self(value)) }
     }
 
+    /// Return the number of bits of the bit size.
     pub fn bits(&self) -> usize {
         self.0 as usize
     }
 
+    /// Return the bit mask of the bit size.
     pub fn mask(&self) -> u32 {
         ((1u64 << self.0 as u64) - 1) as u32
     }
 }
 
+/// A bit reader.
 pub struct BitReader<'a> {
     data: &'a [u8],
     cur_pos: usize,
 }
 
 impl<'a> BitReader<'a> {
+    /// Create a new bit reader.
     pub fn new(data: &'a [u8]) -> Self {
         Self::new_with(data, 0)
     }
 
+    /// Create a new bit reader, and start at a specific bit offset.
     pub fn new_with(data: &'a [u8], cur_pos: usize) -> Self {
         Self { data, cur_pos }
     }
 
+    /// Align the reader to the next byte boundary.
     pub fn align(&mut self) {
         let bit_pos = self.bit_pos();
 
@@ -41,6 +52,7 @@ impl<'a> BitReader<'a> {
         }
     }
 
+    /// Read a bit with the given bit size from the stream.
     pub fn read(&mut self, bit_size: BitSize) -> Option<u32> {
         let byte_pos = self.byte_pos();
 
@@ -87,14 +99,14 @@ impl<'a> BitReader<'a> {
 }
 
 #[derive(Debug)]
-pub struct BitWriter<'a> {
+pub(crate) struct BitWriter<'a> {
     data: &'a mut [u8],
     cur_pos: usize,
     bit_size: BitSize,
 }
 
 impl<'a> BitWriter<'a> {
-    pub fn new(data: &'a mut [u8], bit_size: BitSize) -> Option<Self> {
+    pub(crate) fn new(data: &'a mut [u8], bit_size: BitSize) -> Option<Self> {
         if !matches!(bit_size.0, 1 | 2 | 4 | 8 | 16) {
             return None;
         }
@@ -106,7 +118,7 @@ impl<'a> BitWriter<'a> {
         })
     }
 
-    pub fn split_off(self) -> (&'a [u8], BitWriter<'a>) {
+    pub(crate) fn split_off(self) -> (&'a [u8], BitWriter<'a>) {
         // Assumes that we are currently aligned to a byte boundary!
         let (left, right) = self.data.split_at_mut(self.cur_pos / 8);
         (
@@ -119,11 +131,11 @@ impl<'a> BitWriter<'a> {
         )
     }
 
-    pub fn cur_pos(&self) -> usize {
+    pub(crate) fn cur_pos(&self) -> usize {
         self.cur_pos
     }
 
-    pub fn get_data(&self) -> &[u8] {
+    pub(crate) fn get_data(&self) -> &[u8] {
         self.data
     }
 
@@ -135,7 +147,7 @@ impl<'a> BitWriter<'a> {
         self.cur_pos % 8
     }
 
-    pub fn write(&mut self, val: u16) -> Option<()> {
+    pub(crate) fn write(&mut self, val: u16) -> Option<()> {
         let byte_pos = self.byte_pos();
         let bit_size = self.bit_size;
 
@@ -165,24 +177,16 @@ impl<'a> BitWriter<'a> {
 
         Some(())
     }
-
-    pub fn has_capacity(&self) -> bool {
-        match self.bit_size.0 {
-            1 | 2 | 4 | 8 => self.cur_pos / 8 < self.data.len(),
-            16 => self.cur_pos / 8 < self.data.len() - 1,
-            _ => unreachable!(),
-        }
-    }
 }
 
-pub struct BitChunks<'a> {
+pub(crate) struct BitChunks<'a> {
     reader: BitReader<'a>,
     bit_size: BitSize,
     chunk_len: usize,
 }
 
 impl<'a> BitChunks<'a> {
-    pub fn new(data: &'a [u8], bit_size: BitSize, chunk_len: usize) -> Option<Self> {
+    pub(crate) fn new(data: &'a [u8], bit_size: BitSize, chunk_len: usize) -> Option<Self> {
         if bit_size.0 > 16 {
             warn!("BitChunks doesn't support working with bit sizes > 16.");
 
@@ -214,7 +218,7 @@ impl<'a> Iterator for BitChunks<'_> {
 }
 
 #[derive(Debug, Clone)]
-pub struct BitChunk {
+pub(crate) struct BitChunk {
     bits: SmallVec<[u16; 4]>,
 }
 
@@ -227,13 +231,13 @@ impl BitChunk {
         self.bits.iter().copied()
     }
 
-    pub fn new(val: u8, count: usize) -> Self {
+    pub(crate) fn new(val: u8, count: usize) -> Self {
         Self {
             bits: smallvec![val as u16; count],
         }
     }
 
-    pub fn from_reader(
+    pub(crate) fn from_reader(
         bit_reader: &mut BitReader,
         bit_size: BitSize,
         chunk_len: usize,

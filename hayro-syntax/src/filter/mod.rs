@@ -18,22 +18,35 @@ use log::warn;
 /// A filter.
 #[derive(Debug, Copy, Clone)]
 pub enum Filter {
+    /// The ASCII-hex filter.
     AsciiHexDecode,
+    /// The ASCII85 filter.
     Ascii85Decode,
+    /// The LZW filter.
     LzwDecode,
+    /// The flate (zlib/deflate) filter.
     FlateDecode,
+    /// The run-length filter.
     RunLengthDecode,
+    /// The CCITT Fax filter.
     CcittFaxDecode,
+    /// The JBIG2 filter.
     Jbig2Decode,
+    /// The DCT (JPEG) filter.
     DctDecode,
+    /// The JPX (JPEG 2000) filter.
     JpxDecode,
+    /// The crypt filter.
     Crypt,
 }
 
 /// An image color space.
 pub enum ImageColorSpace {
+    /// Grayscale color space.
     Gray,
+    /// RGB color space.
     Rgb,
+    /// CMYK color space.
     Cmyk,
 }
 
@@ -73,7 +86,7 @@ impl Filter {
         }
     }
 
-    pub fn from_name(name: &Name) -> Option<Self> {
+    pub(crate) fn from_name(name: &Name) -> Option<Self> {
         match *name {
             ASCII_HEX_DECODE | ASCII_HEX_DECODE_ABBREVIATION => Some(Filter::AsciiHexDecode),
             ASCII85_DECODE | ASCII85_DECODE_ABBREVIATION => Some(Filter::Ascii85Decode),
