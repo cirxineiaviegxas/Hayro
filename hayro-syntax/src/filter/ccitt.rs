@@ -1146,30 +1146,30 @@ static BLACK_TABLE_3: [[i32; 2]; 64] = [
     [2, 2],
 ];
 
-pub struct CCITTFaxDecoder<'a> {
-    pub source: &'a mut Reader<'a>,
-    pub eof: bool,
-    pub encoding: i32,
-    pub eoline: bool,
-    pub byte_align: bool,
-    pub columns: usize,
-    pub rows: usize,
-    pub eoblock: bool,
-    pub black: bool,
-    pub coding_line: Vec<u32>,
-    pub ref_line: Vec<u32>,
-    pub coding_pos: usize,
-    pub row: usize,
-    pub next_line_2d: bool,
-    pub input_bits: usize,
-    pub input_buf: u32,
-    pub output_bits: usize,
-    pub rows_done: bool,
-    pub err: bool,
+pub(crate) struct CCITTFaxDecoder<'a> {
+    source: &'a mut Reader<'a>,
+    eof: bool,
+    encoding: i32,
+    eoline: bool,
+    byte_align: bool,
+    columns: usize,
+    rows: usize,
+    eoblock: bool,
+    black: bool,
+    coding_line: Vec<u32>,
+    ref_line: Vec<u32>,
+    coding_pos: usize,
+    row: usize,
+    next_line_2d: bool,
+    input_bits: usize,
+    input_buf: u32,
+    output_bits: usize,
+    rows_done: bool,
+    err: bool,
 }
 
 impl<'a> CCITTFaxDecoder<'a> {
-    pub fn new(source: &'a mut Reader<'a>, options: CCITTFaxDecoderOptions) -> Self {
+    pub(crate) fn new(source: &'a mut Reader<'a>, options: CCITTFaxDecoderOptions) -> Self {
         let k = options.k;
         let eoline = options.end_of_line;
         let byte_align = options.encoded_byte_align;
@@ -1280,7 +1280,6 @@ impl<'a> CCITTFaxDecoder<'a> {
 
             self.coding_line[self.coding_pos] = a1;
         } else if a1 < self.coding_line[self.coding_pos] {
-            // TODO: Investigate why this comparison exists in pdf.js.
             #[allow(unused_comparisons)]
             if a1 < 0 {
                 warn!("invalid code");
@@ -1438,7 +1437,7 @@ impl<'a> CCITTFaxDecoder<'a> {
         1
     }
 
-    pub fn read_next_char(&mut self) -> i32 {
+    pub(crate) fn read_next_char(&mut self) -> i32 {
         if self.eof {
             return -1;
         }
@@ -1854,16 +1853,20 @@ impl<'a> CCITTFaxDecoder<'a> {
 
         c
     }
+
+    pub(crate) fn source(&self) -> &Reader {
+        self.source
+    }
 }
 
-pub struct CCITTFaxDecoderOptions {
-    pub k: i32,
-    pub end_of_line: bool,
-    pub encoded_byte_align: bool,
-    pub columns: usize,
-    pub rows: usize,
-    pub eoblock: bool,
-    pub black_is_1: bool,
+pub(crate) struct CCITTFaxDecoderOptions {
+    pub(crate) k: i32,
+    pub(crate) end_of_line: bool,
+    pub(crate) encoded_byte_align: bool,
+    pub(crate) columns: usize,
+    pub(crate) rows: usize,
+    pub(crate) eoblock: bool,
+    pub(crate) black_is_1: bool,
 }
 
 impl Default for CCITTFaxDecoderOptions {

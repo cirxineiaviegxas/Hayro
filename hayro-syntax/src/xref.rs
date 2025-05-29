@@ -425,14 +425,14 @@ fn populate_from_xref_stream<'a>(
         .read_with_xref::<IndirectObject<Stream>>(XRef::dummy())?
         .get();
 
-    if let Some(prev) = stream.dict.get::<i32>(PREV) {
+    if let Some(prev) = stream.dict().get::<i32>(PREV) {
         // First insert the entries from any previous xref tables.
         let _ = populate_xref_impl(data, prev as usize, insert_map)?;
     }
 
-    let size = stream.dict.get::<u32>(SIZE)?;
+    let size = stream.dict().get::<u32>(SIZE)?;
 
-    let [f1_len, f2_len, f3_len] = stream.dict.get::<[u8; 3]>(W)?;
+    let [f1_len, f2_len, f3_len] = stream.dict().get::<[u8; 3]>(W)?;
 
     if f2_len > size_of::<u32>() as u8 {
         error!("xref offset length is larger than the allowed limit");
@@ -448,7 +448,7 @@ fn populate_from_xref_stream<'a>(
     let xref_data = stream.decoded()?;
     let mut xref_reader = Reader::new(xref_data.as_ref());
 
-    if let Some(arr) = stream.dict.get::<Array>(INDEX) {
+    if let Some(arr) = stream.dict().get::<Array>(INDEX) {
         let mut iter = arr.iter::<(u32, u32)>();
 
         while let Some((start, num_elements)) = iter.next() {
@@ -474,7 +474,7 @@ fn populate_from_xref_stream<'a>(
         )?;
     }
 
-    Some(stream.dict.data())
+    Some(stream.dict().data())
 }
 
 fn xref_stream_num<'a>(data: &[u8]) -> Option<u32> {
@@ -589,8 +589,8 @@ struct ObjectStream<'a> {
 
 impl<'a> ObjectStream<'a> {
     pub fn new(inner: Stream<'a>, data: &'a [u8], xref: &'a XRef) -> Option<Self> {
-        let num_objects = inner.dict.get::<usize>(N)?;
-        let first_offset = inner.dict.get::<usize>(FIRST)?;
+        let num_objects = inner.dict().get::<usize>(N)?;
+        let first_offset = inner.dict().get::<usize>(FIRST)?;
 
         let mut r = Reader::new(data.as_ref());
 

@@ -1,4 +1,4 @@
-use crate::filter::{Filter, FilterResult, apply_filter};
+use crate::filter::{Filter, FilterResult};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
@@ -13,7 +13,7 @@ use std::fmt::{Debug, Formatter};
 /// A stream of arbitrary data.
 #[derive(Clone, PartialEq)]
 pub struct Stream<'a> {
-    pub(crate) dict: Dict<'a>,
+    dict: Dict<'a>,
     data: &'a [u8],
 }
 
@@ -36,6 +36,8 @@ impl<'a> Stream<'a> {
         self.decoded_image().map(|r| r.data)
     }
 
+    /// Return the decoded data of the stream, and return image metadata in case
+    /// the data stream is a JPX stream.
     pub fn decoded_image(&self) -> Option<FilterResult> {
         if let Some(filter) = self
             .dict
@@ -48,7 +50,7 @@ impl<'a> Stream<'a> {
                 .get::<Dict>(DP)
                 .or_else(|| self.dict.get::<Dict>(DECODE_PARMS));
 
-            Some(apply_filter(self.data, filter, params.as_ref())?)
+            filter.apply(self.data, params.clone().unwrap_or_default())
         } else if let Some(filters) = self
             .dict
             .get::<Array>(F)
@@ -72,13 +74,12 @@ impl<'a> Stream<'a> {
             for i in 0..filters.len() {
                 let params = params.get(i).and_then(|p| p.clone().cast::<Dict>());
 
-                let new = apply_filter(
+                let new = filters[i].apply(
                     current
                         .as_ref()
                         .map(|c| c.data.as_ref())
                         .unwrap_or(self.data),
-                    filters[i],
-                    params.as_ref(),
+                    params.clone().unwrap_or_default(),
                 )?;
                 current = Some(new);
             }

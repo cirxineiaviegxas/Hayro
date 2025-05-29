@@ -1,10 +1,10 @@
-//! Decoding filstreams
+//! Decoding data streams.
 
 mod ascii_85;
 mod ascii_hex;
 mod ccitt;
 mod dct;
-pub mod jbig2;
+mod jbig2;
 mod jpx;
 mod lzw_flate;
 mod run_length;
@@ -15,10 +15,7 @@ use crate::object::name::Name;
 use crate::util::OptionLog;
 use log::warn;
 
-pub fn apply_filter(data: &[u8], filter: Filter, params: Option<&Dict>) -> Option<FilterResult> {
-    filter.apply(data, params.cloned().unwrap_or_default())
-}
-
+/// A filter.
 #[derive(Debug, Copy, Clone)]
 pub enum Filter {
     AsciiHexDecode,
@@ -33,20 +30,25 @@ pub enum Filter {
     Crypt,
 }
 
+/// An image color space.
 pub enum ImageColorSpace {
     Gray,
     Rgb,
     Cmyk,
 }
 
+/// The result of the filter.
 pub struct FilterResult {
+    /// The decoded data.
     pub data: Vec<u8>,
+    /// The color space of the image (will only be set for JPX streams).
     pub color_space: Option<ImageColorSpace>,
+    /// The bits per component of the image (will only be set for JPX streams).
     pub bits_per_component: Option<u8>,
 }
 
 impl FilterResult {
-    pub fn from_data(data: Vec<u8>) -> Self {
+    fn from_data(data: Vec<u8>) -> Self {
         Self {
             data,
             color_space: None,
@@ -91,6 +93,7 @@ impl Filter {
         }
     }
 
+    /// Apply the filter to some data.
     pub fn apply(&self, data: &[u8], params: Dict) -> Option<FilterResult> {
         match self {
             Filter::AsciiHexDecode => ascii_hex::decode(data).map(FilterResult::from_data),
