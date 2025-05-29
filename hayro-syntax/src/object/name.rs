@@ -1,8 +1,8 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::Object;
 use crate::reader::{Readable, Reader, Skippable};
 use crate::trivia::is_regular_character;
+use crate::xref::XRef;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Deref;

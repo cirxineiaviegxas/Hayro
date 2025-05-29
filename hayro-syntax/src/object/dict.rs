@@ -1,10 +1,10 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::name::Name;
 use crate::object::null::Null;
 use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
@@ -875,12 +875,12 @@ pub mod keys {
 
 #[cfg(test)]
 mod tests {
-    use crate::file::xref::XRef;
     use crate::object::dict::{Dict, InlineImageDict};
     use crate::object::name::Name;
     use crate::object::number::Number;
     use crate::object::string;
     use crate::reader::Reader;
+    use crate::xref::XRef;
 
     fn dict_impl(data: &[u8]) -> Option<Dict> {
         Reader::new(data).read_with_xref::<Dict>(&XRef::dummy())

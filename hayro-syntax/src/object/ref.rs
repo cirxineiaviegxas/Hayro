@@ -1,7 +1,7 @@
-use crate::file::xref::XRef;
 use crate::object::ObjectIdentifier;
 use crate::object::ObjectLike;
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 use std::fmt::{Debug, Formatter};
 
 /// A reference to an object.

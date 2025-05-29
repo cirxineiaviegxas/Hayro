@@ -1,8 +1,8 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::trivia::is_white_space_character;
+use crate::xref::XRef;
 use std::borrow::Cow;
 
 /// A hex-encoded string.

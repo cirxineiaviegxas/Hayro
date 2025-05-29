@@ -1,10 +1,8 @@
-use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{CATALOG, FIRST, INDEX, N, PAGES, PREV, ROOT, SIZE, W, XREF_STM};
+use crate::object::dict::keys::{FIRST, INDEX, N, PAGES, PREV, ROOT, SIZE, W, XREF_STM};
 use crate::object::indirect::IndirectObject;
-use crate::object::r#ref::ObjRef;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
@@ -373,7 +371,7 @@ fn populate_from_xref_table<'a>(
 ) -> Option<&'a [u8]> {
     let trailer = {
         let mut reader = reader.clone();
-        trailer::read_xref_table_trailer(&mut reader, XRef::dummy())?
+        read_xref_table_trailer(&mut reader, XRef::dummy())?
     };
 
     reader.skip_white_spaces();
@@ -565,6 +563,22 @@ fn xref_stream_subsection<'a>(
     }
 
     Some(())
+}
+
+fn read_xref_table_trailer<'a>(reader: &mut Reader<'a>, xref: &'a XRef) -> Option<Dict<'a>> {
+    reader.skip_white_spaces();
+    reader.forward_tag(b"xref")?;
+    reader.skip_white_spaces();
+
+    while let Some(header) = reader.read_without_xref::<SubsectionHeader>() {
+        reader.jump(reader.offset() + XREF_ENTRY_LEN * header.num_entries as usize);
+    }
+
+    reader.skip_white_spaces();
+    reader.forward_tag(b"trailer")?;
+    reader.skip_white_spaces();
+
+    reader.read_with_xref::<Dict>(xref)
 }
 
 struct ObjectStream<'a> {

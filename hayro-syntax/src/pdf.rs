@@ -1,11 +1,8 @@
 use crate::PdfData;
 use crate::document::page::Pages;
-use crate::file::xref::{XRef, fallback, root_xref};
 use crate::object::Object;
-use crate::object::dict::Dict;
-use crate::object::dict::keys::{CATALOG, ENCRYPT, PAGES, ROOT};
-use crate::object::r#ref::ObjRef;
-use crate::pdf::PdfError::{EncryptionError, OtherError};
+use crate::pdf::PdfError::OtherError;
+use crate::xref::{XRef, fallback, root_xref};
 
 pub struct Pdf {
     xref: XRef,

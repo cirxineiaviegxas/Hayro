@@ -1,5 +1,6 @@
+//! Reading the pages of a PDF document.
+
 use crate::content::{TypedIter, UntypedIter};
-use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::*;
@@ -8,13 +9,17 @@ use crate::object::rect::Rect;
 use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
+use crate::xref::XRef;
 use log::warn;
 use std::cell::OnceCell;
 
+/// A structure holding the pages of a PDF document.
 pub struct Pages<'a> {
+    /// The pages of the document.
     pub pages: Vec<Page<'a>>,
 }
 
+/// Attributes that can be inherited.
 #[derive(Debug, Clone)]
 struct PagesContext {
     media_box: Option<Rect>,
@@ -23,7 +28,7 @@ struct PagesContext {
 }
 
 impl PagesContext {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             media_box: None,
             crop_box: None,
@@ -33,7 +38,8 @@ impl PagesContext {
 }
 
 impl<'a> Pages<'a> {
-    pub fn new(pages_dict: Dict<'a>, xref: &'a XRef) -> Option<Pages<'a>> {
+    /// Create a new `Pages` object.
+    pub(crate) fn new(pages_dict: Dict<'a>, xref: &'a XRef) -> Option<Pages<'a>> {
         let mut pages = vec![];
         let ctx = PagesContext::new();
         resolve_pages(
@@ -46,6 +52,7 @@ impl<'a> Pages<'a> {
         Some(Self { pages })
     }
 
+    /// The number of available pages.
     pub fn len(&self) -> usize {
         self.pages.len()
     }
@@ -76,8 +83,6 @@ fn resolve_pages<'a>(
 
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
 
-    // TODO: Add inheritance of page attributes
-
     for dict in kids.iter::<Dict>() {
         match dict.get::<Name>(TYPE)? {
             PAGES => resolve_pages(dict, entries, ctx.clone(), resources.clone())?,
@@ -89,11 +94,16 @@ fn resolve_pages<'a>(
     Some(())
 }
 
+/// The rotation of the page.
 #[derive(Debug, Copy, Clone)]
 pub enum Rotation {
+    /// No rotation.
     None,
+    /// A rotation of 90 degrees.
     Horizontal,
+    /// A rotation of 180 degrees.
     Flipped,
+    /// A rotation of 270 degrees.
     FlippedHorizontal,
 }
 
@@ -112,8 +122,7 @@ impl<'a> Page<'a> {
         let media_box = dict
             .get::<Rect>(MEDIA_BOX)
             .or_else(|| ctx.media_box)
-            // TODO: A default media box
-            .unwrap();
+            .unwrap_or(A4);
 
         let crop_box = dict
             .get::<Rect>(CROP_BOX)
@@ -181,35 +190,44 @@ impl<'a> Page<'a> {
         Some(iter)
     }
 
+    /// Get the resources of the page.
     pub fn resources(&self) -> &Resources<'a> {
         &self.resources
     }
 
+    /// Get the media box of the page.
     pub fn media_box(&self) -> kurbo::Rect {
         self.media_box
     }
 
+    /// Get the rotation of the page.
     pub fn rotation(&self) -> Rotation {
         self.rotation
     }
 
+    /// Get the crop box of the page.
     pub fn crop_box(&self) -> kurbo::Rect {
         self.crop_box
     }
 
+    /// Get the operations of the content stream of the page.
     pub fn operations(&self) -> UntypedIter {
         self.operations_impl().unwrap_or(UntypedIter::empty())
     }
 
+    // TODO: Remove?
+    /// Get the xref table (of the document the page belongs to).
     pub fn xref(&self) -> &'a XRef {
         self.xref
     }
 
+    /// Return an iterator over the operators in the page's content stream.
     pub fn typed_operations(&self) -> TypedIter {
         TypedIter::new(self.operations().into_iter())
     }
 }
 
+/// A structure keeping track of the resources of a page.
 #[derive(Clone, Debug)]
 pub struct Resources<'a> {
     parent: Option<Box<Resources<'a>>>,
@@ -223,12 +241,14 @@ pub struct Resources<'a> {
 }
 
 impl<'a> Resources<'a> {
+    /// Create a new `Resources` object from a dictionary with a parent.
     pub fn from_parent(resources: Dict<'a>, parent: Resources<'a>) -> Resources<'a> {
         let xref = parent.xref;
 
         Self::new(resources, Some(parent), xref)
     }
 
+    /// Create a new `Resources` object.
     pub fn new(
         resources: Dict<'a>,
         parent: Option<Resources<'a>>,
@@ -255,6 +275,7 @@ impl<'a> Resources<'a> {
         }
     }
 
+    /// Resolve an object reference to an object.
     #[allow(private_bounds)]
     pub fn resolve_ref<T: ObjectLike<'a>>(&self, ref_: ObjRef) -> Option<T> {
         self.xref.get(ref_.into())
@@ -277,6 +298,9 @@ impl<'a> Resources<'a> {
         }
     }
 
+    // TODO: Refactor caching mechanism
+
+    /// Get an external graphics state by name.
     pub fn get_ext_g_state<U>(
         &self,
         name: &Name,
@@ -291,6 +315,7 @@ impl<'a> Resources<'a> {
             })
     }
 
+    /// Get a color space by name.
     pub fn get_color_space<U>(
         &self,
         name: &Name,
@@ -305,6 +330,7 @@ impl<'a> Resources<'a> {
             })
     }
 
+    /// Get a font by name.
     pub fn get_font<U>(
         &self,
         name: &Name,
@@ -319,6 +345,7 @@ impl<'a> Resources<'a> {
             })
     }
 
+    /// Get a pattern by name.
     pub fn get_pattern<U>(
         &self,
         name: &Name,
@@ -333,6 +360,7 @@ impl<'a> Resources<'a> {
             })
     }
 
+    /// Get an x object by name.
     pub fn get_x_object<U>(
         &self,
         name: &Name,
@@ -347,6 +375,7 @@ impl<'a> Resources<'a> {
             })
     }
 
+    /// Get a shading by name.
     pub fn get_shading<U>(
         &self,
         name: &Name,
@@ -361,3 +390,14 @@ impl<'a> Resources<'a> {
             })
     }
 }
+
+// <https://github.com/apache/pdfbox/blob/a53a70db16ea3133994120bcf1e216b9e760c05b/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/common/PDRectangle.java#L38>
+const POINTS_PER_INCH: f64 = 72.0;
+const POINTS_PER_MM: f64 = 1.0 / (10.0 * 2.54) * POINTS_PER_INCH;
+
+const A4: Rect = Rect(kurbo::Rect {
+    x0: 0.0,
+    y0: 0.0,
+    x1: 210.0 * POINTS_PER_MM,
+    y1: 297.0 * POINTS_PER_MM,
+});

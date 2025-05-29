@@ -6,12 +6,12 @@
 pub mod ops;
 
 use crate::content::ops::TypedOperation;
-use crate::file::xref::XRef;
 use crate::object::dict::InlineImageDict;
 use crate::object::name::{Name, skip_name_like};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 use log::warn;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};

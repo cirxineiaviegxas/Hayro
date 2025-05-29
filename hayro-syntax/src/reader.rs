@@ -1,7 +1,7 @@
 //! Reading bytes and PDF objects from data.
 
-use crate::file::xref::XRef;
 use crate::trivia::{Comment, is_eol_character, is_white_space_character};
+use crate::xref::XRef;
 use std::ops::Range;
 
 /// A reader for reading bytes and PDF objects.

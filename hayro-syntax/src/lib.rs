@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 
 use self::object::ObjectIdentifier;
-use crate::file::xref::XRef;
 use crate::object::stream::Stream;
+use crate::xref::XRef;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
@@ -12,7 +12,6 @@ use std::sync::{Arc, Mutex};
 pub mod bit;
 pub mod content;
 pub mod document;
-pub mod file;
 pub mod filter;
 pub mod function;
 pub mod object;
@@ -20,6 +19,7 @@ pub mod pdf;
 pub mod reader;
 pub mod trivia;
 pub(crate) mod util;
+pub mod xref;
 
 const NUM_SLOTS: usize = 10000;
 

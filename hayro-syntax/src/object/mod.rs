@@ -1,4 +1,3 @@
-use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
 use crate::object::name::{Name, skip_name_like};
@@ -6,6 +5,7 @@ use crate::object::null::Null;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 use std::fmt::Debug;
 
 pub mod array;
@@ -246,9 +246,9 @@ pub fn dict_or_stream<'a>(obj: &Object<'a>) -> Option<(Dict<'a>, Option<Stream<'
 
 #[cfg(test)]
 mod tests {
-    use crate::file::xref::XRef;
     use crate::object::Object;
     use crate::reader::Reader;
+    use crate::xref::XRef;
 
     fn object_impl(data: &[u8]) -> Option<Object> {
         let mut r = Reader::new(data);

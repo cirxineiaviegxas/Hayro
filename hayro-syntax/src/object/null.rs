@@ -1,7 +1,7 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::Object;
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]
 pub struct Null;

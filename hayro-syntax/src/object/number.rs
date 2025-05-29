@@ -1,7 +1,7 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 use log::debug;
 use std::fmt::Debug;
 use std::str::FromStr;

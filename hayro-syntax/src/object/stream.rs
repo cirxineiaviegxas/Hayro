@@ -1,4 +1,3 @@
-use crate::file::xref::XRef;
 use crate::filter::{Filter, FilterResult, apply_filter};
 use crate::object::array::Array;
 use crate::object::dict::Dict;
@@ -7,6 +6,7 @@ use crate::object::name::Name;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::util::OptionLog;
+use crate::xref::XRef;
 use log::warn;
 use std::fmt::{Debug, Formatter};
 
@@ -211,9 +211,9 @@ impl<'a> ObjectLike<'a> for Stream<'a> {}
 
 #[cfg(test)]
 mod tests {
-    use crate::file::xref::XRef;
     use crate::object::stream::Stream;
     use crate::reader::Reader;
+    use crate::xref::XRef;
 
     #[test]
     fn stream() {

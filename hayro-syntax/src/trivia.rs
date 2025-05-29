@@ -1,7 +1,7 @@
 //! Comments and white spaces.
 
-use crate::file::xref::XRef;
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 
 #[inline(always)]
 pub fn is_white_space_character(char: u8) -> bool {

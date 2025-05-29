@@ -1,7 +1,7 @@
-use crate::file::xref::XRef;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
+use crate::xref::XRef;
 use std::fmt::Debug;
 // Note that tuples don't correspond to any specific PDF object. Instead, they simply
 // represent a number of PDF objects that are only separated by whitespaces, i.e.

@@ -1,8 +1,8 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 use log::warn;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};
@@ -302,11 +302,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::file::xref::XRef;
     use crate::object::Object;
     use crate::object::array::Array;
     use crate::object::r#ref::{MaybeRef, ObjRef};
     use crate::reader::Reader;
+    use crate::xref::XRef;
 
     fn array_impl(data: &[u8]) -> Option<Vec<Object>> {
         Reader::new(data)

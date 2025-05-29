@@ -1,10 +1,10 @@
-use crate::file::xref::XRef;
 use crate::object::array::Array;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
+use crate::xref::XRef;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Rect(kurbo::Rect);
+pub struct Rect(pub(crate) kurbo::Rect);
 
 impl Rect {
     pub fn get(&self) -> kurbo::Rect {

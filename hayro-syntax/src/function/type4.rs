@@ -1,10 +1,10 @@
 use crate::content;
-use crate::file::xref::XRef;
 use crate::function::{Clamper, Values};
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::Reader;
 use crate::util::OptionLog;
+use crate::xref::XRef;
 use log::error;
 use smallvec::SmallVec;
 use std::array;

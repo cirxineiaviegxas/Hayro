@@ -1,7 +1,7 @@
-use crate::file::xref::XRef;
 use crate::object;
 use crate::object::Object;
 use crate::reader::{Readable, Reader, Skippable};
+use crate::xref::XRef;
 
 impl Skippable for bool {
     fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
