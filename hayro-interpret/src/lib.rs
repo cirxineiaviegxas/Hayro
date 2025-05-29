@@ -439,35 +439,34 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.rise = t.0.as_f32();
             }
             TypedOperation::Shading(s) => {
-                let shading_obj = resources
+                if let Some(sp) = resources
                     .get_shading(&s.0, Box::new(|_| None), Box::new(|d| Some(d)))
-                    .unwrap();
-                let shading_pattern = {
-                    let (dict, stream) = dict_or_stream(&shading_obj).unwrap();
-                    let shading = Shading::new(&dict, stream.as_ref()).unwrap();
-
-                    ShadingPattern {
-                        shading: Arc::new(shading),
+                    .and_then(|o| dict_or_stream(&o))
+                    .and_then(|s| Shading::new(&s.0, s.1.as_ref()))
+                    .map(|s| ShadingPattern {
+                        shading: Arc::new(s),
                         matrix: Affine::IDENTITY,
-                    }
-                };
+                    })
+                {
+                    context.save_state();
+                    context.push_root_transform();
+                    let st = context.get_mut();
+                    st.fill_pattern = Some(sp);
+                    st.fill_cs = ColorSpace::pattern();
 
-                context.save_state();
-                context.push_root_transform();
-                let st = context.get_mut();
-                st.fill_pattern = Some(shading_pattern);
-                st.fill_cs = ColorSpace::pattern();
+                    let bbox = context.bbox().to_path(0.1);
+                    let inverted_bbox = context.get().affine.inverse() * bbox;
+                    fill_path_impl(
+                        context,
+                        device,
+                        Some(&GlyphDescription::Path(inverted_bbox)),
+                        None,
+                    );
 
-                let bbox = context.bbox().to_path(0.1);
-                let inverted_bbox = context.get().affine.inverse() * bbox;
-                fill_path_impl(
-                    context,
-                    device,
-                    Some(&GlyphDescription::Path(inverted_bbox)),
-                    None,
-                );
-
-                context.restore_state();
+                    context.restore_state();
+                }   else {
+                    warn!("failed to process shading");
+                }
             }
             _ => {
                 println!("{:?}", op);
