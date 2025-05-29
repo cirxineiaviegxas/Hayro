@@ -14,6 +14,7 @@ use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::{Fill, ImageQuality};
+use smallvec::SmallVec;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -162,7 +163,7 @@ pub struct ImageXObject<'a> {
     pub height: u32,
     color_space: ColorSpace,
     interpolate: bool,
-    decode: Vec<(f32, f32)>,
+    decode: SmallVec<[(f32, f32); 4]>,
     is_mask: bool,
     pub dict: Dict<'a>,
     bits_per_component: u8,
@@ -190,24 +191,24 @@ impl<'a> ImageXObject<'a> {
                 .unwrap_or(8)
         };
         let color_space = if image_mask {
-            ColorSpace::DeviceGray
+            ColorSpace::device_gray()
         } else {
             dict.get::<Object>(CS)
                 .or_else(|| dict.get::<Object>(COLORSPACE))
                 .map(|c| ColorSpace::new(c))
                 .or_else(|| {
                     decoded.color_space.map(|c| match c {
-                        hayro_syntax::filter::ImageColorSpace::Gray => ColorSpace::DeviceGray,
-                        hayro_syntax::filter::ImageColorSpace::Rgb => ColorSpace::DeviceRgb,
-                        hayro_syntax::filter::ImageColorSpace::Cmyk => ColorSpace::DeviceCmyk,
+                        hayro_syntax::filter::ImageColorSpace::Gray => ColorSpace::device_gray(),
+                        hayro_syntax::filter::ImageColorSpace::Rgb => ColorSpace::device_rgb(),
+                        hayro_syntax::filter::ImageColorSpace::Cmyk => ColorSpace::device_cmyk(),
                     })
                 })
-                .unwrap_or(ColorSpace::DeviceGray)
+                .unwrap_or(ColorSpace::device_gray())
         };
         let decode = dict
             .get::<Array>(D)
             .or_else(|| dict.get::<Array>(DECODE))
-            .map(|a| a.iter::<(f32, f32)>().collect::<Vec<_>>())
+            .map(|a| a.iter::<(f32, f32)>().collect::<SmallVec<_>>())
             .unwrap_or(color_space.default_decode_arr(bits_per_component as f32));
         let width = dict
             .get::<u32>(W)
@@ -286,7 +287,7 @@ impl<'a> ImageXObject<'a> {
                 s_mask.unwrap_or_else(|| vec![1.0; self.width as usize * self.height as usize]);
 
             self.decode_raw()
-                .chunks(self.color_space.components() as usize)
+                .chunks(self.color_space.num_components() as usize)
                 .zip(s_mask)
                 .flat_map(|(v, alpha)| self.color_space.to_rgba(v, alpha).to_rgba8().to_u8_array())
                 .collect::<Vec<_>>()
@@ -335,7 +336,7 @@ impl<'a> ImageXObject<'a> {
 
         let mut decoded_arr = vec![];
 
-        for components in adjusted_components.chunks(self.color_space.components() as usize) {
+        for components in adjusted_components.chunks(self.color_space.num_components() as usize) {
             for (component, (d_min, d_max)) in components.iter().zip(&self.decode) {
                 decoded_arr.push(interpolate(*component as f32, *d_min, *d_max));
             }

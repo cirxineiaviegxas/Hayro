@@ -61,16 +61,16 @@ pub fn interpret<'a, 'b>(
         match op {
             TypedOperation::SaveState(_) => save_sate(context),
             TypedOperation::StrokeColorDeviceRgb(s) => {
-                context.get_mut().stroke_cs = ColorSpace::DeviceRgb;
+                context.get_mut().stroke_cs = ColorSpace::device_rgb();
                 context.get_mut().stroke_color =
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::StrokeColorDeviceGray(s) => {
-                context.get_mut().stroke_cs = ColorSpace::DeviceGray;
+                context.get_mut().stroke_cs = ColorSpace::device_gray();
                 context.get_mut().stroke_color = smallvec![s.0.as_f32()];
             }
             TypedOperation::StrokeColorCmyk(s) => {
-                context.get_mut().stroke_cs = ColorSpace::DeviceCmyk;
+                context.get_mut().stroke_cs = ColorSpace::device_cmyk();
                 context.get_mut().stroke_color =
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
@@ -140,15 +140,15 @@ pub fn interpret<'a, 'b>(
                 fill_stroke_path(context, device);
             }
             TypedOperation::NonStrokeColorDeviceGray(s) => {
-                context.get_mut().fill_cs = ColorSpace::DeviceGray;
+                context.get_mut().fill_cs = ColorSpace::device_gray();
                 context.get_mut().fill_color = smallvec![s.0.as_f32()];
             }
             TypedOperation::NonStrokeColorDeviceRgb(s) => {
-                context.get_mut().fill_cs = ColorSpace::DeviceRgb;
+                context.get_mut().fill_cs = ColorSpace::device_rgb();
                 context.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::NonStrokeColorCmyk(s) => {
-                context.get_mut().fill_cs = ColorSpace::DeviceCmyk;
+                context.get_mut().fill_cs = ColorSpace::device_cmyk();
                 context.get_mut().fill_color =
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
@@ -255,7 +255,7 @@ pub fn interpret<'a, 'b>(
                     context.get_color_space(&resources, c.0)
                 };
 
-                cs.set_initial_color(&mut context.get_mut().stroke_color);
+                context.get_mut().stroke_color = cs.initial_color();
                 context.get_mut().stroke_cs = cs;
             }
             TypedOperation::ColorSpaceNonStroke(c) => {
@@ -265,7 +265,7 @@ pub fn interpret<'a, 'b>(
                     context.get_color_space(&resources, c.0)
                 };
 
-                cs.set_initial_color(&mut context.get_mut().fill_color);
+                context.get_mut().fill_color = cs.initial_color();
                 context.get_mut().fill_cs = cs;
             }
             TypedOperation::DashPattern(p) => {
@@ -456,7 +456,7 @@ pub fn interpret<'a, 'b>(
                 context.push_root_transform();
                 let st = context.get_mut();
                 st.fill_pattern = Some(shading_pattern);
-                st.fill_cs = ColorSpace::Pattern;
+                st.fill_cs = ColorSpace::pattern();
 
                 let bbox = context.bbox().to_path(0.1);
                 let inverted_bbox = context.get().affine.inverse() * bbox;
@@ -674,7 +674,7 @@ fn handle_paint(
         )
     };
 
-    let clip_path = if matches!(cs, ColorSpace::Pattern) {
+    let clip_path = if cs.is_pattern() {
         let mut pattern = pattern.unwrap();
         pattern.matrix = *context.root_transform() * pattern.matrix;
         let bbox = pattern.shading.bbox;

@@ -223,10 +223,6 @@ pub(crate) struct BitChunk {
 }
 
 impl BitChunk {
-    fn bits(&self) -> &[u16] {
-        &self.bits
-    }
-
     pub fn iter(&self) -> impl Iterator<Item = u16> + '_ {
         self.bits.iter().copied()
     }
@@ -485,11 +481,11 @@ mod tests {
     fn bit_reader_chunks() {
         let data = [0b10011000, 0b00010000];
         let mut reader = BitChunks::new(&data, BitSize::from_u8(1).unwrap(), 3).unwrap();
-        assert_eq!(reader.next().unwrap().bits(), [0b1, 0b0, 0b0]);
-        assert_eq!(reader.next().unwrap().bits(), [0b1, 0b1, 0b0]);
-        assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b0]);
-        assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b1]);
-        assert_eq!(reader.next().unwrap().bits(), [0b0, 0b0, 0b0]);
+        assert_eq!(reader.next().unwrap().bits.as_ref(), &[0b1, 0b0, 0b0]);
+        assert_eq!(reader.next().unwrap().bits.as_ref(), &[0b1, 0b1, 0b0]);
+        assert_eq!(reader.next().unwrap().bits.as_ref(), &[0b0, 0b0, 0b0]);
+        assert_eq!(reader.next().unwrap().bits.as_ref(), &[0b0, 0b0, 0b1]);
+        assert_eq!(reader.next().unwrap().bits.as_ref(), &[0b0, 0b0, 0b0]);
     }
 
     #[test]
