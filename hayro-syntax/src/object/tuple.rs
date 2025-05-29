@@ -13,7 +13,7 @@ where
     T: ObjectLike<'a>,
     U: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         r.skip_white_spaces_and_comments();
         let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
         r.skip_white_spaces_and_comments();
@@ -47,7 +47,7 @@ where
     U: ObjectLike<'a>,
     V: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         r.skip_white_spaces_and_comments();
         let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
         r.skip_white_spaces_and_comments();
@@ -87,7 +87,7 @@ where
     V: ObjectLike<'a>,
     W: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         r.skip_white_spaces_and_comments();
         let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
         r.skip_white_spaces_and_comments();
@@ -132,7 +132,7 @@ where
     W: ObjectLike<'a>,
     X: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         r.skip_white_spaces_and_comments();
         let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
         r.skip_white_spaces_and_comments();

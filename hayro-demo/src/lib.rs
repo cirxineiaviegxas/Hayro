@@ -1,9 +1,10 @@
+use hayro_syntax::pdf::Pdf;
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct PdfViewer {
-    pdf_data: Option<Vec<u8>>,
+    pdf: Option<Pdf>,
     current_page: usize,
     total_pages: usize,
 }
@@ -13,7 +14,7 @@ impl PdfViewer {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self {
-            pdf_data: None,
+            pdf: None,
             current_page: 0,
             total_pages: 0,
         }
@@ -22,13 +23,11 @@ impl PdfViewer {
     #[wasm_bindgen]
     pub fn load_pdf(&mut self, data: &[u8]) -> Result<(), JsValue> {
         // Store the data
-        self.pdf_data = Some(data.to_vec());
-        let data_ref = self.pdf_data.as_ref().unwrap();
-
-        let data = hayro_syntax::Data::new(Arc::new(data_ref.clone()));
-        let pdf = hayro_syntax::pdf::Pdf::new(&data)
+        let pdf = Pdf::new(Arc::new(data.to_vec()))
             .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
         self.total_pages = pdf.pages().unwrap().pages.len();
+        self.pdf = Some(pdf);
+
         self.current_page = 0;
 
         Ok(())
@@ -38,10 +37,7 @@ impl PdfViewer {
     pub fn render_current_page(&self, scale: f32) -> Result<Vec<u8>, JsValue> {
         // TODO: This could be optimized using yoke to cache the parsed PDF structure
         // instead of reparsing on every render call
-        if let Some(pdf_data) = &self.pdf_data {
-            let data = hayro_syntax::Data::new(Arc::new(pdf_data.clone()));
-            let pdf = hayro_syntax::pdf::Pdf::new(&data)
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+        if let Some(pdf) = &self.pdf {
             let pages = pdf.pages().unwrap();
 
             if self.current_page < pages.pages.len() {

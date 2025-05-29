@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 #[derive(Clone)]
 pub struct Array<'a> {
     data: &'a [u8],
-    xref: XRef<'a>,
+    xref: &'a XRef,
 }
 
 // Note that this is not structural equality, i.e. two arrays with the same
@@ -26,7 +26,7 @@ impl PartialEq for Array<'_> {
 impl<'a> Array<'a> {
     /// Returns an iterator over the objects of the array.
     fn raw_iter(&self) -> ArrayIter<'a> {
-        ArrayIter::new(self.data, self.xref.clone())
+        ArrayIter::new(self.data, self.xref)
     }
 
     /// Returns an iterator over the resolved objects of the array.
@@ -38,11 +38,11 @@ impl<'a> Array<'a> {
     where
         T: ObjectLike<'a>,
     {
-        ResolvedArrayIter::new(self.data, self.xref.clone())
+        ResolvedArrayIter::new(self.data, self.xref)
     }
 
     pub fn flex_iter(&self) -> FlexArrayIter<'a> {
-        FlexArrayIter::new(self.data, self.xref.clone())
+        FlexArrayIter::new(self.data, self.xref)
     }
 }
 
@@ -87,12 +87,12 @@ impl Default for Array<'_> {
 }
 
 impl<'a> Readable<'a> for Array<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let bytes = r.skip::<PLAIN, Array>()?;
 
         Some(Self {
             data: &bytes[1..bytes.len() - 1],
-            xref: xref.clone(),
+            xref: xref,
         })
     }
 }
@@ -100,11 +100,11 @@ impl<'a> Readable<'a> for Array<'a> {
 /// An iterator over the items of an array.
 pub(crate) struct ArrayIter<'a> {
     reader: Reader<'a>,
-    xref: XRef<'a>,
+    xref: &'a XRef,
 }
 
 impl<'a> ArrayIter<'a> {
-    fn new(data: &'a [u8], xref: XRef<'a>) -> Self {
+    fn new(data: &'a [u8], xref: &'a XRef) -> Self {
         Self {
             reader: Reader::new(data),
             xref,
@@ -137,7 +137,7 @@ pub struct ResolvedArrayIter<'a, T> {
 }
 
 impl<'a, T> ResolvedArrayIter<'a, T> {
-    fn new(data: &'a [u8], xref: XRef<'a>) -> Self {
+    fn new(data: &'a [u8], xref: &'a XRef) -> Self {
         Self {
             flex_iter: FlexArrayIter::new(data, xref),
             phantom_data: PhantomData::default(),
@@ -158,11 +158,11 @@ where
 
 pub struct FlexArrayIter<'a> {
     reader: Reader<'a>,
-    xref: XRef<'a>,
+    xref: &'a XRef,
 }
 
 impl<'a> FlexArrayIter<'a> {
-    fn new(data: &'a [u8], xref: XRef<'a>) -> Self {
+    fn new(data: &'a [u8], xref: &'a XRef) -> Self {
         Self {
             reader: Reader::new(data),
             xref,
@@ -224,7 +224,7 @@ where
 }
 
 impl<'a, T: ObjectLike<'a> + Copy + Default, const C: usize> Readable<'a> for [T; C] {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let array = Array::read::<PLAIN>(r, xref)?;
         array.try_into().ok()
     }
@@ -252,7 +252,7 @@ impl<'a, T: ObjectLike<'a>> TryFrom<Object<'a>> for Vec<T> {
 }
 
 impl<'a, T: ObjectLike<'a>> Readable<'a> for Vec<T> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let array = Array::read::<PLAIN>(r, xref)?;
         array.try_into().ok()
     }
@@ -286,7 +286,7 @@ impl<'a, U: ObjectLike<'a>, T: ObjectLike<'a> + smallvec::Array<Item = U>> TryFr
 impl<'a, U: ObjectLike<'a>, T: ObjectLike<'a> + smallvec::Array<Item = U>> Readable<'a>
     for SmallVec<T>
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let array = Array::read::<PLAIN>(r, xref)?;
         array.try_into().ok()
     }

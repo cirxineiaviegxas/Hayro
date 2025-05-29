@@ -33,10 +33,14 @@ impl<'a> Dict<'a> {
         let repr = Repr {
             data: &[],
             offsets: Default::default(),
-            xref: XRef::dummy(),
+            xref: &XRef::dummy(),
         };
 
         Self(Arc::new(repr))
+    }
+
+    pub fn data(&self) -> &'a [u8] {
+        self.0.data
     }
 
     /// Returns the number of entries in the dictionary.
@@ -83,8 +87,8 @@ impl<'a> Dict<'a> {
         Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
     }
 
-    pub fn xref(&self) -> &XRef<'a> {
-        &self.0.xref
+    pub fn xref(&self) -> &'a XRef {
+        self.0.xref
     }
 }
 
@@ -129,14 +133,14 @@ impl Skippable for Dict<'_> {
 }
 
 impl<'a> Readable<'a> for Dict<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         read_inner::<PLAIN>(r, xref, Some(b"<<"), b">>")
     }
 }
 
 fn read_inner<'a, const PLAIN: bool>(
     r: &mut Reader<'a>,
-    xref: &XRef<'a>,
+    xref: &'a XRef,
     start_tag: Option<&[u8]>,
     end_tag: &[u8],
 ) -> Option<Dict<'a>> {
@@ -194,7 +198,7 @@ fn read_inner<'a, const PLAIN: bool>(
     Some(Dict(Arc::new(Repr {
         data,
         offsets,
-        xref: xref.clone(),
+        xref: xref,
     })))
 }
 
@@ -203,7 +207,7 @@ object!(Dict<'a>, Dict);
 struct Repr<'a> {
     data: &'a [u8],
     offsets: HashMap<Name<'a>, usize>,
-    xref: XRef<'a>,
+    xref: &'a XRef,
 }
 
 pub struct InlineImageDict<'a>(Dict<'a>);
@@ -215,7 +219,7 @@ impl<'a> InlineImageDict<'a> {
 }
 
 impl<'a> Readable<'a> for InlineImageDict<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         Some(Self(read_inner::<true>(r, xref, None, b"ID")?))
     }
 }

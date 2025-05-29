@@ -3,10 +3,11 @@
 use self::object::ObjectIdentifier;
 use crate::file::xref::XRef;
 use crate::object::stream::Stream;
-use std::cell::{OnceCell, RefCell};
+use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::{Arc, Mutex};
 
 pub mod bit;
 pub mod content;
@@ -22,6 +23,8 @@ pub(crate) mod util;
 
 const NUM_SLOTS: usize = 10000;
 
+pub type PdfData = Arc<dyn AsRef<[u8]> + Send + Sync>;
+
 /// A structure for storing the data of the PDF.
 // To explain further: This crate uses a zero-parse approach, meaning that objects like
 // dictionaries or arrays always store the underlying data and parse objects lazily as needed,
@@ -33,10 +36,10 @@ const NUM_SLOTS: usize = 10000;
 // by faking the same lifetime, so that we don't run into lifetime issues when dealing with
 // PDF objects that actually stem from different data sources.
 pub struct Data {
-    data: Arc<dyn AsRef<[u8]> + Send + Sync>,
+    data: PdfData,
     slots: Vec<OnceCell<Option<Vec<u8>>>>,
-    map: RefCell<HashMap<ObjectIdentifier, usize>>,
-    counter: RefCell<usize>,
+    map: Mutex<HashMap<ObjectIdentifier, usize>>,
+    counter: AtomicUsize,
 }
 
 impl Debug for Data {
@@ -47,10 +50,10 @@ impl Debug for Data {
 
 impl Data {
     /// Create a new `Data` structure.
-    pub fn new(data: Arc<dyn AsRef<[u8]> + Send + Sync>) -> Self {
-        let map = RefCell::new(HashMap::new());
+    pub fn new(data: PdfData) -> Self {
+        let map = Mutex::new(HashMap::new());
         let slots = vec![OnceCell::new(); NUM_SLOTS];
-        let counter = RefCell::new(0);
+        let counter = AtomicUsize::new(0);
 
         Self {
             data,
@@ -66,26 +69,24 @@ impl Data {
     }
 
     /// Get access to the data of a decoded object stream.
-    pub(crate) fn get_with<'b>(
-        &'b self,
-        id: ObjectIdentifier,
-        xref: &XRef<'b>,
-    ) -> Option<&'b [u8]> {
-        if let Some(idx) = self.map.borrow().get(&id) {
+    pub(crate) fn get_with(&self, id: ObjectIdentifier, xref: &XRef) -> Option<&[u8]> {
+        if let Some(idx) = self.map.lock().unwrap().get(&id) {
             self.slots[*idx].get()?.as_deref()
         } else {
-            let mut idx = self.counter.borrow_mut();
+            let mut idx = self.counter.load(std::sync::atomic::Ordering::SeqCst);
 
-            if *idx >= NUM_SLOTS {
+            if idx >= NUM_SLOTS {
                 None
             } else {
-                self.map.borrow_mut().insert(id, *idx);
+                self.map.lock().unwrap().insert(id, idx);
 
                 let stream = xref.get::<Stream>(id)?;
-                self.slots[*idx].set(stream.decoded()).unwrap();
+                self.slots[idx].set(stream.decoded()).unwrap();
 
-                let val = self.slots[*idx].get().unwrap().as_deref();
-                *idx += 1;
+                let val = self.slots[idx].get().unwrap().as_deref();
+                idx += 1;
+
+                self.counter.store(idx, std::sync::atomic::Ordering::SeqCst);
 
                 val
             }

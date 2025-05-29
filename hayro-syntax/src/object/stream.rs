@@ -118,7 +118,7 @@ impl Skippable for Stream<'_> {
 }
 
 impl<'a> Readable<'a> for Stream<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let dict = r.read_with_xref::<Dict>(xref)?;
 
         if dict.contains_key(F) {

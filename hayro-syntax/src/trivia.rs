@@ -52,7 +52,7 @@ impl Skippable for Comment<'_> {
 }
 
 impl<'a> Readable<'a> for Comment<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
         let bytes = r.skip_plain::<Comment>()?;
         let bytes = bytes.get(1..bytes.len()).unwrap();
 

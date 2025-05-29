@@ -41,7 +41,7 @@ impl Skippable for HexString<'_> {
 }
 
 impl<'a> Readable<'a> for HexString<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
         let start = r.offset();
         let mut dirty = parse_hex(r)?;
         let end = r.offset();
@@ -158,7 +158,7 @@ impl Skippable for LiteralString<'_> {
 }
 
 impl<'a> Readable<'a> for LiteralString<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef) -> Option<Self> {
         let start = r.offset();
         let dirty = parse_literal(r)?;
         let end = r.offset();
@@ -261,7 +261,7 @@ impl Skippable for String<'_> {
 }
 
 impl<'a> Readable<'a> for String<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
         let inner = match r.peek_byte()? {
             b'<' => InnerString::Hex(r.read_without_xref::<HexString>()?),
             b'(' => InnerString::Literal(r.read_without_xref::<LiteralString>()?),

@@ -21,7 +21,7 @@ impl<'a, T> Readable<'a> for IndirectObject<T>
 where
     T: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let id = r.read_without_xref::<ObjectIdentifier>()?;
         r.skip_white_spaces_and_comments();
         let inner = r.read_with_xref::<T>(xref)?;

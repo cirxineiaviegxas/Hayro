@@ -143,7 +143,7 @@ impl<'a> Type3<'a> {
         let resources = Resources::new(
             self.dict.get(RESOURCES).unwrap_or_default(),
             None,
-            context.xref().clone(),
+            context.xref(),
         );
 
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));

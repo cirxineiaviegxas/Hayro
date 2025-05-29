@@ -45,7 +45,7 @@ impl Skippable for Operator<'_> {
 }
 
 impl<'a> Readable<'a> for Operator<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
         let data = {
             let start = r.offset();
             skip_name_like(r, false)?;

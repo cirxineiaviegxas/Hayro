@@ -1,5 +1,4 @@
 use hayro_render::render_png;
-use hayro_syntax::Data;
 use hayro_syntax::pdf::Pdf;
 use std::sync::Arc;
 
@@ -9,8 +8,8 @@ fn main() {
     }
 
     let file = std::fs::read("/Users/lstampfl/Programming/GitHub/sitro/pdf/in.pdf").unwrap();
-    let data = Data::new(Arc::new(file));
-    let pdf = Pdf::new(&data).unwrap();
+    let data = Arc::new(file);
+    let pdf = Pdf::new(data).unwrap();
 
     let pixmaps = render_png(&pdf, 1.0, None);
 

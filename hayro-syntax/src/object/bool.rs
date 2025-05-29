@@ -14,7 +14,7 @@ impl Skippable for bool {
 }
 
 impl Readable<'_> for bool {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
         match r.skip_plain::<bool>()? {
             b"true" => Some(true),
             b"false" => Some(false),

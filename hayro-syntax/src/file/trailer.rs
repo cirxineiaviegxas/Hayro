@@ -5,14 +5,11 @@ use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::reader::Reader;
 
-/// Parse the "root" trailer from the PDF.
-pub(crate) fn root_trailer<'a>(data: &'a [u8], xref: &XRef<'a>) -> Option<Dict<'a>> {
-    let pos = find_last_xref_pos(data)?;
-
-    trailer_impl(data, pos, &xref)
+pub(crate) fn root_trailer_pos(data: &[u8]) -> Option<usize> {
+    find_last_xref_pos(data)
 }
 
-fn trailer_impl<'a>(data: &'a [u8], pos: usize, xref: &XRef<'a>) -> Option<Dict<'a>> {
+pub(crate) fn read_trailer<'a>(data: &'a [u8], pos: usize, xref: &'a XRef) -> Option<Dict<'a>> {
     let mut reader = Reader::new(data);
     reader.jump(pos);
 
@@ -29,7 +26,7 @@ fn trailer_impl<'a>(data: &'a [u8], pos: usize, xref: &XRef<'a>) -> Option<Dict<
 
 pub(super) fn read_xref_table_trailer<'a>(
     reader: &mut Reader<'a>,
-    xref: &XRef<'a>,
+    xref: &'a XRef,
 ) -> Option<Dict<'a>> {
     reader.skip_white_spaces();
     reader.forward_tag(b"xref")?;
@@ -46,7 +43,7 @@ pub(super) fn read_xref_table_trailer<'a>(
     reader.read_with_xref::<Dict>(xref)
 }
 
-fn read_xref_stream_trailer<'a>(reader: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Dict<'a>> {
+fn read_xref_stream_trailer<'a>(reader: &mut Reader<'a>, xref: &'a XRef) -> Option<Dict<'a>> {
     let stream = reader.read_with_xref::<IndirectObject<Stream>>(xref)?.get();
 
     Some(stream.dict.clone())

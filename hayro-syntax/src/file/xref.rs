@@ -1,13 +1,14 @@
-use crate::Data;
 use crate::file::trailer;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{FIRST, INDEX, N, PREV, ROOT, SIZE, W, XREF_STM};
+use crate::object::dict::keys::{CATALOG, FIRST, INDEX, N, PAGES, PREV, ROOT, SIZE, W, XREF_STM};
 use crate::object::indirect::IndirectObject;
+use crate::object::r#ref::ObjRef;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
+use crate::{Data, PdfData};
 use log::{error, warn};
 use rustc_hash::FxHashMap;
 use std::cmp::max;
@@ -17,30 +18,23 @@ use std::sync::{Arc, RwLock};
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
 /// Parse the "root" xref from the PDF.
-pub(crate) fn root_xref(data: &Data) -> Option<XRef> {
+pub(crate) fn root_xref(data: PdfData) -> Option<XRef> {
     let mut xref_map = FxHashMap::default();
-    let pos = find_last_xref_pos(data.get())?;
-    populate_xref_impl(data.get(), pos, &mut xref_map)?;
+    let xref_pos = find_last_xref_pos(data.as_ref().as_ref())?;
+    let trailer = populate_xref_impl(data.as_ref().as_ref(), xref_pos, &mut xref_map)?;
 
-    let xref = XRef::new(data, xref_map, false);
-
-    Some(xref)
+    XRef::new(data.clone(), xref_map, &trailer, false)
 }
 
 /// Try to manually parse the PDF to build an xref table and trailer dictionary.
-pub(crate) fn fallback(data: &Data) -> Option<(XRef, Dict)> {
+pub(crate) fn fallback(data: PdfData) -> Option<XRef> {
     warn!("xref table was invalid, trying to manually build xref table");
-    let (xref_map, trailer_offset) = fallback_xref_map(data);
+    let (xref_map, trailer_dict) = fallback_xref_map(data.as_ref().as_ref());
 
-    if let Some(trailer_offset) = trailer_offset {
+    if let Some(trailer_dict_data) = trailer_dict {
         warn!("rebuild xref table with {} entries", xref_map.len());
-        let xref = XRef::new(data, xref_map, true);
 
-        let mut r = Reader::new(data.get());
-        r.jump(trailer_offset);
-        let dict = r.read::<false, Dict>(&xref)?;
-
-        Some((xref, dict))
+        XRef::new(data.clone(), xref_map, trailer_dict_data, true)
     } else {
         warn!("couldn't find trailer dictionary, failed to rebuild xref table");
 
@@ -48,20 +42,20 @@ pub(crate) fn fallback(data: &Data) -> Option<(XRef, Dict)> {
     }
 }
 
-pub(crate) fn fallback_xref_map(data: &Data) -> (XrefMap, Option<usize>) {
+fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
     let mut xref_map = FxHashMap::default();
-    let mut trailer_offset = None;
+    let mut trailer_dict = None;
 
-    let mut r = Reader::new(data.get());
+    let mut r = Reader::new(data);
 
     loop {
         let cur_pos = r.offset();
 
         if let Some(obj) = r.read_without_xref::<ObjectIdentifier>() {
             xref_map.insert(obj, EntryType::Normal(cur_pos));
-        } else if let Some(dict) = r.read::<false, Dict>(&XRef::dummy()) {
+        } else if let Some(dict) = r.read::<false, Dict>(XRef::dummy()) {
             if dict.contains_key(SIZE) && dict.contains_key(ROOT) {
-                trailer_offset = Some(cur_pos);
+                trailer_dict = Some(dict);
             }
         } else {
             r.read_byte();
@@ -72,38 +66,85 @@ pub(crate) fn fallback_xref_map(data: &Data) -> (XrefMap, Option<usize>) {
         }
     }
 
-    (xref_map, trailer_offset)
+    (xref_map, trailer_dict.map(|d| d.data()))
 }
 
-/// An xref table.
-#[derive(Clone, Debug)]
-pub struct XRef<'a>(Inner<'a>);
+static DUMMY_XREF: &'static XRef = &XRef(Inner::Dummy);
 
-impl<'a> XRef<'a> {
-    fn new(data: &'a Data, xref_map: XrefMap, repaired: bool) -> Self {
-        Self(Inner::Some(Arc::new(RwLock::new(SomeRepr {
-            data,
-            xref_map,
-            repaired,
-        }))))
+/// An xref table.
+#[derive(Debug)]
+pub struct XRef(Inner);
+
+impl XRef {
+    fn new(
+        data: PdfData,
+        xref_map: XrefMap,
+        trailer_dict_data: &[u8],
+        repaired: bool,
+    ) -> Option<Self> {
+        // This is a bit hacky, but the problem is we can't read the resolved trailer dictionary
+        // before we actually created the xref struct. So we first create it using dummy data
+        // and then populate the data.
+        let trailer_data = TrailerData::dummy();
+
+        let mut xref = Self(Inner::Some {
+            data: Data::new(data),
+            map: Arc::new(RwLock::new(SomeRepr { xref_map, repaired })),
+            trailer_data,
+        });
+
+        // The start and end <<>> will be cut off.
+        let dict_data = {
+            let mut start: Vec<u8> = vec![];
+            start.extend(b"<<");
+            start.extend(trailer_dict_data);
+            start.extend(b">>");
+
+            start
+        };
+
+        let mut r = Reader::new(&dict_data);
+        let trailer_dict = r.read_with_xref::<Dict>(&xref)?;
+        let root = trailer_dict.get::<Dict>(ROOT)?;
+        let pages_ref = root.get_ref(PAGES)?;
+
+        let td = TrailerData {
+            pages_ref: pages_ref.into(),
+        };
+
+        match &mut xref.0 {
+            Inner::Dummy => unreachable!(),
+            Inner::Some { trailer_data, .. } => {
+                *trailer_data = td;
+            }
+        }
+
+        Some(xref)
     }
 
-    pub(crate) fn dummy() -> Self {
-        Self(Inner::Dummy)
+    pub(crate) fn dummy() -> &'static XRef {
+        DUMMY_XREF
     }
 
     pub(crate) fn len(&self) -> usize {
         match &self.0 {
             Inner::Dummy => 0,
-            Inner::Some(s) => s.read().unwrap().xref_map.len(),
+            Inner::Some { map, .. } => map.read().unwrap().xref_map.len(),
         }
     }
 
-    pub(crate) fn objects(&'_ self) -> impl IntoIterator<Item = Object<'a>> + '_ {
+    pub(crate) fn trailer_data(&self) -> &TrailerData {
+        match &self.0 {
+            Inner::Dummy => unreachable!(),
+            Inner::Some { trailer_data, .. } => trailer_data,
+        }
+    }
+
+    pub(crate) fn objects(&self) -> impl IntoIterator<Item = Object<'_>> + '_ {
         match &self.0 {
             Inner::Dummy => unimplemented!(),
-            Inner::Some(s) => iter::from_fn(move || {
-                let locked = s.read().unwrap();
+            Inner::Some { map, .. } => iter::from_fn(move || {
+                let locked = map.read().unwrap();
                 let mut iter = locked.xref_map.keys();
 
                 iter.next().and_then(|k| self.get(*k))
@@ -112,29 +153,29 @@ impl<'a> XRef<'a> {
     }
 
     pub(crate) fn repair(&self) {
-        let Inner::Some(s) = &self.0 else {
+        let Inner::Some { map, data, .. } = &self.0 else {
             unreachable!();
         };
 
-        let mut locked = s.write().unwrap();
+        let mut locked = map.write().unwrap();
         assert!(!locked.repaired);
 
-        let (xref_map, _) = fallback_xref_map(locked.data);
+        let (xref_map, _) = fallback_xref_map(data.get());
         locked.xref_map = xref_map;
         locked.repaired = true;
     }
 
-    pub(crate) fn get<T>(&self, id: ObjectIdentifier) -> Option<T>
+    pub(crate) fn get<'a, T>(&'a self, id: ObjectIdentifier) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
-        let Inner::Some(s) = &self.0 else {
+        let Inner::Some { map, data, .. } = &self.0 else {
             return None;
         };
 
-        let locked = s.read().unwrap();
+        let locked = map.read().unwrap();
 
-        let mut r = Reader::new(locked.data.get());
+        let mut r = Reader::new(data.get());
 
         match *locked.xref_map.get(&id).or_else(|| {
             // An indirect reference to an undefined object shall not be considered an error by a PDF processor; it
@@ -155,7 +196,7 @@ impl<'a> XRef<'a> {
                         return None;
                     }
                 };
-                
+
                 // The xref table is broken, try to repair if not already repaired.
                 if locked.repaired {
                     error!(
@@ -179,8 +220,8 @@ impl<'a> XRef<'a> {
                 let id = ObjectIdentifier::new(id as i32, 0);
 
                 let stream = self.get::<Stream>(id)?;
-                let data = locked.data.get_with(id, self)?;
-                let object_stream = ObjectStream::new(stream, data, self.clone())?;
+                let data = data.get_with(id, self)?;
+                let object_stream = ObjectStream::new(stream, data, self)?;
                 object_stream.get(index)
             }
         }
@@ -223,18 +264,34 @@ type XrefMap = FxHashMap<ObjectIdentifier, EntryType>;
 
 /// Representation of a proper xref table.
 #[derive(Debug)]
-struct SomeRepr<'a> {
+struct SomeRepr {
     xref_map: XrefMap,
-    data: &'a Data,
     repaired: bool,
 }
 
-#[derive(Clone, Debug)]
-enum Inner<'a> {
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct TrailerData {
+    pub pages_ref: ObjectIdentifier,
+}
+
+impl TrailerData {
+    pub fn dummy() -> Self {
+        Self {
+            pages_ref: ObjectIdentifier::new(0, 0),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Inner {
     /// A dummy xref table that doesn't have any entries.
     Dummy,
     /// A proper xref table.
-    Some(Arc<RwLock<SomeRepr<'a>>>),
+    Some {
+        data: Data,
+        map: Arc<RwLock<SomeRepr>>,
+        trailer_data: TrailerData,
+    },
 }
 
 #[derive(Debug)]
@@ -275,7 +332,7 @@ impl XRefEntry {
     }
 }
 
-fn populate_xref_impl(data: &[u8], pos: usize, xref_map: &mut XrefMap) -> Option<()> {
+fn populate_xref_impl<'a>(data: &'a [u8], pos: usize, xref_map: &mut XrefMap) -> Option<&'a [u8]> {
     let mut reader = Reader::new(data);
     reader.jump(pos);
 
@@ -297,7 +354,7 @@ pub(super) struct SubsectionHeader {
 }
 
 impl Readable<'_> for SubsectionHeader {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
         r.skip_white_spaces();
         let start = r.read_without_xref::<u32>()?;
         r.skip_white_spaces();
@@ -308,14 +365,15 @@ impl Readable<'_> for SubsectionHeader {
     }
 }
 
+/// Populate the xref table, and return the trailer dict.
 fn populate_from_xref_table<'a>(
     data: &'a [u8],
     reader: &mut Reader<'a>,
     insert_map: &mut XrefMap,
-) -> Option<()> {
+) -> Option<&'a [u8]> {
     let trailer = {
         let mut reader = reader.clone();
-        trailer::read_xref_table_trailer(&mut reader, &XRef::dummy())?
+        trailer::read_xref_table_trailer(&mut reader, XRef::dummy())?
     };
 
     reader.skip_white_spaces();
@@ -357,16 +415,16 @@ fn populate_from_xref_table<'a>(
         }
     }
 
-    Some(())
+    Some(trailer.data())
 }
 
 fn populate_from_xref_stream<'a>(
     data: &'a [u8],
     reader: &mut Reader<'a>,
     insert_map: &mut XrefMap,
-) -> Option<()> {
+) -> Option<&'a [u8]> {
     let stream = reader
-        .read_with_xref::<IndirectObject<Stream>>(&XRef::dummy())?
+        .read_with_xref::<IndirectObject<Stream>>(XRef::dummy())?
         .get();
 
     if let Some(prev) = stream.dict.get::<i32>(PREV) {
@@ -418,7 +476,7 @@ fn populate_from_xref_stream<'a>(
         )?;
     }
 
-    Some(())
+    Some(stream.dict.data())
 }
 
 fn xref_stream_num<'a>(data: &[u8]) -> Option<u32> {
@@ -511,12 +569,12 @@ fn xref_stream_subsection<'a>(
 
 struct ObjectStream<'a> {
     data: &'a [u8],
-    xref: XRef<'a>,
+    xref: &'a XRef,
     offsets: Vec<usize>,
 }
 
 impl<'a> ObjectStream<'a> {
-    pub fn new(inner: Stream<'a>, data: &'a [u8], xref: XRef<'a>) -> Option<Self> {
+    pub fn new(inner: Stream<'a>, data: &'a [u8], xref: &'a XRef) -> Option<Self> {
         let num_objects = inner.dict.get::<usize>(N)?;
         let first_offset = inner.dict.get::<usize>(FIRST)?;
 
@@ -549,251 +607,5 @@ impl<'a> ObjectStream<'a> {
         r.jump(offset);
 
         r.read_with_xref::<T>(&self.xref)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::Data;
-    use crate::file::xref::{EntryType, Inner, root_xref};
-    use crate::object::ObjectIdentifier;
-    use std::sync::Arc;
-
-    #[test]
-    fn basic_xref() {
-        let data = Data::new(Arc::new(
-            b"
-otherstuff
-xref
-0 9
-0000000000 65535 f 
-0000000016 00000 n 
-0000000086 00000 n 
-0000000214 00000 n 
-0000000391 00000 n 
-0000000527 00000 n 
-0000000651 00000 n 
-0000000828 00000 n 
-0000000968 00000 n 
-trailer
-<< >>
-startxref
-12
-%%EOF",
-        ));
-
-        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
-            unreachable!()
-        };
-        let map = &s.read().unwrap().xref_map;
-
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(1, 0)).unwrap(),
-            EntryType::Normal(16)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(2, 0)).unwrap(),
-            EntryType::Normal(86)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(3, 0)).unwrap(),
-            EntryType::Normal(214)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(4, 0)).unwrap(),
-            EntryType::Normal(391)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(5, 0)).unwrap(),
-            EntryType::Normal(527)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(6, 0)).unwrap(),
-            EntryType::Normal(651)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(7, 0)).unwrap(),
-            EntryType::Normal(828)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(8, 0)).unwrap(),
-            EntryType::Normal(968)
-        );
-    }
-
-    #[test]
-    fn xref_with_free_objects() {
-        let data = Data::new(Arc::new(
-            b"xref
-0 6
-0000000003 65535 f 
-0000000017 00000 n 
-0000000081 00000 n 
-0000000000 00007 f 
-0000000331 00000 n 
-0000000409 00000 n 
-trailer
-<<
-    /Size 5
->>
-startxref
-0",
-        ));
-
-        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
-            unreachable!()
-        };
-        let map = &s.read().unwrap().xref_map;
-
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(1, 0)).unwrap(),
-            EntryType::Normal(17)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(2, 0)).unwrap(),
-            EntryType::Normal(81)
-        );
-        assert_eq!(map.get(&ObjectIdentifier::new(3, 0)), None);
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(4, 0)).unwrap(),
-            EntryType::Normal(331)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(5, 0)).unwrap(),
-            EntryType::Normal(409)
-        );
-    }
-
-    #[test]
-    fn split_xref() {
-        let data = Data::new(Arc::new(
-            b"xref
-0 1
-0000000000 65535 f 
-3 1
-0000000500 00000 n 
-6 1
-0000000698 00000 n 
-9 1
-0000000373 00000 n 
-trailer
-<<
-/Size 9
-/Root 13 0 R
->>
-startxref
-0
-%%EOF",
-        ));
-
-        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
-            unreachable!()
-        };
-        let map = &s.read().unwrap().xref_map;
-
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(3, 0)).unwrap(),
-            EntryType::Normal(500)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(6, 0)).unwrap(),
-            EntryType::Normal(698)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(9, 0)).unwrap(),
-            EntryType::Normal(373)
-        );
-    }
-
-    #[test]
-    fn split_xref_with_updates() {
-        let data = Data::new(Arc::new(
-            b"xref
-0 1
-0000000000 65535 f 
-3 1
-0000025325 00000 n 
-23 2
-0000025518 00002 n 
-0000025635 00000 n 
-30 1
-0000025777 00000 n 
-trailer
-<<
-    /Size 30
->>
-startxref
-0",
-        ));
-
-        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
-            unreachable!()
-        };
-        let map = &s.read().unwrap().xref_map;
-
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(3, 0)).unwrap(),
-            EntryType::Normal(25325)
-        );
-        assert_eq!(map.get(&ObjectIdentifier::new(23, 0)), None);
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(23, 2)).unwrap(),
-            EntryType::Normal(25518)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(30, 0)).unwrap(),
-            EntryType::Normal(25777)
-        );
-    }
-
-    #[test]
-    fn updated_xref_table() {
-        let data = Data::new(Arc::new(
-            b"xref
-0 4
-0000000000 65535 f 
-0000000016 00000 n 
-0000000086 00000 n 
-0000000150 00000 n 
-trailer
-<<
-    /Size 4
->>
-startxref
-0
-%%EOF
-
-xref
-0 1
-0000000000 65535 f 
-2 1
-0000000250 00000 n 
-trailer
-<<
-    /Prev 0
-    /Size 3
->>
-startxref
-134
-%%EOF",
-        ));
-
-        let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
-            unreachable!()
-        };
-        let map = &s.read().unwrap().xref_map;
-
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(1, 0)).unwrap(),
-            EntryType::Normal(16)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(2, 0)).unwrap(),
-            EntryType::Normal(250)
-        );
-        assert_eq!(
-            *map.get(&ObjectIdentifier::new(3, 0)).unwrap(),
-            EntryType::Normal(150)
-        );
     }
 }

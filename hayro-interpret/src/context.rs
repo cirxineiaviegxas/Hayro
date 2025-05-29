@@ -25,11 +25,11 @@ pub struct Context<'a> {
     root_transforms: Vec<Affine>,
     bbox: Vec<kurbo::Rect>,
     color_space_cache: HashMap<ObjRef, ColorSpace>,
-    xref: XRef<'a>,
+    xref: &'a XRef,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(initial_transform: Affine, bbox: kurbo::Rect, xref: XRef<'a>) -> Self {
+    pub fn new(initial_transform: Affine, bbox: kurbo::Rect, xref: &'a XRef) -> Self {
         let line_width = 1.0;
         let line_cap = Cap::Butt;
         let line_join = Join::Miter;
@@ -206,7 +206,7 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub fn xref(&self) -> &XRef<'a> {
-        &self.xref
+    pub fn xref(&self) -> &'a XRef {
+        self.xref
     }
 }

@@ -13,7 +13,7 @@ impl Rect {
 }
 
 impl Readable<'_> for Rect {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
         let arr = r.read_without_xref::<Array>()?;
         from_arr(&arr)
     }

@@ -39,7 +39,7 @@ impl Skippable for ObjRef {
 }
 
 impl Readable<'_> for ObjRef {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
         let obj_ref = r.read_without_xref::<i32>()?;
         r.skip_white_spaces();
         let gen_num = r.read_without_xref::<i32>()?;
@@ -60,7 +60,7 @@ impl<'a, T> MaybeRef<T>
 where
     T: ObjectLike<'a>,
 {
-    pub fn resolve(self, xref: &XRef<'a>) -> Option<T> {
+    pub fn resolve(self, xref: &'a XRef) -> Option<T> {
         match self {
             MaybeRef::Ref(r) => xref.get::<T>(r.into()),
             MaybeRef::NotRef(t) => Some(t),
@@ -106,7 +106,7 @@ impl<'a, T> Readable<'a> for MaybeRef<T>
 where
     T: Readable<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         if let Some(obj) = r.read::<PLAIN, ObjRef>(xref) {
             Some(Self::Ref(obj))
         } else {

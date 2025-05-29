@@ -81,10 +81,7 @@ impl<'a> Reader<'a> {
     // encounter a number we know it's a number, and don't need to do a look-ahead to ensure
     // that it's not an object reference.
     #[inline]
-    pub(crate) fn read<const PLAIN: bool, T: Readable<'a>>(
-        &mut self,
-        xref: &XRef<'a>,
-    ) -> Option<T> {
+    pub(crate) fn read<const PLAIN: bool, T: Readable<'a>>(&mut self, xref: &'a XRef) -> Option<T> {
         let old_offset = self.offset;
 
         T::read::<PLAIN>(self, &xref).or_else(|| {
@@ -95,7 +92,7 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
-    pub(crate) fn read_with_xref<T: Readable<'a>>(&mut self, xref: &XRef<'a>) -> Option<T> {
+    pub(crate) fn read_with_xref<T: Readable<'a>>(&mut self, xref: &'a XRef) -> Option<T> {
         self.read::<false, T>(xref)
     }
 
@@ -246,7 +243,7 @@ impl<'a> Reader<'a> {
 }
 
 pub(crate) trait Readable<'a>: Sized {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self>;
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self>;
     fn from_bytes(b: &'a [u8]) -> Option<Self> {
         let mut r = Reader::new(b);
         let xref = XRef::dummy();

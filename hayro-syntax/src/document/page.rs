@@ -33,7 +33,7 @@ impl PagesContext {
 }
 
 impl<'a> Pages<'a> {
-    pub fn new(pages_dict: Dict<'a>, xref: XRef<'a>) -> Option<Pages<'a>> {
+    pub fn new(pages_dict: Dict<'a>, xref: &'a XRef) -> Option<Pages<'a>> {
         let mut pages = vec![];
         let ctx = PagesContext::new();
         resolve_pages(
@@ -104,7 +104,7 @@ pub struct Page<'a> {
     rotation: Rotation,
     page_streams: OnceCell<Option<Vec<u8>>>,
     resources: Resources<'a>,
-    xref: XRef<'a>,
+    xref: &'a XRef,
 }
 
 impl<'a> Page<'a> {
@@ -128,7 +128,7 @@ impl<'a> Page<'a> {
             _ => Rotation::None,
         };
 
-        let xref = resources.xref.clone();
+        let xref = resources.xref;
         let resources =
             Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
 
@@ -201,8 +201,8 @@ impl<'a> Page<'a> {
         self.operations_impl().unwrap_or(UntypedIter::empty())
     }
 
-    pub fn xref(&self) -> &XRef<'a> {
-        &self.xref
+    pub fn xref(&self) -> &'a XRef {
+        self.xref
     }
 
     pub fn typed_operations(&self) -> TypedIter {
@@ -213,7 +213,7 @@ impl<'a> Page<'a> {
 #[derive(Clone, Debug)]
 pub struct Resources<'a> {
     parent: Option<Box<Resources<'a>>>,
-    xref: XRef<'a>,
+    xref: &'a XRef,
     ext_g_states: Dict<'a>,
     fonts: Dict<'a>,
     color_spaces: Dict<'a>,
@@ -224,7 +224,7 @@ pub struct Resources<'a> {
 
 impl<'a> Resources<'a> {
     pub fn from_parent(resources: Dict<'a>, parent: Resources<'a>) -> Resources<'a> {
-        let xref = parent.xref.clone();
+        let xref = parent.xref;
 
         Self::new(resources, Some(parent), xref)
     }
@@ -232,7 +232,7 @@ impl<'a> Resources<'a> {
     pub fn new(
         resources: Dict<'a>,
         parent: Option<Resources<'a>>,
-        xref: XRef<'a>,
+        xref: &'a XRef,
     ) -> Resources<'a> {
         let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
         let fonts = resources.get::<Dict>(FONT).unwrap_or_default();

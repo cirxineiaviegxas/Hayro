@@ -15,7 +15,7 @@ impl Skippable for Null {
 }
 
 impl Readable<'_> for Null {
-    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef) -> Option<Self> {
         Self::skip::<true>(r)?;
 
         Some(Null)

@@ -84,7 +84,7 @@ impl Skippable for Number {
 }
 
 impl Readable<'_> for Number {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
         // TODO: This function is probably the biggest bottleneck in content parsing, so
         // worth optimizing (i.e. reading the number directly from the bytes instead
         // of first parsing it to a number).
@@ -125,7 +125,7 @@ macro_rules! int_num {
         }
 
         impl<'a> Readable<'a> for $i {
-            fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<$i> {
+            fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<$i> {
                 r.read::<PLAIN, Number>(xref)
                     .map(|n| n.as_i32())
                     .and_then(|n| n.try_into().ok())
@@ -160,7 +160,7 @@ impl Skippable for f32 {
 }
 
 impl Readable<'_> for f32 {
-    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef) -> Option<Self> {
         r.read_without_xref::<Number>().map(|n| n.as_f32())
     }
 }
@@ -185,7 +185,7 @@ impl Skippable for f64 {
 }
 
 impl Readable<'_> for f64 {
-    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef) -> Option<Self> {
         r.read_without_xref::<Number>().map(|n| n.as_f64())
     }
 }

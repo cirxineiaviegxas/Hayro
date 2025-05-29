@@ -144,8 +144,8 @@ pub fn run_test(name: &str, is_download: bool, range_str: Option<&str>) {
         ASSETS_PATH.join(format!("{name}.pdf",))
     };
     let content = std::fs::read(&path).unwrap();
-    let data = Data::new(Arc::new(content));
-    let pdf = Pdf::new(&data).unwrap();
+    let data = Arc::new(content);
+    let pdf = Pdf::new(data).unwrap();
 
     let range = range_str.and_then(parse_range);
     check_render(name, hayro_render::render_png(&pdf, 1.0, range));

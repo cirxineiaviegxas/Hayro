@@ -159,7 +159,7 @@ impl Skippable for Object<'_> {
 }
 
 impl<'a> Readable<'a> for Object<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &XRef<'a>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
         let object = match r.peek_byte()? {
             b'n' => Self::Null(Null::read::<PLAIN>(r, xref)?),
             b't' | b'f' => Self::Boolean(bool::read::<PLAIN>(r, xref)?),
@@ -207,7 +207,7 @@ impl ObjectIdentifier {
 }
 
 impl Readable<'_> for ObjectIdentifier {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef<'_>) -> Option<Self> {
+    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
         let obj_num = r.read_without_xref::<i32>()?;
         r.skip_white_spaces_and_comments();
         let gen_num = r.read_without_xref::<i32>()?;
