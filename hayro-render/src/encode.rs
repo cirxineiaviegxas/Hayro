@@ -120,7 +120,6 @@ impl EncodeExt for ShadingPattern {
                 paints.push(EncodedPaint::PatchMeshShading(encoded));
                 Paint::Indexed(IndexedPaint::new(idx))
             }
-            _ => unimplemented!(),
         }
     }
 }
