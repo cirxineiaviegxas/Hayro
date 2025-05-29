@@ -86,6 +86,7 @@ impl ColorSpaceType {
                     return Some(ColorSpaceType::Separation(Separation::new(&color_array)?));
                 }
                 DEVICE_N => return Some(ColorSpaceType::DeviceN(DeviceN::new(&color_array)?)),
+                PATTERN => return Some(ColorSpaceType::Pattern),
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
