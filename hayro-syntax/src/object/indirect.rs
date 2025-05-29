@@ -1,7 +1,6 @@
 use crate::file::xref::XRef;
 use crate::object::{ObjectIdentifier, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
-use crate::util::OptionLog;
 
 pub(crate) struct IndirectObject<T> {
     id: ObjectIdentifier,

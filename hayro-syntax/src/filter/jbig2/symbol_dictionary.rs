@@ -4,7 +4,7 @@ use crate::filter::jbig2::standard_table::get_standard_table;
 use crate::filter::jbig2::text_region::decode_text_region;
 use crate::filter::jbig2::{
     Bitmap, DecodingContext, Jbig2Error, Reader, SymbolDictionaryHuffmanTables, TemplatePixel,
-    decode_mmr_bitmap, log2, print_bitmap, read_uncompressed_bitmap,
+    decode_mmr_bitmap, log2, read_uncompressed_bitmap,
 };
 
 // 6.5.5 Decoding the symbol dictionary

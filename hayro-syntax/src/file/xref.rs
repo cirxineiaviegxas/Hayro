@@ -12,12 +12,12 @@ use log::{error, warn};
 use rustc_hash::FxHashMap;
 use std::cmp::max;
 use std::iter;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
 /// Parse the "root" xref from the PDF.
-pub(crate) fn root_xref<'a>(data: &'a Data) -> Option<XRef<'a>> {
+pub(crate) fn root_xref(data: &Data) -> Option<XRef> {
     let mut xref_map = FxHashMap::default();
     let pos = find_last_xref_pos(data.get())?;
     populate_xref_impl(data.get(), pos, &mut xref_map)?;
@@ -28,7 +28,7 @@ pub(crate) fn root_xref<'a>(data: &'a Data) -> Option<XRef<'a>> {
 }
 
 /// Try to manually parse the PDF to build an xref table and trailer dictionary.
-pub(crate) fn fallback<'a>(data: &'a Data) -> Option<(XRef<'a>, Dict<'a>)> {
+pub(crate) fn fallback(data: &Data) -> Option<(XRef, Dict)> {
     warn!("xref table was invalid, trying to manually build xref table");
     let (xref_map, trailer_offset) = fallback_xref_map(data);
 
@@ -132,7 +132,7 @@ impl<'a> XRef<'a> {
             return None;
         };
 
-        let mut locked = s.read().unwrap();
+        let locked = s.read().unwrap();
 
         let mut r = Reader::new(locked.data.get());
 
@@ -144,12 +144,8 @@ impl<'a> XRef<'a> {
             EntryType::Normal(offset) => {
                 r.jump(offset);
 
-                let mut broken_xref = false;
-
                 if let Some(object) = r.read_with_xref::<IndirectObject<T>>(self) {
-                    if object.id() != &id {
-                        broken_xref = true;
-                    } else {
+                    if object.id() == &id {
                         return Some(object.get());
                     }
                 } else {
@@ -157,11 +153,10 @@ impl<'a> XRef<'a> {
                     // expected, which is fine.
                     if r.skip_non_plain::<IndirectObject<Object>>().is_some() {
                         return None;
-                    } else {
-                        broken_xref = true;
                     }
                 };
-
+                
+                // The xref table is broken, try to repair if not already repaired.
                 if locked.repaired {
                     error!(
                         "attempt was made at repairing xref, but object {:?} still couldn't be read",

@@ -7,7 +7,7 @@ use crate::object::name::Name;
 use crate::object::rect::Rect;
 use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::stream::Stream;
-use crate::object::{Object, ObjectIdentifier, ObjectLike};
+use crate::object::{Object, ObjectLike};
 use log::warn;
 use std::cell::OnceCell;
 
