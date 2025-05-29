@@ -121,7 +121,7 @@ pub(crate) fn draw_image_xobject(
     let width = x_object.width as f64;
     let height = x_object.height as f64;
 
-    let color = Color::from_pdf(
+    let color = Color::new(
         context.get().fill_cs.clone(),
         context.get().fill_color.clone(),
         context.get().fill_alpha,

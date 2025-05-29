@@ -682,7 +682,7 @@ fn handle_paint(
 
         bbox
     } else {
-        let color = Color::from_pdf(cs, color, alpha);
+        let color = Color::new(cs, color, alpha);
 
         device.set_paint(color);
 

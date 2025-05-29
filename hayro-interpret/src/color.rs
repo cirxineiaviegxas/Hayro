@@ -1,3 +1,5 @@
+//! PDF colors and color spaces.
+
 use crate::util::OptionLog;
 use hayro_syntax::function::Function;
 use hayro_syntax::object::array::Array;
@@ -121,22 +123,27 @@ impl ColorSpace {
         ColorSpaceType::new_from_name(name).map(|c| Self(Arc::new(c)))
     }
 
+    /// Return the device gray color space.
     pub fn device_gray() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceGray))
     }
 
+    /// Return the device RGB color space.
     pub fn device_rgb() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceRgb))
     }
 
+    /// Return the device CMYK color space.
     pub fn device_cmyk() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceCmyk))
     }
 
+    /// Return the pattern color space.
     pub fn pattern() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::Pattern))
     }
 
+    /// Return `true` if the current color space is the pattern color space.
     pub fn is_pattern(&self) -> bool {
         matches!(self.0.as_ref(), ColorSpaceType::Pattern)
     }
@@ -202,7 +209,7 @@ impl ColorSpace {
         }
     }
 
-    /// Turn the given component values and opacity into an SRGB alpha color.
+    /// Turn the given component values and opacity into an RGBA color.
     pub fn to_rgba(&self, c: &[f32], opacity: f32) -> AlphaColor<Srgb> {
         self.to_rgba_inner(c, opacity).unwrap_or(BLACK)
     }
@@ -256,7 +263,7 @@ impl ColorSpace {
 }
 
 #[derive(Debug)]
-pub struct CalGray {
+struct CalGray {
     white_point: [f32; 3],
     black_point: [f32; 3],
     gamma: f32,
@@ -264,7 +271,7 @@ pub struct CalGray {
 
 // See <https://github.com/mozilla/pdf.js/blob/06f44916c8936b92f464d337fe3a0a6b2b78d5b4/src/core/colorspace.js#L752>
 impl CalGray {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    fn new(dict: &Dict) -> Option<Self> {
         let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([1.0, 1.0, 1.0]);
         let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let gamma = dict.get::<f32>(GAMMA).unwrap_or(1.0);
@@ -276,7 +283,7 @@ impl CalGray {
         })
     }
 
-    pub(crate) fn to_rgb(&self, c: f32) -> [u8; 3] {
+    fn to_rgb(&self, c: f32) -> [u8; 3] {
         let g = self.gamma;
         let (_xw, yw, _zw) = {
             let wp = self.white_point;
@@ -297,7 +304,7 @@ impl CalGray {
 }
 
 #[derive(Debug)]
-pub struct CalRgb {
+struct CalRgb {
     white_point: [f32; 3],
     black_point: [f32; 3],
     matrix: [f32; 9],
@@ -309,7 +316,7 @@ pub struct CalRgb {
 // which should be good enough (and by viewing the `calrgb.pdf` test file in different viewers you will
 // see that in many cases each viewer does whatever it wants, even Acrobat), so this is good enough for us.
 impl CalRgb {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    fn new(dict: &Dict) -> Option<Self> {
         let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([1.0, 1.0, 1.0]);
         let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let matrix = dict
@@ -431,7 +438,7 @@ impl CalRgb {
         Self::matrix_product(&Self::BRADFORD_SCALE_INVERSE_MATRIX, &lms_d65)
     }
 
-    pub(crate) fn to_rgb(&self, mut c: [f32; 3]) -> [u8; 3] {
+    fn to_rgb(&self, mut c: [f32; 3]) -> [u8; 3] {
         for i in &mut c {
             *i = i.clamp(0.0, 1.0);
         }
@@ -464,14 +471,14 @@ impl CalRgb {
 }
 
 #[derive(Debug)]
-pub struct Lab {
+struct Lab {
     white_point: [f32; 3],
     _black_point: [f32; 3],
     range: [f32; 4],
 }
 
 impl Lab {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    fn new(dict: &Dict) -> Option<Self> {
         let white_point = dict.get::<[f32; 3]>(WHITE_POINT).unwrap_or([1.0, 1.0, 1.0]);
         let black_point = dict.get::<[f32; 3]>(BLACK_POINT).unwrap_or([0.0, 0.0, 0.0]);
         let range = dict
@@ -493,7 +500,7 @@ impl Lab {
         }
     }
 
-    pub(crate) fn to_rgb(&self, c: [f32; 3]) -> [u8; 3] {
+    fn to_rgb(&self, c: [f32; 3]) -> [u8; 3] {
         let (l, a, b) = (c[0], c[1], c[2]);
 
         let m = (l + 16.0) / 116.0;
@@ -525,14 +532,14 @@ impl Lab {
 }
 
 #[derive(Debug)]
-pub struct Indexed {
+struct Indexed {
     values: Vec<Vec<f32>>,
     hival: u8,
     base: Box<ColorSpace>,
 }
 
 impl Indexed {
-    pub fn new(array: &Array) -> Option<Self> {
+    fn new(array: &Array) -> Option<Self> {
         let mut iter = array.flex_iter();
         // Skip name
         let _ = iter.next::<Name>()?;
@@ -578,13 +585,13 @@ impl Indexed {
 }
 
 #[derive(Debug)]
-pub struct Separation {
+struct Separation {
     alternate_space: ColorSpace,
     tint_transform: Function,
 }
 
 impl Separation {
-    pub fn new(array: &Array) -> Option<Self> {
+    fn new(array: &Array) -> Option<Self> {
         let mut iter = array.flex_iter();
         // Skip `/Separation`
         let _ = iter.next::<Name>()?;
@@ -602,7 +609,7 @@ impl Separation {
         })
     }
 
-    pub fn to_rgba(&self, c: f32, opacity: f32) -> AlphaColor<Srgb> {
+    fn to_rgba(&self, c: f32, opacity: f32) -> AlphaColor<Srgb> {
         // TODO: Handle /All and /None
         let res = self
             .tint_transform
@@ -614,14 +621,14 @@ impl Separation {
 }
 
 #[derive(Debug)]
-pub struct DeviceN {
+struct DeviceN {
     alternate_space: ColorSpace,
     num_components: usize,
     tint_transform: Function,
 }
 
 impl DeviceN {
-    pub fn new(array: &Array) -> Option<Self> {
+    fn new(array: &Array) -> Option<Self> {
         let mut iter = array.flex_iter();
         // Skip `/DeviceN`
         let _ = iter.next::<Name>()?;
@@ -637,7 +644,7 @@ impl DeviceN {
         })
     }
 
-    pub fn to_rgba(&self, c: &[f32], opacity: f32) -> AlphaColor<Srgb> {
+    fn to_rgba(&self, c: &[f32], opacity: f32) -> AlphaColor<Srgb> {
         let res = self
             .tint_transform
             .eval(c.to_smallvec())
@@ -652,7 +659,7 @@ struct ICCColorRepr {
 }
 
 #[derive(Clone)]
-pub struct ICCProfile(Arc<ICCColorRepr>);
+struct ICCProfile(Arc<ICCColorRepr>);
 
 impl Debug for ICCProfile {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -661,7 +668,7 @@ impl Debug for ICCProfile {
 }
 
 impl ICCProfile {
-    pub fn new(profile: &[u8], number_components: usize) -> Option<Self> {
+    fn new(profile: &[u8], number_components: usize) -> Option<Self> {
         let input = qcms::Profile::new_from_slice(profile, false)?;
         let mut output = qcms::Profile::new_sRGB();
         output.precache_output_transform();
@@ -694,7 +701,7 @@ impl ICCProfile {
         })))
     }
 
-    pub(crate) fn to_rgb(&self, c: &[f32]) -> Option<[u8; 3]> {
+    fn to_rgb(&self, c: &[f32]) -> Option<[u8; 3]> {
         let mut srgb = [0, 0, 0];
 
         match self.0.number_components {
@@ -730,6 +737,7 @@ fn f32_to_u8(val: f32) -> u8 {
     (val * 255.0 + 0.5) as u8
 }
 
+/// A color.
 pub struct Color {
     color_space: ColorSpace,
     components: ColorComponents,
@@ -737,11 +745,7 @@ pub struct Color {
 }
 
 impl Color {
-    pub(crate) fn from_pdf(
-        color_space: ColorSpace,
-        components: ColorComponents,
-        opacity: f32,
-    ) -> Self {
+    pub(crate) fn new(color_space: ColorSpace, components: ColorComponents, opacity: f32) -> Self {
         Self {
             color_space,
             components,
@@ -749,6 +753,7 @@ impl Color {
         }
     }
 
+    /// Return the color as an RGBA color.
     pub fn to_rgba(&self) -> AlphaColor<Srgb> {
         self.color_space.to_rgba(&self.components, self.opacity)
     }
