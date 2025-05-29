@@ -20,7 +20,7 @@ pub enum PdfError {
 }
 
 impl<'a> Pdf<'a> {
-    pub fn new(data: &'a Data<'a>) -> Result<Self, PdfError> {
+    pub fn new(data: &'a Data) -> Result<Self, PdfError> {
         let (xref, trailer) = root_xref(data)
             .and_then(|xref| {
                 let trailer = root_trailer(data.get(), &xref);

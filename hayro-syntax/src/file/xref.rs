@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex, RwLock};
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
 /// Parse the "root" xref from the PDF.
-pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
+pub(crate) fn root_xref<'a>(data: &'a Data) -> Option<XRef<'a>> {
     let mut xref_map = FxHashMap::default();
     let pos = find_last_xref_pos(data.get())?;
     populate_xref_impl(data.get(), pos, &mut xref_map)?;
@@ -28,13 +28,13 @@ pub(crate) fn root_xref<'a>(data: &'a Data<'a>) -> Option<XRef<'a>> {
 }
 
 /// Try to manually parse the PDF to build an xref table and trailer dictionary.
-pub(crate) fn fallback<'a>(data: &'a Data<'a>) -> Option<(XRef<'a>, Dict<'a>)> {
+pub(crate) fn fallback<'a>(data: &'a Data) -> Option<(XRef<'a>, Dict<'a>)> {
     warn!("xref table was invalid, trying to manually build xref table");
 
     let mut xref_map = FxHashMap::default();
     let mut trailer_offset = None;
 
-    let mut r = Reader::new(data.data);
+    let mut r = Reader::new(data.get());
 
     loop {
         let cur_pos = r.offset();
@@ -58,7 +58,7 @@ pub(crate) fn fallback<'a>(data: &'a Data<'a>) -> Option<(XRef<'a>, Dict<'a>)> {
         warn!("rebuild xref table with {} entries", xref_map.len());
         let xref = XRef::new(data, xref_map);
 
-        let mut r = Reader::new(data.data);
+        let mut r = Reader::new(data.get());
         r.jump(trailer_offset);
         let dict = r.read::<false, Dict>(&xref)?;
 
@@ -75,7 +75,7 @@ pub(crate) fn fallback<'a>(data: &'a Data<'a>) -> Option<(XRef<'a>, Dict<'a>)> {
 pub struct XRef<'a>(Inner<'a>);
 
 impl<'a> XRef<'a> {
-    fn new(data: &'a Data<'a>, xref_map: XrefMap) -> Self {
+    fn new(data: &'a Data, xref_map: XrefMap) -> Self {
         Self(Inner::Some(Arc::new(RwLock::new(SomeRepr {
             data,
             xref_map,
@@ -187,7 +187,7 @@ type XrefMap = FxHashMap<ObjectIdentifier, EntryType>;
 #[derive(Debug)]
 struct SomeRepr<'a> {
     xref_map: XrefMap,
-    data: &'a Data<'a>,
+    data: &'a Data,
     repaired: bool,
 }
 
@@ -519,10 +519,11 @@ mod tests {
     use crate::Data;
     use crate::file::xref::{EntryType, Inner, root_xref};
     use crate::object::ObjectIdentifier;
+    use std::sync::Arc;
 
     #[test]
     fn basic_xref() {
-        let data = Data::new(
+        let data = Data::new(Arc::new(
             b"
 otherstuff
 xref
@@ -541,7 +542,7 @@ trailer
 startxref
 12
 %%EOF",
-        );
+        ));
 
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
@@ -584,7 +585,7 @@ startxref
 
     #[test]
     fn xref_with_free_objects() {
-        let data = Data::new(
+        let data = Data::new(Arc::new(
             b"xref
 0 6
 0000000003 65535 f 
@@ -599,7 +600,7 @@ trailer
 >>
 startxref
 0",
-        );
+        ));
 
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
@@ -627,7 +628,7 @@ startxref
 
     #[test]
     fn split_xref() {
-        let data = Data::new(
+        let data = Data::new(Arc::new(
             b"xref
 0 1
 0000000000 65535 f 
@@ -645,7 +646,7 @@ trailer
 startxref
 0
 %%EOF",
-        );
+        ));
 
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
@@ -668,7 +669,7 @@ startxref
 
     #[test]
     fn split_xref_with_updates() {
-        let data = Data::new(
+        let data = Data::new(Arc::new(
             b"xref
 0 1
 0000000000 65535 f 
@@ -685,7 +686,7 @@ trailer
 >>
 startxref
 0",
-        );
+        ));
 
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()
@@ -709,7 +710,7 @@ startxref
 
     #[test]
     fn updated_xref_table() {
-        let data = Data::new(
+        let data = Data::new(Arc::new(
             b"xref
 0 4
 0000000000 65535 f 
@@ -737,7 +738,7 @@ trailer
 startxref
 134
 %%EOF",
-        );
+        ));
 
         let Inner::Some(s) = &root_xref(&data).unwrap().0 else {
             unreachable!()

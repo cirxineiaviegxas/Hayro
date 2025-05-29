@@ -2,6 +2,7 @@ use hayro_syntax::Data;
 use hayro_syntax::pdf::Pdf;
 use sitro::RenderOptions;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use walkdir::WalkDir;
 
 const MAX_PAGES: usize = 3;
@@ -65,7 +66,7 @@ fn render_hayro(entries: &[PathBuf]) {
 
         let stem = path.file_stem().unwrap().to_str().unwrap();
         let file = std::fs::read(path).unwrap();
-        let data = Data::new(&file);
+        let data = Data::new(Arc::new(file));
         let pdf = Pdf::new(&data).unwrap();
         let pages = hayro_render::render_png(&pdf, 1.0, None);
 

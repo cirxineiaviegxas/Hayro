@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -24,7 +25,7 @@ impl PdfViewer {
         self.pdf_data = Some(data.to_vec());
         let data_ref = self.pdf_data.as_ref().unwrap();
 
-        let data = hayro_syntax::Data::new(data_ref);
+        let data = hayro_syntax::Data::new(Arc::new(data_ref.clone()));
         let pdf = hayro_syntax::pdf::Pdf::new(&data)
             .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
         self.total_pages = pdf.pages().unwrap().pages.len();
@@ -38,7 +39,7 @@ impl PdfViewer {
         // TODO: This could be optimized using yoke to cache the parsed PDF structure
         // instead of reparsing on every render call
         if let Some(pdf_data) = &self.pdf_data {
-            let data = hayro_syntax::Data::new(pdf_data);
+            let data = hayro_syntax::Data::new(Arc::new(pdf_data.clone()));
             let pdf = hayro_syntax::pdf::Pdf::new(&data)
                 .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
             let pages = pdf.pages().unwrap();

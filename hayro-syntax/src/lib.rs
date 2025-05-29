@@ -6,6 +6,7 @@ use crate::object::stream::Stream;
 use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 
 pub mod bit;
 pub mod content;
@@ -31,22 +32,22 @@ const NUM_SLOTS: usize = 10000;
 // The purpose of `Data` is to allow us to access original data as well as maybe decoded data
 // by faking the same lifetime, so that we don't run into lifetime issues when dealing with
 // PDF objects that actually stem from different data sources.
-pub struct Data<'a> {
-    data: &'a [u8],
+pub struct Data {
+    data: Arc<dyn AsRef<[u8]> + Send + Sync>,
     slots: Vec<OnceCell<Option<Vec<u8>>>>,
     map: RefCell<HashMap<ObjectIdentifier, usize>>,
     counter: RefCell<usize>,
 }
 
-impl Debug for Data<'_> {
+impl Debug for Data {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Data {{ ... }}")
     }
 }
 
-impl<'a> Data<'a> {
+impl Data {
     /// Create a new `Data` structure.
-    pub fn new(data: &'a [u8]) -> Self {
+    pub fn new(data: Arc<dyn AsRef<[u8]> + Send + Sync>) -> Self {
         let map = RefCell::new(HashMap::new());
         let slots = vec![OnceCell::new(); NUM_SLOTS];
         let counter = RefCell::new(0);
@@ -61,14 +62,14 @@ impl<'a> Data<'a> {
 
     /// Get access to the original data of the PDF.
     pub(crate) fn get(&self) -> &[u8] {
-        self.data.as_ref()
+        self.data.as_ref().as_ref()
     }
 
     /// Get access to the data of a decoded object stream.
     pub(crate) fn get_with<'b>(
         &'b self,
         id: ObjectIdentifier,
-        xref: &XRef<'a>,
+        xref: &XRef<'b>,
     ) -> Option<&'b [u8]> {
         if let Some(idx) = self.map.borrow().get(&id) {
             self.slots[*idx].get()?.as_deref()

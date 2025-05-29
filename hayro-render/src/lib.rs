@@ -87,11 +87,11 @@ impl Device for Renderer {
         let min_factor = min_factor(&self.0.transform);
         let mut line_width = stroke_props.line_width.max(0.01);
         let transformed_width = line_width * min_factor;
-        
+
         if transformed_width < 1.0 {
             line_width = line_width / transformed_width;
         }
-        
+
         let stroke = kurbo::Stroke {
             width: line_width as f64,
             join: stroke_props.line_join,
@@ -238,5 +238,8 @@ pub(crate) fn min_factor(transform: &Affine) -> f32 {
     let x_advance = scale_skew_transform * Point::new(1.0, 0.0);
     let y_advance = scale_skew_transform * Point::new(0.0, 1.0);
 
-    x_advance.to_vec2().length().min(y_advance.to_vec2().length()) as f32
+    x_advance
+        .to_vec2()
+        .length()
+        .min(y_advance.to_vec2().length()) as f32
 }
