@@ -12,7 +12,7 @@ use hayro_syntax::object::dict::keys::{
 };
 use hayro_syntax::object::rect::Rect;
 use hayro_syntax::object::stream::Stream;
-use kurbo::{Affine, Point};
+use kurbo::{Affine, CubicBez, ParamCurve, Point};
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
@@ -312,6 +312,51 @@ pub struct CoonsPatch {
     pub control_points: [Point; 12],
     /// The colors at each corner of the coons patch.
     pub colors: [ColorComponents; 4],
+}
+
+impl CoonsPatch {
+    /// Map a coordinate from the unit square of the patch to it's actual coordinate.
+    pub fn map_coordinate(&self, p: Point) -> Point {
+        let (u, v) = (p.x, p.y);
+
+        let cp = &self.control_points;
+
+        let c1 = CubicBez::new(cp[0], cp[11], cp[10], cp[9]);
+        let c2 = CubicBez::new(cp[3], cp[4], cp[5], cp[6]);
+        let d1 = CubicBez::new(cp[0], cp[1], cp[2], cp[3]);
+        let d2 = CubicBez::new(cp[9], cp[8], cp[7], cp[6]);
+
+        let sc = (1.0 - v) * c1.eval(u).to_vec2() + v * c2.eval(u as f64).to_vec2();
+        let sd = (1.0 - u) * d1.eval(v).to_vec2() + u * d2.eval(v as f64).to_vec2();
+        let sb = (1.0 - v) * ((1.0 - u) * c1.eval(0.0).to_vec2() + u * c1.eval(1.0).to_vec2())
+            + v * ((1.0 - u) * c2.eval(0.0).to_vec2() + u * c2.eval(1.0).to_vec2());
+
+        (sc + sd - sb).to_point()
+    }
+
+    /// Get the interpolated colors of the point from the patch.
+    pub fn interpolate(&self, pos: Point) -> ColorComponents {
+        let (u, v) = (pos.x, pos.y);
+        let (c0, c1, c2, c3) = {
+            (
+                &self.colors[0],
+                &self.colors[1],
+                &self.colors[2],
+                &self.colors[3],
+            )
+        };
+
+        let mut result = SmallVec::new();
+        for i in 0..c0.len() {
+            let val = (1.0 - u) * (1.0 - v) * c0[i] as f64
+                + u * (1.0 - v) * c3[i] as f64
+                + u * v * c2[i] as f64
+                + (1.0 - u) * v * c1[i] as f64;
+            result.push(val as f32);
+        }
+
+        result
+    }
 }
 
 fn read_free_form_triangles(

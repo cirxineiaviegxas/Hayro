@@ -36,8 +36,8 @@ impl<'a> PatchMeshShadingFiller<'a> {
             let mut color_found = false;
 
             for patch in &self.shading.patches {
-                if let Some((u, v)) = find_uv(patch, self.cur_pos) {
-                    let t_or_color = bilinear_color(patch, u, v);
+                if let Some(p) = find_uv(patch, self.cur_pos) {
+                    let t_or_color = patch.interpolate(p);
 
                     let final_color = if let Some(function) = &self.shading.function {
                         let val = function.eval(&t_or_color.to_smallvec()).unwrap();
@@ -67,29 +67,7 @@ impl Painter for PatchMeshShadingFiller<'_> {
     }
 }
 
-fn bilinear_color(patch: &CoonsPatch, u: f64, v: f64) -> Vec<f32> {
-    let (c0, c1, c2, c3) = {
-        (
-            &patch.colors[0],
-            &patch.colors[1],
-            &patch.colors[2],
-            &patch.colors[3],
-        )
-    };
-
-    let mut result = Vec::new();
-    for i in 0..c0.len() {
-        let val = (1.0 - u) * (1.0 - v) * c0[i] as f64
-            + u * (1.0 - v) * c3[i] as f64
-            + u * v * c2[i] as f64
-            + (1.0 - u) * v * c1[i] as f64;
-        result.push(val as f32);
-    }
-
-    result
-}
-
-fn find_uv(patch: &CoonsPatch, target: Point) -> Option<(f64, f64)> {
+fn find_uv(patch: &CoonsPatch, target: Point) -> Option<Point> {
     let mut best = None;
     let mut min_dist = f64::MAX;
 
@@ -99,7 +77,7 @@ fn find_uv(patch: &CoonsPatch, target: Point) -> Option<(f64, f64)> {
         for j in 0..=GRANULARITY {
             let u = i as f64 / GRANULARITY as f64;
             let v = j as f64 / GRANULARITY as f64;
-            let s = eval_patch_surface(patch, u, v);
+            let s = patch.map_coordinate(Point::new(u, v));
             let dist = (s - target).hypot();
             if dist < min_dist {
                 min_dist = dist;
@@ -113,12 +91,12 @@ fn find_uv(patch: &CoonsPatch, target: Point) -> Option<(f64, f64)> {
     let (mut u, mut v) = best?;
 
     for _ in 0..10 {
-        let s = eval_patch_surface(patch, u, v);
+        let s = patch.map_coordinate(Point::new(u, v));
         let diff = s - target;
 
         let epsilon = 1e-5;
-        let s_u = (eval_patch_surface(patch, u + epsilon, v) - s) / epsilon;
-        let s_v = (eval_patch_surface(patch, u, v + epsilon) - s) / epsilon;
+        let s_u = (patch.map_coordinate(Point::new(u + epsilon, v)) - s) / epsilon;
+        let s_v = (patch.map_coordinate(Point::new(u, v + epsilon)) - s) / epsilon;
 
         let det = s_u.x * s_v.y - s_u.y * s_v.x;
         if det.abs() < 1e-8 {
@@ -145,24 +123,12 @@ fn find_uv(patch: &CoonsPatch, target: Point) -> Option<(f64, f64)> {
         }
     }
 
-    let final_pos = eval_patch_surface(patch, u, v);
+    let final_pos = patch.map_coordinate(Point::new(u, v));
     let distance = (final_pos - target).hypot();
 
-    if distance < 1.0 { Some((u, v)) } else { None }
-}
-
-fn eval_patch_surface(patch: &CoonsPatch, u: f64, v: f64) -> Point {
-    let cp = &patch.control_points;
-
-    let c1 = CubicBez::new(cp[0], cp[11], cp[10], cp[9]);
-    let c2 = CubicBez::new(cp[3], cp[4], cp[5], cp[6]);
-    let d1 = CubicBez::new(cp[0], cp[1], cp[2], cp[3]);
-    let d2 = CubicBez::new(cp[9], cp[8], cp[7], cp[6]);
-
-    let sc = (1.0 - v) * c1.eval(u).to_vec2() + v * c2.eval(u).to_vec2();
-    let sd = (1.0 - u) * d1.eval(v).to_vec2() + u * d2.eval(v).to_vec2();
-    let sb = (1.0 - v) * ((1.0 - u) * c1.eval(0.0).to_vec2() + u * c1.eval(1.0).to_vec2())
-        + v * ((1.0 - u) * c2.eval(0.0).to_vec2() + u * c2.eval(1.0).to_vec2());
-
-    (sc + sd - sb).to_point()
+    if distance < 1.0 {
+        Some(Point::new(u, v))
+    } else {
+        None
+    }
 }
