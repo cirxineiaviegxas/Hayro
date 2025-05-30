@@ -98,12 +98,18 @@ impl EncodeExt for ShadingPattern {
             }
             ShadingType::CoonsPatchMesh { patches, function } => {
                 let idx = paints.len();
+
                 let full_transform = transform * self.matrix;
                 let inverse_transform = full_transform.inverse();
+
                 let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+
                 let cs = self.shading.color_space.clone();
-                let encoded = EncodedPatchMeshShading {
-                    patches: patches.clone(),
+                
+                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect();
+
+                let encoded = EncodedTriangleMeshShading {
+                    triangles,
                     function: function.clone(),
                     x_advance,
                     y_advance,
@@ -116,7 +122,9 @@ impl EncodeExt for ShadingPattern {
                         .map(|b| cs.to_rgba(&b, 1.0))
                         .unwrap_or(TRANSPARENT),
                 };
-                paints.push(EncodedPaint::PatchMeshShading(encoded));
+
+                paints.push(EncodedPaint::TriangleMeshShading(encoded));
+
                 Paint::Indexed(IndexedPaint::new(idx))
             }
         }
@@ -304,7 +312,6 @@ pub enum EncodedPaint {
     FunctionShading(EncodedFunctionShading),
     AxialShading(EncodedRadialAxialShading),
     TriangleMeshShading(EncodedTriangleMeshShading),
-    PatchMeshShading(EncodedPatchMeshShading),
 }
 
 /// An encoded image.

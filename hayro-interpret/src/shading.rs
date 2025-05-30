@@ -333,6 +333,80 @@ impl CoonsPatch {
 
         (sc + sd - sb).to_point()
     }
+    
+    pub fn to_triangles(&self) -> Vec<Triangle> {
+        const GRID_SIZE: usize = 10;
+        let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
+        
+        // Create 20x20 grid by mapping unit square coordinates
+        for i in 0..GRID_SIZE {
+            for j in 0..GRID_SIZE {
+                let u = i as f64 / (GRID_SIZE - 1) as f64; // 0.0 to 1.0 (left to right)
+                let v = j as f64 / (GRID_SIZE - 1) as f64; // 0.0 to 1.0 (top to bottom)
+                
+                // Map unit square coordinate to patch coordinate
+                let unit_point = Point::new(u, v);
+                grid[i][j] = self.map_coordinate(unit_point);
+            }
+        }
+        
+        // Create triangles from adjacent grid points
+        let mut triangles = vec![];
+        
+        for i in 0..(GRID_SIZE - 1) {
+            for j in 0..(GRID_SIZE - 1) {
+                let p00 = grid[i][j];
+                let p10 = grid[i + 1][j];
+                let p01 = grid[i][j + 1];
+                let p11 = grid[i + 1][j + 1];
+                
+                // Calculate unit square coordinates for color interpolation
+                let u0 = i as f64 / (GRID_SIZE - 1) as f64;
+                let u1 = (i + 1) as f64 / (GRID_SIZE - 1) as f64;
+                let v0 = j as f64 / (GRID_SIZE - 1) as f64;
+                let v1 = (j + 1) as f64 / (GRID_SIZE - 1) as f64;
+                
+                // Create triangle vertices with interpolated colors
+                let v00 = TriangleVertex { 
+                    flag: 0, 
+                    point: p00, 
+                    colors: self.interpolate(Point::new(u0, v0))
+                };
+                let v10 = TriangleVertex { 
+                    flag: 0, 
+                    point: p10, 
+                    colors: self.interpolate(Point::new(u1, v0))
+                };
+                let v01 = TriangleVertex { 
+                    flag: 0, 
+                    point: p01, 
+                    colors: self.interpolate(Point::new(u0, v1))
+                };
+                let v11 = TriangleVertex { 
+                    flag: 0, 
+                    point: p11, 
+                    colors: self.interpolate(Point::new(u1, v1))
+                };
+                
+                // Create two triangles for each grid cell
+                // Triangle 1: top-left, top-right, bottom-left
+                triangles.push(Triangle {
+                    p0: v00.clone(),
+                    p1: v10.clone(),
+                    p2: v01.clone(),
+                });
+                
+                // Triangle 2: top-right, bottom-right, bottom-left
+                triangles.push(Triangle {
+                    p0: v10,
+                    p1: v11,
+                    p2: v01,
+                });
+            }
+        }
+        
+        triangles
+    }
 
     /// Get the interpolated colors of the point from the patch.
     pub fn interpolate(&self, pos: Point) -> ColorComponents {
