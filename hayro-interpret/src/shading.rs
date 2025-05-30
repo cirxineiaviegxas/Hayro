@@ -12,7 +12,7 @@ use hayro_syntax::object::dict::keys::{
 };
 use hayro_syntax::object::rect::Rect;
 use hayro_syntax::object::stream::Stream;
-use kurbo::{Affine, CubicBez, ParamCurve, Point};
+use kurbo::{Affine, CubicBez, ParamCurve, Point, Shape};
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
@@ -235,63 +235,81 @@ impl Shading {
 #[derive(Clone, Debug)]
 pub struct Triangle {
     /// The first vertex.
-    pub p0: TriangleVertex,
+    p0: TriangleVertex,
     /// The second vertex.
-    pub p1: TriangleVertex,
+    p1: TriangleVertex,
     /// The third vertex.
-    pub p2: TriangleVertex,
+    p2: TriangleVertex,
+    kurbo_tri: kurbo::Triangle,
+    d00: f64,
+    d01: f64,
+    d11: f64,
 }
 
 impl Triangle {
+    pub fn new(p0: TriangleVertex, p1: TriangleVertex, p2: TriangleVertex) -> Self {
+        let v0 = p1.point - p0.point;
+        let v1 = p2.point - p0.point;
+
+        let d00 = v0.dot(v0);
+        let d01 = v0.dot(v1);
+        let d11 = v1.dot(v1);
+        
+        let kurbo_tri = kurbo::Triangle::new(p0.point, p1.point, p2.point);
+        
+        Self {
+            p0,
+            p1,
+            kurbo_tri,
+            p2,
+            d00,
+            d01,
+            d11,
+        }
+    }
     /// Get the interpolated colors of the point from the triangle.
     ///
     /// Returns `None` if the point is not inside of the triangle.
-    pub fn interpolate(&self, pos: Point) -> Option<ColorComponents> {
-        let (u, v, w) = self.barycentric_coords(pos)?;
+    pub fn interpolate(&self, pos: Point) -> ColorComponents {
+        let (u, v, w) = self.barycentric_coords(pos);
 
         let mut result = smallvec![];
 
         for i in 0..self.p0.colors.len() {
-            let c0 = self.p0.colors.get(i)?;
-            let c1 = self.p1.colors.get(i)?;
-            let c2 = self.p2.colors.get(i)?;
+            let c0 = self.p0.colors[i];
+            let c1 = self.p1.colors[i];
+            let c2 = self.p2.colors[i];
             result.push(u * c0 + v * c1 + w * c2);
         }
 
-        Some(result)
+        result
+    }
+    
+    pub fn contains_point(&self, pos: Point) -> bool {
+        self.kurbo_tri.winding(pos) != 0
     }
 
     /// Return the barycentric coordinates of the point in the triangle.
     ///
     /// Returns `None` if the point is not inside of the triangle.
-    pub fn barycentric_coords(&self, p: Point) -> Option<(f32, f32, f32)> {
+    fn barycentric_coords(&self, p: Point) -> (f32, f32, f32) {
         let (a, b, c) = (self.p0.point, self.p1.point, self.p2.point);
         let v0 = b - a;
         let v1 = c - a;
         let v2 = p - a;
 
-        let d00 = v0.dot(v0);
-        let d01 = v0.dot(v1);
-        let d11 = v1.dot(v1);
+        let d00 =  self.d00;
+        let d01 =  self.d01;
+        let d11 =  self.d11;
         let d20 = v2.dot(v0);
         let d21 = v2.dot(v1);
 
-        let nudge = |val: f64| -> Option<f64> {
-            const EPSILON: f64 = -1e-4;
-
-            if val < EPSILON {
-                None
-            } else {
-                Some(val.max(0.0))
-            }
-        };
-
         let denom = d00 * d11 - d01 * d01;
-        let v = nudge((d11 * d20 - d01 * d21) / denom)?;
-        let w = nudge((d00 * d21 - d01 * d20) / denom)?;
-        let u = nudge(1.0 - v - w)? as f32;
+        let v = (d11 * d20 - d01 * d21) / denom;
+        let w = (d00 * d21 - d01 * d20) / denom;
+        let u = (1.0 - v - w) as f32;
 
-        Some((u, v as f32, w as f32))
+        (u, v as f32, w as f32)
     }
 }
 
@@ -388,20 +406,8 @@ impl CoonsPatch {
                     colors: self.interpolate(Point::new(u1, v1))
                 };
                 
-                // Create two triangles for each grid cell
-                // Triangle 1: top-left, top-right, bottom-left
-                triangles.push(Triangle {
-                    p0: v00.clone(),
-                    p1: v10.clone(),
-                    p2: v01.clone(),
-                });
-                
-                // Triangle 2: top-right, bottom-right, bottom-left
-                triangles.push(Triangle {
-                    p0: v10,
-                    p1: v11,
-                    p2: v01,
-                });
+                triangles.push(Triangle::new(v00.clone(), v10.clone(), v01.clone()));
+                triangles.push(Triangle::new(v10.clone(), v11.clone(), v01.clone()));
             }
         }
         
@@ -539,11 +545,7 @@ fn read_free_form_triangles(
             return None;
         }
 
-        triangles.push(Triangle {
-            p0: a.clone()?,
-            p1: b.clone()?,
-            p2: c.clone()?,
-        })
+        triangles.push(Triangle::new(a.clone()?, b.clone()?, c.clone()?));
     }
 
     Some(triangles)
@@ -640,17 +642,15 @@ fn read_lattice_triangles(
 
     for i in 0..(lattices.len() - 1) {
         for j in 0..(vertices_per_row as usize - 1) {
-            triangles.push(Triangle {
-                p0: lattices[i][j].clone(),
-                p1: lattices[i + 1][j].clone(),
-                p2: lattices[i][j + 1].clone(),
-            });
+            triangles.push(Triangle::new(lattices[i][j].clone(),
+                lattices[i + 1][j].clone(),
+                lattices[i][j + 1].clone(),
+            ));
 
-            triangles.push(Triangle {
-                p0: lattices[i + 1][j + 1].clone(),
-                p1: lattices[i + 1][j].clone(),
-                p2: lattices[i][j + 1].clone(),
-            });
+            triangles.push(Triangle::new(lattices[i + 1][j + 1].clone(),
+                lattices[i + 1][j].clone(),
+                lattices[i][j + 1].clone(),
+            ));
         }
     }
 

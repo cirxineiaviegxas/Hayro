@@ -3,7 +3,7 @@ use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use hayro_interpret::color::ColorComponents;
 use hayro_interpret::shading::Triangle;
-use kurbo::Point;
+use kurbo::{Point, Shape};
 use smallvec::ToSmallVec;
 
 #[derive(Debug)]
@@ -39,8 +39,8 @@ impl<'a> TriangleMeshShadingFiller<'a> {
 
     fn get_color(&mut self) -> Option<ColorComponents> {
         if let Some(triangle) = &mut self.current {
-            if let Some(color) = triangle.interpolate(self.cur_pos) {
-                Some(color)
+            if triangle.contains_point(self.cur_pos) {
+                Some(triangle.interpolate(self.cur_pos))
             } else {
                 self.update_current()
             }
@@ -53,10 +53,10 @@ impl<'a> TriangleMeshShadingFiller<'a> {
         // Do in reverse so that triangles that appear later in the stream are the ones that
         // will actually be painted.
         for triangle in self.shading.triangles.iter().rev() {
-            if let Some(color) = triangle.interpolate(self.cur_pos) {
+            if triangle.contains_point(self.cur_pos) {
                 self.current = Some(triangle);
 
-                return Some(color);
+                return Some(triangle.interpolate(self.cur_pos));
             }
         }
 
