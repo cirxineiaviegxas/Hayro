@@ -1,5 +1,6 @@
 /// PDF shadings.
 use crate::color::{ColorComponents, ColorSpace};
+use crate::util::PointExt;
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::function::{Function, Values, interpolate};
 use hayro_syntax::object::Object;
@@ -15,7 +16,6 @@ use kurbo::{Affine, Point};
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
-use crate::util::PointExt;
 
 /// The function supplied to a shading.
 #[derive(Debug, Clone)]
@@ -242,6 +242,59 @@ pub struct Triangle {
     pub p2: TriangleVertex,
 }
 
+impl Triangle {
+    /// Get the interpolated colors of the point from the triangle.
+    ///
+    /// Returns `None` if the point is not inside of the triangle.
+    pub fn interpolate(&self, pos: Point) -> Option<ColorComponents> {
+        let (u, v, w) = self.barycentric_coords(pos)?;
+
+        let mut result = smallvec![];
+
+        for i in 0..self.p0.colors.len() {
+            let c0 = self.p0.colors.get(i)?;
+            let c1 = self.p1.colors.get(i)?;
+            let c2 = self.p2.colors.get(i)?;
+            result.push(u * c0 + v * c1 + w * c2);
+        }
+
+        Some(result)
+    }
+
+    /// Return the barycentric coordinates of the point in the triangle.
+    ///
+    /// Returns `None` if the point is not inside of the triangle.
+    pub fn barycentric_coords(&self, p: Point) -> Option<(f32, f32, f32)> {
+        let (a, b, c) = (self.p0.point, self.p1.point, self.p2.point);
+        let v0 = b - a;
+        let v1 = c - a;
+        let v2 = p - a;
+
+        let d00 = v0.dot(v0);
+        let d01 = v0.dot(v1);
+        let d11 = v1.dot(v1);
+        let d20 = v2.dot(v0);
+        let d21 = v2.dot(v1);
+
+        let nudge = |val: f64| -> Option<f64> {
+            const EPSILON: f64 = -1e-4;
+
+            if val < EPSILON {
+                None
+            } else {
+                Some(val.max(0.0))
+            }
+        };
+
+        let denom = d00 * d11 - d01 * d01;
+        let v = nudge((d11 * d20 - d01 * d21) / denom)?;
+        let w = nudge((d00 * d21 - d01 * d20) / denom)?;
+        let u = nudge(1.0 - v - w)? as f32;
+
+        Some((u, v as f32, w as f32))
+    }
+}
+
 /// A triangle vertex.
 #[derive(Clone, Debug)]
 pub struct TriangleVertex {
@@ -360,9 +413,9 @@ fn read_free_form_triangles(
             b = Some(c.clone()?);
             c = Some(first);
         }
-        
+
         let (p0, p1, p2) = (a.clone()?, b.clone()?, c.clone()?);
-        
+
         if p0.point.nearly_same(p1.point) || p1.point.nearly_same(p2.point) {
             return None;
         }

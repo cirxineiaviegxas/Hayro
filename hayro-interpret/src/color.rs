@@ -17,7 +17,8 @@ use smallvec::{SmallVec, ToSmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
-pub(crate) type ColorComponents = SmallVec<[f32; 4]>;
+/// A storage for the components of colors.
+pub type ColorComponents = SmallVec<[f32; 4]>;
 
 #[derive(Debug)]
 enum ColorSpaceType {

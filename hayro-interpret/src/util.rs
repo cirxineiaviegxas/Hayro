@@ -1,7 +1,7 @@
-use std::ops::Sub;
 use log::warn;
 use skrifa::GlyphId;
 use skrifa::raw::tables::cmap::CmapSubtable;
+use std::ops::Sub;
 
 pub(crate) trait OptionLog {
     fn warn_none(self, f: &str) -> Self;
@@ -46,7 +46,7 @@ pub(crate) trait FloatExt: Sized + Sub<f32, Output = f32> + Copy {
     fn is_nearly_zero(&self) -> bool {
         self.is_nearly_zero_within_tolerance(SCALAR_NEARLY_ZERO)
     }
-    
+
     fn is_nearly_equal(&self, other: f32) -> bool {
         (*self - other).is_nearly_zero()
     }
@@ -66,7 +66,7 @@ impl FloatExt for f32 {
 pub(crate) trait PointExt: Sized {
     fn x(&self) -> f32;
     fn y(&self) -> f32;
-    
+
     fn nearly_same(&self, other: Self) -> bool {
         self.x().is_nearly_equal(other.x()) && self.y().is_nearly_equal(other.y())
     }
