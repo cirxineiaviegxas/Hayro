@@ -144,5 +144,9 @@
   {
     "id": "operator-in-TJ-array",
     "file": "pdfs/operator-in-TJ-array.pdf"
+  },
+  {
+    "id": "issue18816",
+    "file": "pdfs/issue18816.pdf"
   }
 ]

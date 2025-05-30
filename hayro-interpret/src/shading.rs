@@ -91,6 +91,13 @@ pub enum ShadingType {
         /// An optional function used for calculating the sampled color values.
         function: Option<ShadingFunction>,
     },
+    /// A tensor-product-patch-mesh shading.
+    TensorProductPatchMesh {
+        /// The patches that make up the shading.
+        patches: Vec<TensorProductPatch>,
+        /// An optional function used for calculating the sampled color values.
+        function: Option<ShadingFunction>,
+    },
 }
 
 /// A PDF shading.
@@ -214,6 +221,26 @@ impl Shading {
 
                 ShadingType::CoonsPatchMesh { patches, function }
             }
+            7 => {
+                let stream = stream?;
+                let stream_data = stream.decoded()?;
+                let bp_coord = dict.get::<u8>(BITS_PER_COORDINATE)?;
+                let bp_comp = dict.get::<u8>(BITS_PER_COMPONENT)?;
+                let bpf = dict.get::<u8>(BITS_PER_FLAG)?;
+                let function = read_function(dict, &color_space);
+                let decode = dict.get::<Array>(DECODE)?.iter::<f32>().collect::<Vec<_>>();
+
+                let patches = read_tensor_product_patch_mesh(
+                    stream_data.as_ref(),
+                    bpf,
+                    bp_coord,
+                    bp_comp,
+                    function.is_some(),
+                    &decode,
+                )?;
+
+                ShadingType::TensorProductPatchMesh { patches, function }
+            }
             _ => return None,
         };
 
@@ -254,9 +281,9 @@ impl Triangle {
         let d00 = v0.dot(v0);
         let d01 = v0.dot(v1);
         let d11 = v1.dot(v1);
-        
+
         let kurbo_tri = kurbo::Triangle::new(p0.point, p1.point, p2.point);
-        
+
         Self {
             p0,
             p1,
@@ -284,7 +311,7 @@ impl Triangle {
 
         result
     }
-    
+
     pub fn contains_point(&self, pos: Point) -> bool {
         self.kurbo_tri.winding(pos) != 0
     }
@@ -298,9 +325,9 @@ impl Triangle {
         let v1 = c - a;
         let v2 = p - a;
 
-        let d00 =  self.d00;
-        let d01 =  self.d01;
-        let d11 =  self.d11;
+        let d00 = self.d00;
+        let d01 = self.d01;
+        let d11 = self.d11;
         let d20 = v2.dot(v0);
         let d21 = v2.dot(v1);
 
@@ -332,6 +359,15 @@ pub struct CoonsPatch {
     pub colors: [ColorComponents; 4],
 }
 
+/// A tensor-product patch.
+#[derive(Clone, Debug)]
+pub struct TensorProductPatch {
+    /// The control points of the tensor-product patch (4x4 grid = 16 points).
+    pub control_points: [Point; 16],
+    /// The colors at each corner of the tensor-product patch.
+    pub colors: [ColorComponents; 4],
+}
+
 impl CoonsPatch {
     /// Map a coordinate from the unit square of the patch to it's actual coordinate.
     pub fn map_coordinate(&self, p: Point) -> Point {
@@ -351,67 +387,209 @@ impl CoonsPatch {
 
         (sc + sd - sb).to_point()
     }
-    
+
     pub fn to_triangles(&self) -> Vec<Triangle> {
         // TODO: Be smarter about this
         const GRID_SIZE: usize = 10;
         let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
-        
+
         // Create 20x20 grid by mapping unit square coordinates
         for i in 0..GRID_SIZE {
             for j in 0..GRID_SIZE {
                 let u = i as f64 / (GRID_SIZE - 1) as f64; // 0.0 to 1.0 (left to right)
                 let v = j as f64 / (GRID_SIZE - 1) as f64; // 0.0 to 1.0 (top to bottom)
-                
+
                 // Map unit square coordinate to patch coordinate
                 let unit_point = Point::new(u, v);
                 grid[i][j] = self.map_coordinate(unit_point);
             }
         }
-        
+
         // Create triangles from adjacent grid points
         let mut triangles = vec![];
-        
+
         for i in 0..(GRID_SIZE - 1) {
             for j in 0..(GRID_SIZE - 1) {
                 let p00 = grid[i][j];
                 let p10 = grid[i + 1][j];
                 let p01 = grid[i][j + 1];
                 let p11 = grid[i + 1][j + 1];
-                
+
                 // Calculate unit square coordinates for color interpolation
                 let u0 = i as f64 / (GRID_SIZE - 1) as f64;
                 let u1 = (i + 1) as f64 / (GRID_SIZE - 1) as f64;
                 let v0 = j as f64 / (GRID_SIZE - 1) as f64;
                 let v1 = (j + 1) as f64 / (GRID_SIZE - 1) as f64;
-                
+
                 // Create triangle vertices with interpolated colors
-                let v00 = TriangleVertex { 
-                    flag: 0, 
-                    point: p00, 
-                    colors: self.interpolate(Point::new(u0, v0))
+                let v00 = TriangleVertex {
+                    flag: 0,
+                    point: p00,
+                    colors: self.interpolate(Point::new(u0, v0)),
                 };
-                let v10 = TriangleVertex { 
-                    flag: 0, 
-                    point: p10, 
-                    colors: self.interpolate(Point::new(u1, v0))
+                let v10 = TriangleVertex {
+                    flag: 0,
+                    point: p10,
+                    colors: self.interpolate(Point::new(u1, v0)),
                 };
-                let v01 = TriangleVertex { 
-                    flag: 0, 
-                    point: p01, 
-                    colors: self.interpolate(Point::new(u0, v1))
+                let v01 = TriangleVertex {
+                    flag: 0,
+                    point: p01,
+                    colors: self.interpolate(Point::new(u0, v1)),
                 };
-                let v11 = TriangleVertex { 
-                    flag: 0, 
-                    point: p11, 
-                    colors: self.interpolate(Point::new(u1, v1))
+                let v11 = TriangleVertex {
+                    flag: 0,
+                    point: p11,
+                    colors: self.interpolate(Point::new(u1, v1)),
                 };
-                
+
                 triangles.push(Triangle::new(v00.clone(), v10.clone(), v01.clone()));
                 triangles.push(Triangle::new(v10.clone(), v11.clone(), v01.clone()));
             }
         }
-        
+
+        triangles
+    }
+
+    /// Get the interpolated colors of the point from the patch.
+    pub fn interpolate(&self, pos: Point) -> ColorComponents {
+        let (u, v) = (pos.x, pos.y);
+        let (c0, c1, c2, c3) = {
+            (
+                &self.colors[0],
+                &self.colors[1],
+                &self.colors[2],
+                &self.colors[3],
+            )
+        };
+
+        let mut result = SmallVec::new();
+        for i in 0..c0.len() {
+            let val = (1.0 - u) * (1.0 - v) * c0[i] as f64
+                + u * (1.0 - v) * c3[i] as f64
+                + u * v * c2[i] as f64
+                + (1.0 - u) * v * c1[i] as f64;
+            result.push(val as f32);
+        }
+
+        result
+    }
+}
+
+impl TensorProductPatch {
+    /// Evaluate Bernstein polynomial B_i(t) for tensor-product patches.
+    fn bernstein(i: usize, t: f64) -> f64 {
+        match i {
+            0 => (1.0 - t).powi(3),
+            1 => 3.0 * t * (1.0 - t).powi(2),
+            2 => 3.0 * t.powi(2) * (1.0 - t),
+            3 => t.powi(3),
+            _ => 0.0,
+        }
+    }
+
+    /// Map a coordinate from the unit square of the patch to its actual coordinate using tensor-product formula.
+    pub fn map_coordinate(&self, p: Point) -> Point {
+        let (u, v) = (p.x, p.y);
+
+        let mut x = 0.0;
+        let mut y = 0.0;
+
+        fn idx(i: usize, j: usize) -> usize {
+            match (i, j) {
+                (0, 0) => 0,
+                (0, 1) => 1,
+                (0, 2) => 2,
+                (0, 3) => 3,
+                (1, 0) => 11,
+                (1, 1) => 12,
+                (1, 2) => 13,
+                (1, 3) => 4,
+                (2, 0) => 10,
+                (2, 1) => 15,
+                (2, 2) => 14,
+                (2, 3) => 5,
+                (3, 0) => 9,
+                (3, 1) => 8,
+                (3, 2) => 7,
+                (3, 3) => 6,
+                _ => panic!("Invalid index"),
+            }
+        }
+
+        for i in 0..4 {
+            for j in 0..4 {
+                let control_point_idx = idx(i, j);
+                let basis = Self::bernstein(i, u) * Self::bernstein(j, v);
+
+                x += self.control_points[control_point_idx].x * basis;
+                y += self.control_points[control_point_idx].y * basis;
+            }
+        }
+
+        Point::new(x, y)
+    }
+
+    pub fn to_triangles(&self) -> Vec<Triangle> {
+        // TODO: Be smarter about this
+        const GRID_SIZE: usize = 10;
+        let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
+
+        // Create grid by mapping unit square coordinates
+        for i in 0..GRID_SIZE {
+            for j in 0..GRID_SIZE {
+                let u = i as f64 / (GRID_SIZE - 1) as f64; // 0.0 to 1.0 (left to right)
+                let v = j as f64 / (GRID_SIZE - 1) as f64; // 0.0 to 1.0 (top to bottom)
+
+                // Map unit square coordinate to patch coordinate
+                let unit_point = Point::new(u, v);
+                grid[i][j] = self.map_coordinate(unit_point);
+            }
+        }
+
+        // Create triangles from adjacent grid points
+        let mut triangles = vec![];
+
+        for i in 0..(GRID_SIZE - 1) {
+            for j in 0..(GRID_SIZE - 1) {
+                let p00 = grid[i][j];
+                let p10 = grid[i + 1][j];
+                let p01 = grid[i][j + 1];
+                let p11 = grid[i + 1][j + 1];
+
+                // Calculate unit square coordinates for color interpolation
+                let u0 = i as f64 / (GRID_SIZE - 1) as f64;
+                let u1 = (i + 1) as f64 / (GRID_SIZE - 1) as f64;
+                let v0 = j as f64 / (GRID_SIZE - 1) as f64;
+                let v1 = (j + 1) as f64 / (GRID_SIZE - 1) as f64;
+
+                // Create triangle vertices with interpolated colors
+                let v00 = TriangleVertex {
+                    flag: 0,
+                    point: p00,
+                    colors: self.interpolate(Point::new(u0, v0)),
+                };
+                let v10 = TriangleVertex {
+                    flag: 0,
+                    point: p10,
+                    colors: self.interpolate(Point::new(u1, v0)),
+                };
+                let v01 = TriangleVertex {
+                    flag: 0,
+                    point: p01,
+                    colors: self.interpolate(Point::new(u0, v1)),
+                };
+                let v11 = TriangleVertex {
+                    flag: 0,
+                    point: p11,
+                    colors: self.interpolate(Point::new(u1, v1)),
+                };
+
+                triangles.push(Triangle::new(v00.clone(), v10.clone(), v01.clone()));
+                triangles.push(Triangle::new(v10.clone(), v11.clone(), v01.clone()));
+            }
+        }
+
         triangles
     }
 
@@ -643,12 +821,14 @@ fn read_lattice_triangles(
 
     for i in 0..(lattices.len() - 1) {
         for j in 0..(vertices_per_row as usize - 1) {
-            triangles.push(Triangle::new(lattices[i][j].clone(),
+            triangles.push(Triangle::new(
+                lattices[i][j].clone(),
                 lattices[i + 1][j].clone(),
                 lattices[i][j + 1].clone(),
             ));
 
-            triangles.push(Triangle::new(lattices[i + 1][j + 1].clone(),
+            triangles.push(Triangle::new(
+                lattices[i + 1][j + 1].clone(),
                 lattices[i + 1][j].clone(),
                 lattices[i][j + 1].clone(),
             ));
@@ -818,6 +998,180 @@ fn read_coons_patch_mesh(
         }
 
         patches.push(CoonsPatch {
+            control_points,
+            colors,
+        });
+    }
+    Some(patches)
+}
+
+fn read_tensor_product_patch_mesh(
+    data: &[u8],
+    bpf: u8,
+    bp_coord: u8,
+    bp_comp: u8,
+    has_function: bool,
+    decode: &[f32],
+) -> Option<Vec<TensorProductPatch>> {
+    let bpf = BitSize::from_u8(bpf)?;
+    let bp_coord = BitSize::from_u8(bp_coord)?;
+    let bp_comp = BitSize::from_u8(bp_comp)?;
+
+    let ([x_min, x_max, y_min, y_max], decode) =
+        decode.split_first_chunk::<4>().map(|(a, b)| (*a, b))?;
+    let num_components = decode.len() / 2;
+
+    let mut reader = BitReader::new(data);
+
+    let interpolate_coord = |n: u32, d_min: f32, d_max: f32| {
+        interpolate(
+            n as f32,
+            0.0,
+            2.0f32.powi(bp_coord.bits() as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
+
+    let interpolate_comp = |n: u32, d_min: f32, d_max: f32| {
+        interpolate(
+            n as f32,
+            0.0,
+            2.0f32.powi(bp_comp.bits() as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
+
+    // Helper to read a single color (or t value)
+    let read_colors = |reader: &mut BitReader| -> Option<ColorComponents> {
+        let mut colors = smallvec![];
+        if has_function {
+            colors.push(interpolate_comp(
+                reader.read(bp_comp)?,
+                decode[0],
+                decode[1],
+            ));
+        } else {
+            for (_, decode) in (0..num_components).zip(decode.chunks_exact(2)) {
+                colors.push(interpolate_comp(
+                    reader.read(bp_comp)?,
+                    decode[0],
+                    decode[1],
+                ));
+            }
+        }
+        Some(colors)
+    };
+
+    // State for implicit control points/colors
+    let mut prev_patch: Option<TensorProductPatch> = None;
+    let mut patches = vec![];
+
+    while let Some(flag) = reader.read(bpf) {
+        let mut control_points = [Point::ZERO; 16];
+        let mut colors = [smallvec![], smallvec![], smallvec![], smallvec![]];
+
+        match flag {
+            0 => {
+                for i in 0..16 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+
+                for i in 0..4 {
+                    colors[i] = read_colors(&mut reader)?;
+                }
+
+                prev_patch = Some(TensorProductPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            1 => {
+                let prev = prev_patch.as_ref()?;
+
+                control_points[0] = prev.control_points[3];
+                control_points[1] = prev.control_points[4];
+                control_points[2] = prev.control_points[5];
+                control_points[3] = prev.control_points[6];
+                colors[0] = prev.colors[1].clone();
+                colors[1] = prev.colors[2].clone();
+
+                for i in 4..16 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+
+                // Read colors for new top-right and bottom-right corners
+                colors[2] = read_colors(&mut reader)?; // top-right  
+                colors[3] = read_colors(&mut reader)?; // bottom-right
+
+                prev_patch = Some(TensorProductPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            2 => {
+                // Bottom edge sharing - previous patch's bottom edge becomes new patch's top edge
+                let prev = prev_patch.as_ref()?;
+
+                // For 4x4 grid: bottom edge is [12, 13, 14, 15], top edge is [0, 1, 2, 3]
+                control_points[0] = prev.control_points[6]; // bottom-left -> top-left
+                control_points[1] = prev.control_points[7]; // -> top edge
+                control_points[2] = prev.control_points[8]; // -> top edge
+                control_points[3] = prev.control_points[9]; // bottom-right -> top-right
+                colors[0] = prev.colors[2].clone(); // prev bottom-left -> new top-left
+                colors[1] = prev.colors[3].clone(); // prev bottom-right -> new top-right
+
+                for i in 4..16 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+
+                // Read colors for new bottom corners
+                colors[2] = read_colors(&mut reader)?; // bottom-left
+                colors[3] = read_colors(&mut reader)?; // bottom-right
+
+                prev_patch = Some(TensorProductPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            3 => {
+                // Left edge sharing - previous patch's left edge becomes new patch's right edge
+                let prev = prev_patch.as_ref()?;
+
+                // For 4x4 grid: left edge is [0, 4, 8, 12], right edge is [3, 7, 11, 15]
+                control_points[0] = prev.control_points[9]; // bottom-left -> top-left
+                control_points[1] = prev.control_points[10]; // -> top edge
+                control_points[2] = prev.control_points[11]; // -> top edge
+                control_points[3] = prev.control_points[0]; // bottom-right -> top-right
+                colors[0] = prev.colors[3].clone(); // prev bottom-left -> new top-left
+                colors[1] = prev.colors[0].clone(); // prev bottom-right -> new top-right
+
+                for i in 4..16 {
+                    let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
+                    let y = interpolate_coord(reader.read(bp_coord)?, y_min, y_max);
+                    control_points[i] = Point::new(x as f64, y as f64);
+                }
+
+                // Read colors for new left corners
+                colors[2] = read_colors(&mut reader)?; // top-left
+                colors[3] = read_colors(&mut reader)?; // bottom-left
+
+                prev_patch = Some(TensorProductPatch {
+                    control_points,
+                    colors: colors.clone(),
+                });
+            }
+            _ => break,
+        }
+
+        patches.push(TensorProductPatch {
             control_points,
             colors,
         });

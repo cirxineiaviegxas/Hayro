@@ -837,5 +837,11 @@
     "file": "pdfs/pdfbox-2217.link",
     "md5": "f71d4420fc746f0ea3c69f5ebf525ad3",
     "link": true
+  },
+  {
+    "id": "pattern_shading_type7",
+    "file": "pdfs/pattern_shading_type7.link",
+    "md5": "cb29410d8f736cf4631c4e658605cc3e",
+    "link": true
   }
 ]

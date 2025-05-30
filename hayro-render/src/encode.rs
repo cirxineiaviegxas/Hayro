@@ -105,7 +105,38 @@ impl EncodeExt for ShadingPattern {
                 let (x_advance, y_advance) = x_y_advances(&inverse_transform);
 
                 let cs = self.shading.color_space.clone();
-                
+
+                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect();
+
+                let encoded = EncodedTriangleMeshShading {
+                    triangles,
+                    function: function.clone(),
+                    x_advance,
+                    y_advance,
+                    color_space: cs.clone(),
+                    inverse_transform,
+                    background: self
+                        .shading
+                        .background
+                        .as_ref()
+                        .map(|b| cs.to_rgba(&b, 1.0))
+                        .unwrap_or(TRANSPARENT),
+                };
+
+                paints.push(EncodedPaint::TriangleMeshShading(encoded));
+
+                Paint::Indexed(IndexedPaint::new(idx))
+            }
+            ShadingType::TensorProductPatchMesh { patches, function } => {
+                let idx = paints.len();
+
+                let full_transform = transform * self.matrix;
+                let inverse_transform = full_transform.inverse();
+
+                let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+
+                let cs = self.shading.color_space.clone();
+
                 let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect();
 
                 let encoded = EncodedTriangleMeshShading {

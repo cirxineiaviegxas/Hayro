@@ -66,6 +66,9 @@ class PDFJSSync:
             "issue6231_1",
             "issue4227",
             "issue6549",
+            "issue18816",
+            "tensor-allflags-withfunction",
+            # "personwithdog",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
