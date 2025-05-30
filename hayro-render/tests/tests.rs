@@ -192,11 +192,13 @@ use crate::run_test;
 #[test] fn pdfbox_3647() { run_test("pdfbox-3647", true, None); }
 #[test] fn pdfbox_2217() { run_test("pdfbox-2217", true, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
+#[test] fn arabiccidtruetype_pdf() { run_test("arabiccidtruetype-pdf", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }
 #[test] fn issue17848() { run_test("issue17848", false, None); }
 #[test] fn issue2948() { run_test("issue2948", false, None); }
 #[test] fn issue6231_1() { run_test("issue6231_1", false, None); }
+#[test] fn issue6549() { run_test("issue6549", true, Some("1..=2")); }
 #[test] fn issue14297() { run_test("issue14297", false, None); }
 #[test] fn simpletype3font() { run_test("simpletype3font", false, None); }
 #[test] fn IndexedCS_negative_and_high() { run_test("IndexedCS_negative_and_high", false, None); }
@@ -220,4 +222,5 @@ use crate::run_test;
 #[test] fn clippath() { run_test("clippath", false, None); }
 #[test] fn calgray() { run_test("calgray", false, None); }
 #[test] fn calrgb() { run_test("calrgb", false, Some("..=7")); }
+#[test] fn issue4227() { run_test("issue4227", false, None); }
 #[test] fn operator_in_TJ_array() { run_test("operator-in-TJ-array", false, None); }

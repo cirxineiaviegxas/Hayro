@@ -353,6 +353,7 @@ impl CoonsPatch {
     }
     
     pub fn to_triangles(&self) -> Vec<Triangle> {
+        // TODO: Be smarter about this
         const GRID_SIZE: usize = 10;
         let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
         

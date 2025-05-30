@@ -5,14 +5,12 @@
 //! of each pixel and pack it into the pixmap.
 
 mod image;
-mod patch_mesh;
 mod shading;
 mod triangle_mesh;
 
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
-use crate::fine::patch_mesh::PatchMeshShadingFiller;
 use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
 use crate::fine::triangle_mesh::TriangleMeshShadingFiller;
 use crate::paint::Paint;

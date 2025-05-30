@@ -4,6 +4,10 @@
     "file": "pdfs/mmtype1.pdf"
   },
   {
+    "id": "arabiccidtruetype-pdf",
+    "file": "pdfs/ArabicCIDTrueType.pdf"
+  },
+  {
     "id": "colorspace_sin",
     "file": "pdfs/colorspace_sin.pdf"
   },
@@ -22,6 +26,14 @@
   {
     "id": "issue6231_1",
     "file": "pdfs/issue6231_1.pdf"
+  },
+  {
+    "id": "issue6549",
+    "file": "pdfs/issue6549.link",
+    "md5": "699aeea73a6f45375022ffc6cc80f12a",
+    "link": true,
+    "first_page": 1,
+    "last_page": 2
   },
   {
     "id": "issue14297",
@@ -124,6 +136,10 @@
     "id": "calrgb",
     "file": "pdfs/calrgb.pdf",
     "last_page": 7
+  },
+  {
+    "id": "issue4227",
+    "file": "pdfs/coons-allflags-withfunction.pdf"
   },
   {
     "id": "operator-in-TJ-array",

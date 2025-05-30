@@ -64,6 +64,8 @@ class PDFJSSync:
             "issue2948",
             "issue17848",
             "issue6231_1",
+            "issue4227",
+            "issue6549",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
@@ -178,9 +180,20 @@ class PDFJSSync:
             
     def convert_pdfjs_entry_to_our_format(self, entry: Dict[str, Any]) -> Dict[str, Any]:
         """Convert a PDF.js manifest entry to our manifest format."""
+        
+        # Determine the actual filename
+        if entry.get("link", False):
+            filename = f"{entry['id']}.link"
+        else:
+            file_path = entry.get("file", f"pdfs/{entry['id']}.pdf")
+            if file_path.startswith("pdfs/"):
+                filename = file_path[5:]  # Remove "pdfs/" prefix
+            else:
+                filename = file_path
+        
         our_entry = {
             "id": entry["id"],
-            "file": f"pdfs/{entry['id']}.{'link' if entry.get('link', False) else 'pdf'}"
+            "file": f"pdfs/{filename}"
         }
         
         # Copy MD5 if it's a link
@@ -306,15 +319,22 @@ class PDFJSSync:
                     continue
                     
             else:
-                # Handle regular PDF files
-                pdf_file_path = self.pdfjs_pdfs_dir / f"{entry_id}.pdf"
+                # Handle regular PDF files - use the actual filename from manifest
+                file_path = entry.get("file", f"pdfs/{entry_id}.pdf")
+                if file_path.startswith("pdfs/"):
+                    actual_filename = file_path[5:]  # Remove "pdfs/" prefix
+                else:
+                    actual_filename = file_path
+                    
+                pdf_file_path = self.pdfjs_pdfs_dir / actual_filename
                 if not pdf_file_path.exists():
                     print(f"✘ PDF file not found: {pdf_file_path}")
                     failed_count += 1
                     continue
                     
-                # Copy the PDF file
-                if not self.copy_pdf_file(pdf_file_path, entry_id):
+                # Copy the PDF file preserving the original filename
+                dest_filename = actual_filename.replace('.pdf', '')  # Remove .pdf extension for dest name
+                if not self.copy_pdf_file(pdf_file_path, dest_filename):
                     failed_count += 1
                     continue
                     
@@ -330,7 +350,7 @@ class PDFJSSync:
                 
             print(f"\n🎉 Synchronization complete!")
             print(f"📄 Created manifest_pdfjs.json with {len(our_manifest_entries)} entries")
-            print(f"📊 Summary: {success_count} successful, {failed_count} failed")
+            print(f"�� Summary: {success_count} successful, {failed_count} failed")
             
         except Exception as e:
             print(f"✘ Failed to write manifest_pdfjs.json: {e}")
