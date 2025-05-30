@@ -1,4 +1,3 @@
-import os
 import json
 import hashlib
 import requests
@@ -14,12 +13,10 @@ class PDFJSSync:
         self.pdfjs_pdfs_dir = self.pdfjs_test_dir / "pdfs"
         self.pdfjs_manifest_path = self.pdfjs_test_dir / "test_manifest.json"
         
-        # Our directories
         self.our_pdfs_dir = self.script_dir / "pdfs"
         self.our_downloads_dir = self.script_dir / "downloads"
         self.our_pdfjs_manifest_path = self.script_dir / "manifest_pdfjs.json"
         
-        # Whitelist of tests to synchronize (support patterns with *)
         self.whitelist = [
             "calgray",
             "calrgb",
