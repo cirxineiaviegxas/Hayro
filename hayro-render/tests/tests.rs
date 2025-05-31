@@ -192,11 +192,15 @@ use crate::run_test;
 #[test] fn pdfbox_3647() { run_test("pdfbox-3647", true, None); }
 #[test] fn pdfbox_2217() { run_test("pdfbox-2217", true, None); }
 #[test] fn pattern_shading_type7() { run_test("pattern_shading_type7", true, None); }
+#[test] fn pattern_shading_type7_background() { run_test("pattern_shading_type7_background", false, None); }
+#[test] fn pattern_shading_type6_3() { run_test("pattern_shading_type6_3", true, None); }
+#[test] fn pattern_shading_type7_2() { run_test("pattern_shading_type7_2", true, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn arabiccidtruetype_pdf() { run_test("arabiccidtruetype-pdf", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }
 #[test] fn jbig2_symbol_offset() { run_test("jbig2_symbol_offset", false, None); }
 #[test] fn issue17848() { run_test("issue17848", false, None); }
+#[test] fn personwithdog() { run_test("personwithdog", false, None); }
 #[test] fn issue2948() { run_test("issue2948", false, None); }
 #[test] fn issue6231_1() { run_test("issue6231_1", false, None); }
 #[test] fn issue6549() { run_test("issue6549", true, Some("1..=2")); }

@@ -12,12 +12,12 @@ use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
 use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
-use crate::fine::triangle_mesh::TriangleMeshShadingFiller;
 use crate::paint::Paint;
 use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
 use peniko::{BlendMode, Compose, Mix};
+use crate::fine::triangle_mesh::SampledShadingFiller;
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;
@@ -242,8 +242,8 @@ impl Fine {
                         // gradient is degenerate
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
-                    EncodedPaint::TriangleMeshShading(s) => {
-                        let filler = TriangleMeshShadingFiller::new(s, start_x, start_y);
+                    EncodedPaint::SampledShading(s) => {
+                        let filler = SampledShadingFiller::new(s, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                 }
@@ -333,8 +333,8 @@ impl Fine {
                             alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                         );
                     }
-                    EncodedPaint::TriangleMeshShading(s) => {
-                        let filler = TriangleMeshShadingFiller::new(s, start_x, start_y);
+                    EncodedPaint::SampledShading(s) => {
+                        let filler = SampledShadingFiller::new(s, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(

@@ -5,14 +5,16 @@
 
 use crate::paint::{Image, IndexedPaint, Paint};
 use crate::pixmap::Pixmap;
-use hayro_interpret::color::ColorSpace;
+use hayro_interpret::color::{ColorComponents, ColorSpace};
 use hayro_interpret::pattern::ShadingPattern;
-use hayro_interpret::shading::{CoonsPatch, ShadingFunction, ShadingType, Triangle};
+use hayro_interpret::shading::{CoonsPatch, ShadingFunction, ShadingType, Triangle, TriangleVertex};
 use kurbo::{Affine, Point, Vec2};
 use peniko::ImageQuality;
 use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;
+use hayro_syntax::content::ops::Transform;
+use rustc_hash::FxHashMap;
 
 /// A trait for encoding gradients.
 pub(crate) trait EncodeExt {
@@ -71,14 +73,17 @@ impl EncodeExt for ShadingPattern {
                 let idx = paints.len();
 
                 let full_transform = transform * self.matrix;
-                let inverse_transform = full_transform.inverse();
+                let samples = sample_triangles(triangles, full_transform);
+                
+                let inverse_transform = Affine::IDENTITY;
 
                 let (x_advance, y_advance) = x_y_advances(&inverse_transform);
 
                 let cs = self.shading.color_space.clone();
+                
 
-                let encoded = EncodedTriangleMeshShading {
-                    triangles: triangles.clone(),
+                let encoded = EncodedSampledShading {
+                    samples,
                     function: function.clone(),
                     x_advance,
                     y_advance,
@@ -92,7 +97,7 @@ impl EncodeExt for ShadingPattern {
                         .unwrap_or(TRANSPARENT),
                 };
 
-                paints.push(EncodedPaint::TriangleMeshShading(encoded));
+                paints.push(EncodedPaint::SampledShading(encoded));
 
                 Paint::Indexed(IndexedPaint::new(idx))
             }
@@ -100,16 +105,18 @@ impl EncodeExt for ShadingPattern {
                 let idx = paints.len();
 
                 let full_transform = transform * self.matrix;
-                let inverse_transform = full_transform.inverse();
-
-                let (x_advance, y_advance) = x_y_advances(&inverse_transform);
 
                 let cs = self.shading.color_space.clone();
 
-                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect();
+                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect::<Vec<_>>();
+                let samples = sample_triangles(&triangles, full_transform);
 
-                let encoded = EncodedTriangleMeshShading {
-                    triangles,
+                let inverse_transform = Affine::IDENTITY;
+
+                let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+
+                let encoded = EncodedSampledShading {
+                    samples,
                     function: function.clone(),
                     x_advance,
                     y_advance,
@@ -123,7 +130,7 @@ impl EncodeExt for ShadingPattern {
                         .unwrap_or(TRANSPARENT),
                 };
 
-                paints.push(EncodedPaint::TriangleMeshShading(encoded));
+                paints.push(EncodedPaint::SampledShading(encoded));
 
                 Paint::Indexed(IndexedPaint::new(idx))
             }
@@ -131,16 +138,20 @@ impl EncodeExt for ShadingPattern {
                 let idx = paints.len();
 
                 let full_transform = transform * self.matrix;
-                let inverse_transform = full_transform.inverse();
-
-                let (x_advance, y_advance) = x_y_advances(&inverse_transform);
 
                 let cs = self.shading.color_space.clone();
 
-                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect();
+                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect::<Vec<_>>();
+                let samples = sample_triangles(&triangles, full_transform);
 
-                let encoded = EncodedTriangleMeshShading {
-                    triangles,
+
+                let inverse_transform = Affine::IDENTITY;
+
+                let (x_advance, y_advance) = x_y_advances(&inverse_transform);
+                
+
+                let encoded = EncodedSampledShading {
+                    samples,
                     function: function.clone(),
                     x_advance,
                     y_advance,
@@ -154,7 +165,7 @@ impl EncodeExt for ShadingPattern {
                         .unwrap_or(TRANSPARENT),
                 };
 
-                paints.push(EncodedPaint::TriangleMeshShading(encoded));
+                paints.push(EncodedPaint::SampledShading(encoded));
 
                 Paint::Indexed(IndexedPaint::new(idx))
             }
@@ -233,6 +244,40 @@ fn encode_axial_shading(
     paints.push(EncodedPaint::AxialShading(encoded));
 
     Paint::Indexed(IndexedPaint::new(idx))
+}
+
+fn sample_triangles(triangles: &[Triangle], transform: Affine) -> FxHashMap<(u16, u16), ColorComponents> {
+    let mut map = FxHashMap::default();
+    
+    for t in triangles {
+        let t = {
+            let p0 = transform * t.p0.point;
+            let p1 = transform * t.p1.point;
+            let p2 = transform * t.p2.point;
+            
+            let mut v0 = t.p0.clone();
+            v0.point = p0; 
+            let mut v1 = t.p1.clone();
+            v1.point = p1;
+            let mut v2 = t.p2.clone();
+            v2.point = p2;
+            
+            Triangle::new(v0, v1, v2)
+        };
+        
+        let bbox = t.bounding_box();
+        
+        for y in (bbox.y0.floor() as u16)..(bbox.y1.ceil() as u16) {
+            for x in (bbox.x0.floor() as u16)..(bbox.x1.ceil() as u16) {
+                let point = Point::new(x as f64, y as f64);
+                    if t.contains_point(point) {
+                        map.insert((x, y), t.interpolate(point));
+                    }
+            }
+        }
+    }
+    
+    map
 }
 
 fn encode_function_shading(
@@ -325,8 +370,8 @@ pub struct EncodedRadialAxialShading {
 }
 
 #[derive(Debug)]
-pub struct EncodedPatchMeshShading {
-    pub patches: Vec<CoonsPatch>,
+pub struct EncodedSampledShading {
+    pub samples: FxHashMap<(u16, u16), ColorComponents>,
     pub function: Option<ShadingFunction>,
     pub x_advance: Vec2,
     pub y_advance: Vec2,
@@ -342,7 +387,7 @@ pub enum EncodedPaint {
     Image(EncodedImage),
     FunctionShading(EncodedFunctionShading),
     AxialShading(EncodedRadialAxialShading),
-    TriangleMeshShading(EncodedTriangleMeshShading),
+    SampledShading(EncodedSampledShading),
 }
 
 /// An encoded image.

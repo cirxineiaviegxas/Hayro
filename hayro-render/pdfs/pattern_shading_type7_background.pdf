@@ -1,0 +1,143 @@
+%PDF-1.7
+%µ¶
+
+1 0 obj
+<<
+  /Type /Catalog
+  /Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+  /Type /Pages
+  /Kids [ 3 0 R ]
+  /Count 1
+>>
+endobj
+
+3 0 obj
+<<
+  /Type /Page
+  /Parent 2 0 R
+  /MediaBox [ 0 0 300 520 ]
+  /Contents 10 0 R
+  /Resources <<
+    /Shading <<
+      /Sh1 5 0 R
+      /Sh2 9 0 R
+    >>
+  >>
+>>
+endobj
+
+5 0 obj
+<<
+  /ShadingType 7
+  /Background [ 0 1 0 ]
+  /ColorSpace /DeviceRGB
+  /BitsPerCoordinate 16
+  /BitsPerComponent 8
+  /BitsPerFlag 8
+  /Decode [ 50 250 40 240 0 1 0 1 0 1 ]
+  /Length 492
+  /Filter /ASCIIHexDecode
+>>
+stream
+0006660666010c402c0a80407f14006b95500078534879710666f979807f842c
+6a63ff487f7fd3152c17802199799906ff077f17aa2ad55f80500075556ad520
+3900a72affff00ff0058d5ffff02910c002ca0000853e4000b95da80807fef84
+0c6af0f9898068798106e3ff887f977f17aabad57f80db008555aad5803900a7
+2ad5ffff03510ce02c6879810660f9e9808f84ec6aba80d07fe409eb95d000a8
+53e3ff987f477fe7aa8ad5ef80b000c555ead5a039ffa72ad50fff01510ce02c
+3879d10610f9e9800f84ec6a1a80d07f04006b952000985323ff687f577fd7aa
+0ad5df802000e5556ad58039fff0f0058f8f>
+endstream
+endobj
+
+6 0 obj
+<<
+  /FunctionType 2
+  /Domain [ 0 1 ]
+  /Range [ 0 1 0 1 0 1 ]
+  /C0 [ 1 0 0 ]
+  /C1 [ 0 1 0 ]
+  /N 3
+>>
+endobj
+
+7 0 obj
+<<
+  /FunctionType 2
+  /Domain [ 0 1 ]
+  /Range [ 0 1 0 1 0 1 ]
+  /C0 [ 0 1 0 ]
+  /C1 [ 0 0 1 ]
+  /N 3
+>>
+endobj
+
+8 0 obj
+<<
+  /FunctionType 3
+  /Domain [ 0 1 ]
+  /Functions [ 6 0 R 7 0 R ]
+  /Bounds [ .5 ]
+  /Encode [ 0 1 0 1 ]
+>>
+endobj
+
+9 0 obj
+<<
+  /ShadingType 7
+  /ColorSpace /DeviceRGB
+  /BitsPerCoordinate 16
+  /BitsPerComponent 8
+  /BitsPerFlag 8
+  /Function 8 0 R
+  /Decode [ 50 250 40 240 0 1 ]
+  /Length 141
+  /Filter /ASCIIHexDecode
+>>
+stream
+000ccd0ccd02198058150080ff2800d72aa000f0a790f3e20ccdf2f300ff0958
+d5c7ff90ffffa72a582f004332f3320dfe0effdf55c5aadf00a0000aaa35aa20
+7200ffff00>
+endstream
+endobj
+
+10 0 obj
+<<
+  /Length 36
+>>
+stream
+q
+1 0 0 1 0 240 cm
+/Sh1 sh
+Q
+/Sh2 sh
+endstream
+endobj
+
+xref
+0 11
+0000000004 65535 f 
+0000000016 00000 n 
+0000000070 00000 n 
+0000000136 00000 n 
+0000000000 00001 f 
+0000000313 00000 n 
+0000001054 00000 n 
+0000001176 00000 n 
+0000001298 00000 n 
+0000001424 00000 n 
+0000001800 00000 n 
+
+trailer
+<<
+  /Size 11
+  /Root 1 0 R
+>>
+startxref
+1890
+%%EOF

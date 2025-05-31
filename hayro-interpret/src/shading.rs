@@ -262,11 +262,11 @@ impl Shading {
 #[derive(Clone, Debug)]
 pub struct Triangle {
     /// The first vertex.
-    p0: TriangleVertex,
+    pub p0: TriangleVertex,
     /// The second vertex.
-    p1: TriangleVertex,
+    pub p1: TriangleVertex,
     /// The third vertex.
-    p2: TriangleVertex,
+    pub p2: TriangleVertex,
     kurbo_tri: kurbo::Triangle,
     d00: f64,
     d01: f64,
@@ -314,6 +314,10 @@ impl Triangle {
 
     pub fn contains_point(&self, pos: Point) -> bool {
         self.kurbo_tri.winding(pos) != 0
+    }
+    
+    pub fn bounding_box(&self) -> kurbo::Rect {
+        self.kurbo_tri.bounding_box()
     }
 
     /// Return the barycentric coordinates of the point in the triangle.
@@ -390,7 +394,7 @@ impl CoonsPatch {
 
     pub fn to_triangles(&self) -> Vec<Triangle> {
         // TODO: Be smarter about this
-        const GRID_SIZE: usize = 10;
+        const GRID_SIZE: usize = 20;
         let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
 
         // Create 20x20 grid by mapping unit square coordinates
@@ -532,7 +536,7 @@ impl TensorProductPatch {
 
     pub fn to_triangles(&self) -> Vec<Triangle> {
         // TODO: Be smarter about this
-        const GRID_SIZE: usize = 10;
+        const GRID_SIZE: usize = 20;
         let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
 
         // Create grid by mapping unit square coordinates

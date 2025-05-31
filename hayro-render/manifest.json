@@ -843,5 +843,21 @@
     "file": "pdfs/pattern_shading_type7.link",
     "md5": "cb29410d8f736cf4631c4e658605cc3e",
     "link": true
+  },
+  {
+    "id": "pattern_shading_type7_background",
+    "file": "pdfs/pattern_shading_type7_background.pdf"
+  },
+  {
+    "id": "pattern_shading_type6_3",
+    "file": "pdfs/pattern_shading_type6_3.link",
+    "md5": "dc49c6f1595b9773c1a28866aea597ef",
+    "link": true
+  },
+  {
+    "id": "pattern_shading_type7_2",
+    "file": "pdfs/pattern_shading_type7_2.link",
+    "md5": "da8f7a1d34f50163d13989c840f2e673",
+    "link": true
   }
 ]
