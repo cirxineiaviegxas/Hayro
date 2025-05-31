@@ -230,4 +230,5 @@ use crate::run_test;
 #[test] fn calrgb() { run_test("calrgb", false, Some("..=7")); }
 #[test] fn issue4227() { run_test("issue4227", false, None); }
 #[test] fn operator_in_TJ_array() { run_test("operator-in-TJ-array", false, None); }
+#[test] fn issue17065() { run_test("issue17065", false, None); }
 #[test] fn issue18816() { run_test("issue18816", false, None); }
