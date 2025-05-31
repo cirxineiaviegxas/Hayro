@@ -1,13 +1,13 @@
-use kurbo::{Affine, Point, Vec2};
-use peniko::color::{AlphaColor, Srgb};
-use peniko::color::palette::css::TRANSPARENT;
-use rustc_hash::FxHashMap;
-use smallvec::{smallvec, ToSmallVec};
+use crate::encode::{EncodeExt, EncodedPaint, x_y_advances};
+use crate::paint::{IndexedPaint, Paint};
 use hayro_interpret::color::{ColorComponents, ColorSpace};
 use hayro_interpret::pattern::ShadingPattern;
 use hayro_interpret::shading::{ShadingFunction, ShadingType, Triangle};
-use crate::encode::{x_y_advances, EncodeExt, EncodedPaint};
-use crate::paint::{IndexedPaint, Paint};
+use kurbo::{Affine, Point, Vec2};
+use peniko::color::palette::css::TRANSPARENT;
+use peniko::color::{AlphaColor, Srgb};
+use rustc_hash::FxHashMap;
+use smallvec::{ToSmallVec, smallvec};
 
 #[derive(Debug)]
 pub(crate) struct EncodedShading {
@@ -32,7 +32,7 @@ impl EncodeExt for ShadingPattern {
             } => {
                 base_transform = (transform * self.matrix * *matrix).inverse();
                 encode_function_shading(domain, function)
-            },
+            }
             ShadingType::RadialAxial {
                 coords,
                 domain,
@@ -40,14 +40,13 @@ impl EncodeExt for ShadingPattern {
                 extend,
                 axial,
             } => {
-                let (encoded, initial_transform) = encode_axial_shading(
-                    *coords, *domain, function, *extend, *axial,
-                );
+                let (encoded, initial_transform) =
+                    encode_axial_shading(*coords, *domain, function, *extend, *axial);
 
                 base_transform = initial_transform * (transform * self.matrix).inverse();
 
                 encoded
-            },
+            }
             ShadingType::TriangleMesh {
                 triangles,
                 function,
@@ -63,7 +62,10 @@ impl EncodeExt for ShadingPattern {
                 }
             }
             ShadingType::CoonsPatchMesh { patches, function } => {
-                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect::<Vec<_>>();
+                let triangles = patches
+                    .iter()
+                    .flat_map(|p| p.to_triangles())
+                    .collect::<Vec<_>>();
 
                 let full_transform = transform * self.matrix;
                 let samples = sample_triangles(&triangles, full_transform);
@@ -76,7 +78,10 @@ impl EncodeExt for ShadingPattern {
                 }
             }
             ShadingType::TensorProductPatchMesh { patches, function } => {
-                let triangles = patches.iter().flat_map(|p| p.to_triangles()).collect::<Vec<_>>();
+                let triangles = patches
+                    .iter()
+                    .flat_map(|p| p.to_triangles())
+                    .collect::<Vec<_>>();
 
                 let full_transform = transform * self.matrix;
                 let samples = sample_triangles(&triangles, full_transform);
@@ -89,7 +94,7 @@ impl EncodeExt for ShadingPattern {
                 }
             }
         };
-        
+
         base_transform = base_transform * Affine::translate((0.5, 0.5));
         let color_space = self.shading.color_space.clone();
         let (x_advance, y_advance) = x_y_advances(&base_transform);
@@ -130,7 +135,10 @@ fn encode_axial_shading(
 
         initial_transform = ts_from_line_to_line(
             Point::new(x_0 as f64, y_0 as f64),
-            Point::new(x_1 as f64, y_1 as f64), Point::ZERO, Point::new(1.0, 0.0));
+            Point::new(x_1 as f64, y_1 as f64),
+            Point::ZERO,
+            Point::new(1.0, 0.0),
+        );
 
         RadialAxialParams::Axial
     } else {
@@ -143,20 +151,24 @@ fn encode_axial_shading(
         let p1 = Point::new(new_x1 as f64, new_y1 as f64);
         let r = Point::new(r0 as f64, r_1 as f64);
 
-        RadialAxialParams::Radial {
-            p1, r
-        }
+        RadialAxialParams::Radial { p1, r }
     };
 
-    (EncodedShadingType::RadialAxial {
-        function: function.clone(),
-        params,
-        domain,
-        extend,
-    }, initial_transform)
+    (
+        EncodedShadingType::RadialAxial {
+            function: function.clone(),
+            params,
+            domain,
+            extend,
+        },
+        initial_transform,
+    )
 }
 
-fn sample_triangles(triangles: &[Triangle], transform: Affine) -> FxHashMap<(u16, u16), ColorComponents> {
+fn sample_triangles(
+    triangles: &[Triangle],
+    transform: Affine,
+) -> FxHashMap<(u16, u16), ColorComponents> {
     let mut map = FxHashMap::default();
 
     for t in triangles {
@@ -190,10 +202,7 @@ fn sample_triangles(triangles: &[Triangle], transform: Affine) -> FxHashMap<(u16
     map
 }
 
-fn encode_function_shading(
-    domain: &[f32; 4],
-    function: &ShadingFunction,
-) -> EncodedShadingType {
+fn encode_function_shading(domain: &[f32; 4], function: &ShadingFunction) -> EncodedShadingType {
     let domain = kurbo::Rect::new(
         domain[0] as f64,
         domain[2] as f64,
@@ -210,10 +219,7 @@ fn encode_function_shading(
 #[derive(Debug)]
 pub(crate) enum RadialAxialParams {
     Axial,
-    Radial {
-        p1: Point,
-        r: Point,
-    },
+    Radial { p1: Point, r: Point },
 }
 
 #[derive(Debug)]
@@ -231,11 +237,16 @@ pub(crate) enum EncodedShadingType {
     Sampled {
         samples: FxHashMap<(u16, u16), ColorComponents>,
         function: Option<ShadingFunction>,
-    }
+    },
 }
 
 impl EncodedShadingType {
-    pub(crate) fn eval(&self, pos: Point, bg_color: AlphaColor<Srgb>, color_space: &ColorSpace) -> AlphaColor<Srgb> {
+    pub(crate) fn eval(
+        &self,
+        pos: Point,
+        bg_color: AlphaColor<Srgb>,
+        color_space: &ColorSpace,
+    ) -> AlphaColor<Srgb> {
         match self {
             EncodedShadingType::FunctionBased { domain, function } => {
                 if !domain.contains(pos) {
@@ -247,21 +258,19 @@ impl EncodedShadingType {
                     // TODO: Clamp out-of-range values.
                     color_space.to_rgba(&out, 1.0)
                 }
-            },
-            EncodedShadingType::RadialAxial { function, params, domain, extend } => {
+            }
+            EncodedShadingType::RadialAxial {
+                function,
+                params,
+                domain,
+                extend,
+            } => {
                 let (t0, t1) = (domain[0], domain[1]);
 
                 let mut t = match params {
                     RadialAxialParams::Axial => pos.x as f32,
                     RadialAxialParams::Radial { p1, r } => {
-                        radial_pos(
-                            &pos,
-                            &p1,
-                            *r,
-                            extend[0],
-                            extend[1],
-                        )
-                            .unwrap_or(f32::MIN)
+                        radial_pos(&pos, &p1, *r, extend[0], extend[1]).unwrap_or(f32::MIN)
                     }
                 };
 
@@ -279,7 +288,7 @@ impl EncodedShadingType {
                     if extend[1] {
                         t = 1.0;
                     } else {
-                        return bg_color
+                        return bg_color;
                     }
                 }
 
@@ -326,7 +335,6 @@ fn unit_to_line(p0: Point, p1: Point) -> Affine {
         p0.y,
     ])
 }
-
 
 fn radial_pos(
     pos: &Point,

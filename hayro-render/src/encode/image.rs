@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use kurbo::{Affine, Vec2};
-use peniko::ImageQuality;
-use crate::encode::{x_y_advances, EncodeExt, EncodedPaint};
+use crate::encode::{EncodeExt, EncodedPaint, x_y_advances};
 use crate::paint::{Image, IndexedPaint, Paint};
 use crate::pixmap::Pixmap;
+use kurbo::{Affine, Vec2};
+use peniko::ImageQuality;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) struct EncodedImage {

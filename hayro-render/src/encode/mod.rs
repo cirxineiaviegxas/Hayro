@@ -4,10 +4,10 @@
 pub(crate) mod image;
 pub(crate) mod shading;
 
-use kurbo::{Affine, Point, Vec2};
 use crate::encode::image::EncodedImage;
 use crate::encode::shading::EncodedShading;
 use crate::paint::Paint;
+use kurbo::{Affine, Point, Vec2};
 
 pub(crate) trait EncodeExt {
     fn encode_into(&self, paints: &mut Vec<EncodedPaint>, transform: Affine) -> Paint;

@@ -1,10 +1,10 @@
 // Copyright 2025 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::encode::image::EncodedImage;
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS, from_rgba8};
 use kurbo::{Point, Vec2};
 use peniko::ImageQuality;
-use crate::encode::image::EncodedImage;
 
 #[derive(Debug)]
 pub(crate) struct ImageFiller<'a> {
@@ -15,8 +15,7 @@ pub(crate) struct ImageFiller<'a> {
 impl<'a> ImageFiller<'a> {
     pub(crate) fn new(image: &'a EncodedImage, start_x: u16, start_y: u16) -> Self {
         Self {
-            cur_pos: image.transform
-                * Point::new(f64::from(start_x), f64::from(start_y)),
+            cur_pos: image.transform * Point::new(f64::from(start_x), f64::from(start_y)),
             image,
         }
     }
