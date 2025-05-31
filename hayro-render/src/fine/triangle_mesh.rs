@@ -1,9 +1,7 @@
-use crate::encode::{EncodedSampledShading, EncodedTriangleMeshShading};
+use crate::encode::EncodedSampledShading;
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
-use hayro_interpret::color::ColorComponents;
-use hayro_interpret::shading::Triangle;
-use kurbo::{Point, Shape};
+use kurbo::Point;
 use smallvec::ToSmallVec;
 
 #[derive(Debug)]

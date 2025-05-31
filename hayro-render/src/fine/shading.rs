@@ -1,7 +1,7 @@
 // Copyright 2025 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading};
+use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading, RadialAxialParams};
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use kurbo::Point;
@@ -94,17 +94,18 @@ impl<'a> RadialAxialShadingFiller<'a> {
         let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            let mut x = if self.shading.axial {
-                pos.x as f32
-            } else {
-                radial_pos(
-                    &pos,
-                    &self.shading.p1,
-                    self.shading.r,
-                    self.shading.extend[0],
-                    self.shading.extend[1],
-                )
-                .unwrap_or(f32::MIN)
+            let mut x = match self.shading.params {
+                RadialAxialParams::Axial => pos.x as f32,
+                RadialAxialParams::Radial { p1, r } => {
+                    radial_pos(
+                        &pos,
+                        &p1,
+                        r,
+                        self.shading.extend[0],
+                        self.shading.extend[1],
+                    )
+                        .unwrap_or(f32::MIN)
+                }
             };
 
             if x == f32::MIN {

@@ -7,13 +7,12 @@ use crate::paint::{Image, IndexedPaint, Paint};
 use crate::pixmap::Pixmap;
 use hayro_interpret::color::{ColorComponents, ColorSpace};
 use hayro_interpret::pattern::ShadingPattern;
-use hayro_interpret::shading::{CoonsPatch, ShadingFunction, ShadingType, Triangle, TriangleVertex};
+use hayro_interpret::shading::{ShadingFunction, ShadingType, Triangle};
 use kurbo::{Affine, Point, Vec2};
 use peniko::ImageQuality;
 use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;
-use hayro_syntax::content::ops::Transform;
 use rustc_hash::FxHashMap;
 
 /// A trait for encoding gradients.
@@ -185,8 +184,6 @@ fn encode_axial_shading(
 ) -> Paint {
     let idx = paints.len();
 
-    let mut p1 = Point::ZERO;
-    let mut r = Point::ZERO;
     let initial_transform;
 
     let params = if is_axial {
@@ -204,10 +201,12 @@ fn encode_axial_shading(
         let new_x1 = x_1 - x_0;
         let new_y1 = y_1 - y_0;
 
-        p1 = Point::new(new_x1 as f64, new_y1 as f64);
-        r = Point::new(r0 as f64, r_1 as f64);
+        let p1 = Point::new(new_x1 as f64, new_y1 as f64);
+        let r = Point::new(r0 as f64, r_1 as f64);
 
-        RadialAxialParams::Radial
+        RadialAxialParams::Radial {
+            p1, r
+        }
     };
 
     let full_transform = transform * sp.matrix;
@@ -230,11 +229,8 @@ fn encode_axial_shading(
             .map(|b| cs.to_rgba(&b, 1.0))
             .unwrap_or(TRANSPARENT),
         params,
-        p1,
-        r,
         domain,
         extend,
-        axial: is_axial,
     };
 
     paints.push(EncodedPaint::AxialShading(encoded));
@@ -333,20 +329,12 @@ pub struct EncodedFunctionShading {
 }
 
 #[derive(Debug)]
-pub struct EncodedTriangleMeshShading {
-    pub triangles: Vec<Triangle>,
-    pub function: Option<ShadingFunction>,
-    pub x_advance: Vec2,
-    pub y_advance: Vec2,
-    pub color_space: ColorSpace,
-    pub inverse_transform: Affine,
-    pub background: AlphaColor<Srgb>,
-}
-
-#[derive(Debug)]
 pub enum RadialAxialParams {
     Axial,
-    Radial,
+    Radial {
+        p1: Point,
+        r: Point,
+    },
 }
 
 #[derive(Debug)]
@@ -358,11 +346,8 @@ pub struct EncodedRadialAxialShading {
     pub color_space: ColorSpace,
     pub background: AlphaColor<Srgb>,
     pub params: RadialAxialParams,
-    pub p1: Point,
-    pub r: Point,
     pub domain: [f32; 2],
     pub extend: [bool; 2],
-    pub axial: bool,
 }
 
 #[derive(Debug)]
