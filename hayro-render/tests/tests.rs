@@ -208,6 +208,7 @@ use crate::run_test;
 #[test] fn issue14297() { run_test("issue14297", false, None); }
 #[test] fn simpletype3font() { run_test("simpletype3font", false, None); }
 #[test] fn IndexedCS_negative_and_high() { run_test("IndexedCS_negative_and_high", false, None); }
+#[test] fn issue13372() { run_test("issue13372", false, None); }
 #[test] fn close_path_bug() { run_test("close-path-bug", false, None); }
 #[test] fn colorspace_cos() { run_test("colorspace_cos", false, None); }
 #[test] fn devicen() { run_test("devicen", false, None); }

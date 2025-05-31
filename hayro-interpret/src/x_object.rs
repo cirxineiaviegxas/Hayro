@@ -1,7 +1,7 @@
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::{ClipPath, Device};
-use crate::interpret;
+use crate::{handle_paint, interpret, FillProps};
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
@@ -13,6 +13,7 @@ use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
+use peniko::color::{AlphaColor, Srgb};
 use peniko::Fill;
 use smallvec::SmallVec;
 
@@ -121,13 +122,7 @@ pub(crate) fn draw_image_xobject(
     let width = x_object.width as f64;
     let height = x_object.height as f64;
 
-    let color = Color::new(
-        context.get().fill_cs.clone(),
-        context.get().fill_color.clone(),
-        context.get().fill_alpha,
-    );
-
-    let data = x_object.as_rgba8(color);
+    let data = x_object.as_rgba8();
 
     context.save_state();
     context.pre_concat_affine(Affine::new([
@@ -138,14 +133,35 @@ pub(crate) fn draw_image_xobject(
         0.0,
         1.0,
     ]));
-    device.set_transform(context.get().affine);
-    device.draw_rgba_image(
-        data,
-        x_object.width,
-        x_object.height,
-        x_object.is_mask,
-        x_object.interpolate,
-    );
+    let transform = context.get().affine;
+    device.set_transform(transform);
+    
+    if x_object.is_image_mask {
+        handle_paint(context, device, transform, false);
+        device.set_anti_aliasing(false);
+        
+        device.push_layer(None, 1.0);
+        device.fill_path(&Rect::new(0.0, 0.0, width, height).to_path(0.1), &FillProps { fill_rule: Fill::NonZero });
+        device.draw_rgba_image(
+            data,
+            x_object.width,
+            x_object.height,
+            x_object.is_image_mask,
+            x_object.interpolate,
+        );
+        device.pop();
+        
+        device.set_anti_aliasing(true);
+    }   else {
+        device.draw_rgba_image(
+            data,
+            x_object.width,
+            x_object.height,
+            x_object.is_image_mask,
+            x_object.interpolate,
+        );
+    }
+    
     context.restore_state();
 }
 
@@ -156,7 +172,7 @@ pub struct ImageXObject<'a> {
     color_space: ColorSpace,
     interpolate: bool,
     decode: SmallVec<[(f32, f32); 4]>,
-    is_mask: bool,
+    is_image_mask: bool,
     pub dict: Dict<'a>,
     bits_per_component: u8,
 }
@@ -218,23 +234,20 @@ impl<'a> ImageXObject<'a> {
             color_space,
             interpolate,
             decode,
-            is_mask: image_mask,
+            is_image_mask: image_mask,
             dict: dict.clone(),
             bits_per_component,
         })
     }
 
-    pub fn as_rgba8(&self, current_color: Color) -> Vec<u8> {
-        if self.is_mask {
+    pub fn as_rgba8(&self) -> Vec<u8> {
+        if self.is_image_mask {
             let decoded = self.decode_raw();
             decoded
                 .iter()
                 .flat_map(|alpha| {
-                    current_color
-                        .to_rgba()
-                        .multiply_alpha(1.0 - *alpha)
-                        .to_rgba8()
-                        .to_u8_array()
+                    let alpha = ((1.0 - *alpha) * 255.0 + 0.5) as u8;
+                    [0, 0, 0, alpha]
                 })
                 .collect()
         } else {

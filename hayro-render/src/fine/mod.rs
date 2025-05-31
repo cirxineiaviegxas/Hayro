@@ -234,6 +234,18 @@ impl Fine {
                         let filler = ShadingFiller::new(s, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
+                    EncodedPaint::Mask(i) => {
+                        let filler = ImageFiller::new(i, start_x, start_y);
+                        filler.paint(color_buf);
+                        
+                        for (dest, src) in blend_buf.chunks_exact_mut(4).zip(color_buf.chunks_exact(4)) {
+                            let src = src[3];
+                            
+                            for dest in dest {
+                                *dest = *dest * src;
+                            }
+                        } 
+                    }
                 }
             }
         }
@@ -279,25 +291,12 @@ impl Fine {
                         let filler = ImageFiller::new(i, start_x, start_y);
                         filler.paint(color_buf);
 
-                        if i.is_stencil {
-                            strip::blend(
-                                blend_buf,
-                                color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                                blend_mode,
-                                // We don't want anti-aliasing for stencil images, so we quantize.
-                                alphas.chunks_exact(4).map(|e| {
-                                    let m = |val: u8| if val == 0 { 0 } else { 255 };
-                                    [m(e[0]), m(e[1]), m(e[2]), m(e[3])]
-                                }),
-                            );
-                        } else {
-                            strip::blend(
-                                blend_buf,
-                                color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                                blend_mode,
-                                alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                            );
-                        }
+                        strip::blend(
+                            blend_buf,
+                            color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                            blend_mode,
+                            alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
+                        );
                     }
                     EncodedPaint::Shading(s) => {
                         let filler = ShadingFiller::new(s, start_x, start_y);
@@ -309,6 +308,19 @@ impl Fine {
                             blend_mode,
                             alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
                         );
+                    }
+                    EncodedPaint::Mask(i) => {
+                        let filler = ImageFiller::new(i, start_x, start_y);
+                        filler.paint(color_buf);
+
+                        for ((dest, src), alpha) in blend_buf.chunks_exact_mut(4).zip(color_buf.chunks_exact(4)).zip(alphas.iter()) {
+                            let alpha = *alpha as f32 / 255.0;
+                            let src = src[3];
+                            
+                            for dest in dest {
+                                *dest = *dest * src * alpha;
+                            }
+                        }
                     }
                 }
             }

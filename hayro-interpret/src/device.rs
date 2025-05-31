@@ -32,6 +32,7 @@ pub trait Device {
         is_stencil: bool,
         interpolate: bool,
     );
+    fn set_anti_aliasing(&mut self, val: bool);
     fn pop(&mut self);
 }
 
@@ -57,6 +58,9 @@ pub(crate) enum ReplayInstruction {
         height: u32,
         is_stencil: bool,
         interpolate: bool,
+    },
+    AntiAliasing {
+        val: bool,
     },
     PopClip,
 }

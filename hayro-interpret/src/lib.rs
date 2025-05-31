@@ -760,6 +760,9 @@ fn run_t3_instructions(
                 *is_stencil,
                 *interpolate,
             ),
+            ReplayInstruction::AntiAliasing { val } => {
+                device.set_anti_aliasing(*val)
+            }
         }
     }
 }

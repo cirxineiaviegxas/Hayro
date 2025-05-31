@@ -70,6 +70,12 @@ impl Device for Type3GlyphDescription {
         })
     }
 
+    fn set_anti_aliasing(&mut self, val: bool) {
+        self.0.push(ReplayInstruction::AntiAliasing {
+            val
+        })
+    }
+
     fn pop(&mut self) {
         self.0.push(ReplayInstruction::PopClip)
     }

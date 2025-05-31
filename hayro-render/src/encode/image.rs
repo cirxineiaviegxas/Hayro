@@ -12,7 +12,6 @@ pub(crate) struct EncodedImage {
     pub(crate) transform: Affine,
     pub(crate) x_advance: Vec2,
     pub(crate) y_advance: Vec2,
-    pub(crate) is_stencil: bool,
 }
 
 impl EncodeExt for Image {
@@ -30,10 +29,14 @@ impl EncodeExt for Image {
             repeat: self.repeat,
             x_advance,
             y_advance,
-            is_stencil: self.is_stencil,
         };
 
-        paints.push(EncodedPaint::Image(encoded));
+        if self.is_stencil {
+            paints.push(EncodedPaint::Mask(encoded));
+        }   else {
+            paints.push(EncodedPaint::Image(encoded));
+        }
+        
 
         Paint::Indexed(IndexedPaint::new(idx))
     }

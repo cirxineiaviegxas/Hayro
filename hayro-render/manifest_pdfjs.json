@@ -52,6 +52,10 @@
     "file": "pdfs/IndexedCS_negative_and_high.pdf"
   },
   {
+    "id": "issue13372",
+    "file": "pdfs/issue13372.pdf"
+  },
+  {
     "id": "close-path-bug",
     "file": "pdfs/close-path-bug.pdf"
   },

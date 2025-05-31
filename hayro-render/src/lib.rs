@@ -55,24 +55,24 @@ impl Renderer {
             // Do subsampling to prevent aliasing artifacts.
             let new_width = (width as f32 * x_scale).ceil().max(1.0) as u32;
             let new_height = (height as f32 * y_scale).ceil().max(1.0) as u32;
-
+            
             let image = DynamicImage::ImageRgba8(
                 ImageBuffer::from_raw(width, height, image_data.clone()).unwrap(),
             );
             let resized = image.resize_exact(new_width, new_height, FilterType::CatmullRom);
-
+            
             let new_width = resized.width();
             let new_height = resized.height();
             let t_scale_x = width as f32 / new_width as f32;
             let t_scale_y = height as f32 / new_height as f32;
-
+            
             cur_transform =
                 cur_transform * Affine::scale_non_uniform(t_scale_x as f64, t_scale_y as f64);
             self.0.set_transform(cur_transform);
-
+            
             width = new_width;
             height = new_height;
-
+            
             resized.to_rgba8().into_raw()
         };
 
@@ -158,6 +158,10 @@ impl Device for Renderer {
         interpolate: bool,
     ) {
         self.draw_image(image_data, width, height, is_stencil, interpolate);
+    }
+
+    fn set_anti_aliasing(&mut self, val: bool) {
+        self.0.set_anti_aliasing(val);
     }
 
     fn pop(&mut self) {

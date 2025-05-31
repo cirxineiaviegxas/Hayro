@@ -16,6 +16,7 @@ pub(crate) trait EncodeExt {
 #[derive(Debug)]
 pub enum EncodedPaint {
     Image(EncodedImage),
+    Mask(EncodedImage),
     Shading(EncodedShading),
 }
 
