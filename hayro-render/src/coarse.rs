@@ -624,8 +624,10 @@ impl Wide {
                 // If there's a gap, fill it
                 if width > 0 {
                     let x_rel = u32::from(x1 % WideTile::WIDTH);
+                    // TODO: Deviation from vello_cpu.
+                    let width = (width as u32).min(WideTile::WIDTH as u32 - x_rel);
                     self.get_mut(cur_wtile_x, cur_wtile_y)
-                        .clip_fill(x_rel, u32::from(width));
+                        .clip_fill(x_rel, width);
                 }
 
                 // If the next strip is a sentinel, skip the fill

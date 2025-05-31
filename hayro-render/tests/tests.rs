@@ -89,6 +89,7 @@ use crate::run_test;
 #[test] fn image_rgba8_icc() { run_test("image_rgba8_icc", false, None); }
 #[test] fn integration_coat_of_arms() { run_test("integration_coat_of_arms", false, None); }
 #[test] fn integration_diagram() { run_test("integration_diagram", false, None); }
+#[test] fn integration_matplotlib() { run_test("integration_matplotlib", false, None); }
 #[test] fn integration_matplotlib_2() { run_test("integration_matplotlib_2", false, None); }
 #[test] fn issue_clipping_panic() { run_test("issue_clipping_panic", false, None); }
 #[test] fn issue_cmap_lookup() { run_test("issue_cmap_lookup", false, Some("..=0")); }
@@ -196,6 +197,7 @@ use crate::run_test;
 #[test] fn pattern_shading_type6_3() { run_test("pattern_shading_type6_3", true, None); }
 #[test] fn pattern_shading_type7_2() { run_test("pattern_shading_type7_2", true, None); }
 #[test] fn pattern_shading_type0_transform() { run_test("pattern_shading_type0_transform", false, None); }
+#[test] fn issue_panic_with_clip() { run_test("issue_panic_with_clip", false, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn arabiccidtruetype_pdf() { run_test("arabiccidtruetype-pdf", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }

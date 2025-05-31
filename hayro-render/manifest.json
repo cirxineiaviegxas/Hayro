@@ -378,8 +378,7 @@
   },
   {
     "id": "integration_matplotlib",
-    "file": "pdfs/integration_matplotlib.pdf",
-    "ignore": true
+    "file": "pdfs/integration_matplotlib.pdf"
   },
   {
     "id": "integration_matplotlib_2",
@@ -863,5 +862,9 @@
   {
     "id": "pattern_shading_type0_transform",
     "file": "pdfs/pattern_shading_type0_transform.pdf"
+  },
+  {
+    "id": "issue_panic_with_clip",
+    "file": "pdfs/issue_panic_with_clip.pdf"
   }
 ]
