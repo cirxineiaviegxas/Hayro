@@ -1,7 +1,7 @@
 // Copyright 2025 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading, RadialAxialParams};
+use crate::encode::{EncodedFunctionShading, EncodedRadialAxialShading};
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use kurbo::Point;
@@ -80,36 +80,22 @@ impl<'a> RadialAxialShadingFiller<'a> {
     pub(super) fn run(mut self, target: &mut [f32]) {
         let bg_color = PremulColor::from_alpha_color(self.shading.background).0;
 
-        let denom = match self.shading.params {
-            RadialAxialParams::Axial { denom } => denom,
-            RadialAxialParams::Radial { .. } => 0.0,
-        };
-
         target
             .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
             .for_each(|column| {
-                self.fill_axial(column, &bg_color, denom);
+                self.fill_axial(column, &bg_color);
                 self.cur_pos += self.shading.x_advance;
             });
     }
 
-    fn fill_axial(&mut self, col: &mut [f32], bg_color: &[f32; 4], denom: f32) {
-        // TODO: If the
-        // starting and ending coordinates are coincident (x0=x1 and y0=y1) nothing shall be
-        // painted.
-
+    fn fill_axial(&mut self, col: &mut [f32], bg_color: &[f32; 4]) {
         let mut pos = self.cur_pos;
-        let (x1, y1) = (self.shading.p1.x as f32, self.shading.p1.y as f32);
 
         let (t0, t1) = (self.shading.domain[0], self.shading.domain[1]);
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
             let mut x = if self.shading.axial {
-                let (x, y) = (pos.x as f32, pos.y as f32);
-                // Note that x0 is not needed because we shortened it to 0.
-                let p1 = x1 * x + y1 * y;
-
-                p1 / denom
+                pos.x as f32
             } else {
                 radial_pos(
                     &pos,

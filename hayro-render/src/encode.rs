@@ -185,22 +185,18 @@ fn encode_axial_shading(
 ) -> Paint {
     let idx = paints.len();
 
-    let p1;
-    let r;
+    let mut p1 = Point::ZERO;
+    let mut r = Point::ZERO;
     let initial_transform;
 
     let params = if is_axial {
         let [x_0, y_0, x_1, y_1, _, _] = coords;
 
-        initial_transform = Affine::translate((-x_0 as f64, -y_0 as f64));
-        let new_x1 = x_1 - x_0;
-        let new_y1 = y_1 - y_0;
-        p1 = Point::new(new_x1 as f64, new_y1 as f64);
-        r = Point::default();
+        initial_transform = ts_from_line_to_line(
+            Point::new(x_0 as f64, y_0 as f64), 
+            Point::new(x_1 as f64, y_1 as f64), Point::ZERO, Point::new(1.0, 0.0));
 
-        RadialAxialParams::Axial {
-            denom: new_x1 * new_x1 + new_y1 * new_y1,
-        }
+        RadialAxialParams::Axial
     } else {
         let [x_0, y_0, r0, x_1, y_1, r_1] = coords;
 
@@ -349,7 +345,7 @@ pub struct EncodedTriangleMeshShading {
 
 #[derive(Debug)]
 pub enum RadialAxialParams {
-    Axial { denom: f32 },
+    Axial,
     Radial,
 }
 
@@ -423,4 +419,25 @@ pub(crate) fn x_y_advances(transform: &Affine) -> (Vec2, Vec2) {
         Vec2::new(x_advance.x, x_advance.y),
         Vec2::new(y_advance.x, y_advance.y),
     )
+}
+
+fn ts_from_line_to_line(src1: Point, src2: Point, dst1: Point, dst2: Point) -> Affine {
+    let unit_to_line1 = unit_to_line(src1, src2);
+    // Calculate the transform necessary to map line1 to the unit vector.
+    let line1_to_unit = unit_to_line1.inverse();
+    // Then map the unit vector to line2.
+    let unit_to_line2 = unit_to_line(dst1, dst2);
+
+    unit_to_line2 * line1_to_unit
+}
+
+fn unit_to_line(p0: Point, p1: Point) -> Affine {
+    Affine::new([
+        p1.y - p0.y,
+        p0.x - p1.x,
+        p1.x - p0.x,
+        p1.y - p0.y,
+        p0.x,
+        p0.y,
+    ])
 }
