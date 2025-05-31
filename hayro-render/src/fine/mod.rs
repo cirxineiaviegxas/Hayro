@@ -6,18 +6,16 @@
 
 mod image;
 mod shading;
-mod triangle_mesh;
 
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
 use crate::fine::image::ImageFiller;
-use crate::fine::shading::{FunctionShadingFiller, RadialAxialShadingFiller};
+use crate::fine::shading::ShadingFiller;
 use crate::paint::Paint;
 use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
 use peniko::{BlendMode, Compose, Mix};
-use crate::fine::triangle_mesh::SampledShadingFiller;
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;
@@ -232,18 +230,8 @@ impl Fine {
                         let filler = ImageFiller::new(i, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
-                    EncodedPaint::FunctionShading(s) => {
-                        let filler = FunctionShadingFiller::new(s, start_x, start_y);
-                        fill_complex_paint(color_buf, blend_buf, false, blend_mode, filler);
-                    }
-                    EncodedPaint::AxialShading(a) => {
-                        let filler = RadialAxialShadingFiller::new(a, start_x, start_y);
-                        // TODO: Refine when opacities are needed (if one of extents is none or if radial
-                        // gradient is degenerate
-                        fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
-                    }
-                    EncodedPaint::SampledShading(s) => {
-                        let filler = SampledShadingFiller::new(s, start_x, start_y);
+                    EncodedPaint::Shading(s) => {
+                        let filler = ShadingFiller::new(s, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                 }
@@ -311,30 +299,8 @@ impl Fine {
                             );
                         }
                     }
-                    EncodedPaint::FunctionShading(s) => {
-                        let filler = FunctionShadingFiller::new(s, start_x, start_y);
-                        filler.paint(color_buf);
-
-                        strip::blend(
-                            blend_buf,
-                            color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                            blend_mode,
-                            alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                        );
-                    }
-                    EncodedPaint::AxialShading(s) => {
-                        let filler = RadialAxialShadingFiller::new(s, start_x, start_y);
-                        filler.paint(color_buf);
-
-                        strip::blend(
-                            blend_buf,
-                            color_buf.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                            blend_mode,
-                            alphas.chunks_exact(4).map(|e| [e[0], e[1], e[2], e[3]]),
-                        );
-                    }
-                    EncodedPaint::SampledShading(s) => {
-                        let filler = SampledShadingFiller::new(s, start_x, start_y);
+                    EncodedPaint::Shading(s) => {
+                        let filler = ShadingFiller::new(s, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(

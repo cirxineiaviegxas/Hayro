@@ -859,5 +859,9 @@
     "file": "pdfs/pattern_shading_type7_2.link",
     "md5": "da8f7a1d34f50163d13989c840f2e673",
     "link": true
+  },
+  {
+    "id": "pattern_shading_type0_transform",
+    "file": "pdfs/pattern_shading_type0_transform.pdf"
   }
 ]
