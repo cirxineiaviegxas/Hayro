@@ -88,10 +88,7 @@ impl Renderer {
 
         let image = Image {
             pixmap: Arc::new(pixmap),
-            x_extend: Default::default(),
-            x_step: width as f32,
-            y_step: height as f32,
-            y_extend: Default::default(),
+            repeat: false,
             interpolate,
             is_stencil,
         };

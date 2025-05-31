@@ -54,12 +54,8 @@ impl From<AlphaColor<Srgb>> for Paint {
 pub struct Image {
     /// The underlying pixmap of the image.
     pub pixmap: Arc<Pixmap>,
-    /// Extend mode in the horizontal direction.
-    pub x_extend: peniko::Extend,
-    pub x_step: f32,
-    pub y_step: f32,
     /// Extend mode in the vertical direction.
-    pub y_extend: peniko::Extend,
+    pub repeat: bool,
     /// Hint for desired rendering quality.
     pub interpolate: bool,
     pub is_stencil: bool,

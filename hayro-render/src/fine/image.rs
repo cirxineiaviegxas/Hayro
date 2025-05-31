@@ -9,13 +9,24 @@ use kurbo::{Point, Vec2};
 pub(crate) struct ImageFiller<'a> {
     cur_pos: Point,
     image: &'a EncodedImage,
+    height: f32,
+    height_inv: f32,
+    width: f32,
+    width_inv: f32,
 }
 
 impl<'a> ImageFiller<'a> {
     pub(crate) fn new(image: &'a EncodedImage, start_x: u16, start_y: u16) -> Self {
+        let height = image.pixmap.height() as f32;
+        let width = image.pixmap.width() as f32;
+        
         Self {
             cur_pos: image.transform * Point::new(f64::from(start_x), f64::from(start_y)),
             image,
+            width,
+            width_inv: 1.0 / width,
+            height,
+            height_inv: 1.0 / height,
         }
     }
 
@@ -31,14 +42,16 @@ impl<'a> ImageFiller<'a> {
     fn run_complex_column(&mut self, col: &mut [f32]) {
         let extend_point = |mut point: Point| {
             point.x = f64::from(extend(
-                point.x.floor() as f32,
-                self.image.extends.0,
-                self.image.x_step,
+                point.x as f32,
+                self.image.repeat,
+                self.width,
+                self.width_inv,
             ));
             point.y = f64::from(extend(
-                point.y.floor() as f32,
-                self.image.extends.1,
-                self.image.y_step,
+                point.y as f32,
+                self.image.repeat,
+                self.height,
+                self.height_inv,
             ));
 
             point
@@ -58,19 +71,12 @@ impl<'a> ImageFiller<'a> {
                 );
                 pixel.copy_from_slice(&sample);
             } else {
-                let fract = |orig_val: f64| {
-                    let start = orig_val - 0.5;
-                    let mut res = start.fract() as f32;
+                fn fract(val: f32) -> f32 {
+                    val - val.floor()
+                }
 
-                    if res.is_sign_negative() {
-                        res += 1.0;
-                    }
-
-                    res
-                };
-
-                let x_fract = fract(pos.x);
-                let y_fract = fract(pos.y);
+                let x_fract = fract(pos.x as f32 + 0.5);
+                let y_fract = fract(pos.y as f32 + 0.5);
 
                 let mut interpolated_color = [0.0_f32; 4];
 
@@ -112,21 +118,15 @@ impl<'a> ImageFiller<'a> {
     }
 }
 
-fn extend(val: f32, extend: peniko::Extend, max: f32) -> f32 {
-    match extend {
-        peniko::Extend::Pad => val.clamp(0.0, max - 1.0),
-        peniko::Extend::Repeat => val.rem_euclid(max),
-        peniko::Extend::Reflect => {
-            let period = 2.0 * max;
 
-            let val_mod = val.rem_euclid(period);
+#[inline(always)]
+fn extend(val: f32, repeat: bool, max: f32, inv_max: f32) -> f32 {
+    const BIAS: f32 = 0.01;
 
-            if val_mod < max {
-                val_mod
-            } else {
-                (period - 1.0) - val_mod
-            }
-        }
+    if !repeat {
+        val.clamp(0.0, max - BIAS)
+    }   else {
+        val - (val * inv_max).floor() * max
     }
 }
 
