@@ -1,3 +1,4 @@
+use crate::encode::x_y_advances;
 use crate::paint::Image;
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
@@ -9,7 +10,8 @@ use hayro_interpret::{FillProps, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
-use image::{ExtendedColorType, ImageEncoder};
+use image::imageops::FilterType;
+use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder, RgbaImage};
 use kurbo::{Affine, BezPath, Point, Rect};
 use peniko::color::palette::css::WHITE;
 use peniko::color::{AlphaColor, Srgb};
@@ -35,11 +37,45 @@ impl Renderer {
     fn draw_image(
         &mut self,
         image_data: Vec<u8>,
-        width: u32,
-        height: u32,
+        mut width: u32,
+        mut height: u32,
         is_stencil: bool,
         quality: ImageQuality,
     ) {
+        let mut cur_transform = self.0.transform;
+
+        let (x_scale, y_scale) = {
+            let (x, y) = x_y_advances(&cur_transform);
+            (x.length() as f32, y.length() as f32)
+        };
+
+        let image_data = if x_scale >= 1.0 && y_scale >= 1.0 {
+            image_data
+        } else {
+            // Do subsampling to prevent aliasing artifacts.
+            let new_width = (width as f32 * x_scale).ceil().max(1.0) as u32;
+            let new_height = (height as f32 * y_scale).ceil().max(1.0) as u32;
+
+            let image = DynamicImage::ImageRgba8(
+                ImageBuffer::from_raw(width, height, image_data.clone()).unwrap(),
+            );
+            let resized = image.resize_exact(new_width, new_height, FilterType::CatmullRom);
+
+            let new_width = resized.width();
+            let new_height = resized.height();
+            let t_scale_x = width as f32 / new_width as f32;
+            let t_scale_y = height as f32 / new_height as f32;
+
+            cur_transform =
+                cur_transform * Affine::scale_non_uniform(t_scale_x as f64, t_scale_y as f64);
+            self.0.set_transform(cur_transform);
+
+            width = new_width;
+            height = new_height;
+
+            resized.to_rgba8().into_raw()
+        };
+
         let premul = image_data
             .chunks_exact(4)
             .map(|d| {
@@ -49,8 +85,6 @@ impl Renderer {
             })
             .collect();
         let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
-
-        // pixmap.clone().save_png("out_pix.png");
 
         let image = Image {
             pixmap: Arc::new(pixmap),

@@ -129,9 +129,7 @@ pub(crate) fn draw_image_xobject(
 
     let data = x_object.as_rgba8(color);
 
-    // TODO: image_ccit test cases look pretty bad, we need support for mipmaps to improve
-    // them.
-    let quality = if x_object.interpolate || x_object.bits_per_component <= 8 {
+    let quality = if x_object.interpolate {
         ImageQuality::Medium
     } else {
         ImageQuality::Low
