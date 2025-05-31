@@ -11,11 +11,11 @@ use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
-use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder, RgbaImage};
+use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
 use kurbo::{Affine, BezPath, Point, Rect};
+use peniko::Fill;
 use peniko::color::palette::css::WHITE;
 use peniko::color::{AlphaColor, Srgb};
-use peniko::{Fill, ImageQuality};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
@@ -40,7 +40,7 @@ impl Renderer {
         mut width: u32,
         mut height: u32,
         is_stencil: bool,
-        quality: ImageQuality,
+        interpolate: bool,
     ) {
         let mut cur_transform = self.0.transform;
 
@@ -92,7 +92,7 @@ impl Renderer {
             x_step: width as f32,
             y_step: height as f32,
             y_extend: Default::default(),
-            quality,
+            interpolate,
             is_stencil,
         };
 
@@ -158,9 +158,9 @@ impl Device for Renderer {
         width: u32,
         height: u32,
         is_stencil: bool,
-        quality: ImageQuality,
+        interpolate: bool,
     ) {
-        self.draw_image(image_data, width, height, is_stencil, quality);
+        self.draw_image(image_data, width, height, is_stencil, interpolate);
     }
 
     fn pop(&mut self) {

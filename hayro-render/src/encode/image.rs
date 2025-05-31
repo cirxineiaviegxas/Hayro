@@ -2,14 +2,13 @@ use crate::encode::{EncodeExt, EncodedPaint, x_y_advances};
 use crate::paint::{Image, IndexedPaint, Paint};
 use crate::pixmap::Pixmap;
 use kurbo::{Affine, Vec2};
-use peniko::ImageQuality;
 use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) struct EncodedImage {
     pub(crate) pixmap: Arc<Pixmap>,
     pub(crate) extends: (peniko::Extend, peniko::Extend),
-    pub(crate) quality: ImageQuality,
+    pub(crate) interpolate: bool,
     pub(crate) transform: Affine,
     pub(crate) x_advance: Vec2,
     pub(crate) y_advance: Vec2,
@@ -29,7 +28,7 @@ impl EncodeExt for Image {
         let encoded = EncodedImage {
             pixmap: self.pixmap.clone(),
             extends: (self.x_extend, self.y_extend),
-            quality: self.quality,
+            interpolate: self.interpolate,
             transform,
             x_advance,
             y_advance,

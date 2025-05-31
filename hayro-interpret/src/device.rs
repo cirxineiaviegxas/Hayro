@@ -2,7 +2,7 @@ use crate::color::Color;
 use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
-use peniko::{Fill, ImageQuality};
+use peniko::Fill;
 
 #[derive(Debug, Clone)]
 pub struct ClipPath {
@@ -30,7 +30,7 @@ pub trait Device {
         width: u32,
         height: u32,
         is_stencil: bool,
-        quality: ImageQuality,
+        interpolate: bool,
     );
     fn pop(&mut self);
 }
@@ -56,7 +56,7 @@ pub(crate) enum ReplayInstruction {
         width: u32,
         height: u32,
         is_stencil: bool,
-        quality: ImageQuality,
+        interpolate: bool,
     },
     PopClip,
 }

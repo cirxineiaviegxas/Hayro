@@ -12,7 +12,6 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
-use peniko::ImageQuality;
 use skrifa::GlyphId;
 use std::collections::HashMap;
 
@@ -60,14 +59,14 @@ impl Device for Type3GlyphDescription {
         width: u32,
         height: u32,
         is_stencil: bool,
-        quality: ImageQuality,
+        interpolate: bool,
     ) {
         self.0.push(ReplayInstruction::DrawImage {
             image_data,
             width,
             height,
             is_stencil,
-            quality,
+            interpolate,
         })
     }
 

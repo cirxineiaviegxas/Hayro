@@ -5,10 +5,7 @@
 
 use crate::pixmap::Pixmap;
 use hayro_interpret::pattern::ShadingPattern;
-use peniko::{
-    ImageQuality,
-    color::{AlphaColor, Srgb},
-};
+use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;
 
 /// A paint that needs to be resolved via its index.
@@ -64,7 +61,7 @@ pub struct Image {
     /// Extend mode in the vertical direction.
     pub y_extend: peniko::Extend,
     /// Hint for desired rendering quality.
-    pub quality: ImageQuality,
+    pub interpolate: bool,
     pub is_stencil: bool,
 }
 

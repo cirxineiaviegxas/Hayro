@@ -13,7 +13,7 @@ use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
-use peniko::{Fill, ImageQuality};
+use peniko::Fill;
 use smallvec::SmallVec;
 
 pub enum XObject<'a> {
@@ -129,12 +129,6 @@ pub(crate) fn draw_image_xobject(
 
     let data = x_object.as_rgba8(color);
 
-    let quality = if x_object.interpolate {
-        ImageQuality::Medium
-    } else {
-        ImageQuality::Low
-    };
-
     context.save_state();
     context.pre_concat_affine(Affine::new([
         1.0 / width,
@@ -150,7 +144,7 @@ pub(crate) fn draw_image_xobject(
         x_object.width,
         x_object.height,
         x_object.is_mask,
-        quality,
+        x_object.interpolate,
     );
     context.restore_state();
 }

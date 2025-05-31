@@ -752,8 +752,14 @@ fn run_t3_instructions(
                 width,
                 height,
                 is_stencil,
-                quality,
-            } => device.draw_rgba_image(image_data.clone(), *width, *height, *is_stencil, *quality),
+                interpolate,
+            } => device.draw_rgba_image(
+                image_data.clone(),
+                *width,
+                *height,
+                *is_stencil,
+                *interpolate,
+            ),
         }
     }
 }

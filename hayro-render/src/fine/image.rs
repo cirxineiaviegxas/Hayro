@@ -4,7 +4,6 @@
 use crate::encode::image::EncodedImage;
 use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS, from_rgba8};
 use kurbo::{Point, Vec2};
-use peniko::ImageQuality;
 
 #[derive(Debug)]
 pub(crate) struct ImageFiller<'a> {
@@ -48,69 +47,65 @@ impl<'a> ImageFiller<'a> {
         let mut pos = self.cur_pos;
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            match self.image.quality {
-                ImageQuality::Low => {
-                    let point = extend_point(pos);
-                    let sample = from_rgba8(
-                        &self
-                            .image
-                            .pixmap
-                            .sample(point.x as u16, point.y as u16)
-                            .to_u8_array(),
-                    );
-                    pixel.copy_from_slice(&sample);
-                }
-                ImageQuality::Medium => {
-                    let fract = |orig_val: f64| {
-                        let start = orig_val - 0.5;
-                        let mut res = start.fract() as f32;
+            if !self.image.interpolate {
+                let point = extend_point(pos);
+                let sample = from_rgba8(
+                    &self
+                        .image
+                        .pixmap
+                        .sample(point.x as u16, point.y as u16)
+                        .to_u8_array(),
+                );
+                pixel.copy_from_slice(&sample);
+            } else {
+                let fract = |orig_val: f64| {
+                    let start = orig_val - 0.5;
+                    let mut res = start.fract() as f32;
 
-                        if res.is_sign_negative() {
-                            res += 1.0;
-                        }
-
-                        res
-                    };
-
-                    let x_fract = fract(pos.x);
-                    let y_fract = fract(pos.y);
-
-                    let mut interpolated_color = [0.0_f32; 4];
-
-                    let sample = |p: Point| {
-                        let c = |val: u8| f32::from(val) / 255.0;
-                        let s = self.image.pixmap.sample(p.x as u16, p.y as u16);
-
-                        [c(s.r), c(s.g), c(s.b), c(s.a)]
-                    };
-
-                    let cx = [1.0 - x_fract, x_fract];
-                    let cy = [1.0 - y_fract, y_fract];
-
-                    for (x_idx, x) in [-0.5, 0.5].into_iter().enumerate() {
-                        for (y_idx, y) in [-0.5, 0.5].into_iter().enumerate() {
-                            let color_sample = sample(extend_point(pos + Vec2::new(x, y)));
-                            let w = cx[x_idx] * cy[y_idx];
-
-                            for (component, component_sample) in
-                                interpolated_color.iter_mut().zip(color_sample)
-                            {
-                                *component += w * component_sample;
-                            }
-                        }
+                    if res.is_sign_negative() {
+                        res += 1.0;
                     }
 
-                    for i in 0..COLOR_COMPONENTS {
-                        let f32_val = interpolated_color[i]
-                            .clamp(0.0, 1.0)
-                            .min(interpolated_color[3]);
-                        interpolated_color[i] = f32_val;
-                    }
+                    res
+                };
 
-                    pixel.copy_from_slice(&interpolated_color);
+                let x_fract = fract(pos.x);
+                let y_fract = fract(pos.y);
+
+                let mut interpolated_color = [0.0_f32; 4];
+
+                let sample = |p: Point| {
+                    let c = |val: u8| f32::from(val) / 255.0;
+                    let s = self.image.pixmap.sample(p.x as u16, p.y as u16);
+
+                    [c(s.r), c(s.g), c(s.b), c(s.a)]
+                };
+
+                let cx = [1.0 - x_fract, x_fract];
+                let cy = [1.0 - y_fract, y_fract];
+
+                for (x_idx, x) in [-0.5, 0.5].into_iter().enumerate() {
+                    for (y_idx, y) in [-0.5, 0.5].into_iter().enumerate() {
+                        let color_sample = sample(extend_point(pos + Vec2::new(x, y)));
+                        let w = cx[x_idx] * cy[y_idx];
+
+                        for (component, component_sample) in
+                            interpolated_color.iter_mut().zip(color_sample)
+                        {
+                            *component += w * component_sample;
+                        }
+                    }
                 }
-                _ => unimplemented!(),
-            };
+
+                for i in 0..COLOR_COMPONENTS {
+                    let f32_val = interpolated_color[i]
+                        .clamp(0.0, 1.0)
+                        .min(interpolated_color[3]);
+                    interpolated_color[i] = f32_val;
+                }
+
+                pixel.copy_from_slice(&interpolated_color);
+            }
 
             pos += self.image.y_advance;
         }
