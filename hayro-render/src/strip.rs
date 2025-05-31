@@ -35,6 +35,7 @@ pub fn render(
     alpha_buf: &mut Vec<u8>,
     fill_rule: Fill,
     lines: &[Line],
+    anti_aliasing: bool,
 ) {
     strip_buf.clear();
 
@@ -85,7 +86,15 @@ pub fn render(
                         for y in 0..Tile::HEIGHT as usize {
                             let area = location_winding[x][y];
                             let coverage = $rule(area);
-                            alpha_buf.push((coverage * 255.0 + 0.5) as u8);
+                            let mut alpha = (coverage * 255.0 + 0.5) as u8;
+
+                            if !anti_aliasing {
+                                if alpha > 0 {
+                                    alpha = 255;
+                                }
+                            }
+
+                            alpha_buf.push(alpha);
                         }
                     }
                 };

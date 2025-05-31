@@ -36,6 +36,7 @@ pub struct RenderContext {
     pub(crate) transform: Affine,
     pub(crate) fill_rule: Fill,
     pub(crate) encoded_paints: Vec<EncodedPaint>,
+    pub(crate) anti_aliasing: bool,
 }
 
 impl RenderContext {
@@ -60,6 +61,7 @@ impl RenderContext {
             ..Default::default()
         };
         let encoded_paints = vec![];
+        let anti_aliasing = true;
 
         Self {
             width,
@@ -75,6 +77,7 @@ impl RenderContext {
             fill_rule,
             stroke,
             encoded_paints,
+            anti_aliasing,
         }
     }
 
@@ -217,6 +220,10 @@ impl RenderContext {
         self.render_to_buffer(pixmap.data_as_u8_slice_mut(), width, height);
     }
 
+    pub fn set_anti_aliasing(&mut self, val: bool) {
+        self.anti_aliasing = val;
+    }
+
     /// Return the width of the pixmap.
     pub fn width(&self) -> u16 {
         self.width
@@ -244,6 +251,7 @@ impl RenderContext {
             &mut self.alphas,
             fill_rule,
             &self.line_buf,
+            self.anti_aliasing,
         );
     }
 }
