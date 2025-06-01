@@ -30,7 +30,21 @@ type RenderedDocument = Vec<Vec<u8>>;
 type RenderedPage = Vec<u8>;
 
 pub fn check_render(name: &str, document: RenderedDocument) {
-    let refs_path = SNAPSHOTS_PATH.clone();
+    let refs_path = if name.starts_with("pdfjs_") {
+        SNAPSHOTS_PATH.join("pdfjs")
+    } else {
+        SNAPSHOTS_PATH.clone()
+    };
+
+    // Ensure the snapshots subdirectory exists
+    let _ = std::fs::create_dir_all(&refs_path);
+    
+    // Use the name without the pdfjs_ prefix for the actual filename
+    let snapshot_name = if name.starts_with("pdfjs_") {
+        &name[6..] // Remove "pdfjs_" prefix
+    } else {
+        name
+    };
 
     let mut ref_created = false;
     let mut test_replaced = false;
@@ -93,7 +107,7 @@ pub fn check_render(name: &str, document: RenderedDocument) {
         panic!("empty document");
     } else {
         for (index, page) in document.iter().enumerate() {
-            check_single(name.to_string(), page, index, &mut failed);
+            check_single(snapshot_name.to_string(), page, index, &mut failed);
         }
 
         if test_replaced {
@@ -136,12 +150,8 @@ fn parse_range(range_str: &str) -> Option<RangeInclusive<usize>> {
     None
 }
 
-pub fn run_test(name: &str, is_download: bool, range_str: Option<&str>) {
-    let path = if is_download {
-        DOWNLOADS_PATH.join(format!("{name}.pdf",))
-    } else {
-        ASSETS_PATH.join(format!("{name}.pdf",))
-    };
+pub fn run_test(name: &str, file_path: &str, range_str: Option<&str>) {
+    let path = WORKSPACE_PATH.join(file_path);
     let content = std::fs::read(&path).unwrap();
     let data = Arc::new(content);
     let pdf = Pdf::new(data).unwrap();

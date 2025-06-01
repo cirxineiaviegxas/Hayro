@@ -25,10 +25,17 @@ class TestGenerator:
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
         
-    def download_pdf(self, link_path: Path, expected_md5: str = None) -> bool:
+    def download_pdf(self, link_path: Path, expected_md5: str = None, is_pdfjs: bool = False) -> bool:
         """Download PDF from link file and verify MD5 if provided."""
         stem = link_path.stem
-        dest_path = self.downloads_dir / f"{stem}.pdf"
+        
+        # Store downloads in pdfjs subdirectory for pdfjs entries
+        if is_pdfjs:
+            dest_dir = self.downloads_dir / "pdfjs"
+            dest_dir.mkdir(exist_ok=True)
+            dest_path = dest_dir / f"{stem}.pdf"
+        else:
+            dest_path = self.downloads_dir / f"{stem}.pdf"
         
         # If file exists, check MD5
         if dest_path.exists():
@@ -104,7 +111,7 @@ class TestGenerator:
             
         return all_entries
             
-    def process_entry(self, entry: dict) -> bool:
+    def process_entry(self, entry: dict, is_pdfjs: bool = False) -> bool:
         """Process a single manifest entry, downloading if necessary."""
         entry_id = entry['id']
         file_path = entry['file']
@@ -117,25 +124,26 @@ class TestGenerator:
             return False
             
         if is_link:
-            link_path = self.pdfs_dir / file_path.replace('pdfs/', '')
+            # Handle link files - they should be in pdfs/pdfjs/ for pdfjs entries
+            link_path = self.pdfs_dir / (f"pdfjs/{file_path.replace('pdfs/', '')}" if is_pdfjs else file_path.replace('pdfs/', ''))
             if not link_path.exists():
                 print(f"✘ Link file not found: {link_path}")
                 return False
                 
-            success = self.download_pdf(link_path, expected_md5)
+            success = self.download_pdf(link_path, expected_md5, is_pdfjs)
             if not success:
                 print(f"✘ Failed to download or verify {entry_id}")
                 return False
         else:
-            # Check if PDF file exists
-            pdf_path = self.pdfs_dir / file_path.replace('pdfs/', '')
+            # Check if PDF file exists - in pdfs/pdfjs/ for pdfjs entries
+            pdf_path = self.pdfs_dir / (f"pdfjs/{file_path.replace('pdfs/', '')}" if is_pdfjs else file_path.replace('pdfs/', ''))
             if not pdf_path.exists():
                 print(f"✘ PDF file not found: {pdf_path}")
                 return False
                 
         return True
         
-    def generate_rust_function(self, entry: dict) -> str:
+    def generate_rust_function(self, entry: dict, is_pdfjs: bool = False) -> str:
         """Generate Rust test function for a manifest entry."""
         entry_id = entry['id']
         is_link = entry.get('link', False)
@@ -155,10 +163,24 @@ class TestGenerator:
         else:
             # No page range specified
             length = "None"
+        
+        # Generate file path
+        if is_pdfjs:
+            if is_link:
+                file_path = f"downloads/pdfjs/{entry_id}.pdf"
+            else:
+                # Remove pdfs/ prefix and add pdfjs subdirectory
+                original_file = entry['file'].replace('pdfs/', '')
+                file_path = f"pdfs/pdfjs/{original_file}"
+            func_name = f"pdfjs_{entry_id.replace('-', '_')}"
+        else:
+            if is_link:
+                file_path = f"downloads/{entry_id}.pdf"
+            else:
+                file_path = entry['file']
+            func_name = entry_id.replace('-', '_')
             
-        func_name = entry_id.replace('-', '_')
-            
-        return f"#[test] fn {func_name}() {{ run_test(\"{entry_id}\", {str(is_link).lower()}, {length}); }}"
+        return f'#[test] fn {func_name}() {{ run_test("{func_name}", "{file_path}", {length}); }}'
         
     def generate_tests(self):
         """Main function to generate tests from manifest."""
@@ -167,25 +189,44 @@ class TestGenerator:
         # Ensure downloads directory exists
         self.ensure_downloads_dir()
         
-        # Load manifests
-        try:
-            manifest = self.load_manifests()
-            print(f"📋 Combined total: {len(manifest)} entries")
-        except Exception as e:
-            print(f"✘ Failed to load manifests: {e}")
-            return
-            
         # Process all entries and generate Rust functions
         rust_functions = []
         processed_count = 0
         skipped_count = 0
         
-        for entry in manifest:
-            if self.process_entry(entry):
-                rust_functions.append(self.generate_rust_function(entry))
-                processed_count += 1
-            else:
-                skipped_count += 1
+        # Load and process custom manifest
+        if self.custom_manifest_path.exists():
+            with open(self.custom_manifest_path, 'r') as f:
+                custom_entries = json.load(f)
+                print(f"📋 Processing {len(custom_entries)} custom entries")
+                
+                for entry in custom_entries:
+                    if self.process_entry(entry, is_pdfjs=False):
+                        rust_functions.append(self.generate_rust_function(entry, is_pdfjs=False))
+                        processed_count += 1
+                    else:
+                        skipped_count += 1
+        else:
+            print("⚠ Custom manifest not found, skipping")
+            
+        # Load and process PDF.js manifest
+        if self.pdfjs_manifest_path.exists():
+            with open(self.pdfjs_manifest_path, 'r') as f:
+                pdfjs_entries = json.load(f)
+                print(f"📋 Processing {len(pdfjs_entries)} PDF.js entries")
+                
+                for entry in pdfjs_entries:
+                    if self.process_entry(entry, is_pdfjs=True):
+                        rust_functions.append(self.generate_rust_function(entry, is_pdfjs=True))
+                        processed_count += 1
+                    else:
+                        skipped_count += 1
+        else:
+            print("⚠ PDF.js manifest not found, skipping")
+            
+        if not rust_functions:
+            print("✘ No test functions generated")
+            return
                 
         # Write Rust test file
         try:
@@ -198,7 +239,7 @@ class TestGenerator:
             print(f"📊 Summary: {processed_count} processed, {skipped_count} skipped")
             
         except Exception as e:
-            print(f"✘ Failed to write output file: {e}")
+            print(f"✘ Failed to write test file: {e}")
 
 def main():
     generator = TestGenerator()

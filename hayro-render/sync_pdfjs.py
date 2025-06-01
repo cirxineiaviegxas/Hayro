@@ -98,7 +98,10 @@ class PDFJSSync:
         
     def download_pdf_from_link(self, link_file_path: Path, expected_md5: str, dest_name: str) -> bool:
         """Download PDF from a .link file and verify MD5."""
-        dest_path = self.our_downloads_dir / f"{dest_name}.pdf"
+        # Create pdfjs subdirectory in downloads
+        pdfjs_downloads_dir = self.our_downloads_dir / "pdfjs"
+        pdfjs_downloads_dir.mkdir(exist_ok=True)
+        dest_path = pdfjs_downloads_dir / f"{dest_name}.pdf"
         
         # Check if already downloaded with correct MD5
         if dest_path.exists():
@@ -119,9 +122,6 @@ class PDFJSSync:
         try:
             response = requests.get(url, stream=True, timeout=60)
             response.raise_for_status()
-            
-            # Ensure downloads directory exists
-            self.our_downloads_dir.mkdir(exist_ok=True)
             
             with open(dest_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
@@ -145,12 +145,12 @@ class PDFJSSync:
             
     def copy_pdf_file(self, source_path: Path, dest_name: str) -> bool:
         """Copy a PDF file from PDF.js to our pdfs directory."""
-        dest_path = self.our_pdfs_dir / f"{dest_name}.pdf"
+        # Create pdfjs subdirectory in pdfs
+        pdfjs_pdfs_dir = self.our_pdfs_dir / "pdfjs"
+        pdfjs_pdfs_dir.mkdir(exist_ok=True)
+        dest_path = pdfjs_pdfs_dir / f"{dest_name}.pdf"
         
         try:
-            # Ensure pdfs directory exists
-            self.our_pdfs_dir.mkdir(exist_ok=True)
-            
             if dest_path.exists():
                 print(f"✔ {dest_name}.pdf already exists, skipping copy")
                 return True
@@ -165,12 +165,12 @@ class PDFJSSync:
             
     def copy_link_file(self, source_path: Path, dest_name: str) -> bool:
         """Copy a .link file from PDF.js to our pdfs directory."""
-        dest_path = self.our_pdfs_dir / f"{dest_name}.link"
+        # Create pdfjs subdirectory in pdfs
+        pdfjs_pdfs_dir = self.our_pdfs_dir / "pdfjs"
+        pdfjs_pdfs_dir.mkdir(exist_ok=True)
+        dest_path = pdfjs_pdfs_dir / f"{dest_name}.link"
         
         try:
-            # Ensure pdfs directory exists
-            self.our_pdfs_dir.mkdir(exist_ok=True)
-            
             if dest_path.exists():
                 print(f"✔ {dest_name}.link already exists, skipping copy")
                 return True
@@ -230,29 +230,82 @@ class PDFJSSync:
             if entry_id not in current_whitelist_ids:
                 print(f"🧹 Cleaning up {entry_id} (no longer in whitelist)...")
                 
-                # Remove PDF file
-                pdf_path = self.our_pdfs_dir / f"{entry_id}.pdf"
+                # Remove PDF file from pdfjs subdirectory
+                pdf_path = self.our_pdfs_dir / "pdfjs" / f"{entry_id}.pdf"
                 if pdf_path.exists():
                     pdf_path.unlink()
-                    print(f"  ✔ Removed {entry_id}.pdf")
+                    print(f"  ✔ Removed pdfjs/{entry_id}.pdf")
                 
-                # Remove link file
-                link_path = self.our_pdfs_dir / f"{entry_id}.link"
+                # Remove link file from pdfjs subdirectory
+                link_path = self.our_pdfs_dir / "pdfjs" / f"{entry_id}.link"
                 if link_path.exists():
                     link_path.unlink()
-                    print(f"  ✔ Removed {entry_id}.link")
+                    print(f"  ✔ Removed pdfjs/{entry_id}.link")
                     
-                # Remove downloaded file
-                download_path = self.our_downloads_dir / f"{entry_id}.pdf"
+                # Remove downloaded file from pdfjs subdirectory
+                download_path = self.our_downloads_dir / "pdfjs" / f"{entry_id}.pdf"
                 if download_path.exists():
                     download_path.unlink()
-                    print(f"  ✔ Removed downloaded {entry_id}.pdf")
+                    print(f"  ✔ Removed downloads/pdfjs/{entry_id}.pdf")
                     
                 removed_count += 1
                 
         if removed_count > 0:
             print(f"🧹 Cleaned up {removed_count} removed entries")
         
+    def cleanup_stale_files(self):
+        """Remove PDF.js files from old locations (root directories) that are now in subdirectories."""
+        print("🧹 Cleaning up stale PDF.js files from old locations...")
+        
+        # Load our current PDF.js manifest to know which files should be in subdirectories
+        if not self.our_pdfjs_manifest_path.exists():
+            print("⚠ No PDF.js manifest found, skipping stale file cleanup")
+            return
+            
+        with open(self.our_pdfjs_manifest_path, 'r') as f:
+            pdfjs_entries = json.load(f)
+            
+        cleaned_count = 0
+        
+        for entry in pdfjs_entries:
+            entry_id = entry["id"]
+            is_link = entry.get("link", False)
+            
+            # Clean up stale PDF files from root pdfs directory
+            if not is_link:
+                # Get the actual filename from the manifest
+                file_path = entry["file"]
+                if file_path.startswith("pdfs/"):
+                    filename = file_path[5:]  # Remove "pdfs/" prefix
+                else:
+                    filename = file_path
+                    
+                stale_pdf_path = self.our_pdfs_dir / filename
+                if stale_pdf_path.exists():
+                    stale_pdf_path.unlink()
+                    print(f"  ✔ Removed stale {filename}")
+                    cleaned_count += 1
+            
+            # Clean up stale link files from root pdfs directory
+            if is_link:
+                stale_link_path = self.our_pdfs_dir / f"{entry_id}.link"
+                if stale_link_path.exists():
+                    stale_link_path.unlink()
+                    print(f"  ✔ Removed stale {entry_id}.link")
+                    cleaned_count += 1
+            
+            # Clean up stale downloaded files from root downloads directory
+            stale_download_path = self.our_downloads_dir / f"{entry_id}.pdf"
+            if stale_download_path.exists():
+                stale_download_path.unlink()
+                print(f"  ✔ Removed stale downloads/{entry_id}.pdf")
+                cleaned_count += 1
+                
+        if cleaned_count > 0:
+            print(f"🧹 Cleaned up {cleaned_count} stale files")
+        else:
+            print("✔ No stale files found")
+
     def sync(self):
         """Main synchronization function."""
         print("🚀 Starting PDF.js test synchronization...")
@@ -355,7 +408,10 @@ class PDFJSSync:
                 
             print(f"\n🎉 Synchronization complete!")
             print(f"📄 Created manifest_pdfjs.json with {len(our_manifest_entries)} entries")
-            print(f"�� Summary: {success_count} successful, {failed_count} failed")
+            print(f"📊 Summary: {success_count} successful, {failed_count} failed")
+            
+            # Clean up stale files from old locations
+            self.cleanup_stale_files()
             
         except Exception as e:
             print(f"✘ Failed to write manifest_pdfjs.json: {e}")
