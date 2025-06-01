@@ -3,6 +3,7 @@ use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
 use peniko::Fill;
+use crate::paint::Paint;
 
 #[derive(Debug, Clone)]
 pub struct ClipPath {
@@ -19,8 +20,7 @@ pub struct Mask {
 
 pub trait Device {
     fn set_transform(&mut self, affine: Affine);
-    fn set_paint(&mut self, color: Color);
-    fn set_shading_paint(&mut self, color: ShadingPattern);
+    fn set_paint(&mut self, paint: Paint);
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps);
     fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps);
     fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32);

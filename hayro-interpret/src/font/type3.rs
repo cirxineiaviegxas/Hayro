@@ -14,6 +14,7 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
 use skrifa::GlyphId;
 use std::collections::HashMap;
+use crate::paint::Paint;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -28,9 +29,7 @@ impl Device for Type3GlyphDescription {
         self.0.push(ReplayInstruction::SetTransform { affine });
     }
 
-    fn set_paint(&mut self, _: Color) {}
-
-    fn set_shading_paint(&mut self, _: ShadingPattern) {}
+    fn set_paint(&mut self, _: Paint) {}
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
         self.0.push(ReplayInstruction::StrokePath {

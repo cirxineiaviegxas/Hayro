@@ -24,6 +24,7 @@ pub mod shading;
 mod state;
 mod util;
 pub mod x_object;
+mod paint;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
@@ -33,6 +34,8 @@ use crate::pattern::ShadingPattern;
 use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
+
+pub use paint::Paint;
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -677,13 +680,13 @@ fn handle_paint(
         let mut pattern = pattern.unwrap();
         pattern.matrix = *context.root_transform() * pattern.matrix;
         let bbox = pattern.shading.bbox;
-        device.set_shading_paint(pattern);
+        device.set_paint(Paint::Shading(pattern));
 
         bbox
     } else {
         let color = Color::new(cs, color, alpha);
 
-        device.set_paint(color);
+        device.set_paint(Paint::Color(color));
 
         None
     };

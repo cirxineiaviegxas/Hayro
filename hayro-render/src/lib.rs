@@ -1,5 +1,5 @@
 use crate::encode::x_y_advances;
-use crate::paint::Image;
+use crate::paint::{Image, Paint};
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
 use hayro_interpret::color::Color;
@@ -104,13 +104,15 @@ impl Device for Renderer {
         self.0.set_transform(affine);
     }
 
-    fn set_paint(&mut self, color: Color) {
-        let res = color.to_rgba();
-        self.0.set_paint(res);
-    }
-
-    fn set_shading_paint(&mut self, color: ShadingPattern) {
-        self.0.set_paint(color);
+    fn set_paint(&mut self, paint: hayro_interpret::Paint) {
+        match paint {
+            hayro_interpret::Paint::Color(c) => {
+                self.0.set_paint(c.to_rgba());
+            }
+            hayro_interpret::Paint::Shading(s) => {
+                self.0.set_paint(s);
+            }
+        }
     }
 
     fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
