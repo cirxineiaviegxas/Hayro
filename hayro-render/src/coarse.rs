@@ -564,7 +564,7 @@ impl Wide {
             let next_strip = &strips[i + 1];
             let strip_width =
                 ((next_strip.alpha_idx - strip.alpha_idx) / u32::from(Tile::HEIGHT)) as u16;
-            let x1 = x0 + strip_width;
+            let mut x1 = x0 + strip_width;
             let wtile_x0 = (x0 / WideTile::WIDTH).max(clip_bbox.x0());
             let wtile_x1 = x1.div_ceil(WideTile::WIDTH).min(clip_bbox.x1());
 
@@ -575,6 +575,7 @@ impl Wide {
             if clip_x > x {
                 col += u32::from(clip_x - x);
                 x = clip_x;
+                x1 = clip_x.max(x1);
             }
 
             // Render clip strips for each affected tile and mark for popping
@@ -624,10 +625,8 @@ impl Wide {
                 // If there's a gap, fill it
                 if width > 0 {
                     let x_rel = u32::from(x1 % WideTile::WIDTH);
-                    // TODO: Deviation from vello_cpu.
-                    let width = (width as u32).min(WideTile::WIDTH as u32 - x_rel);
                     self.get_mut(cur_wtile_x, cur_wtile_y)
-                        .clip_fill(x_rel, width);
+                        .clip_fill(x_rel, u32::from(width));
                 }
 
                 // If the next strip is a sentinel, skip the fill
