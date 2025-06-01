@@ -38,10 +38,11 @@ pub(crate) fn fill_path_impl(
     device.set_transform(base_transform);
 
     set_device_paint(context, device, false);
+    device.set_fill_properties(&context.fill_props());
 
     match path {
-        None => device.fill_path(context.path(), &context.fill_props()),
-        Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
+        None => device.fill_path(context.path()),
+        Some(GlyphDescription::Path(path)) => device.fill_path(path),
         Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
 }
@@ -71,10 +72,11 @@ pub(crate) fn stroke_path_impl(
     device.set_transform(base_transform);
 
     set_device_paint(context, device, true);
+    device.set_stroke_properties(&context.stroke_props());
 
     match path {
-        None => device.stroke_path(context.path(), &context.stroke_props()),
-        Some(GlyphDescription::Path(path)) => device.stroke_path(path, &context.stroke_props()),
+        None => device.stroke_path(context.path()),
+        Some(GlyphDescription::Path(path)) => device.stroke_path(path),
         Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
     };
 }

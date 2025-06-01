@@ -95,11 +95,11 @@ pub(crate) fn run_t3_instructions(
             ReplayInstruction::SetTransform { affine } => {
                 device.set_transform(initial_transform * *affine);
             }
-            ReplayInstruction::StrokePath { path, stroke_props } => {
-                device.stroke_path(path, stroke_props);
+            ReplayInstruction::StrokePath { path } => {
+                device.stroke_path(path);
             }
-            ReplayInstruction::FillPath { path, fill_props } => {
-                device.fill_path(path, fill_props);
+            ReplayInstruction::FillPath { path } => {
+                device.fill_path(path);
             }
             ReplayInstruction::PushLayer { clip, opacity } => {
                 device.push_layer(clip.as_ref(), *opacity)
@@ -111,6 +111,12 @@ pub(crate) fn run_t3_instructions(
             }
             ReplayInstruction::SetPaintTransform { affine } => {
                 device.set_paint_transform(*affine);
+            }
+            ReplayInstruction::StrokeProperties { stroke_props } => {
+                device.set_stroke_properties(stroke_props);
+            }
+            ReplayInstruction::FillProperties { fill_props } => {
+                device.set_fill_properties(fill_props);
             }
         }
     }

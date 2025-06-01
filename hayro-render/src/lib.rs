@@ -119,7 +119,7 @@ impl Device for Renderer {
         }
     }
 
-    fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
+    fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
         // Best-effort attempt to ensure a line width of at least 1.
         let min_factor = min_factor(&self.0.transform);
         let mut line_width = stroke_props.line_width.max(0.01);
@@ -140,11 +140,17 @@ impl Device for Renderer {
         };
 
         self.0.set_stroke(stroke);
+    }
+
+    fn stroke_path(&mut self, path: &BezPath) {
         self.0.stroke_path(path);
     }
 
-    fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps) {
+    fn set_fill_properties(&mut self, fill_props: &FillProps) {
         self.0.set_fill_rule(fill_props.fill_rule);
+    }
+
+    fn fill_path(&mut self, path: &BezPath) {
         self.0.fill_path(path);
     }
 
@@ -168,11 +174,12 @@ impl Device for Renderer {
     fn draw_stencil_image(&mut self, stencil: StencilImage) {
         self.0.set_anti_aliasing(false);
         self.push_layer(None, 1.0);
+        let old_rule = self.0.fill_rule;
+        self.set_fill_properties(&FillProps {
+            fill_rule: Fill::NonZero,
+        });
         self.fill_path(
             &Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64).to_path(0.1),
-            &FillProps {
-                fill_rule: Fill::NonZero,
-            },
         );
         self.draw_image(
             stencil.stencil_data,
@@ -183,6 +190,9 @@ impl Device for Renderer {
         );
         self.pop();
 
+        self.set_fill_properties(&FillProps {
+            fill_rule: old_rule,
+        });
         self.0.set_anti_aliasing(true);
     }
 

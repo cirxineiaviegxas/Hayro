@@ -61,12 +61,20 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
 
     fn set_paint(&mut self, paint: Paint) {}
 
-    fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
-        self.0.stroke_path(path, stroke_props)
+    fn stroke_path(&mut self, path: &BezPath) {
+        self.0.stroke_path(path)
     }
 
-    fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps) {
-        self.0.fill_path(path, fill_props)
+    fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
+        self.0.set_stroke_properties(stroke_props)
+    }
+
+    fn fill_path(&mut self, path: &BezPath) {
+        self.0.fill_path(path)
+    }
+
+    fn set_fill_properties(&mut self, fill_props: &FillProps) {
+        self.0.set_fill_properties(fill_props)
     }
 
     fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32) {

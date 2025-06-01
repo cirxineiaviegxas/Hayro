@@ -35,16 +35,24 @@ impl Device for Type3GlyphDescription {
 
     fn set_paint(&mut self, _: Paint) {}
 
-    fn stroke_path(&mut self, path: &BezPath, stroke_props: &StrokeProps) {
-        self.0.push(ReplayInstruction::StrokePath {
-            path: path.clone(),
+    fn stroke_path(&mut self, path: &BezPath) {
+        self.0
+            .push(ReplayInstruction::StrokePath { path: path.clone() })
+    }
+
+    fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
+        self.0.push(ReplayInstruction::StrokeProperties {
             stroke_props: stroke_props.clone(),
         })
     }
 
-    fn fill_path(&mut self, path: &BezPath, fill_props: &FillProps) {
-        self.0.push(ReplayInstruction::FillPath {
-            path: path.clone(),
+    fn fill_path(&mut self, path: &BezPath) {
+        self.0
+            .push(ReplayInstruction::FillPath { path: path.clone() })
+    }
+
+    fn set_fill_properties(&mut self, fill_props: &FillProps) {
+        self.0.push(ReplayInstruction::FillProperties {
             fill_props: fill_props.clone(),
         })
     }
