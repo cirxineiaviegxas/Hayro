@@ -147,21 +147,21 @@ fn read_inner<'a, const PLAIN: bool>(
     let mut offsets = HashMap::new();
 
     let data = {
+        let dict_data = r.tail()?;
+        let start_offset = r.offset();
+        
         // Inline image dictionaries don't start with '<<'.
         if let Some(start_tag) = start_tag {
             r.forward_tag(start_tag)?;
         }
-
-        let dict_data = r.tail()?;
-        let start_offset = r.offset();
-
+        
         loop {
             r.skip_white_spaces_and_comments();
 
             // Normal dictionaries end with '>>', inline image dictionaries end with BD.
             if let Some(()) = r.peek_tag(end_tag) {
-                let end_offset = r.offset() - start_offset;
                 r.forward_tag(end_tag)?;
+                let end_offset = r.offset() - start_offset;
 
                 break &dict_data[..end_offset];
             } else {
@@ -198,7 +198,7 @@ fn read_inner<'a, const PLAIN: bool>(
     Some(Dict(Arc::new(Repr {
         data,
         offsets,
-        xref: xref,
+        xref,
     })))
 }
 

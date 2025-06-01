@@ -93,17 +93,7 @@ impl XRef {
             trailer_data,
         });
 
-        // The start and end <<>> will be cut off.
-        let dict_data = {
-            let mut start: Vec<u8> = vec![];
-            start.extend(b"<<");
-            start.extend(trailer_dict_data);
-            start.extend(b">>");
-
-            start
-        };
-
-        let mut r = Reader::new(&dict_data);
+        let mut r = Reader::new(&trailer_dict_data);
         let trailer_dict = r.read_with_xref::<Dict>(&xref)?;
         let root = trailer_dict.get::<Dict>(ROOT)?;
         let pages_ref = root.get_ref(PAGES)?;
