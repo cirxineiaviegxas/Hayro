@@ -1,4 +1,8 @@
 {
+  "615": [
+    "https://issues.apache.org/jira/secure/attachment/12622902/DECAHED.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12623808/LATTICE2.pdf"
+  ],
   "795": [
     "https://issues.apache.org/jira/secure/attachment/12452515/b.pdf"
   ],
@@ -17,11 +21,49 @@
     "https://issues.apache.org/jira/secure/attachment/12633430/asy-functionshading.pdf",
     "https://issues.apache.org/jira/secure/attachment/12633431/hsv-shading.pdf"
   ],
+  "1970": [
+    "https://issues.apache.org/jira/secure/attachment/12633540/asy-gouraud.pdf"
+  ],
+  "1200": [
+    "https://issues.apache.org/jira/secure/attachment/12647112/PDFBOX-2100-gouraud-CMYK-function.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647115/PDFBOX-2100-gouraud-RGB-function.pdf"
+  ],
+  "1915": [
+    "https://issues.apache.org/jira/secure/attachment/12628793/asy-tensor.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12646784/asy-tensor-rainbow.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12658953/axsh02.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12652090/CIB-coons-vs-tensormesh.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12628802/CONICAL.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647091/coons2-function.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647093/coons-function.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647095/coons-nofunction-CMYK.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647097/coons-nofunction-Duotone.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647099/coons-nofunction-Gray.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647101/coons-nofunction-RGB.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12628795/lamp_cairo.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12631768/McAfee-ShadingType7.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12657988/pattern-shading-2-4-idMatrix.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12659177/Shading2Function2LargeDomain.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12647811/tensor-nofunction-RGB.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12657990/TRITYP4.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12628796/XYZsweep.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12630272/uniekekans_test.pdf"
+  ],
+  "1958": [
+    "https://issues.apache.org/jira/secure/attachment/12632189/cinnebar.pdf"
+  ],
   "2112": [
     "https://issues.apache.org/jira/secure/attachment/12648299/main%20doc.pdf"
   ],
+  "2156": [
+    "https://issues.apache.org/jira/secure/attachment/12651861/pattern-shading-2-4-noMatrix.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12651826/swftools-gradients.pdf"
+  ],
   "2217": [
     "https://issues.apache.org/jira/secure/attachment/12656351/pdfbox-bug.pdf"
+  ],
+  "2344": [
+    "https://issues.apache.org/jira/secure/attachment/12668313/PDFBOX-2344-233644-p10.pdf"
   ],
   "2726": [
     "https://issues.apache.org/jira/secure/attachment/12706706/PDFBOX-2726.pdf"
@@ -31,6 +73,9 @@
   ],
   "3562": [
     "https://issues.apache.org/jira/secure/attachment/12838397/PDFBOX-3562-BitsPerFlag2.pdf"
+  ],
+  "3640": [
+    "https://issues.apache.org/jira/secure/attachment/12844801/PDFBOX-3640.pdf"
   ],
   "3647": [
     "https://issues.apache.org/jira/secure/attachment/12846620/PDFBOX-3647.pdf"
