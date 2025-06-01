@@ -743,98 +743,8 @@
     "file": "pdfs/image_jbig2_crash.pdf"
   },
   {
-    "id": "image_jbig2_5",
-    "file": "pdfs/image_jbig2_5.link",
-    "md5": "22ab33f869ed862dea8285ded2e52787",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_6",
-    "file": "pdfs/image_jbig2_6.link",
-    "md5": "3298d93eb9ef69d5d5470f0c42c6df57",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_7",
-    "file": "pdfs/image_jbig2_7.link",
-    "md5": "80cefe27f02ee53d846a6f84db7af20f",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_8",
-    "file": "pdfs/image_jbig2_8.link",
-    "md5": "740ca024f33d089807d1eedf9a46649d",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_9",
-    "file": "pdfs/image_jbig2_9.link",
-    "md5": "28377dc96ad36f3f78042e9787470271",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_10",
-    "file": "pdfs/image_jbig2_10.link",
-    "md5": "72fde39ef3e668a4176f6281f534e62c",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_11",
-    "file": "pdfs/image_jbig2_11.link",
-    "md5": "3fcc05c7ed4001492981776e9424c645",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_12",
-    "file": "pdfs/image_jbig2_12.link",
-    "md5": "87ac5f108e3729383b4c7b03d021b4d2",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_13",
-    "file": "pdfs/image_jbig2_13.link",
-    "md5": "42ae5879760faa4ee53b65c21b531421",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_14",
-    "file": "pdfs/image_jbig2_14.link",
-    "md5": "f4721a5d4f60ea146ade53b35b24916b",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_15",
-    "file": "pdfs/image_jbig2_15.link",
-    "md5": "8199e1935492f79da1a6c5b76b505ebf",
-    "link": true
-  },
-  {
-    "id": "image_jbig2_16",
-    "file": "pdfs/image_jbig2_16.link",
-    "md5": "ffef0c24bed7abb258082a85b891f753",
-    "link": true
-  },
-  {
     "id": "xref_invalid_offsets",
     "file": "pdfs/xref_invalid_offsets.pdf"
-  },
-  {
-    "id": "pdfbox-3562",
-    "file": "pdfs/pdfbox-3562.link",
-    "md5": "ea6c0f1fffeaa9b06d2001d88223e7cb",
-    "link": true
-  },
-  {
-    "id": "pdfbox-3647",
-    "file": "pdfs/pdfbox-3647.link",
-    "md5": "2f7dc1d1a179b1529ed8b4025d8825ea",
-    "link": true
-  },
-  {
-    "id": "pdfbox-2217",
-    "file": "pdfs/pdfbox-2217.link",
-    "md5": "f71d4420fc746f0ea3c69f5ebf525ad3",
-    "link": true
   },
   {
     "id": "pattern_shading_type7",
@@ -845,18 +755,6 @@
   {
     "id": "pattern_shading_type7_background",
     "file": "pdfs/pattern_shading_type7_background.pdf"
-  },
-  {
-    "id": "pattern_shading_type6_3",
-    "file": "pdfs/pattern_shading_type6_3.link",
-    "md5": "dc49c6f1595b9773c1a28866aea597ef",
-    "link": true
-  },
-  {
-    "id": "pattern_shading_type7_2",
-    "file": "pdfs/pattern_shading_type7_2.link",
-    "md5": "da8f7a1d34f50163d13989c840f2e673",
-    "link": true
   },
   {
     "id": "pattern_shading_type0_transform",

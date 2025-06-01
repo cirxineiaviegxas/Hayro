@@ -15,8 +15,6 @@ const REPLACE: Option<&str> = option_env!("REPLACE");
 pub(crate) static WORKSPACE_PATH: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(""));
 
-pub(crate) static ASSETS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("pdfs"));
-pub(crate) static DOWNLOADS_PATH: Lazy<PathBuf> = Lazy::new(|| WORKSPACE_PATH.join("downloads"));
 pub(crate) static DIFFS_PATH: Lazy<PathBuf> = Lazy::new(|| {
     let path = WORKSPACE_PATH.join("diffs");
     let _ = std::fs::remove_dir_all(&path);
@@ -32,6 +30,8 @@ type RenderedPage = Vec<u8>;
 pub fn check_render(name: &str, document: RenderedDocument) {
     let refs_path = if name.starts_with("pdfjs_") {
         SNAPSHOTS_PATH.join("pdfjs")
+    } else if name.starts_with("pdfbox_") {
+        SNAPSHOTS_PATH.join("pdfbox")
     } else {
         SNAPSHOTS_PATH.clone()
     };
@@ -39,9 +39,11 @@ pub fn check_render(name: &str, document: RenderedDocument) {
     // Ensure the snapshots subdirectory exists
     let _ = std::fs::create_dir_all(&refs_path);
     
-    // Use the name without the pdfjs_ prefix for the actual filename
+    // Use the name without the prefix for the actual filename
     let snapshot_name = if name.starts_with("pdfjs_") {
         &name[6..] // Remove "pdfjs_" prefix
+    } else if name.starts_with("pdfbox_") {
+        &name[7..] // Remove "pdfbox_" prefix
     } else {
         name
     };

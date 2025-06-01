@@ -9,6 +9,7 @@ class TestGenerator:
         self.script_dir = Path(__file__).resolve().parent
         self.custom_manifest_path = self.script_dir / 'manifest.json'
         self.pdfjs_manifest_path = self.script_dir / 'manifest_pdfjs.json'
+        self.pdfbox_manifest_path = self.script_dir / 'manifest_pdfbox.json'
         self.pdfs_dir = self.script_dir / 'pdfs'
         self.downloads_dir = self.script_dir / 'downloads'
         self.output_file = self.script_dir / 'tests' / 'tests.rs'
@@ -25,13 +26,19 @@ class TestGenerator:
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
         
-    def download_pdf(self, link_path: Path, expected_md5: str = None, is_pdfjs: bool = False) -> bool:
+    def download_pdf(self, link_path: Path, expected_md5: str = None, is_external: bool = False) -> bool:
         """Download PDF from link file and verify MD5 if provided."""
         stem = link_path.stem
         
-        # Store downloads in pdfjs subdirectory for pdfjs entries
-        if is_pdfjs:
-            dest_dir = self.downloads_dir / "pdfjs"
+        # Store downloads in appropriate subdirectory for external entries
+        if is_external:
+            # Determine subdirectory based on link file location
+            if 'pdfjs' in str(link_path):
+                dest_dir = self.downloads_dir / "pdfjs"
+            elif 'pdfbox' in str(link_path):
+                dest_dir = self.downloads_dir / "pdfbox"
+            else:
+                dest_dir = self.downloads_dir
             dest_dir.mkdir(exist_ok=True)
             dest_path = dest_dir / f"{stem}.pdf"
         else:
@@ -111,7 +118,7 @@ class TestGenerator:
             
         return all_entries
             
-    def process_entry(self, entry: dict, is_pdfjs: bool = False) -> bool:
+    def process_entry(self, entry: dict, is_pdfjs: bool = False, is_pdfbox: bool = False) -> bool:
         """Process a single manifest entry, downloading if necessary."""
         entry_id = entry['id']
         file_path = entry['file']
@@ -124,26 +131,38 @@ class TestGenerator:
             return False
             
         if is_link:
-            # Handle link files - they should be in pdfs/pdfjs/ for pdfjs entries
-            link_path = self.pdfs_dir / (f"pdfjs/{file_path.replace('pdfs/', '')}" if is_pdfjs else file_path.replace('pdfs/', ''))
+            # Handle link files - they should be in pdfs/pdfjs/ or pdfs/pdfbox/ for respective entries
+            if is_pdfjs:
+                link_path = self.pdfs_dir / f"pdfjs/{file_path.replace('pdfs/', '')}"
+            elif is_pdfbox:
+                link_path = self.pdfs_dir / f"pdfbox/{file_path.replace('pdfs/', '')}"
+            else:
+                link_path = self.pdfs_dir / file_path.replace('pdfs/', '')
+                
             if not link_path.exists():
                 print(f"✘ Link file not found: {link_path}")
                 return False
                 
-            success = self.download_pdf(link_path, expected_md5, is_pdfjs)
+            success = self.download_pdf(link_path, expected_md5, is_pdfjs or is_pdfbox)
             if not success:
                 print(f"✘ Failed to download or verify {entry_id}")
                 return False
         else:
-            # Check if PDF file exists - in pdfs/pdfjs/ for pdfjs entries
-            pdf_path = self.pdfs_dir / (f"pdfjs/{file_path.replace('pdfs/', '')}" if is_pdfjs else file_path.replace('pdfs/', ''))
+            # Check if PDF file exists - in pdfs/pdfjs/ or pdfs/pdfbox/ for respective entries
+            if is_pdfjs:
+                pdf_path = self.pdfs_dir / f"pdfjs/{file_path.replace('pdfs/', '')}"
+            elif is_pdfbox:
+                pdf_path = self.pdfs_dir / f"pdfbox/{file_path.replace('pdfs/', '')}"
+            else:
+                pdf_path = self.pdfs_dir / file_path.replace('pdfs/', '')
+                
             if not pdf_path.exists():
                 print(f"✘ PDF file not found: {pdf_path}")
                 return False
                 
         return True
         
-    def generate_rust_function(self, entry: dict, is_pdfjs: bool = False) -> str:
+    def generate_rust_function(self, entry: dict, is_pdfjs: bool = False, is_pdfbox: bool = False) -> str:
         """Generate Rust test function for a manifest entry."""
         entry_id = entry['id']
         is_link = entry.get('link', False)
@@ -164,7 +183,7 @@ class TestGenerator:
             # No page range specified
             length = "None"
         
-        # Generate file path
+        # Generate file path and function name
         if is_pdfjs:
             if is_link:
                 file_path = f"downloads/pdfjs/{entry_id}.pdf"
@@ -173,6 +192,14 @@ class TestGenerator:
                 original_file = entry['file'].replace('pdfs/', '')
                 file_path = f"pdfs/pdfjs/{original_file}"
             func_name = f"pdfjs_{entry_id.replace('-', '_')}"
+        elif is_pdfbox:
+            if is_link:
+                file_path = f"downloads/pdfbox/{entry_id}.pdf"
+            else:
+                # Remove pdfs/ prefix and add pdfbox subdirectory
+                original_file = entry['file'].replace('pdfs/', '')
+                file_path = f"pdfs/pdfbox/{original_file}"
+            func_name = f"pdfbox_{entry_id.replace('-', '_')}"
         else:
             if is_link:
                 file_path = f"downloads/{entry_id}.pdf"
@@ -223,6 +250,21 @@ class TestGenerator:
                         skipped_count += 1
         else:
             print("⚠ PDF.js manifest not found, skipping")
+            
+        # Load and process pdfbox manifest
+        if self.pdfbox_manifest_path.exists():
+            with open(self.pdfbox_manifest_path, 'r') as f:
+                pdfbox_entries = json.load(f)
+                print(f"📋 Processing {len(pdfbox_entries)} pdfbox entries")
+                
+                for entry in pdfbox_entries:
+                    if self.process_entry(entry, is_pdfbox=True):
+                        rust_functions.append(self.generate_rust_function(entry, is_pdfbox=True))
+                        processed_count += 1
+                    else:
+                        skipped_count += 1
+        else:
+            print("⚠ Pdfbox manifest not found, skipping")
             
         if not rust_functions:
             print("✘ No test functions generated")
