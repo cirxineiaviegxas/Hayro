@@ -14,6 +14,7 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
+use crate::cache::Cache;
 
 pub struct Context<'a> {
     states: Vec<State<'a>>,
@@ -24,12 +25,12 @@ pub struct Context<'a> {
     font_cache: HashMap<ObjRef, Font<'a>>,
     root_transforms: Vec<Affine>,
     bbox: Vec<kurbo::Rect>,
-    color_space_cache: HashMap<ObjRef, ColorSpace>,
+    object_cache: Cache,
     xref: &'a XRef,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(initial_transform: Affine, bbox: kurbo::Rect, xref: &'a XRef) -> Self {
+    pub fn new(initial_transform: Affine, bbox: kurbo::Rect, cache: Cache, xref: &'a XRef) -> Self {
         let line_width = 1.0;
         let line_cap = Cap::Butt;
         let line_join = Join::Miter;
@@ -64,7 +65,7 @@ impl<'a> Context<'a> {
             bbox: vec![bbox],
             path: BezPath::new(),
             font_cache: HashMap::new(),
-            color_space_cache: HashMap::new(),
+            object_cache: cache,
         }
     }
 
@@ -168,17 +169,11 @@ impl<'a> Context<'a> {
             .get_color_space(
                 &name,
                 Box::new(|ref_| {
-                    Some(
-                        self.color_space_cache
-                            .entry(ref_)
-                            .or_insert_with(|| {
-                                resources
-                                    .resolve_ref::<Object>(ref_)
-                                    .map(|o| ColorSpace::new(o))
-                                    .unwrap()
-                            })
-                            .clone(),
-                    )
+                    self.object_cache.get_or_insert_with(ref_.into(), || {
+                        resources
+                            .resolve_ref::<Object>(ref_)
+                            .map(|o| ColorSpace::new(o))
+                    })
                 }),
                 Box::new(|c| Some(ColorSpace::new(c))),
             )

@@ -29,6 +29,7 @@ pub mod pattern;
 pub mod shading;
 mod util;
 pub mod x_object;
+pub mod cache;
 
 use crate::color::ColorSpace;
 use crate::context::Context;

@@ -190,14 +190,16 @@ impl<'a> Readable<'a> for Object<'a> {
     }
 }
 
+/// An identifier for a PDF object.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct ObjectIdentifier {
+pub struct ObjectIdentifier {
     pub(crate) obj_num: i32,
     pub(crate) gen_num: i32,
 }
 
 impl ObjectIdentifier {
-    pub(crate) fn new(obj_num: i32, gen_num: i32) -> Self {
+    /// Create a new `ObjectIdentifier`.
+    pub fn new(obj_num: i32, gen_num: i32) -> Self {
         Self { obj_num, gen_num }
     }
 }

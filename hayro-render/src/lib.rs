@@ -18,6 +18,7 @@ use peniko::color::{AlphaColor, Srgb};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
+use hayro_interpret::cache::Cache;
 
 mod coarse;
 mod encode;
@@ -230,6 +231,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     let mut state = Context::new(
         initial_transform,
         kurbo::Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
+        Cache::new(),
         page.xref(),
     );
     let mut device = Renderer(RenderContext::new(pix_width, pix_height));
