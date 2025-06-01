@@ -1,7 +1,10 @@
+use crate::clip_path::ClipPath;
 use crate::color::ColorSpace;
 use crate::context::Context;
 use crate::device::Device;
-use crate::{handle_paint, interpret};
+use crate::image::{RgbaImage, StencilImage};
+use crate::interpret;
+use crate::interpret::path::set_device_paint;
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
@@ -15,8 +18,6 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::Fill;
 use smallvec::SmallVec;
-use crate::clip_path::ClipPath;
-use crate::image::{RgbaImage, StencilImage};
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -89,7 +90,7 @@ pub(crate) fn draw_form_xobject<'a>(
     context.pre_concat_affine(x_object.matrix);
     context.push_root_transform();
 
-    device.set_transform(context.get().affine);
+    device.set_transform(context.get().ctm);
     device.push_layer(
         Some(&ClipPath {
             path: Rect::new(
@@ -101,7 +102,7 @@ pub(crate) fn draw_form_xobject<'a>(
             .to_path(0.1),
             fill: Fill::NonZero,
         }),
-        context.get().fill_alpha,
+        context.get().non_stroke_alpha,
     );
     // TODO: XObjects inherit from page resources?
     interpret(
@@ -134,30 +135,30 @@ pub(crate) fn draw_image_xobject(
         0.0,
         1.0,
     ]));
-    let transform = context.get().affine;
+    let transform = context.get().ctm;
     device.set_transform(transform);
-    
+
     if x_object.is_image_mask {
-        handle_paint(context, device, transform, false);
+        set_device_paint(context, device, false);
         let stencil = StencilImage {
             stencil_data: data,
             width: x_object.width,
             height: x_object.height,
             interpolate: x_object.interpolate,
         };
-        
+
         device.draw_stencil_image(stencil);
-    }   else {
+    } else {
         let image = RgbaImage {
             image_data: data,
             width: x_object.width,
             height: x_object.height,
             interpolate: x_object.interpolate,
         };
-        
+
         device.draw_rgba_image(image);
     }
-    
+
     context.restore_state();
 }
 

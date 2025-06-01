@@ -1,5 +1,6 @@
 use crate::convert::{convert_line_cap, convert_line_join};
 use crate::device::{Device, ReplayInstruction};
+use clip_path::ClipPath;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
@@ -13,24 +14,23 @@ use peniko::Fill;
 use skrifa::GlyphId;
 use smallvec::{smallvec, SmallVec};
 use std::sync::Arc;
-use clip_path::ClipPath;
 
+pub mod clip_path;
 pub mod color;
 pub mod context;
 mod convert;
 pub mod device;
 mod font;
+mod image;
+mod interpret;
+pub mod mask;
+mod paint;
 pub mod pattern;
 pub mod shading;
-mod state;
 mod util;
 pub mod x_object;
-mod paint;
-pub mod mask;
-pub mod clip_path;
-mod image;
 
-use crate::color::{Color, ColorSpace};
+use crate::color::ColorSpace;
 use crate::context::Context;
 use crate::font::type3::Type3GlyphDescription;
 use crate::font::{Font, GlyphDescription, TextRenderingMode};
@@ -39,8 +39,12 @@ use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{draw_image_xobject, draw_xobject, ImageXObject, XObject};
 
+use crate::interpret::path::{
+    clip_impl, fill_path, fill_path_impl, fill_stroke_path, stroke_path, stroke_path_impl,
+};
+pub use image::{RgbaImage, StencilImage};
+use interpret::text;
 pub use paint::Paint;
-pub use image::{StencilImage, RgbaImage};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -114,23 +118,23 @@ pub fn interpret<'a, 'b>(
                 context.path_mut().move_to(p);
             }
             TypedOperation::FillPathEvenOdd(_) => {
-                context.get_mut().fill = Fill::EvenOdd;
+                context.get_mut().fill_rule = Fill::EvenOdd;
                 fill_path(context, device);
             }
             TypedOperation::FillPathNonZero(_) => {
-                context.get_mut().fill = Fill::NonZero;
+                context.get_mut().fill_rule = Fill::NonZero;
                 fill_path(context, device);
             }
             TypedOperation::FillPathNonZeroCompatibility(_) => {
-                context.get_mut().fill = Fill::NonZero;
+                context.get_mut().fill_rule = Fill::NonZero;
                 fill_path(context, device);
             }
             TypedOperation::FillAndStrokeEvenOdd(_) => {
-                context.get_mut().fill = Fill::EvenOdd;
+                context.get_mut().fill_rule = Fill::EvenOdd;
                 fill_stroke_path(context, device);
             }
             TypedOperation::FillAndStrokeNonZero(_) => {
-                context.get_mut().fill = Fill::NonZero;
+                context.get_mut().fill_rule = Fill::NonZero;
                 fill_stroke_path(context, device);
             }
             TypedOperation::CloseAndStrokePath(_) => {
@@ -139,25 +143,26 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::CloseFillAndStrokeEvenOdd(_) => {
                 context.path_mut().close_path();
-                context.get_mut().fill = Fill::EvenOdd;
+                context.get_mut().fill_rule = Fill::EvenOdd;
                 fill_stroke_path(context, device);
             }
             TypedOperation::CloseFillAndStrokeNonZero(_) => {
                 context.path_mut().close_path();
-                context.get_mut().fill = Fill::NonZero;
+                context.get_mut().fill_rule = Fill::NonZero;
                 fill_stroke_path(context, device);
             }
             TypedOperation::NonStrokeColorDeviceGray(s) => {
-                context.get_mut().fill_cs = ColorSpace::device_gray();
-                context.get_mut().fill_color = smallvec![s.0.as_f32()];
+                context.get_mut().none_stroke_cs = ColorSpace::device_gray();
+                context.get_mut().non_stroke_color = smallvec![s.0.as_f32()];
             }
             TypedOperation::NonStrokeColorDeviceRgb(s) => {
-                context.get_mut().fill_cs = ColorSpace::device_rgb();
-                context.get_mut().fill_color = smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
+                context.get_mut().none_stroke_cs = ColorSpace::device_rgb();
+                context.get_mut().non_stroke_color =
+                    smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32()];
             }
             TypedOperation::NonStrokeColorCmyk(s) => {
-                context.get_mut().fill_cs = ColorSpace::device_cmyk();
-                context.get_mut().fill_color =
+                context.get_mut().none_stroke_cs = ColorSpace::device_cmyk();
+                context.get_mut().non_stroke_color =
                     smallvec![s.0.as_f32(), s.1.as_f32(), s.2.as_f32(), s.3.as_f32()];
             }
             TypedOperation::LineTo(m) => {
@@ -215,7 +220,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::EndPath(_) => {
                 if let Some(clip) = *context.clip() {
-                    device.set_transform(context.get().affine);
+                    device.set_transform(context.get().ctm);
                     device.push_layer(
                         Some(&ClipPath {
                             path: context.path().clone(),
@@ -231,7 +236,7 @@ pub fn interpret<'a, 'b>(
                 context.path_mut().truncate(0);
             }
             TypedOperation::NonStrokeColor(c) => {
-                let fill_c = &mut context.get_mut().fill_color;
+                let fill_c = &mut context.get_mut().non_stroke_color;
                 fill_c.truncate(0);
 
                 for e in c.0 {
@@ -273,8 +278,8 @@ pub fn interpret<'a, 'b>(
                     context.get_color_space(&resources, c.0)
                 };
 
-                context.get_mut().fill_color = cs.initial_color();
-                context.get_mut().fill_cs = cs;
+                context.get_mut().non_stroke_color = cs.initial_color();
+                context.get_mut().none_stroke_cs = cs;
             }
             TypedOperation::DashPattern(p) => {
                 context.get_mut().dash_offset = p.1.as_f32();
@@ -288,25 +293,26 @@ pub fn interpret<'a, 'b>(
                 // Ignore for now.
             }
             TypedOperation::NonStrokeColorNamed(n) => {
-                if let Some(pattern) = n.1.and_then(|name|  resources
-                    .get_pattern(
+                if let Some(pattern) = n.1.and_then(|name| {
+                    resources.get_pattern(
                         &name,
                         Box::new(|_| None),
                         Box::new(|d| ShadingPattern::new(&d)),
-                    )) {
-                    context.get_mut().fill_pattern = Some(pattern);
+                    )
+                }) {
+                    context.get_mut().non_stroke_pattern = Some(pattern);
                 } else {
-                    context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
+                    context.get_mut().non_stroke_color =
+                        n.0.into_iter().map(|n| n.as_f32()).collect();
                 }
             }
             TypedOperation::StrokeColorNamed(n) => {
                 if let Some(pattern) = n.1.and_then(|name| {
-                    resources
-                        .get_pattern(
-                            &name,
-                            Box::new(|_| None),
-                            Box::new(|d| ShadingPattern::new(&d)),
-                        )
+                    resources.get_pattern(
+                        &name,
+                        Box::new(|_| None),
+                        Box::new(|d| ShadingPattern::new(&d)),
+                    )
                 }) {
                     context.get_mut().stroke_pattern = Some(pattern);
                 } else {
@@ -344,7 +350,7 @@ pub fn interpret<'a, 'b>(
                     .is_some();
 
                 if has_outline {
-                    device.set_transform(context.get().affine);
+                    device.set_transform(context.get().ctm);
                     device.push_layer(
                         Some(&ClipPath {
                             path: context.get().text_state.clip_paths.clone(),
@@ -359,23 +365,18 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::TextFont(t) => {
                 let font = context.get_font(&resources, t.0);
-                context.get_mut().text_state.font = Some((font, t.1.as_f32()));
+                context.get_mut().text_state.font_size = t.1.as_f32();
+                context.get_mut().text_state.font = Some(font);
             }
             TypedOperation::ShowText(s) => {
-                let font = context.get().text_state.font();
-                show_text_string(context, device, s.0, &font);
+                text::show_text_string(context, device, s.0);
             }
             TypedOperation::ShowTexts(s) => {
-                let font = context.get().text_state.font();
-
                 for obj in s.0.iter::<Object>() {
                     if let Some(adjustment) = obj.clone().into_f32() {
-                        context
-                            .get_mut()
-                            .text_state
-                            .apply_adjustment(adjustment, font.is_horizontal());
+                        context.get_mut().text_state.apply_adjustment(adjustment);
                     } else if let Some(text) = obj.into_string() {
-                        show_text_string(context, device, text, &font);
+                        text::show_text_string(context, device, text);
                     }
                 }
             }
@@ -393,16 +394,14 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::NextLine(n) => {
                 let (tx, ty) = (n.0.as_f64(), n.1.as_f64());
-                next_line(context, tx, ty)
+                text::next_line(context, tx, ty)
             }
             TypedOperation::NextLineUsingLeading(_) => {
-                next_line(context, 0.0, -context.get().text_state.leading as f64);
+                text::next_line(context, 0.0, -context.get().text_state.leading as f64);
             }
             TypedOperation::NextLineAndShowText(n) => {
-                let font = context.get().text_state.font();
-
-                next_line(context, 0.0, -context.get().text_state.leading as f64);
-                show_text_string(context, device, n.0, &font)
+                text::next_line(context, 0.0, -context.get().text_state.leading as f64);
+                text::show_text_string(context, device, n.0)
             }
             TypedOperation::TextRenderingMode(r) => {
                 let mode = match r.0.as_i32() {
@@ -426,7 +425,7 @@ pub fn interpret<'a, 'b>(
             TypedOperation::NextLineAndSetLeading(n) => {
                 let (tx, ty) = (n.0.as_f64(), n.1.as_f64());
                 context.get_mut().text_state.leading = -ty as f32;
-                next_line(context, tx, ty)
+                text::next_line(context, tx, ty)
             }
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
@@ -457,11 +456,11 @@ pub fn interpret<'a, 'b>(
                     context.save_state();
                     context.push_root_transform();
                     let st = context.get_mut();
-                    st.fill_pattern = Some(sp);
-                    st.fill_cs = ColorSpace::pattern();
+                    st.non_stroke_pattern = Some(sp);
+                    st.none_stroke_cs = ColorSpace::pattern();
 
                     let bbox = context.bbox().to_path(0.1);
-                    let inverted_bbox = context.get().affine.inverse() * bbox;
+                    let inverted_bbox = context.get().ctm.inverse() * bbox;
                     fill_path_impl(
                         context,
                         device,
@@ -474,8 +473,8 @@ pub fn interpret<'a, 'b>(
                     warn!("failed to process shading");
                 }
             }
-            TypedOperation::BeginCompatibility(_) => {},
-            TypedOperation::EndCompatibility(_) => {},
+            TypedOperation::BeginCompatibility(_) => {}
+            TypedOperation::EndCompatibility(_) => {}
             _ => {
                 println!("{:?}", op);
             }
@@ -500,83 +499,6 @@ fn restore_state(ctx: &mut Context, device: &mut impl Device) {
     }
 }
 
-fn next_line(ctx: &mut Context, tx: f64, ty: f64) {
-    let new_matrix = ctx.get_mut().text_state.text_line_matrix * Affine::translate((tx, ty));
-    ctx.get_mut().text_state.text_line_matrix = new_matrix;
-    ctx.get_mut().text_state.text_matrix = new_matrix;
-}
-
-fn show_text_string<'a>(
-    ctx: &mut Context<'a>,
-    device: &mut impl Device,
-    text: String,
-    font: &Font<'a>,
-) {
-    let code_len = font.code_len();
-    for b in text.get().chunks(code_len) {
-        let code = match code_len {
-            1 => b[0] as u16,
-            2 => u16::from_be_bytes([b[0], b[1]]),
-            _ => unimplemented!(),
-        };
-
-        let glyph = font.map_code(code);
-        show_glyph(ctx, device, glyph, font, font.origin_displacement(code));
-
-        ctx.get_mut().text_state.apply_glyph_width(
-            font.code_advance(code),
-            code,
-            code_len,
-            font.is_horizontal(),
-        );
-    }
-}
-
-fn show_glyph<'a>(
-    ctx: &mut Context<'a>,
-    device: &mut impl Device,
-    glyph: GlyphId,
-    font: &Font<'a>,
-    origin_displacement: Vec2,
-) {
-    let t = ctx.get().text_transform()
-        * Affine::scale(1.0 / 1000.0)
-        * Affine::translate(origin_displacement);
-    let glyph_description = match font.render_glyph(glyph, ctx) {
-        GlyphDescription::Path(path) => GlyphDescription::Path(t * path),
-        GlyphDescription::Type3(mut desc) => {
-            desc.1 = t * desc.1;
-            GlyphDescription::Type3(desc)
-        }
-    };
-
-    match ctx.get().text_state.render_mode {
-        TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&glyph_description), None),
-        TextRenderingMode::Stroke => stroke_path_impl(ctx, device, Some(&glyph_description), None),
-        TextRenderingMode::FillStroke => {
-            fill_path_impl(ctx, device, Some(&glyph_description), None);
-            stroke_path_impl(ctx, device, Some(&glyph_description), None);
-        }
-        TextRenderingMode::Invisible => {}
-        TextRenderingMode::Clip => {
-            clip_impl(ctx, &glyph_description);
-        }
-        TextRenderingMode::FillAndClip => {
-            clip_impl(ctx, &glyph_description);
-            fill_path_impl(ctx, device, Some(&glyph_description), None);
-        }
-        TextRenderingMode::StrokeAndClip => {
-            clip_impl(ctx, &glyph_description);
-            stroke_path_impl(ctx, device, Some(&glyph_description), None);
-        }
-        TextRenderingMode::FillAndStrokeAndClip => {
-            clip_impl(ctx, &glyph_description);
-            fill_path_impl(ctx, device, Some(&glyph_description), None);
-            stroke_path_impl(ctx, device, Some(&glyph_description), None);
-        }
-    }
-}
-
 fn handle_gs(dict: &Dict, context: &mut Context) {
     for key in dict.keys() {
         handle_gs_single(dict, &key, context).warn_none(&format!(
@@ -594,7 +516,7 @@ fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()
         "LJ" => context.get_mut().line_join = convert_line_join(LineJoin(dict.get::<Number>(key)?)),
         "ML" => context.get_mut().miter_limit = dict.get::<f32>(key)?,
         "CA" => context.get_mut().stroke_alpha = dict.get::<f32>(key)?,
-        "ca" => context.get_mut().fill_alpha = dict.get::<f32>(key)?,
+        "ca" => context.get_mut().non_stroke_alpha = dict.get::<f32>(key)?,
         "Type" => {}
         _ => {}
     }
@@ -602,167 +524,3 @@ fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()
     Some(())
 }
 
-// TODO: Apply bbox if shading has one!
-
-fn fill_path(context: &mut Context, device: &mut impl Device) {
-    fill_path_impl(context, device, None, None);
-    context.path_mut().truncate(0);
-}
-
-fn stroke_path(context: &mut Context, device: &mut impl Device) {
-    stroke_path_impl(context, device, None, None);
-    context.path_mut().truncate(0);
-}
-
-fn fill_stroke_path(context: &mut Context, device: &mut impl Device) {
-    fill_path_impl(context, device, None, None);
-    stroke_path_impl(context, device, None, None);
-    context.path_mut().truncate(0);
-}
-
-fn clip_impl(context: &mut Context, outline: &GlyphDescription) {
-    match outline {
-        GlyphDescription::Path(p) => {
-            let has_outline = p.segments().next().is_some();
-
-            if has_outline {
-                context.get_mut().text_state.clip_paths.extend(p);
-            }
-        }
-        GlyphDescription::Type3(_) => {
-            warn!("text rendering mode clip is currently not supported with Type3 glyphs")
-        }
-    }
-}
-
-fn fill_path_impl(
-    context: &mut Context,
-    device: &mut impl Device,
-    path: Option<&GlyphDescription>,
-    transform: Option<Affine>,
-) {
-    let base_transform = transform.unwrap_or(context.get().affine);
-    device.set_transform(base_transform);
-
-    let need_pop = handle_paint(context, device, base_transform, false);
-
-    match path {
-        None => device.fill_path(context.path(), &context.fill_props()),
-        Some(GlyphDescription::Path(path)) => device.fill_path(path, &context.fill_props()),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
-    };
-
-    if need_pop {
-        device.pop();
-    }
-}
-
-fn handle_paint(
-    context: &mut Context,
-    device: &mut impl Device,
-    base_transform: Affine,
-    is_stroke: bool,
-) -> bool {
-    let (cs, pattern, color, alpha) = if is_stroke {
-        let s = context.get();
-        (
-            s.stroke_cs.clone(),
-            s.stroke_pattern.clone(),
-            s.stroke_color.clone(),
-            s.stroke_alpha,
-        )
-    } else {
-        let s = context.get();
-        (
-            s.fill_cs.clone(),
-            s.fill_pattern.clone(),
-            s.fill_color.clone(),
-            s.fill_alpha,
-        )
-    };
-
-    let clip_path = if cs.is_pattern() && pattern.is_some() {
-        let mut pattern = pattern.unwrap();
-        pattern.matrix = *context.root_transform() * pattern.matrix;
-        let bbox = pattern.shading.bbox;
-        device.set_paint(Paint::Shading(pattern));
-
-        bbox
-    } else {
-        let color = Color::new(cs, color, alpha);
-
-        device.set_paint(Paint::Color(color));
-
-        None
-    };
-
-    if let Some(clip_path) = clip_path {
-        // Temporary hack, because currently a clip path will always assume the transform used
-        // by `set_transform`.
-        device.set_transform(*context.root_transform());
-        device.push_layer(
-            Some(&ClipPath {
-                path: clip_path.get().to_path(0.1),
-                fill: Fill::NonZero,
-            }),
-            1.0,
-        );
-        device.set_transform(base_transform);
-    }
-
-    clip_path.is_some()
-}
-
-fn stroke_path_impl(
-    context: &mut Context,
-    device: &mut impl Device,
-    path: Option<&GlyphDescription>,
-    transform: Option<Affine>,
-) {
-    let base_transform = transform.unwrap_or(context.get().affine);
-    device.set_transform(base_transform);
-
-    let need_pop = handle_paint(context, device, base_transform, true);
-
-    match path {
-        None => device.stroke_path(context.path(), &context.stroke_props()),
-        Some(GlyphDescription::Path(path)) => device.stroke_path(path, &context.stroke_props()),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
-    };
-
-    if need_pop {
-        device.pop();
-    }
-}
-
-fn run_t3_instructions(
-    device: &mut impl Device,
-    description: &Type3GlyphDescription,
-    initial_transform: Affine,
-) {
-    for instruction in &description.0 {
-        match instruction {
-            ReplayInstruction::SetTransform { affine } => {
-                device.set_transform(initial_transform * *affine);
-            }
-            ReplayInstruction::StrokePath { path, stroke_props } => {
-                device.stroke_path(path, stroke_props);
-            }
-            ReplayInstruction::FillPath { path, fill_props } => {
-                device.fill_path(path, fill_props);
-            }
-            ReplayInstruction::PushLayer { clip, opacity } => {
-                device.push_layer(clip.as_ref(), *opacity)
-            }
-            ReplayInstruction::PopClip => device.pop(),
-            ReplayInstruction::DrawImage {
-                image
-            } => device.draw_rgba_image(
-                image.clone()
-            ),
-            ReplayInstruction::DrawStencil {
-                stencil_image
-            } => device.draw_stencil_image(stencil_image.clone()),
-        }
-    }
-}

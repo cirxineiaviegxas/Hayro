@@ -1,7 +1,7 @@
 use crate::color::ColorSpace;
 use crate::convert::convert_transform;
 use crate::font::Font;
-use crate::state::{State, TextState};
+use crate::interpret::state::{State, TextState};
 use crate::{FillProps, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use hayro_syntax::document::page::Resources;
@@ -43,18 +43,18 @@ impl<'a> Context<'a> {
                 miter_limit,
                 dash_array: smallvec![],
                 dash_offset: 0.0,
-                affine: initial_transform,
-                fill_alpha: 1.0,
+                ctm: initial_transform,
+                non_stroke_alpha: 1.0,
                 stroke_cs: ColorSpace::device_gray(),
                 stroke_color: smallvec![0.0,],
-                fill_cs: ColorSpace::device_gray(),
-                fill_color: smallvec![0.0],
+                none_stroke_cs: ColorSpace::device_gray(),
+                non_stroke_color: smallvec![0.0],
                 stroke_alpha: 1.0,
-                fill: Fill::NonZero,
+                fill_rule: Fill::NonZero,
                 n_clips: 0,
                 text_state: TextState::default(),
                 stroke_pattern: None,
-                fill_pattern: None,
+                non_stroke_pattern: None,
             }],
             xref,
             root_transforms: vec![initial_transform],
@@ -78,15 +78,15 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn push_root_transform(&mut self) {
-        self.root_transforms.push(self.get().affine);
+        self.root_transforms.push(self.get().ctm);
     }
 
     pub(crate) fn pop_root_transform(&mut self) {
         self.root_transforms.pop();
     }
 
-    pub(crate) fn root_transform(&self) -> &Affine {
-        self.root_transforms.last().unwrap()
+    pub(crate) fn root_transform(&self) -> Affine {
+        *self.root_transforms.last().unwrap()
     }
 
     pub(crate) fn restore_state(&mut self) {
@@ -138,7 +138,7 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn pre_concat_affine(&mut self, transform: Affine) {
-        self.get_mut().affine *= transform;
+        self.get_mut().ctm *= transform;
     }
 
     pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Font<'a> {
@@ -202,7 +202,7 @@ impl<'a> Context<'a> {
         let state = self.get();
 
         FillProps {
-            fill_rule: state.fill,
+            fill_rule: state.fill_rule,
         }
     }
 

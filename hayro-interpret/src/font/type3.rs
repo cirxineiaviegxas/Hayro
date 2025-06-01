@@ -1,9 +1,12 @@
+use crate::clip_path::ClipPath;
 use crate::context::Context;
 use crate::device::{Device, ReplayInstruction};
 use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::font::type1::GlyphSimulator;
-use crate::{interpret, FillProps, StrokeProps};
+use crate::image::{RgbaImage, StencilImage};
+use crate::paint::Paint;
+use crate::{FillProps, StrokeProps, interpret};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
@@ -12,9 +15,6 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
 use skrifa::GlyphId;
 use std::collections::HashMap;
-use crate::clip_path::ClipPath;
-use crate::image::{RgbaImage, StencilImage};
-use crate::paint::Paint;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
 
@@ -27,6 +27,10 @@ impl Type3GlyphDescription {
 impl Device for Type3GlyphDescription {
     fn set_transform(&mut self, affine: Affine) {
         self.0.push(ReplayInstruction::SetTransform { affine });
+    }
+
+    fn set_paint_transform(&mut self, affine: Affine) {
+        self.0.push(ReplayInstruction::SetPaintTransform { affine });
     }
 
     fn set_paint(&mut self, _: Paint) {}
@@ -52,18 +56,13 @@ impl Device for Type3GlyphDescription {
         });
     }
 
-    fn draw_rgba_image(
-        &mut self,
-        image: RgbaImage
-    ) {
-        self.0.push(ReplayInstruction::DrawImage {
-            image
-        })
+    fn draw_rgba_image(&mut self, image: RgbaImage) {
+        self.0.push(ReplayInstruction::DrawImage { image })
     }
 
     fn draw_stencil_image(&mut self, stencil: StencilImage) {
         self.0.push(ReplayInstruction::DrawStencil {
-            stencil_image: stencil
+            stencil_image: stencil,
         })
     }
 
@@ -145,7 +144,7 @@ impl<'a> Type3<'a> {
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
 
         context.save_state();
-        context.get_mut().affine = Affine::IDENTITY;
+        context.get_mut().ctm = Affine::IDENTITY;
         interpret(iter, &resources, context, &mut t3);
         context.restore_state();
 

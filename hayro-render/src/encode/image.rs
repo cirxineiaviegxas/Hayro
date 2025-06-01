@@ -33,10 +33,9 @@ impl EncodeExt for Image {
 
         if self.is_stencil {
             paints.push(EncodedPaint::Mask(encoded));
-        }   else {
+        } else {
             paints.push(EncodedPaint::Image(encoded));
         }
-        
 
         Paint::Indexed(IndexedPaint::new(idx))
     }

@@ -2,9 +2,10 @@ use crate::encode::x_y_advances;
 use crate::paint::Image;
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
+use hayro_interpret::clip_path::ClipPath;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
-use hayro_interpret::{interpret, FillProps, StencilImage, StrokeProps};
+use hayro_interpret::{FillProps, StencilImage, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
@@ -17,7 +18,6 @@ use peniko::color::{AlphaColor, Srgb};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use hayro_interpret::clip_path::ClipPath;
 
 mod coarse;
 mod encode;
@@ -54,24 +54,24 @@ impl Renderer {
             // Do subsampling to prevent aliasing artifacts.
             let new_width = (width as f32 * x_scale).ceil().max(1.0) as u32;
             let new_height = (height as f32 * y_scale).ceil().max(1.0) as u32;
-            
+
             let image = DynamicImage::ImageRgba8(
                 ImageBuffer::from_raw(width, height, image_data.clone()).unwrap(),
             );
             let resized = image.resize_exact(new_width, new_height, FilterType::CatmullRom);
-            
+
             let new_width = resized.width();
             let new_height = resized.height();
             let t_scale_x = width as f32 / new_width as f32;
             let t_scale_y = height as f32 / new_height as f32;
-            
+
             cur_transform =
                 cur_transform * Affine::scale_non_uniform(t_scale_x as f64, t_scale_y as f64);
             self.0.set_transform(cur_transform);
-            
+
             width = new_width;
             height = new_height;
-            
+
             resized.to_rgba8().into_raw()
         };
 
@@ -101,6 +101,10 @@ impl Renderer {
 impl Device for Renderer {
     fn set_transform(&mut self, affine: Affine) {
         self.0.set_transform(affine);
+    }
+
+    fn set_paint_transform(&mut self, affine: Affine) {
+        self.0.set_paint_transform(affine);
     }
 
     fn set_paint(&mut self, paint: hayro_interpret::Paint) {
@@ -150,17 +154,25 @@ impl Device for Renderer {
             .push_layer(clip.map(|c| &c.path), None, Some(opacity), None)
     }
 
-    fn draw_rgba_image(
-        &mut self,
-        image: hayro_interpret::RgbaImage
-    ) {
-        self.draw_image(image.image_data, image.width, image.height, false, image.interpolate);
+    fn draw_rgba_image(&mut self, image: hayro_interpret::RgbaImage) {
+        self.draw_image(
+            image.image_data,
+            image.width,
+            image.height,
+            false,
+            image.interpolate,
+        );
     }
 
     fn draw_stencil_image(&mut self, stencil: StencilImage) {
         self.0.set_anti_aliasing(false);
         self.push_layer(None, 1.0);
-        self.fill_path(&Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64).to_path(0.1), &FillProps { fill_rule: Fill::NonZero });
+        self.fill_path(
+            &Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64).to_path(0.1),
+            &FillProps {
+                fill_rule: Fill::NonZero,
+            },
+        );
         self.draw_image(
             stencil.stencil_data,
             stencil.width,

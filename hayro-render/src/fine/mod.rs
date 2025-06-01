@@ -237,14 +237,16 @@ impl Fine {
                     EncodedPaint::Mask(i) => {
                         let filler = ImageFiller::new(i, start_x, start_y);
                         filler.paint(color_buf);
-                        
-                        for (dest, src) in blend_buf.chunks_exact_mut(4).zip(color_buf.chunks_exact(4)) {
+
+                        for (dest, src) in
+                            blend_buf.chunks_exact_mut(4).zip(color_buf.chunks_exact(4))
+                        {
                             let src = src[3];
-                            
+
                             for dest in dest {
                                 *dest = *dest * src;
                             }
-                        } 
+                        }
                     }
                 }
             }
@@ -313,10 +315,14 @@ impl Fine {
                         let filler = ImageFiller::new(i, start_x, start_y);
                         filler.paint(color_buf);
 
-                        for ((dest, src), alpha) in blend_buf.chunks_exact_mut(4).zip(color_buf.chunks_exact(4)).zip(alphas.iter()) {
+                        for ((dest, src), alpha) in blend_buf
+                            .chunks_exact_mut(4)
+                            .zip(color_buf.chunks_exact(4))
+                            .zip(alphas.iter())
+                        {
                             let alpha = *alpha as f32 / 255.0;
                             let src = src[3];
-                            
+
                             for dest in dest {
                                 *dest = *dest * src * alpha;
                             }

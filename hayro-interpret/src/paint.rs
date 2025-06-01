@@ -3,5 +3,5 @@ use crate::pattern::ShadingPattern;
 
 pub enum Paint {
     Color(Color),
-    Shading(ShadingPattern)
+    Shading(ShadingPattern),
 }

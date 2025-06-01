@@ -38,7 +38,7 @@ pub fn check_render(name: &str, document: RenderedDocument) {
 
     // Ensure the snapshots subdirectory exists
     let _ = std::fs::create_dir_all(&refs_path);
-    
+
     // Use the name without the prefix for the actual filename
     let snapshot_name = if name.starts_with("pdfjs_") {
         &name[6..] // Remove "pdfjs_" prefix

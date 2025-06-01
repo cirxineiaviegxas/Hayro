@@ -19,7 +19,7 @@ impl<'a> ImageFiller<'a> {
     pub(crate) fn new(image: &'a EncodedImage, start_x: u16, start_y: u16) -> Self {
         let height = image.pixmap.height() as f32;
         let width = image.pixmap.width() as f32;
-        
+
         Self {
             cur_pos: image.transform * Point::new(f64::from(start_x), f64::from(start_y)),
             image,
@@ -60,7 +60,8 @@ impl<'a> ImageFiller<'a> {
         let mut pos = self.cur_pos;
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
-            let sample = sample_with_interpolation(self.image, pos, self.image.interpolate, &extend_point);
+            let sample =
+                sample_with_interpolation(self.image, pos, self.image.interpolate, &extend_point);
             pixel.copy_from_slice(&sample);
             pos += self.image.y_advance;
         }
@@ -73,7 +74,7 @@ fn extend(val: f32, repeat: bool, max: f32, inv_max: f32) -> f32 {
 
     if !repeat {
         val.clamp(0.0, max - BIAS)
-    }   else {
+    } else {
         val - (val * inv_max).floor() * max
     }
 }
@@ -122,8 +123,7 @@ where
                 let color_sample = sampleable.sample(sample_point.x as u16, sample_point.y as u16);
                 let w = cx[x_idx] * cy[y_idx];
 
-                for (component, component_sample) in
-                    interpolated_color.iter_mut().zip(color_sample)
+                for (component, component_sample) in interpolated_color.iter_mut().zip(color_sample)
                 {
                     *component += w * component_sample;
                 }
@@ -146,5 +146,3 @@ impl Sampleable for EncodedImage {
         from_rgba8(&self.pixmap.sample(x, y).to_u8_array())
     }
 }
-
-

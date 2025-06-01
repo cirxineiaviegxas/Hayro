@@ -32,6 +32,7 @@ pub struct RenderContext {
     pub(crate) strip_buf: Vec<Strip>,
     pub(crate) paint: PaintType,
     pub(crate) paint_transform: Affine,
+    paint_bbox: Option<Rect>,
     pub(crate) stroke: Stroke,
     pub(crate) transform: Affine,
     pub(crate) fill_rule: Fill,
@@ -73,6 +74,7 @@ impl RenderContext {
             strip_buf,
             transform,
             paint,
+            paint_bbox: None,
             paint_transform,
             fill_rule,
             stroke,
@@ -83,9 +85,16 @@ impl RenderContext {
 
     fn encode_current_paint(&mut self) -> Paint {
         match self.paint.clone() {
-            PaintType::Solid(s) => s.into(),
-            PaintType::Image(i) => i.encode_into(&mut self.encoded_paints, self.transform),
+            PaintType::Solid(s) => {
+                self.paint_bbox = None;
+                s.into()
+            }
+            PaintType::Image(i) => {
+                self.paint_bbox = None;
+                i.encode_into(&mut self.encoded_paints, self.transform)
+            }
             PaintType::ShadingPattern(s) => {
+                self.paint_bbox = s.shading.bbox.map(|r| r.get());
                 s.encode_into(&mut self.encoded_paints, self.paint_transform)
             }
         }
@@ -93,16 +102,35 @@ impl RenderContext {
 
     /// Fill a path.
     pub fn fill_path(&mut self, path: &BezPath) {
-        flatten::fill(path, self.transform, &mut self.line_buf);
         let paint = self.encode_current_paint();
+        self.apply_paint_bbox();
+        flatten::fill(path, self.transform, &mut self.line_buf);
         self.render_path(self.fill_rule, paint);
+        self.unapply_paint_bbox();
+    }
+
+    fn apply_paint_bbox(&mut self) {
+        if let Some(bbox) = self.paint_bbox {
+            let old_transform = self.transform;
+            self.transform = self.paint_transform;
+            self.push_layer(Some(&bbox.to_path(0.1)), None, None, None);
+            self.transform = old_transform;
+        }
+    }
+
+    fn unapply_paint_bbox(&mut self) {
+        if self.paint_bbox.is_some() {
+            self.pop_layer();
+        }
     }
 
     /// Stroke a path.
     pub fn stroke_path(&mut self, path: &BezPath) {
-        flatten::stroke(path, &self.stroke, self.transform, &mut self.line_buf);
         let paint = self.encode_current_paint();
+        self.apply_paint_bbox();
+        flatten::stroke(path, &self.stroke, self.transform, &mut self.line_buf);
         self.render_path(Fill::NonZero, paint);
+        self.unapply_paint_bbox();
     }
 
     /// Fill a rectangle.
@@ -169,6 +197,10 @@ impl RenderContext {
     /// Set the current transform.
     pub fn set_transform(&mut self, transform: Affine) {
         self.transform = transform;
+    }
+    /// Set the current transform.
+    pub fn set_paint_transform(&mut self, transform: Affine) {
+        self.paint_transform = transform;
     }
 
     /// Reset the render context.

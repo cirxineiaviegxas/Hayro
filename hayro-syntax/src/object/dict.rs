@@ -149,12 +149,12 @@ fn read_inner<'a, const PLAIN: bool>(
     let data = {
         let dict_data = r.tail()?;
         let start_offset = r.offset();
-        
+
         // Inline image dictionaries don't start with '<<'.
         if let Some(start_tag) = start_tag {
             r.forward_tag(start_tag)?;
         }
-        
+
         loop {
             r.skip_white_spaces_and_comments();
 
