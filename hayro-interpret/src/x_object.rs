@@ -1,6 +1,6 @@
-use crate::color::{Color, ColorSpace};
+use crate::color::ColorSpace;
 use crate::context::Context;
-use crate::device::{ClipPath, Device};
+use crate::device::Device;
 use crate::{handle_paint, interpret, FillProps};
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
@@ -13,9 +13,9 @@ use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
-use peniko::color::{AlphaColor, Srgb};
 use peniko::Fill;
 use smallvec::SmallVec;
+use crate::clip_path::ClipPath;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),

@@ -1,22 +1,7 @@
-use crate::color::Color;
-use crate::pattern::ShadingPattern;
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
-use peniko::Fill;
+use crate::clip_path::ClipPath;
 use crate::paint::Paint;
-
-#[derive(Debug, Clone)]
-pub struct ClipPath {
-    pub path: BezPath,
-    pub fill: Fill,
-}
-
-#[derive(Debug, Clone)]
-pub struct Mask {
-    pub data: Vec<u8>,
-    pub width: u32,
-    pub height: u32,
-}
 
 pub trait Device {
     fn set_transform(&mut self, affine: Affine);

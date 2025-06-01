@@ -1,11 +1,9 @@
-use crate::color::Color;
 use crate::context::Context;
-use crate::device::{ClipPath, Device, ReplayInstruction};
+use crate::device::{Device, ReplayInstruction};
 use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::font::type1::GlyphSimulator;
-use crate::pattern::ShadingPattern;
-use crate::{FillProps, StrokeProps, interpret};
+use crate::{interpret, FillProps, StrokeProps};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
@@ -14,6 +12,7 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, BezPath};
 use skrifa::GlyphId;
 use std::collections::HashMap;
+use crate::clip_path::ClipPath;
 use crate::paint::Paint;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);

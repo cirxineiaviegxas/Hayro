@@ -1,18 +1,19 @@
 use crate::convert::{convert_line_cap, convert_line_join};
-use crate::device::{ClipPath, Device, ReplayInstruction};
+use crate::device::{Device, ReplayInstruction};
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::string::String;
-use hayro_syntax::object::{Object, dict_or_stream};
+use hayro_syntax::object::{dict_or_stream, Object};
 use kurbo::{Affine, Cap, Join, Point, Shape, Vec2};
 use log::warn;
 use peniko::Fill;
 use skrifa::GlyphId;
-use smallvec::{SmallVec, smallvec};
+use smallvec::{smallvec, SmallVec};
 use std::sync::Arc;
+use clip_path::ClipPath;
 
 pub mod color;
 pub mod context;
@@ -25,6 +26,8 @@ mod state;
 mod util;
 pub mod x_object;
 mod paint;
+pub mod mask;
+pub mod clip_path;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
@@ -33,7 +36,7 @@ use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::pattern::ShadingPattern;
 use crate::shading::Shading;
 use crate::util::OptionLog;
-use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
+use crate::x_object::{draw_image_xobject, draw_xobject, ImageXObject, XObject};
 
 pub use paint::Paint;
 

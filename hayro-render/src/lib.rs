@@ -1,12 +1,10 @@
 use crate::encode::x_y_advances;
-use crate::paint::{Image, Paint};
+use crate::paint::Image;
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
-use hayro_interpret::color::Color;
 use hayro_interpret::context::Context;
-use hayro_interpret::device::{ClipPath, Device};
-use hayro_interpret::pattern::ShadingPattern;
-use hayro_interpret::{FillProps, StrokeProps, interpret};
+use hayro_interpret::device::Device;
+use hayro_interpret::{interpret, FillProps, StrokeProps};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
@@ -19,6 +17,7 @@ use peniko::color::{AlphaColor, Srgb};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
+use hayro_interpret::clip_path::ClipPath;
 
 mod coarse;
 mod encode;
