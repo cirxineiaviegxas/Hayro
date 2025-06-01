@@ -198,6 +198,7 @@ use crate::run_test;
 #[test] fn pattern_shading_type7_2() { run_test("pattern_shading_type7_2", true, None); }
 #[test] fn pattern_shading_type0_transform() { run_test("pattern_shading_type0_transform", false, None); }
 #[test] fn issue_panic_with_clip() { run_test("issue_panic_with_clip", false, None); }
+#[test] fn pdfjs_issue18062() { run_test("pdfjs_issue18062", true, None); }
 #[test] fn mmtype1() { run_test("mmtype1", false, None); }
 #[test] fn arabiccidtruetype_pdf() { run_test("arabiccidtruetype-pdf", false, None); }
 #[test] fn colorspace_sin() { run_test("colorspace_sin", false, None); }

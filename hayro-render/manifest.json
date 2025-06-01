@@ -866,5 +866,11 @@
   {
     "id": "issue_panic_with_clip",
     "file": "pdfs/issue_panic_with_clip.pdf"
+  },
+  {
+    "id": "pdfjs_issue18062",
+    "file": "pdfs/pdfjs_issue18062.link",
+    "md5": "b8fb6d5622f0a2f45be8e26da7de969c",
+    "link": true
   }
 ]
