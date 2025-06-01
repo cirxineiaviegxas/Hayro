@@ -1,16 +1,20 @@
 use crate::context::Context;
-use crate::device::{Device, ReplayInstruction};
-use crate::font::type3::Type3GlyphDescription;
-use crate::font::{Font, GlyphDescription, TextRenderingMode};
-use crate::interpret::path::{clip_impl, fill_path_impl, stroke_path_impl};
+use crate::device::Device;
+use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
+use crate::glyph::Glyph;
+use crate::interpret::path::{clip_impl, fill_path_impl, set_device_paint, stroke_path_impl};
+use hayro_syntax::document::page::Resources;
+use hayro_syntax::object::dict::keys::P;
 use hayro_syntax::object::string;
 use kurbo::{Affine, Vec2};
 use log::warn;
 use skrifa::GlyphId;
+use yoke::Yokeable;
 
 pub(crate) fn show_text_string<'a>(
     ctx: &mut Context<'a>,
     device: &mut impl Device,
+    resources: &Resources<'a>,
     text: string::String,
 ) {
     let Some(font) = ctx.get().text_state.font.clone() else {
@@ -27,8 +31,13 @@ pub(crate) fn show_text_string<'a>(
             _ => unimplemented!(),
         };
 
-        let glyph = font.map_code(code);
-        show_glyph(ctx, device, glyph, &font, font.origin_displacement(code));
+        let glyph = font.get_glyph(
+            font.map_code(code),
+            ctx,
+            resources,
+            font.origin_displacement(code),
+        );
+        show_glyph(ctx, device, &glyph);
 
         ctx.get_mut().text_state.apply_code_advance(code);
     }
@@ -40,84 +49,47 @@ pub(crate) fn next_line(ctx: &mut Context, tx: f64, ty: f64) {
     ctx.get_mut().text_state.text_matrix = new_matrix;
 }
 
-pub(crate) fn show_glyph<'a>(
-    ctx: &mut Context<'a>,
-    device: &mut impl Device,
-    glyph: GlyphId,
-    font: &Font<'a>,
-    origin_displacement: Vec2,
-) {
-    let t = ctx.get().text_state.full_transform()
-        * Affine::scale(1.0 / 1000.0)
-        * Affine::translate(origin_displacement);
-    let glyph_description = match font.render_glyph(glyph, ctx) {
-        GlyphDescription::Path(path) => GlyphDescription::Path(t * path),
-        GlyphDescription::Type3(mut desc) => {
-            desc.1 = t * desc.1;
-            GlyphDescription::Type3(desc)
-        }
-    };
+pub(crate) fn show_glyph<'a>(ctx: &mut Context<'a>, device: &mut impl Device, glyph: &Glyph<'a>) {
+    device.set_transform(ctx.get().ctm);
+
+    device.set_stroke_properties(&ctx.stroke_props());
+    device.set_fill_properties(&ctx.fill_props());
 
     match ctx.get().text_state.render_mode {
-        TextRenderingMode::Fill => fill_path_impl(ctx, device, Some(&glyph_description), None),
-        TextRenderingMode::Stroke => stroke_path_impl(ctx, device, Some(&glyph_description), None),
+        TextRenderingMode::Fill => {
+            set_device_paint(ctx, device, false);
+            device.fill_glyph(glyph);
+        }
+        TextRenderingMode::Stroke => {
+            set_device_paint(ctx, device, true);
+            device.stroke_glyph(glyph);
+        }
         TextRenderingMode::FillStroke => {
-            fill_path_impl(ctx, device, Some(&glyph_description), None);
-            stroke_path_impl(ctx, device, Some(&glyph_description), None);
+            set_device_paint(ctx, device, false);
+            device.fill_glyph(glyph);
+            set_device_paint(ctx, device, true);
+            device.stroke_glyph(glyph);
         }
         TextRenderingMode::Invisible => {}
         TextRenderingMode::Clip => {
-            clip_impl(ctx, &glyph_description);
+            clip_impl(ctx, glyph, glyph.glyph_transform());
         }
         TextRenderingMode::FillAndClip => {
-            clip_impl(ctx, &glyph_description);
-            fill_path_impl(ctx, device, Some(&glyph_description), None);
+            set_device_paint(ctx, device, false);
+            clip_impl(ctx, glyph, glyph.glyph_transform());
+            device.fill_glyph(glyph);
         }
         TextRenderingMode::StrokeAndClip => {
-            clip_impl(ctx, &glyph_description);
-            stroke_path_impl(ctx, device, Some(&glyph_description), None);
+            set_device_paint(ctx, device, true);
+            clip_impl(ctx, glyph, glyph.glyph_transform());
+            device.stroke_glyph(glyph);
         }
         TextRenderingMode::FillAndStrokeAndClip => {
-            clip_impl(ctx, &glyph_description);
-            fill_path_impl(ctx, device, Some(&glyph_description), None);
-            stroke_path_impl(ctx, device, Some(&glyph_description), None);
-        }
-    }
-}
-
-pub(crate) fn run_t3_instructions(
-    device: &mut impl Device,
-    description: &Type3GlyphDescription,
-    initial_transform: Affine,
-) {
-    for instruction in &description.0 {
-        match instruction {
-            ReplayInstruction::SetTransform { affine } => {
-                device.set_transform(initial_transform * *affine);
-            }
-            ReplayInstruction::StrokePath { path } => {
-                device.stroke_path(path);
-            }
-            ReplayInstruction::FillPath { path } => {
-                device.fill_path(path);
-            }
-            ReplayInstruction::PushLayer { clip, opacity } => {
-                device.push_layer(clip.as_ref(), *opacity)
-            }
-            ReplayInstruction::PopClip => device.pop(),
-            ReplayInstruction::DrawImage { image } => device.draw_rgba_image(image.clone()),
-            ReplayInstruction::DrawStencil { stencil_image } => {
-                device.draw_stencil_image(stencil_image.clone())
-            }
-            ReplayInstruction::SetPaintTransform { affine } => {
-                device.set_paint_transform(*affine);
-            }
-            ReplayInstruction::StrokeProperties { stroke_props } => {
-                device.set_stroke_properties(stroke_props);
-            }
-            ReplayInstruction::FillProperties { fill_props } => {
-                device.set_fill_properties(fill_props);
-            }
+            clip_impl(ctx, glyph, glyph.glyph_transform());
+            set_device_paint(ctx, device, false);
+            device.fill_glyph(glyph);
+            set_device_paint(ctx, device, true);
+            device.stroke_glyph(glyph);
         }
     }
 }

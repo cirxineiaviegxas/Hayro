@@ -184,6 +184,9 @@ use crate::run_test;
 #[test] fn issue_panic_with_clip() { run_test("issue_panic_with_clip", "pdfs/issue_panic_with_clip.pdf", None); }
 #[test] fn pdfjs_issue18062() { run_test("pdfjs_issue18062", "downloads/pdfjs_issue18062.pdf", None); }
 #[test] fn issue_panic_with_nested_clip() { run_test("issue_panic_with_nested_clip", "pdfs/issue_panic_with_nested_clip.pdf", None); }
+#[test] fn font_type3_filled_glyphs() { run_test("font_type3_filled_glyphs", "pdfs/font_type3_filled_glyphs.pdf", None); }
+#[test] fn font_type3_stroked_glyphs() { run_test("font_type3_stroked_glyphs", "pdfs/font_type3_stroked_glyphs.pdf", None); }
+#[test] fn font_type3_shape_glyphs() { run_test("font_type3_shape_glyphs", "pdfs/font_type3_shape_glyphs.pdf", None); }
 #[test] fn pdfjs_mmtype1() { run_test("pdfjs_mmtype1", "pdfs/pdfjs/mmtype1.pdf", None); }
 #[test] fn pdfjs_arabiccidtruetype_pdf() { run_test("pdfjs_arabiccidtruetype_pdf", "pdfs/pdfjs/ArabicCIDTrueType.pdf", None); }
 #[test] fn pdfjs_colorspace_sin() { run_test("pdfjs_colorspace_sin", "pdfs/pdfjs/colorspace_sin.pdf", None); }

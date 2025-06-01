@@ -3,13 +3,15 @@ use crate::font::cid::Type0Font;
 use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
-use crate::font::type3::{Type3, Type3GlyphDescription};
+use crate::font::type3::Type3;
+use crate::glyph::{Glyph, OutlineGlyph, Type3Glyph};
 use hayro_font_parser::OutlineBuilder;
+use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
-use kurbo::{BezPath, Vec2};
+use kurbo::{Affine, BezPath, Vec2};
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
@@ -27,17 +29,22 @@ mod type1;
 pub(crate) mod type3;
 
 #[derive(Clone, Debug)]
-pub struct Font<'a>(Arc<FontType<'a>>);
+pub struct Font<'a>(FontType<'a>);
 
 impl<'a> Font<'a> {
     pub fn new(dict: &Dict<'a>) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)? {
-            TYPE1 | MM_TYPE1 => FontType::Type1(Type1Font::new(dict)?),
+            TYPE1 | MM_TYPE1 => FontType::Type1(Arc::new(Type1Font::new(dict)?)),
             TRUE_TYPE => TrueTypeFont::new(dict)
+                .map(|t| Arc::new(t))
                 .map(FontType::TrueType)
-                .or_else(|| Type1Font::new(dict).map(FontType::Type1))?,
-            TYPE0 => FontType::Type0(Type0Font::new(dict)?),
-            TYPE3 => FontType::Type3(Type3::new(dict)),
+                .or_else(|| {
+                    Type1Font::new(dict)
+                        .map(|t| Arc::new(t))
+                        .map(FontType::Type1)
+                })?,
+            TYPE0 => FontType::Type0(Arc::new(Type0Font::new(dict)?)),
+            TYPE3 => FontType::Type3(Arc::new(Type3::new(dict))),
             f => {
                 println!(
                     "unimplemented font type {:?}",
@@ -48,11 +55,11 @@ impl<'a> Font<'a> {
             }
         };
 
-        Some(Self(Arc::new(f_type)))
+        Some(Self(f_type))
     }
 
     pub fn map_code(&self, code: u16) -> GlyphId {
-        match self.0.as_ref() {
+        match &self.0 {
             FontType::Type1(f) => {
                 debug_assert!(code <= u8::MAX as u16);
 
@@ -72,17 +79,60 @@ impl<'a> Font<'a> {
         }
     }
 
-    pub fn render_glyph(&self, glyph: GlyphId, ctx: &mut Context<'a>) -> GlyphDescription {
-        match self.0.as_ref() {
-            FontType::Type1(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
-            FontType::TrueType(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
-            FontType::Type0(t) => GlyphDescription::Path(t.outline_glyph(glyph)),
-            FontType::Type3(t) => GlyphDescription::Type3(t.render_glyph(glyph, ctx)),
+    pub fn get_glyph(
+        &self,
+        glyph: GlyphId,
+        ctx: &mut Context<'a>,
+        resources: &Resources<'a>,
+        origin_displacement: Vec2,
+    ) -> Glyph<'a> {
+        let glyph_transform = ctx.get().text_state.full_transform()
+            * Affine::scale(1.0 / UNITS_PER_EM as f64)
+            * Affine::translate(origin_displacement);
+
+        match &self.0 {
+            FontType::Type1(t) => {
+                let font = OutlineFont::Type1(t.clone());
+                Glyph::Outline(OutlineGlyph {
+                    id: glyph,
+                    font,
+                    glyph_transform,
+                })
+            }
+            FontType::TrueType(t) => {
+                let font = OutlineFont::TrueType(t.clone());
+                Glyph::Outline(OutlineGlyph {
+                    id: glyph,
+                    font,
+                    glyph_transform,
+                })
+            }
+            FontType::Type0(t) => {
+                let font = OutlineFont::Type0(t.clone());
+                Glyph::Outline(OutlineGlyph {
+                    id: glyph,
+                    font,
+                    glyph_transform,
+                })
+            }
+            FontType::Type3(t) => {
+                let shape_glyph = Type3Glyph {
+                    font: t.clone(),
+                    glyph_id: glyph,
+                    state: ctx.get().clone(),
+                    parent_resources: resources.clone(),
+                    cache: ctx.object_cache.clone(),
+                    xref: ctx.xref,
+                    glyph_transform,
+                };
+
+                Glyph::Shape(shape_glyph)
+            }
         }
     }
 
     pub fn code_advance(&self, code: u16) -> Vec2 {
-        match self.0.as_ref() {
+        match &self.0 {
             FontType::Type1(t) => {
                 debug_assert!(code <= u8::MAX as u16);
 
@@ -103,7 +153,7 @@ impl<'a> Font<'a> {
     }
 
     pub fn origin_displacement(&self, code: u16) -> Vec2 {
-        match self.0.as_ref() {
+        match &self.0 {
             FontType::Type1(_) => Vec2::default(),
             FontType::TrueType(_) => Vec2::default(),
             FontType::Type0(t) => t.origin_displacement(code),
@@ -112,7 +162,7 @@ impl<'a> Font<'a> {
     }
 
     pub fn code_len(&self) -> usize {
-        match self.0.as_ref() {
+        match &self.0 {
             FontType::Type1(_) => 1,
             FontType::TrueType(_) => 1,
             FontType::Type0(t) => t.code_len(),
@@ -121,18 +171,13 @@ impl<'a> Font<'a> {
     }
 
     pub fn is_horizontal(&self) -> bool {
-        match self.0.as_ref() {
+        match &self.0 {
             FontType::Type1(_) => true,
             FontType::TrueType(_) => true,
             FontType::Type0(t) => t.is_horizontal(),
             FontType::Type3(_) => true,
         }
     }
-}
-
-pub enum GlyphDescription {
-    Path(BezPath),
-    Type3(Type3GlyphDescription),
 }
 
 #[derive(Debug)]
@@ -159,11 +204,11 @@ impl Encoding {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum OutlineFont {
-    Type1(Type1Font),
-    TrueType(TrueTypeFont),
-    Type0(Type0Font),
+    Type1(Arc<Type1Font>),
+    TrueType(Arc<TrueTypeFont>),
+    Type0(Arc<Type0Font>),
 }
 
 impl OutlineFont {
@@ -176,12 +221,12 @@ impl OutlineFont {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum FontType<'a> {
-    Type1(Type1Font),
-    TrueType(TrueTypeFont),
-    Type0(Type0Font),
-    Type3(Type3<'a>),
+    Type1(Arc<Type1Font>),
+    TrueType(Arc<TrueTypeFont>),
+    Type0(Arc<Type0Font>),
+    Type3(Arc<Type3<'a>>),
 }
 
 #[derive(Debug, Clone, Copy, Default)]

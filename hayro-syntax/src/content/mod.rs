@@ -67,6 +67,7 @@ impl<'a> Readable<'a> for Operator<'a> {
 
 /// An iterator over PDF content streams that provides access to the operators
 /// in a raw manner by only exposing the operator name and its arguments on the stack.
+#[derive(Clone)]
 pub struct UntypedIter<'a> {
     reader: Reader<'a>,
     stack: Stack<'a>,
@@ -176,6 +177,7 @@ impl<'a> Iterator for UntypedIter<'a> {
 
 /// An iterator over PDF content streams that provide access to the operators
 /// in a typed fashion.
+#[derive(Clone)]
 pub struct TypedIter<'a> {
     untyped: UntypedIter<'a>,
 }

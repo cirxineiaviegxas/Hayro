@@ -739,6 +739,7 @@ fn f32_to_u8(val: f32) -> u8 {
     (val * 255.0 + 0.5) as u8
 }
 
+#[derive(Debug, Clone)]
 /// A color.
 pub struct Color {
     color_space: ColorSpace,

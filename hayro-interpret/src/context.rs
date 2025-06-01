@@ -25,8 +25,8 @@ pub struct Context<'a> {
     font_cache: HashMap<ObjRef, Font<'a>>,
     root_transforms: Vec<Affine>,
     bbox: Vec<kurbo::Rect>,
-    object_cache: Cache,
-    xref: &'a XRef,
+    pub(crate) object_cache: Cache,
+    pub(crate) xref: &'a XRef,
 }
 
 impl<'a> Context<'a> {

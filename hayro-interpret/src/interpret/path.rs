@@ -2,9 +2,8 @@ use crate::Paint;
 use crate::color::Color;
 use crate::context::Context;
 use crate::device::Device;
-use crate::font::GlyphDescription;
-use crate::interpret::text::run_t3_instructions;
-use kurbo::Affine;
+use crate::glyph::Glyph;
+use kurbo::{Affine, BezPath};
 use log::warn;
 
 pub(crate) fn fill_path(context: &mut Context, device: &mut impl Device) {
@@ -26,12 +25,11 @@ pub(crate) fn fill_stroke_path(context: &mut Context, device: &mut impl Device) 
     context.path_mut().truncate(0);
 }
 
-// TODO: Get rid of glyph description
-
 pub(crate) fn fill_path_impl(
     context: &mut Context,
     device: &mut impl Device,
-    path: Option<&GlyphDescription>,
+    // TODO: DOn't take option here?
+    path: Option<&BezPath>,
     transform: Option<Affine>,
 ) {
     let base_transform = transform.unwrap_or(context.get().ctm);
@@ -42,22 +40,22 @@ pub(crate) fn fill_path_impl(
 
     match path {
         None => device.fill_path(context.path()),
-        Some(GlyphDescription::Path(path)) => device.fill_path(path),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
+        Some(path) => device.fill_path(path),
     };
 }
 
-pub(crate) fn clip_impl(context: &mut Context, outline: &GlyphDescription) {
-    match outline {
-        GlyphDescription::Path(p) => {
-            let has_outline = p.segments().next().is_some();
+pub(crate) fn clip_impl(context: &mut Context, glyph: &Glyph, transform: Affine) {
+    match glyph {
+        Glyph::Outline(o) => {
+            let outline = transform * o.outline();
+            let has_outline = outline.segments().next().is_some();
 
             if has_outline {
-                context.get_mut().text_state.clip_paths.extend(p);
+                context.get_mut().text_state.clip_paths.extend(outline);
             }
         }
-        GlyphDescription::Type3(_) => {
-            warn!("text rendering mode clip is currently not supported with Type3 glyphs")
+        Glyph::Shape(_) => {
+            warn!("text rendering mode clip not implemented for shape glyphs");
         }
     }
 }
@@ -65,7 +63,7 @@ pub(crate) fn clip_impl(context: &mut Context, outline: &GlyphDescription) {
 pub(crate) fn stroke_path_impl(
     context: &mut Context,
     device: &mut impl Device,
-    path: Option<&GlyphDescription>,
+    path: Option<&BezPath>,
     transform: Option<Affine>,
 ) {
     let base_transform = transform.unwrap_or(context.get().ctm);
@@ -76,8 +74,7 @@ pub(crate) fn stroke_path_impl(
 
     match path {
         None => device.stroke_path(context.path()),
-        Some(GlyphDescription::Path(path)) => device.stroke_path(path),
-        Some(GlyphDescription::Type3(t3)) => run_t3_instructions(device, t3, base_transform * t3.1),
+        Some(path) => device.stroke_path(path),
     };
 }
 

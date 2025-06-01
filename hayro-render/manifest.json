@@ -773,5 +773,17 @@
   {
     "id": "issue_panic_with_nested_clip",
     "file": "pdfs/issue_panic_with_nested_clip.pdf"
+  },
+  {
+    "id": "font_type3_filled_glyphs",
+    "file": "pdfs/font_type3_filled_glyphs.pdf"
+  },
+  {
+    "id": "font_type3_stroked_glyphs",
+    "file": "pdfs/font_type3_stroked_glyphs.pdf"
+  },
+  {
+    "id": "font_type3_shape_glyphs",
+    "file": "pdfs/font_type3_shape_glyphs.pdf"
   }
 ]

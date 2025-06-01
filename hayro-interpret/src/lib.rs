@@ -1,5 +1,5 @@
 use crate::convert::{convert_line_cap, convert_line_join};
-use crate::device::{Device, ReplayInstruction};
+use crate::device::Device;
 use clip_path::ClipPath;
 use hayro_syntax::content::ops::{LineCap, LineJoin, TypedOperation};
 use hayro_syntax::document::page::Resources;
@@ -34,8 +34,7 @@ pub mod x_object;
 
 use crate::color::ColorSpace;
 use crate::context::Context;
-use crate::font::type3::Type3GlyphDescription;
-use crate::font::{Font, GlyphDescription, TextRenderingMode};
+use crate::font::{Font, TextRenderingMode};
 use crate::pattern::ShadingPattern;
 use crate::shading::Shading;
 use crate::util::OptionLog;
@@ -371,14 +370,14 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.font = Some(font);
             }
             TypedOperation::ShowText(s) => {
-                text::show_text_string(context, device, s.0);
+                text::show_text_string(context, device, resources, s.0);
             }
             TypedOperation::ShowTexts(s) => {
                 for obj in s.0.iter::<Object>() {
                     if let Some(adjustment) = obj.clone().into_f32() {
                         context.get_mut().text_state.apply_adjustment(adjustment);
                     } else if let Some(text) = obj.into_string() {
-                        text::show_text_string(context, device, text);
+                        text::show_text_string(context, device, resources, text);
                     }
                 }
             }
@@ -403,7 +402,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::NextLineAndShowText(n) => {
                 text::next_line(context, 0.0, -context.get().text_state.leading as f64);
-                text::show_text_string(context, device, n.0)
+                text::show_text_string(context, device, resources, n.0)
             }
             TypedOperation::TextRenderingMode(r) => {
                 let mode = match r.0.as_i32() {
@@ -463,12 +462,7 @@ pub fn interpret<'a, 'b>(
 
                     let bbox = context.bbox().to_path(0.1);
                     let inverted_bbox = context.get().ctm.inverse() * bbox;
-                    fill_path_impl(
-                        context,
-                        device,
-                        Some(&GlyphDescription::Path(inverted_bbox)),
-                        None,
-                    );
+                    fill_path_impl(context, device, Some(&inverted_bbox), None);
 
                     context.restore_state();
                 } else {
@@ -477,6 +471,8 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::BeginCompatibility(_) => {}
             TypedOperation::EndCompatibility(_) => {}
+            TypedOperation::ShapeGlyph(_) => {}
+            TypedOperation::ColorGlyph(_) => {}
             _ => {
                 println!("{:?}", op);
             }

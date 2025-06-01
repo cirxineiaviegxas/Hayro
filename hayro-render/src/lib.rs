@@ -6,6 +6,7 @@ use hayro_interpret::cache::Cache;
 use hayro_interpret::clip_path::ClipPath;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
+use hayro_interpret::glyph::Glyph;
 use hayro_interpret::{FillProps, StencilImage, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
@@ -198,6 +199,30 @@ impl Device for Renderer {
 
     fn pop(&mut self) {
         self.0.pop_layer();
+    }
+
+    fn fill_glyph(&mut self, glyph: &Glyph<'_>) {
+        match glyph {
+            Glyph::Outline(o) => {
+                let outline = o.glyph_transform * o.outline();
+                self.fill_path(&outline);
+            }
+            Glyph::Shape(s) => {
+                s.interpret(self);
+            }
+        }
+    }
+
+    fn stroke_glyph(&mut self, glyph: &Glyph<'_>) {
+        match glyph {
+            Glyph::Outline(o) => {
+                let outline = o.glyph_transform * o.outline();
+                self.stroke_path(&outline);
+            }
+            Glyph::Shape(s) => {
+                s.interpret(self);
+            }
+        }
     }
 }
 

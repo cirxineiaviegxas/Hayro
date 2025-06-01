@@ -1,93 +1,31 @@
 use crate::clip_path::ClipPath;
 use crate::context::Context;
-use crate::device::{Device, ReplayInstruction};
+use crate::device::Device;
 use crate::font::UNITS_PER_EM;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::font::type1::GlyphSimulator;
+use crate::glyph::{Glyph, Type3Glyph};
 use crate::image::{RgbaImage, StencilImage};
 use crate::paint::Paint;
 use crate::{FillProps, StrokeProps, interpret};
+use hayro_syntax::content::ops::TypedOperation;
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
 use hayro_syntax::object::stream::Stream;
-use kurbo::{Affine, BezPath};
+use kurbo::{Affine, BezPath, Rect};
 use skrifa::GlyphId;
 use std::collections::HashMap;
-
-pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
-
-impl Type3GlyphDescription {
-    pub fn new(affine: Affine) -> Self {
-        Type3GlyphDescription(Vec::new(), affine)
-    }
-}
-
-impl Device for Type3GlyphDescription {
-    fn set_transform(&mut self, affine: Affine) {
-        self.0.push(ReplayInstruction::SetTransform { affine });
-    }
-
-    fn set_paint_transform(&mut self, affine: Affine) {
-        self.0.push(ReplayInstruction::SetPaintTransform { affine });
-    }
-
-    fn set_paint(&mut self, _: Paint) {}
-
-    fn stroke_path(&mut self, path: &BezPath) {
-        self.0
-            .push(ReplayInstruction::StrokePath { path: path.clone() })
-    }
-
-    fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
-        self.0.push(ReplayInstruction::StrokeProperties {
-            stroke_props: stroke_props.clone(),
-        })
-    }
-
-    fn fill_path(&mut self, path: &BezPath) {
-        self.0
-            .push(ReplayInstruction::FillPath { path: path.clone() })
-    }
-
-    fn set_fill_properties(&mut self, fill_props: &FillProps) {
-        self.0.push(ReplayInstruction::FillProperties {
-            fill_props: fill_props.clone(),
-        })
-    }
-
-    fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32) {
-        self.0.push(ReplayInstruction::PushLayer {
-            clip: clip_path.cloned(),
-            opacity,
-        });
-    }
-
-    fn draw_rgba_image(&mut self, image: RgbaImage) {
-        self.0.push(ReplayInstruction::DrawImage { image })
-    }
-
-    fn draw_stencil_image(&mut self, stencil: StencilImage) {
-        self.0.push(ReplayInstruction::DrawStencil {
-            stencil_image: stencil,
-        })
-    }
-
-    fn pop(&mut self) {
-        self.0.push(ReplayInstruction::PopClip)
-    }
-}
 
 #[derive(Debug)]
 pub struct Type3<'a> {
     widths: Vec<f32>,
     encodings: HashMap<u8, String>,
     dict: Dict<'a>,
-    // TODO: Don't automatically resolve glyph streams?
     char_procs: HashMap<String, Stream<'a>>,
     glyph_simulator: GlyphSimulator,
-    pub(crate) matrix: Affine,
+    matrix: Affine,
 }
 
 impl<'a> Type3<'a> {
@@ -135,26 +73,113 @@ impl<'a> Type3<'a> {
             * UNITS_PER_EM
     }
 
-    pub fn render_glyph(&self, glyph: GlyphId, context: &mut Context<'a>) -> Type3GlyphDescription {
-        let mut t3 = Type3GlyphDescription::new(self.matrix * Affine::scale(UNITS_PER_EM as f64));
+    pub(crate) fn render_glyph(&self, glyph: &Type3Glyph, device: &mut impl Device) -> Option<()> {
+        let mut state = glyph.state.clone();
+        let root_transform =
+            state.ctm * glyph.glyph_transform * self.matrix * Affine::scale(UNITS_PER_EM as f64);
+        state.ctm = root_transform;
 
-        let name = self.glyph_simulator.glyph_to_string(glyph).unwrap();
-        let program = self.char_procs.get(&name).unwrap();
-        let decoded = program.decoded().unwrap();
-        // TODO: Can resources be inherited?
-        let resources = Resources::new(
-            self.dict.get(RESOURCES).unwrap_or_default(),
-            None,
-            context.xref(),
+        let mut context = Context::new_with(
+            state.ctm,
+            // TODO: bbox?
+            Rect::new(0.0, 0.0, 1.0, 1.0),
+            glyph.cache.clone(),
+            glyph.xref,
+            state,
         );
 
+        let name = self.glyph_simulator.glyph_to_string(glyph.glyph_id)?;
+        let program = self.char_procs.get(&name)?;
+        let decoded = program.decoded()?;
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
 
-        context.save_state();
-        context.get_mut().ctm = Affine::IDENTITY;
-        interpret(iter, &resources, context, &mut t3);
-        context.restore_state();
+        let is_shape_glyph = {
+            let mut iter = iter.clone();
+            let mut is_shape_glyph = true;
 
-        t3
+            while let Some(op) = iter.next() {
+                match op {
+                    TypedOperation::ShapeGlyph(_) => {
+                        break;
+                    }
+                    TypedOperation::ColorGlyph(_) => {
+                        is_shape_glyph = false;
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+
+            is_shape_glyph
+        };
+
+        let resources = Resources::from_parent(
+            self.dict.get(RESOURCES).unwrap_or_default(),
+            glyph.parent_resources.clone(),
+        );
+
+        if is_shape_glyph {
+            let mut device = Type3ShapeGlyphDevice::new(device);
+            interpret(iter, &resources, &mut context, &mut device);
+        } else {
+            interpret(iter, &resources, &mut context, device);
+        }
+
+        Some(())
+    }
+}
+
+struct Type3ShapeGlyphDevice<'a, T: Device> {
+    inner: &'a mut T,
+}
+
+impl<'a, T: Device> Type3ShapeGlyphDevice<'a, T> {
+    pub fn new(device: &'a mut T) -> Self {
+        Self { inner: device }
+    }
+}
+
+// Only filling, stroking of paths and stencil masks are allowed.
+impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
+    fn set_transform(&mut self, affine: Affine) {
+        self.inner.set_transform(affine);
+    }
+
+    fn set_paint_transform(&mut self, _: Affine) {}
+
+    fn set_paint(&mut self, _: Paint) {}
+
+    fn stroke_path(&mut self, path: &BezPath) {
+        self.inner.stroke_path(path)
+    }
+
+    fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
+        self.inner.set_stroke_properties(stroke_props)
+    }
+
+    fn fill_path(&mut self, path: &BezPath) {
+        self.inner.fill_path(path)
+    }
+
+    fn set_fill_properties(&mut self, fill_props: &FillProps) {
+        self.inner.set_fill_properties(fill_props)
+    }
+
+    fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32) {
+        self.inner.push_layer(clip_path, opacity)
+    }
+
+    fn fill_glyph(&mut self, _: &Glyph<'_>) {}
+
+    fn stroke_glyph(&mut self, _: &Glyph<'_>) {}
+
+    fn draw_rgba_image(&mut self, _: RgbaImage) {}
+
+    fn draw_stencil_image(&mut self, stencil: StencilImage) {
+        self.inner.draw_stencil_image(stencil);
+    }
+
+    fn pop(&mut self) {
+        self.inner.pop()
     }
 }
