@@ -79,7 +79,7 @@ pub struct Type3<'a> {
     // TODO: Don't automatically resolve glyph streams?
     char_procs: HashMap<String, Stream<'a>>,
     glyph_simulator: GlyphSimulator,
-    matrix: Affine,
+    pub(crate) matrix: Affine,
 }
 
 impl<'a> Type3<'a> {
@@ -129,7 +129,7 @@ impl<'a> Type3<'a> {
 
     pub fn render_glyph(&self, glyph: GlyphId, context: &mut Context<'a>) -> Type3GlyphDescription {
         let mut t3 =
-            Type3GlyphDescription::new(self.matrix * Affine::scale_non_uniform(1000.0, 1000.0));
+            Type3GlyphDescription::new(self.matrix * Affine::scale(UNITS_PER_EM as f64));
 
         let name = self.glyph_simulator.glyph_to_string(glyph).unwrap();
         let program = self.char_procs.get(&name).unwrap();

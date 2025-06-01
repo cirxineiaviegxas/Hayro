@@ -160,6 +160,23 @@ impl Encoding {
 }
 
 #[derive(Debug)]
+pub(crate) enum OutlineFont {
+    Type1(Type1Font),
+    TrueType(TrueTypeFont),
+    Type0(Type0Font),
+}
+
+impl OutlineFont {
+    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+        match self {
+            OutlineFont::Type1(t) => t.outline_glyph(glyph),
+            OutlineFont::TrueType(t) => t.outline_glyph(glyph),
+            OutlineFont::Type0(t) => t.outline_glyph(glyph),
+        }
+    }
+}
+
+#[derive(Debug)]
 enum FontType<'a> {
     Type1(Type1Font),
     TrueType(TrueTypeFont),

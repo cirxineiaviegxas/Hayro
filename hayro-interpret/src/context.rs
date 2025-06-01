@@ -36,27 +36,36 @@ impl<'a> Context<'a> {
         let line_join = Join::Miter;
         let miter_limit = 10.0;
 
+        let state = State {
+            line_width,
+            line_cap,
+            line_join,
+            miter_limit,
+            dash_array: smallvec![],
+            dash_offset: 0.0,
+            ctm: initial_transform,
+            non_stroke_alpha: 1.0,
+            stroke_cs: ColorSpace::device_gray(),
+            stroke_color: smallvec![0.0,],
+            none_stroke_cs: ColorSpace::device_gray(),
+            non_stroke_color: smallvec![0.0],
+            stroke_alpha: 1.0,
+            fill_rule: Fill::NonZero,
+            n_clips: 0,
+            text_state: TextState::default(),
+            stroke_pattern: None,
+            non_stroke_pattern: None,
+        };
+        
+        Self::new_with(initial_transform, bbox, cache, xref, state)
+    }
+
+    pub(crate) fn new_with(
+        initial_transform: Affine, bbox: kurbo::Rect, cache: Cache, xref: &'a XRef, state: State<'a>) -> Self {
+
+
         Self {
-            states: vec![State {
-                line_width,
-                line_cap,
-                line_join,
-                miter_limit,
-                dash_array: smallvec![],
-                dash_offset: 0.0,
-                ctm: initial_transform,
-                non_stroke_alpha: 1.0,
-                stroke_cs: ColorSpace::device_gray(),
-                stroke_color: smallvec![0.0,],
-                none_stroke_cs: ColorSpace::device_gray(),
-                non_stroke_color: smallvec![0.0],
-                stroke_alpha: 1.0,
-                fill_rule: Fill::NonZero,
-                n_clips: 0,
-                text_state: TextState::default(),
-                stroke_pattern: None,
-                non_stroke_pattern: None,
-            }],
+            states: vec![state],
             xref,
             root_transforms: vec![initial_transform],
             last_point: Point::default(),

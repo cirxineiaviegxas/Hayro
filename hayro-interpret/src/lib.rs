@@ -30,6 +30,7 @@ pub mod shading;
 mod util;
 pub mod x_object;
 pub mod cache;
+pub mod glyph;
 
 use crate::color::ColorSpace;
 use crate::context::Context;
