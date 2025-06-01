@@ -280,28 +280,26 @@ pub fn interpret<'a, 'b>(
                 // Ignore for now.
             }
             TypedOperation::NonStrokeColorNamed(n) => {
-                if let Some(name) = n.1 {
-                    let pattern = resources
-                        .get_pattern(
-                            &name,
-                            Box::new(|_| None),
-                            Box::new(|d| ShadingPattern::new(&d)),
-                        )
-                        .unwrap();
+                if let Some(pattern) = n.1.and_then(|name|  resources
+                    .get_pattern(
+                        &name,
+                        Box::new(|_| None),
+                        Box::new(|d| ShadingPattern::new(&d)),
+                    )) {
                     context.get_mut().fill_pattern = Some(pattern);
                 } else {
                     context.get_mut().fill_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 }
             }
             TypedOperation::StrokeColorNamed(n) => {
-                if let Some(name) = n.1 {
-                    let pattern = resources
+                if let Some(pattern) = n.1.and_then(|name| {
+                    resources
                         .get_pattern(
                             &name,
                             Box::new(|_| None),
                             Box::new(|d| ShadingPattern::new(&d)),
                         )
-                        .unwrap();
+                }) {
                     context.get_mut().stroke_pattern = Some(pattern);
                 } else {
                     context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
@@ -468,6 +466,8 @@ pub fn interpret<'a, 'b>(
                     warn!("failed to process shading");
                 }
             }
+            TypedOperation::BeginCompatibility(_) => {},
+            TypedOperation::EndCompatibility(_) => {},
             _ => {
                 println!("{:?}", op);
             }
@@ -673,7 +673,7 @@ fn handle_paint(
         )
     };
 
-    let clip_path = if cs.is_pattern() {
+    let clip_path = if cs.is_pattern() && pattern.is_some() {
         let mut pattern = pattern.unwrap();
         pattern.matrix = *context.root_transform() * pattern.matrix;
         let bbox = pattern.shading.bbox;
