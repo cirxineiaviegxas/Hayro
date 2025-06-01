@@ -1,3 +1,4 @@
+use crate::cache::Cache;
 use crate::color::ColorSpace;
 use crate::convert::convert_transform;
 use crate::font::Font;
@@ -14,7 +15,6 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
-use crate::cache::Cache;
 
 pub struct Context<'a> {
     states: Vec<State<'a>>,
@@ -56,14 +56,17 @@ impl<'a> Context<'a> {
             stroke_pattern: None,
             non_stroke_pattern: None,
         };
-        
+
         Self::new_with(initial_transform, bbox, cache, xref, state)
     }
 
     pub(crate) fn new_with(
-        initial_transform: Affine, bbox: kurbo::Rect, cache: Cache, xref: &'a XRef, state: State<'a>) -> Self {
-
-
+        initial_transform: Affine,
+        bbox: kurbo::Rect,
+        cache: Cache,
+        xref: &'a XRef,
+        state: State<'a>,
+    ) -> Self {
         Self {
             states: vec![state],
             xref,

@@ -2,6 +2,7 @@ use crate::encode::x_y_advances;
 use crate::paint::Image;
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
+use hayro_interpret::cache::Cache;
 use hayro_interpret::clip_path::ClipPath;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
@@ -18,7 +19,6 @@ use peniko::color::{AlphaColor, Srgb};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use hayro_interpret::cache::Cache;
 
 mod coarse;
 mod encode;

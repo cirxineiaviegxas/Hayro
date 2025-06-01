@@ -1,14 +1,18 @@
-use hayro_syntax::object::string;
-use log::warn;
-use skrifa::GlyphId;
-use kurbo::{Affine, Vec2};
 use crate::context::Context;
 use crate::device::{Device, ReplayInstruction};
-use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::font::type3::Type3GlyphDescription;
+use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::interpret::path::{clip_impl, fill_path_impl, stroke_path_impl};
+use hayro_syntax::object::string;
+use kurbo::{Affine, Vec2};
+use log::warn;
+use skrifa::GlyphId;
 
-pub(crate) fn show_text_string<'a>(ctx: &mut Context<'a>, device: &mut impl Device, text: string::String) {
+pub(crate) fn show_text_string<'a>(
+    ctx: &mut Context<'a>,
+    device: &mut impl Device,
+    text: string::String,
+) {
     let Some(font) = ctx.get().text_state.font.clone() else {
         warn!("tried to show text without active font");
 

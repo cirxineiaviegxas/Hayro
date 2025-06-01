@@ -7,20 +7,22 @@ use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
 use hayro_syntax::object::string::String;
-use hayro_syntax::object::{dict_or_stream, Object};
+use hayro_syntax::object::{Object, dict_or_stream};
 use kurbo::{Affine, Cap, Join, Point, Shape, Vec2};
 use log::warn;
 use peniko::Fill;
 use skrifa::GlyphId;
-use smallvec::{smallvec, SmallVec};
+use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
 
+pub mod cache;
 pub mod clip_path;
 pub mod color;
 pub mod context;
 mod convert;
 pub mod device;
 mod font;
+pub mod glyph;
 mod image;
 mod interpret;
 pub mod mask;
@@ -29,8 +31,6 @@ pub mod pattern;
 pub mod shading;
 mod util;
 pub mod x_object;
-pub mod cache;
-pub mod glyph;
 
 use crate::color::ColorSpace;
 use crate::context::Context;
@@ -39,7 +39,7 @@ use crate::font::{Font, GlyphDescription, TextRenderingMode};
 use crate::pattern::ShadingPattern;
 use crate::shading::Shading;
 use crate::util::OptionLog;
-use crate::x_object::{draw_image_xobject, draw_xobject, ImageXObject, XObject};
+use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
 
 use crate::interpret::path::{
     clip_impl, fill_path, fill_path_impl, fill_stroke_path, stroke_path, stroke_path_impl,
@@ -525,4 +525,3 @@ fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()
 
     Some(())
 }
-

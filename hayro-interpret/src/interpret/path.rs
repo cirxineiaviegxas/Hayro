@@ -1,11 +1,11 @@
+use crate::Paint;
 use crate::color::Color;
 use crate::context::Context;
 use crate::device::Device;
 use crate::font::GlyphDescription;
-use crate::Paint;
+use crate::interpret::text::run_t3_instructions;
 use kurbo::Affine;
 use log::warn;
-use crate::interpret::text::run_t3_instructions;
 
 pub(crate) fn fill_path(context: &mut Context, device: &mut impl Device) {
     fill_path_impl(context, device, None, None);
