@@ -28,6 +28,7 @@ pub mod x_object;
 mod paint;
 pub mod mask;
 pub mod clip_path;
+mod image;
 
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
@@ -39,6 +40,7 @@ use crate::util::OptionLog;
 use crate::x_object::{draw_image_xobject, draw_xobject, ImageXObject, XObject};
 
 pub use paint::Paint;
+pub use image::{StencilImage, RgbaImage};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {
@@ -754,21 +756,13 @@ fn run_t3_instructions(
             }
             ReplayInstruction::PopClip => device.pop(),
             ReplayInstruction::DrawImage {
-                image_data,
-                width,
-                height,
-                is_stencil,
-                interpolate,
+                image
             } => device.draw_rgba_image(
-                image_data.clone(),
-                *width,
-                *height,
-                *is_stencil,
-                *interpolate,
+                image.clone()
             ),
-            ReplayInstruction::AntiAliasing { val } => {
-                device.set_anti_aliasing(*val)
-            }
+            ReplayInstruction::DrawStencil {
+                stencil_image
+            } => device.draw_stencil_image(stencil_image.clone()),
         }
     }
 }

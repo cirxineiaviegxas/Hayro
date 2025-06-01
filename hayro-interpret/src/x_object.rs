@@ -1,7 +1,7 @@
 use crate::color::ColorSpace;
 use crate::context::Context;
 use crate::device::Device;
-use crate::{handle_paint, interpret, FillProps};
+use crate::{handle_paint, interpret};
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
@@ -16,6 +16,7 @@ use kurbo::{Affine, Rect, Shape};
 use peniko::Fill;
 use smallvec::SmallVec;
 use crate::clip_path::ClipPath;
+use crate::image::{RgbaImage, StencilImage};
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -138,28 +139,23 @@ pub(crate) fn draw_image_xobject(
     
     if x_object.is_image_mask {
         handle_paint(context, device, transform, false);
-        device.set_anti_aliasing(false);
+        let stencil = StencilImage {
+            stencil_data: data,
+            width: x_object.width,
+            height: x_object.height,
+            interpolate: x_object.interpolate,
+        };
         
-        device.push_layer(None, 1.0);
-        device.fill_path(&Rect::new(0.0, 0.0, width, height).to_path(0.1), &FillProps { fill_rule: Fill::NonZero });
-        device.draw_rgba_image(
-            data,
-            x_object.width,
-            x_object.height,
-            x_object.is_image_mask,
-            x_object.interpolate,
-        );
-        device.pop();
-        
-        device.set_anti_aliasing(true);
+        device.draw_stencil_image(stencil);
     }   else {
-        device.draw_rgba_image(
-            data,
-            x_object.width,
-            x_object.height,
-            x_object.is_image_mask,
-            x_object.interpolate,
-        );
+        let image = RgbaImage {
+            image_data: data,
+            width: x_object.width,
+            height: x_object.height,
+            interpolate: x_object.interpolate,
+        };
+        
+        device.draw_rgba_image(image);
     }
     
     context.restore_state();

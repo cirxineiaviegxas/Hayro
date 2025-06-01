@@ -4,13 +4,13 @@ use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
-use hayro_interpret::{interpret, FillProps, StrokeProps};
+use hayro_interpret::{interpret, FillProps, StencilImage, StrokeProps};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
 use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
-use kurbo::{Affine, BezPath, Point, Rect};
+use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
 use peniko::color::{AlphaColor, Srgb};
@@ -152,17 +152,25 @@ impl Device for Renderer {
 
     fn draw_rgba_image(
         &mut self,
-        image_data: Vec<u8>,
-        width: u32,
-        height: u32,
-        is_stencil: bool,
-        interpolate: bool,
+        image: hayro_interpret::RgbaImage
     ) {
-        self.draw_image(image_data, width, height, is_stencil, interpolate);
+        self.draw_image(image.image_data, image.width, image.height, false, image.interpolate);
     }
 
-    fn set_anti_aliasing(&mut self, val: bool) {
-        self.0.set_anti_aliasing(val);
+    fn draw_stencil_image(&mut self, stencil: StencilImage) {
+        self.0.set_anti_aliasing(false);
+        self.push_layer(None, 1.0);
+        self.fill_path(&Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64).to_path(0.1), &FillProps { fill_rule: Fill::NonZero });
+        self.draw_image(
+            stencil.stencil_data,
+            stencil.width,
+            stencil.height,
+            true,
+            stencil.interpolate,
+        );
+        self.pop();
+
+        self.0.set_anti_aliasing(true);
     }
 
     fn pop(&mut self) {

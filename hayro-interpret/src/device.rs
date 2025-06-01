@@ -1,6 +1,7 @@
 use crate::{FillProps, StrokeProps};
 use kurbo::{Affine, BezPath};
 use crate::clip_path::ClipPath;
+use crate::image::{RgbaImage, StencilImage};
 use crate::paint::Paint;
 
 pub trait Device {
@@ -11,13 +12,12 @@ pub trait Device {
     fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32);
     fn draw_rgba_image(
         &mut self,
-        image_data: Vec<u8>,
-        width: u32,
-        height: u32,
-        is_stencil: bool,
-        interpolate: bool,
+        image: RgbaImage
     );
-    fn set_anti_aliasing(&mut self, val: bool);
+    fn draw_stencil_image(
+        &mut self,
+        stencil: StencilImage
+    );
     fn pop(&mut self);
 }
 
@@ -38,14 +38,10 @@ pub(crate) enum ReplayInstruction {
         opacity: f32,
     },
     DrawImage {
-        image_data: Vec<u8>,
-        width: u32,
-        height: u32,
-        is_stencil: bool,
-        interpolate: bool,
+        image: RgbaImage
     },
-    AntiAliasing {
-        val: bool,
+    DrawStencil {
+        stencil_image: StencilImage
     },
     PopClip,
 }

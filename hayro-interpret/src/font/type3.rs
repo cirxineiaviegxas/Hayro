@@ -13,6 +13,7 @@ use kurbo::{Affine, BezPath};
 use skrifa::GlyphId;
 use std::collections::HashMap;
 use crate::clip_path::ClipPath;
+use crate::image::{RgbaImage, StencilImage};
 use crate::paint::Paint;
 
 pub struct Type3GlyphDescription(pub(crate) Vec<ReplayInstruction>, pub(crate) Affine);
@@ -53,24 +54,16 @@ impl Device for Type3GlyphDescription {
 
     fn draw_rgba_image(
         &mut self,
-        image_data: Vec<u8>,
-        width: u32,
-        height: u32,
-        is_stencil: bool,
-        interpolate: bool,
+        image: RgbaImage
     ) {
         self.0.push(ReplayInstruction::DrawImage {
-            image_data,
-            width,
-            height,
-            is_stencil,
-            interpolate,
+            image
         })
     }
 
-    fn set_anti_aliasing(&mut self, val: bool) {
-        self.0.push(ReplayInstruction::AntiAliasing {
-            val
+    fn draw_stencil_image(&mut self, stencil: StencilImage) {
+        self.0.push(ReplayInstruction::DrawStencil {
+            stencil_image: stencil
         })
     }
 
