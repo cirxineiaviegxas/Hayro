@@ -293,8 +293,7 @@
     "id": "image_jbig2_3",
     "file": "pdfs/image_jbig2_3.link",
     "md5": "2ac5f90159feba3aab04091c5026fef6",
-    "link": true,
-    "ignore": true
+    "link": true
   },
   {
     "id": "image_lab",
