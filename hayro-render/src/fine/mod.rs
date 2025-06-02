@@ -4,20 +4,18 @@
 //! Fine rasterization runs the commands in each wide tile to determine the final RGBA value
 //! of each pixel and pack it into the pixmap.
 
-mod image;
-mod shading;
+mod shader;
 
 use crate::coarse::{Cmd, WideTile};
 use crate::encode::EncodedPaint;
-use crate::fine::image::ImageFiller;
-use crate::fine::shading::ShadingFiller;
+use crate::fine::shader::ShaderFiller;
 use crate::paint::Paint;
 use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
 use kurbo::Point;
-use peniko::{BlendMode, Compose, Mix};
 use peniko::color::{AlphaColor, Srgb};
+use peniko::{BlendMode, Compose, Mix};
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;
@@ -229,15 +227,15 @@ impl Fine {
 
                 match encoded_paint {
                     EncodedPaint::Image(i) => {
-                        let filler = ImageFiller::new(i, start_x, start_y);
+                        let filler = ShaderFiller::new(i, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                     EncodedPaint::Shading(s) => {
-                        let filler = ShadingFiller::new(s, start_x, start_y);
+                        let filler = ShaderFiller::new(s, start_x, start_y);
                         fill_complex_paint(color_buf, blend_buf, true, blend_mode, filler);
                     }
                     EncodedPaint::Mask(i) => {
-                        let filler = ImageFiller::new(i, start_x, start_y);
+                        let filler = ShaderFiller::new(i, start_x, start_y);
                         filler.paint(color_buf);
 
                         for (dest, src) in
@@ -292,7 +290,7 @@ impl Fine {
 
                 match encoded_paint {
                     EncodedPaint::Image(i) => {
-                        let filler = ImageFiller::new(i, start_x, start_y);
+                        let filler = ShaderFiller::new(i, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(
@@ -303,7 +301,7 @@ impl Fine {
                         );
                     }
                     EncodedPaint::Shading(s) => {
-                        let filler = ShadingFiller::new(s, start_x, start_y);
+                        let filler = ShaderFiller::new(s, start_x, start_y);
                         filler.paint(color_buf);
 
                         strip::blend(
@@ -314,7 +312,7 @@ impl Fine {
                         );
                     }
                     EncodedPaint::Mask(i) => {
-                        let filler = ImageFiller::new(i, start_x, start_y);
+                        let filler = ShaderFiller::new(i, start_x, start_y);
                         filler.paint(color_buf);
 
                         for ((dest, src), alpha) in blend_buf

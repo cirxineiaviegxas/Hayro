@@ -6,8 +6,35 @@ pub(crate) mod shading;
 
 use crate::encode::image::EncodedImage;
 use crate::encode::shading::EncodedShading;
+use crate::fine::Sampler;
 use crate::paint::Paint;
 use kurbo::{Affine, Point, Vec2};
+
+#[derive(Debug)]
+pub struct Shader<T: Sampler> {
+    pub(crate) transform: Affine,
+    pub(crate) x_advance: Vec2,
+    pub(crate) y_advance: Vec2,
+    pub(crate) sampler: T,
+}
+
+impl<T: Sampler> Shader<T> {
+    pub(crate) fn new(transform: Affine, sampler: T) -> Shader<T> {
+        let transform = transform * Affine::translate((0.5, 0.5));
+        let (x_advance, y_advance) = x_y_advances(&transform);
+
+        Shader {
+            transform,
+            x_advance,
+            y_advance,
+            sampler,
+        }
+    }
+
+    pub fn sample(&self, pos: Point) -> [f32; 4] {
+        self.sampler.sample(pos)
+    }
+}
 
 pub(crate) trait EncodeExt {
     fn encode_into(&self, paints: &mut Vec<EncodedPaint>, transform: Affine) -> Paint;
@@ -15,9 +42,9 @@ pub(crate) trait EncodeExt {
 
 #[derive(Debug)]
 pub enum EncodedPaint {
-    Image(EncodedImage),
-    Mask(EncodedImage),
-    Shading(EncodedShading),
+    Image(Shader<EncodedImage>),
+    Mask(Shader<EncodedImage>),
+    Shading(Shader<EncodedShading>),
 }
 
 pub(crate) fn x_y_advances(transform: &Affine) -> (Vec2, Vec2) {

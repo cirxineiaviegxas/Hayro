@@ -1,4 +1,5 @@
-use crate::encode::{EncodeExt, EncodedPaint, x_y_advances};
+use crate::encode::{EncodeExt, EncodedPaint, Shader, x_y_advances};
+use crate::fine::Sampler;
 use crate::paint::{IndexedPaint, Paint};
 use hayro_interpret::color::{ColorComponents, ColorSpace};
 use hayro_interpret::pattern::ShadingPattern;
@@ -8,29 +9,25 @@ use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use rustc_hash::FxHashMap;
 use smallvec::{ToSmallVec, smallvec};
-use crate::fine::Sampler;
 
 #[derive(Debug)]
 pub(crate) struct EncodedShading {
-    pub(crate) x_advance: Vec2,
-    pub(crate) y_advance: Vec2,
     pub(crate) color_space: ColorSpace,
-    pub(crate) initial_transform: Affine,
     pub(crate) background_color: AlphaColor<Srgb>,
     pub(crate) shading_type: EncodedShadingType,
 }
 
 impl Sampler for EncodedShading {
     fn sample(&self, pos: Point) -> [f32; 4] {
-        self.shading_type.eval(pos,
-                               self.background_color,
-                               &self.color_space).components
+        self.shading_type
+            .eval(pos, self.background_color, &self.color_space)
+            .components
     }
 }
 
 impl EncodeExt for ShadingPattern {
     fn encode_into(&self, paints: &mut Vec<EncodedPaint>, transform: Affine) -> Paint {
-        let mut base_transform;
+        let base_transform;
         let idx = paints.len();
 
         let shading_type = match self.shading.shading_type.as_ref() {
@@ -104,9 +101,7 @@ impl EncodeExt for ShadingPattern {
             }
         };
 
-        base_transform *= Affine::translate((0.5, 0.5));
         let color_space = self.shading.color_space.clone();
-        let (x_advance, y_advance) = x_y_advances(&base_transform);
 
         let background_color = self
             .shading
@@ -116,16 +111,13 @@ impl EncodeExt for ShadingPattern {
             .unwrap_or(TRANSPARENT);
 
         let encoded = EncodedShading {
-            x_advance,
-            y_advance,
             color_space,
-            initial_transform: base_transform,
             background_color,
             shading_type,
         };
 
-        paints.push(EncodedPaint::Shading(encoded));
-
+        let shader = Shader::new(base_transform, encoded);
+        paints.push(EncodedPaint::Shading(shader));
         Paint::Indexed(IndexedPaint::new(idx))
     }
 }
