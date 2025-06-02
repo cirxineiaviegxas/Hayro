@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::device::Device;
 use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
 use crate::glyph::Glyph;
-use crate::interpret::path::{clip_impl, fill_path_impl, set_device_paint, stroke_path_impl};
+use crate::interpret::path::{clip_impl, fill_path_impl, get_paint, stroke_path_impl};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::keys::P;
 use hayro_syntax::object::string;
@@ -57,39 +57,31 @@ pub(crate) fn show_glyph<'a>(ctx: &mut Context<'a>, device: &mut impl Device, gl
 
     match ctx.get().text_state.render_mode {
         TextRenderingMode::Fill => {
-            set_device_paint(ctx, device, false);
-            device.fill_glyph(glyph);
+            device.fill_glyph(glyph, &get_paint(ctx, false));
         }
         TextRenderingMode::Stroke => {
-            set_device_paint(ctx, device, true);
-            device.stroke_glyph(glyph);
+            device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
         TextRenderingMode::FillStroke => {
-            set_device_paint(ctx, device, false);
-            device.fill_glyph(glyph);
-            set_device_paint(ctx, device, true);
-            device.stroke_glyph(glyph);
+            device.fill_glyph(glyph, &get_paint(ctx, false));
+            device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
         TextRenderingMode::Invisible => {}
         TextRenderingMode::Clip => {
             clip_impl(ctx, glyph, glyph.glyph_transform());
         }
         TextRenderingMode::FillAndClip => {
-            set_device_paint(ctx, device, false);
             clip_impl(ctx, glyph, glyph.glyph_transform());
-            device.fill_glyph(glyph);
+            device.fill_glyph(glyph, &get_paint(ctx, false));
         }
         TextRenderingMode::StrokeAndClip => {
-            set_device_paint(ctx, device, true);
             clip_impl(ctx, glyph, glyph.glyph_transform());
-            device.stroke_glyph(glyph);
+            device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
         TextRenderingMode::FillAndStrokeAndClip => {
             clip_impl(ctx, glyph, glyph.glyph_transform());
-            set_device_paint(ctx, device, false);
-            device.fill_glyph(glyph);
-            set_device_paint(ctx, device, true);
-            device.stroke_glyph(glyph);
+            device.fill_glyph(glyph, &get_paint(ctx, false));
+            device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
     }
 }

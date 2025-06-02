@@ -30,8 +30,6 @@ pub struct RenderContext {
     pub(crate) line_buf: Vec<Line>,
     pub(crate) tiles: Tiles,
     pub(crate) strip_buf: Vec<Strip>,
-    pub(crate) paint: PaintType,
-    pub(crate) paint_transform: Affine,
     paint_bbox: Option<Rect>,
     pub(crate) stroke: Stroke,
     pub(crate) transform: Affine,
@@ -52,8 +50,6 @@ impl RenderContext {
 
         let transform = Affine::IDENTITY;
         let fill_rule = Fill::NonZero;
-        let paint = BLACK.into();
-        let paint_transform = Affine::IDENTITY;
         let stroke = Stroke {
             width: 1.0,
             join: Join::Bevel,
@@ -73,9 +69,7 @@ impl RenderContext {
             tiles,
             strip_buf,
             transform,
-            paint,
             paint_bbox: None,
-            paint_transform,
             fill_rule,
             stroke,
             encoded_paints,
@@ -83,36 +77,36 @@ impl RenderContext {
         }
     }
 
-    fn encode_current_paint(&mut self) -> Paint {
-        match self.paint.clone() {
+    fn encode_paint(&mut self, paint_type: PaintType, paint_transform: Affine) -> Paint {
+        match paint_type {
             PaintType::Solid(s) => {
                 self.paint_bbox = None;
                 s.into()
             }
             PaintType::Image(i) => {
                 self.paint_bbox = None;
-                i.encode_into(&mut self.encoded_paints, self.transform)
+                i.encode_into(&mut self.encoded_paints, paint_transform)
             }
             PaintType::ShadingPattern(s) => {
                 self.paint_bbox = s.shading.bbox.map(|r| r.get());
-                s.encode_into(&mut self.encoded_paints, self.paint_transform)
+                s.encode_into(&mut self.encoded_paints, paint_transform)
             }
         }
     }
 
     /// Fill a path.
-    pub fn fill_path(&mut self, path: &BezPath) {
-        let paint = self.encode_current_paint();
-        self.apply_paint_bbox();
+    pub fn fill_path(&mut self, path: &BezPath, paint_type: PaintType, paint_transform: Affine) {
+        let paint = self.encode_paint(paint_type, paint_transform);
+        self.apply_paint_bbox(paint_transform);
         flatten::fill(path, self.transform, &mut self.line_buf);
         self.render_path(self.fill_rule, paint);
         self.unapply_paint_bbox();
     }
 
-    fn apply_paint_bbox(&mut self) {
+    fn apply_paint_bbox(&mut self, paint_transform: Affine) {
         if let Some(bbox) = self.paint_bbox {
             let old_transform = self.transform;
-            self.transform = self.paint_transform;
+            self.transform = paint_transform;
             self.push_layer(Some(&bbox.to_path(0.1)), None, None, None);
             self.transform = old_transform;
         }
@@ -125,17 +119,21 @@ impl RenderContext {
     }
 
     /// Stroke a path.
-    pub fn stroke_path(&mut self, path: &BezPath) {
-        let paint = self.encode_current_paint();
-        self.apply_paint_bbox();
+    pub fn stroke_path(&mut self, path: &BezPath, paint_type: PaintType, paint_transform: Affine) {
+        let paint = self.encode_paint(paint_type, paint_transform);
+        self.apply_paint_bbox(paint_transform);
         flatten::stroke(path, &self.stroke, self.transform, &mut self.line_buf);
         self.render_path(Fill::NonZero, paint);
         self.unapply_paint_bbox();
     }
 
     /// Fill a rectangle.
-    pub fn fill_rect(&mut self, rect: &Rect) {
-        self.fill_path(&rect.to_path(DEFAULT_TOLERANCE));
+    pub fn fill_rect(&mut self, rect: &Rect, paint_type: PaintType, paint_transform: Affine) {
+        self.fill_path(
+            &rect.to_path(DEFAULT_TOLERANCE),
+            paint_type,
+            paint_transform,
+        );
     }
 
     /// Push a new layer with the given properties.
@@ -184,11 +182,6 @@ impl RenderContext {
         self.stroke = stroke;
     }
 
-    /// Set the current paint.
-    pub fn set_paint(&mut self, paint: impl Into<PaintType>) {
-        self.paint = paint.into();
-    }
-
     /// Set the current fill rule.
     pub fn set_fill_rule(&mut self, fill_rule: Fill) {
         self.fill_rule = fill_rule;
@@ -197,10 +190,6 @@ impl RenderContext {
     /// Set the current transform.
     pub fn set_transform(&mut self, transform: Affine) {
         self.transform = transform;
-    }
-    /// Set the current transform.
-    pub fn set_paint_transform(&mut self, transform: Affine) {
-        self.paint_transform = transform;
     }
 
     /// Reset the render context.

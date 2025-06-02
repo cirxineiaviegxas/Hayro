@@ -73,7 +73,12 @@ impl<'a> Type3<'a> {
             * UNITS_PER_EM
     }
 
-    pub(crate) fn render_glyph(&self, glyph: &Type3Glyph, device: &mut impl Device) -> Option<()> {
+    pub(crate) fn render_glyph(
+        &self,
+        glyph: &Type3Glyph,
+        paint: &Paint,
+        device: &mut impl Device,
+    ) -> Option<()> {
         let mut state = glyph.state.clone();
         let root_transform =
             state.ctm * glyph.glyph_transform * self.matrix * Affine::scale(UNITS_PER_EM as f64);
@@ -119,7 +124,7 @@ impl<'a> Type3<'a> {
         );
 
         if is_shape_glyph {
-            let mut device = Type3ShapeGlyphDevice::new(device);
+            let mut device = Type3ShapeGlyphDevice::new(device, paint);
             interpret(iter, &resources, &mut context, &mut device);
         } else {
             interpret(iter, &resources, &mut context, device);
@@ -131,11 +136,15 @@ impl<'a> Type3<'a> {
 
 struct Type3ShapeGlyphDevice<'a, T: Device> {
     inner: &'a mut T,
+    paint: &'a Paint,
 }
 
 impl<'a, T: Device> Type3ShapeGlyphDevice<'a, T> {
-    pub fn new(device: &'a mut T) -> Self {
-        Self { inner: device }
+    pub fn new(device: &'a mut T, paint: &'a Paint) -> Self {
+        Self {
+            inner: device,
+            paint,
+        }
     }
 }
 
@@ -145,20 +154,16 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.set_transform(affine);
     }
 
-    fn set_paint_transform(&mut self, _: Affine) {}
-
-    fn set_paint(&mut self, _: Paint) {}
-
-    fn stroke_path(&mut self, path: &BezPath) {
-        self.inner.stroke_path(path)
+    fn stroke_path(&mut self, path: &BezPath, _: &Paint) {
+        self.inner.stroke_path(path, self.paint)
     }
 
     fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
         self.inner.set_stroke_properties(stroke_props)
     }
 
-    fn fill_path(&mut self, path: &BezPath) {
-        self.inner.fill_path(path)
+    fn fill_path(&mut self, path: &BezPath, _: &Paint) {
+        self.inner.fill_path(path, self.paint)
     }
 
     fn set_fill_properties(&mut self, fill_props: &FillProps) {
@@ -169,14 +174,14 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.push_layer(clip_path, opacity)
     }
 
-    fn fill_glyph(&mut self, _: &Glyph<'_>) {}
+    fn fill_glyph(&mut self, _: &Glyph<'_>, _: &Paint) {}
 
-    fn stroke_glyph(&mut self, _: &Glyph<'_>) {}
+    fn stroke_glyph(&mut self, _: &Glyph<'_>, _: &Paint) {}
 
     fn draw_rgba_image(&mut self, _: RgbaImage) {}
 
-    fn draw_stencil_image(&mut self, stencil: StencilImage) {
-        self.inner.draw_stencil_image(stencil);
+    fn draw_stencil_image(&mut self, stencil: StencilImage, _: &Paint) {
+        self.inner.draw_stencil_image(stencil, self.paint);
     }
 
     fn pop(&mut self) {

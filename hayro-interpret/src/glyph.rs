@@ -49,7 +49,7 @@ pub struct Type3Glyph<'a> {
 }
 
 impl<'a> Type3Glyph<'a> {
-    pub fn interpret(&self, device: &mut impl Device) {
-        self.font.render_glyph(&self, device);
+    pub fn interpret(&self, device: &mut impl Device, paint: &Paint) {
+        self.font.render_glyph(&self, paint, device);
     }
 }

@@ -1,5 +1,5 @@
 use crate::encode::x_y_advances;
-use crate::paint::Image;
+use crate::paint::{Image, PaintType};
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
 use hayro_interpret::cache::Cache;
@@ -7,7 +7,7 @@ use hayro_interpret::clip_path::ClipPath;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
 use hayro_interpret::glyph::Glyph;
-use hayro_interpret::{FillProps, StencilImage, StrokeProps, interpret};
+use hayro_interpret::{FillProps, Paint, StencilImage, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
@@ -94,30 +94,24 @@ impl Renderer {
             is_stencil,
         };
 
-        self.0.set_paint(image);
-        self.0
-            .fill_rect(&Rect::new(0.0, 0.0, width as f64, height as f64));
+        self.0.fill_rect(
+            &Rect::new(0.0, 0.0, width as f64, height as f64),
+            image.into(),
+            self.0.transform,
+        );
+    }
+
+    fn convert_paint(&mut self, paint: &hayro_interpret::Paint) -> PaintType {
+        match paint.paint_type.clone() {
+            hayro_interpret::PaintType::Color(c) => c.to_rgba().into(),
+            hayro_interpret::PaintType::Shading(s) => s.into(),
+        }
     }
 }
 
 impl Device for Renderer {
     fn set_transform(&mut self, affine: Affine) {
         self.0.set_transform(affine);
-    }
-
-    fn set_paint_transform(&mut self, affine: Affine) {
-        self.0.set_paint_transform(affine);
-    }
-
-    fn set_paint(&mut self, paint: hayro_interpret::Paint) {
-        match paint {
-            hayro_interpret::Paint::Color(c) => {
-                self.0.set_paint(c.to_rgba());
-            }
-            hayro_interpret::Paint::Shading(s) => {
-                self.0.set_paint(s);
-            }
-        }
     }
 
     fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
@@ -143,16 +137,18 @@ impl Device for Renderer {
         self.0.set_stroke(stroke);
     }
 
-    fn stroke_path(&mut self, path: &BezPath) {
-        self.0.stroke_path(path);
+    fn stroke_path(&mut self, path: &BezPath, paint: &Paint) {
+        let paint_type = self.convert_paint(paint);
+        self.0.stroke_path(path, paint_type, paint.paint_transform);
     }
 
     fn set_fill_properties(&mut self, fill_props: &FillProps) {
         self.0.set_fill_rule(fill_props.fill_rule);
     }
 
-    fn fill_path(&mut self, path: &BezPath) {
-        self.0.fill_path(path);
+    fn fill_path(&mut self, path: &BezPath, paint: &Paint) {
+        let paint_type = self.convert_paint(paint);
+        self.0.fill_path(path, paint_type, paint.paint_transform);
     }
 
     fn push_layer(&mut self, clip: Option<&ClipPath>, opacity: f32) {
@@ -172,15 +168,18 @@ impl Device for Renderer {
         );
     }
 
-    fn draw_stencil_image(&mut self, stencil: StencilImage) {
+    fn draw_stencil_image(&mut self, stencil: StencilImage, paint: &Paint) {
         self.0.set_anti_aliasing(false);
         self.push_layer(None, 1.0);
         let old_rule = self.0.fill_rule;
         self.set_fill_properties(&FillProps {
             fill_rule: Fill::NonZero,
         });
-        self.fill_path(
-            &Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64).to_path(0.1),
+        let converted_paint = self.convert_paint(paint);
+        self.0.fill_rect(
+            &Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64),
+            converted_paint,
+            paint.paint_transform,
         );
         self.draw_image(
             stencil.stencil_data,
@@ -201,26 +200,26 @@ impl Device for Renderer {
         self.0.pop_layer();
     }
 
-    fn fill_glyph(&mut self, glyph: &Glyph<'_>) {
+    fn fill_glyph(&mut self, glyph: &Glyph<'_>, paint: &Paint) {
         match glyph {
             Glyph::Outline(o) => {
                 let outline = o.glyph_transform * o.outline();
-                self.fill_path(&outline);
+                self.fill_path(&outline, paint);
             }
             Glyph::Shape(s) => {
-                s.interpret(self);
+                s.interpret(self, paint);
             }
         }
     }
 
-    fn stroke_glyph(&mut self, glyph: &Glyph<'_>) {
+    fn stroke_glyph(&mut self, glyph: &Glyph<'_>, paint: &Paint) {
         match glyph {
             Glyph::Outline(o) => {
                 let outline = o.glyph_transform * o.outline();
-                self.stroke_path(&outline);
+                self.stroke_path(&outline, paint);
             }
             Glyph::Shape(s) => {
-                s.interpret(self);
+                s.interpret(self, paint);
             }
         }
     }
@@ -271,10 +270,11 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     );
     let mut device = Renderer(RenderContext::new(pix_width, pix_height));
 
-    device.0.set_paint(WHITE);
-    device
-        .0
-        .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
+    device.0.fill_rect(
+        &Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
+        WHITE.into(),
+        Affine::IDENTITY,
+    );
 
     device.set_transform(initial_transform);
 

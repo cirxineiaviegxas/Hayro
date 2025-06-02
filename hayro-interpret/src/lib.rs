@@ -45,7 +45,7 @@ use crate::interpret::path::{
 };
 pub use image::{RgbaImage, StencilImage};
 use interpret::text;
-pub use paint::Paint;
+pub use paint::{Paint, PaintType};
 
 #[derive(Clone, Debug)]
 pub struct StrokeProps {

@@ -3,6 +3,7 @@ use crate::color::Color;
 use crate::context::Context;
 use crate::device::Device;
 use crate::glyph::Glyph;
+use crate::paint::PaintType;
 use kurbo::{Affine, BezPath};
 use log::warn;
 
@@ -35,12 +36,12 @@ pub(crate) fn fill_path_impl(
     let base_transform = transform.unwrap_or(context.get().ctm);
     device.set_transform(base_transform);
 
-    set_device_paint(context, device, false);
+    let paint = get_paint(context, false);
     device.set_fill_properties(&context.fill_props());
 
     match path {
-        None => device.fill_path(context.path()),
-        Some(path) => device.fill_path(path),
+        None => device.fill_path(context.path(), &paint),
+        Some(path) => device.fill_path(path, &paint),
     };
 }
 
@@ -69,16 +70,16 @@ pub(crate) fn stroke_path_impl(
     let base_transform = transform.unwrap_or(context.get().ctm);
     device.set_transform(base_transform);
 
-    set_device_paint(context, device, true);
     device.set_stroke_properties(&context.stroke_props());
+    let paint = get_paint(context, true);
 
     match path {
-        None => device.stroke_path(context.path()),
-        Some(path) => device.stroke_path(path),
+        None => device.stroke_path(context.path(), &paint),
+        Some(path) => device.stroke_path(path, &paint),
     };
 }
 
-pub(crate) fn set_device_paint(context: &mut Context, device: &mut impl Device, is_stroke: bool) {
+pub(crate) fn get_paint(context: &mut Context, is_stroke: bool) -> Paint {
     let data = if is_stroke {
         context.get().stroke_data()
     } else {
@@ -88,10 +89,17 @@ pub(crate) fn set_device_paint(context: &mut Context, device: &mut impl Device, 
     // TODO: use let chains
     if data.color_space.is_pattern() && data.pattern.is_some() {
         let pattern = data.pattern.unwrap();
-        device.set_paint_transform(context.root_transform());
-        device.set_paint(Paint::Shading(pattern));
+
+        Paint {
+            paint_type: PaintType::Shading(pattern),
+            paint_transform: context.root_transform(),
+        }
     } else {
         let color = Color::new(data.color_space, data.color, data.alpha);
-        device.set_paint(Paint::Color(color));
-    };
+
+        Paint {
+            paint_type: PaintType::Color(color),
+            paint_transform: Affine::IDENTITY,
+        }
+    }
 }

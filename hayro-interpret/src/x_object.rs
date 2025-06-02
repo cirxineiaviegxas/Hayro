@@ -4,7 +4,7 @@ use crate::context::Context;
 use crate::device::Device;
 use crate::image::{RgbaImage, StencilImage};
 use crate::interpret;
-use crate::interpret::path::set_device_paint;
+use crate::interpret::path::get_paint;
 use hayro_syntax::bit::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
@@ -139,7 +139,6 @@ pub(crate) fn draw_image_xobject(
     device.set_transform(transform);
 
     if x_object.is_image_mask {
-        set_device_paint(context, device, false);
         let stencil = StencilImage {
             stencil_data: data,
             width: x_object.width,
@@ -147,7 +146,7 @@ pub(crate) fn draw_image_xobject(
             interpolate: x_object.interpolate,
         };
 
-        device.draw_stencil_image(stencil);
+        device.draw_stencil_image(stencil, &get_paint(context, false));
     } else {
         let image = RgbaImage {
             image_data: data,
