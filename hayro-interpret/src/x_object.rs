@@ -191,7 +191,7 @@ impl<'a> ImageXObject<'a> {
         } else {
             dict.get::<u8>(BPC)
                 .or_else(|| dict.get::<u8>(BITS_PER_COMPONENT))
-                .or_else(|| decoded.bits_per_component)
+                .or(decoded.bits_per_component)
                 .unwrap_or(8)
         };
         let color_space = if image_mask {

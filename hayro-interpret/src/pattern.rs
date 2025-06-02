@@ -21,7 +21,7 @@ impl ShadingPattern {
         })?;
         let matrix = dict
             .get::<[f64; 6]>(MATRIX)
-            .map(|f| Affine::new(f))
+            .map(Affine::new)
             .unwrap_or_default();
 
         if dict.contains_key(EXT_G_STATE) {

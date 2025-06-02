@@ -6,6 +6,12 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone)]
 pub struct Cache(Arc<Mutex<HashMap<ObjectIdentifier, Option<Box<dyn Any>>>>>);
 
+impl Default for Cache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Cache {
     pub fn new() -> Self {
         Self(Arc::new(Mutex::new(HashMap::new())))
@@ -22,6 +28,6 @@ impl Cache {
             .entry(id)
             .or_insert_with(|| f().map(|val| Box::new(val) as Box<dyn Any>))
             .as_ref()
-            .and_then(|val| val.downcast_ref::<T>().map(|val| val.clone()))
+            .and_then(|val| val.downcast_ref::<T>().cloned())
     }
 }

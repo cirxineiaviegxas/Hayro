@@ -208,7 +208,7 @@ impl FromData for OffsetSize {
 
     #[inline]
     fn parse(data: &[u8]) -> Option<Self> {
-        match data.get(0)? {
+        match data.first()? {
             1 => Some(OffsetSize::Size1),
             2 => Some(OffsetSize::Size2),
             3 => Some(OffsetSize::Size3),

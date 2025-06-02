@@ -134,7 +134,7 @@ impl Fine {
                         .chunks_exact_mut(TILE_HEIGHT_COMPONENTS)
                         .for_each(|s| {
                             for c in s {
-                                *c = *o * *c;
+                                *c *= *o;
                             }
                         });
                 }
@@ -158,7 +158,7 @@ impl Fine {
                             let val = m.sample(x, y) as f32 / 255.0;
 
                             for comp in pix.iter_mut() {
-                                *comp = *comp * val;
+                                *comp *= val;
                             }
                         }
                     }
@@ -244,7 +244,7 @@ impl Fine {
                             let src = src[3];
 
                             for dest in dest {
-                                *dest = *dest * src;
+                                *dest *= src;
                             }
                         }
                     }

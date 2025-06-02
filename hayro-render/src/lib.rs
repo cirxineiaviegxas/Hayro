@@ -13,7 +13,7 @@ use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
 use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
-use kurbo::{Affine, BezPath, Point, Rect, Shape};
+use kurbo::{Affine, BezPath, Point, Rect};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
 use peniko::color::{AlphaColor, Srgb};
@@ -67,8 +67,7 @@ impl Renderer {
             let t_scale_x = width as f32 / new_width as f32;
             let t_scale_y = height as f32 / new_height as f32;
 
-            cur_transform =
-                cur_transform * Affine::scale_non_uniform(t_scale_x as f64, t_scale_y as f64);
+            cur_transform *= Affine::scale_non_uniform(t_scale_x as f64, t_scale_y as f64);
             self.0.set_transform(cur_transform);
 
             width = new_width;
@@ -121,7 +120,7 @@ impl Device for Renderer {
         let transformed_width = line_width * min_factor;
 
         if transformed_width < 1.0 {
-            line_width = line_width / transformed_width;
+            line_width /= transformed_width;
         }
 
         let stroke = kurbo::Stroke {
@@ -281,7 +280,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     device.push_layer(None, 1.0);
     interpret(
         page.typed_operations(),
-        &page.resources(),
+        page.resources(),
         &mut state,
         &mut device,
     );

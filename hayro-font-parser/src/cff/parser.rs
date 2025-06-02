@@ -41,7 +41,7 @@ impl FromData for u8 {
 
     #[inline]
     fn parse(data: &[u8]) -> Option<Self> {
-        data.get(0).copied()
+        data.first().copied()
     }
 }
 
@@ -50,7 +50,7 @@ impl FromData for i8 {
 
     #[inline]
     fn parse(data: &[u8]) -> Option<Self> {
-        data.get(0).copied().map(|n| n as i8)
+        data.first().copied().map(|n| n as i8)
     }
 }
 

@@ -37,7 +37,7 @@ impl ShadingFunction {
                 let mut out = smallvec![];
 
                 for func in m {
-                    out.push(*func.eval(input.clone())?.get(0)?);
+                    out.push(*func.eval(input.clone())?.first()?);
                 }
 
                 Some(out)
@@ -124,7 +124,7 @@ impl Shading {
                 let domain = dict.get::<[f32; 4]>(DOMAIN).unwrap_or([0.0, 1.0, 0.0, 1.0]);
                 let matrix = dict
                     .get::<[f64; 6]>(MATRIX)
-                    .map(|f| Affine::new(f))
+                    .map(Affine::new)
                     .unwrap_or_default();
                 let function = read_function(dict, &color_space)?;
 
@@ -384,8 +384,8 @@ impl CoonsPatch {
         let d1 = CubicBez::new(cp[0], cp[1], cp[2], cp[3]);
         let d2 = CubicBez::new(cp[9], cp[8], cp[7], cp[6]);
 
-        let sc = (1.0 - v) * c1.eval(u).to_vec2() + v * c2.eval(u as f64).to_vec2();
-        let sd = (1.0 - u) * d1.eval(v).to_vec2() + u * d2.eval(v as f64).to_vec2();
+        let sc = (1.0 - v) * c1.eval(u).to_vec2() + v * c2.eval(u).to_vec2();
+        let sd = (1.0 - u) * d1.eval(v).to_vec2() + u * d2.eval(v).to_vec2();
         let sb = (1.0 - v) * ((1.0 - u) * c1.eval(0.0).to_vec2() + u * c1.eval(1.0).to_vec2())
             + v * ((1.0 - u) * c2.eval(0.0).to_vec2() + u * c2.eval(1.0).to_vec2());
 

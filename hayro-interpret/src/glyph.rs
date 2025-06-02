@@ -1,13 +1,12 @@
+use crate::Paint;
 use crate::cache::Cache;
-use crate::clip_path::ClipPath;
 use crate::device::Device;
+use crate::font::OutlineFont;
 use crate::font::type3::Type3;
-use crate::font::{Font, OutlineFont, UNITS_PER_EM};
 use crate::interpret::state::State;
-use crate::{FillProps, Paint, RgbaImage, StencilImage, StrokeProps};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::xref::XRef;
-use kurbo::{Affine, BezPath, Rect};
+use kurbo::{Affine, BezPath};
 use skrifa::GlyphId;
 use std::sync::Arc;
 
@@ -50,6 +49,6 @@ pub struct Type3Glyph<'a> {
 
 impl<'a> Type3Glyph<'a> {
     pub fn interpret(&self, device: &mut impl Device, paint: &Paint) {
-        self.font.render_glyph(&self, paint, device);
+        self.font.render_glyph(self, paint, device);
     }
 }

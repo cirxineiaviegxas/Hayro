@@ -59,7 +59,7 @@ impl CharStringParser<'_> {
     pub fn parse_line_to(&mut self) -> Result<(), CFFError> {
         let mut i = 0;
         while i < self.stack.len() {
-            self.x += self.stack.at(i + 0);
+            self.x += self.stack.at(i);
             self.y += self.stack.at(i + 1);
             self.builder.line_to(self.x, self.y);
             i += 2;
@@ -115,7 +115,7 @@ impl CharStringParser<'_> {
     pub fn parse_curve_to(&mut self) -> Result<(), CFFError> {
         let mut i = 0;
         while i < self.stack.len() {
-            let x1 = self.x + self.stack.at(i + 0);
+            let x1 = self.x + self.stack.at(i);
             let y1 = self.y + self.stack.at(i + 1);
             let x2 = x1 + self.stack.at(i + 2);
             let y2 = y1 + self.stack.at(i + 3);

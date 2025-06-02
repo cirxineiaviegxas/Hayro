@@ -61,7 +61,7 @@ impl<'a> ImageFiller<'a> {
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
             let sample =
-                sample_with_interpolation(self.image, pos, self.image.interpolate, &extend_point);
+                sample_with_interpolation(self.image, pos, self.image.interpolate, extend_point);
             pixel.copy_from_slice(&sample);
             pos += self.image.y_advance;
         }

@@ -142,9 +142,8 @@ fn parse_range(range_str: &str) -> Option<RangeInclusive<usize>> {
                 }
             }
         }
-    } else if range_str.ends_with("..") {
+    } else if let Some(start_str) = range_str.strip_suffix("..") {
         // Handle "3.." - from 3 to end
-        let start_str = &range_str[..range_str.len() - 2];
         if let Ok(start) = start_str.parse::<usize>() {
             return Some(start..=usize::MAX);
         }

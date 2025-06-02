@@ -114,7 +114,7 @@ impl<'a> DictionaryParser<'a> {
     #[inline]
     pub fn parse_number(&mut self) -> Option<f64> {
         self.parse_operands()?;
-        self.operands().get(0).cloned()
+        self.operands().first().cloned()
     }
 
     #[inline]

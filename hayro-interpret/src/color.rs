@@ -57,7 +57,7 @@ impl ColorSpaceType {
                     let num_components = dict.get::<usize>(N)?;
 
                     return ICCProfile::new(icc_stream.decoded()?.as_ref(), num_components)
-                        .map(|p| ColorSpaceType::ICCBased(p))
+                        .map(ColorSpaceType::ICCBased)
                         .or_else(|| {
                             dict.get::<Object>(ALTERNATE)
                                 .map(|o| ColorSpaceType::new(o))
@@ -219,10 +219,10 @@ impl ColorSpace {
     fn to_rgba_inner(&self, c: &[f32], opacity: f32) -> Option<AlphaColor<Srgb>> {
         let color = match self.0.as_ref() {
             ColorSpaceType::DeviceRgb => {
-                AlphaColor::new([*c.get(0)?, *c.get(1)?, *c.get(2)?, opacity])
+                AlphaColor::new([*c.first()?, *c.get(1)?, *c.get(2)?, opacity])
             }
             ColorSpaceType::DeviceGray => {
-                AlphaColor::new([*c.get(0)?, *c.get(0)?, *c.get(0)?, opacity])
+                AlphaColor::new([*c.first()?, *c.first()?, *c.first()?, opacity])
             }
             ColorSpaceType::DeviceCmyk => {
                 let opacity = f32_to_u8(opacity);
@@ -238,24 +238,24 @@ impl ColorSpace {
             }
             ColorSpaceType::CalGray(cal) => {
                 let opacity = f32_to_u8(opacity);
-                let srgb = cal.to_rgb(*c.get(0)?);
+                let srgb = cal.to_rgb(*c.first()?);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorSpaceType::CalRgb(cal) => {
                 let opacity = f32_to_u8(opacity);
-                let srgb = cal.to_rgb([*c.get(0)?, *c.get(1)?, *c.get(2)?]);
+                let srgb = cal.to_rgb([*c.first()?, *c.get(1)?, *c.get(2)?]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
             ColorSpaceType::Lab(lab) => {
                 let opacity = f32_to_u8(opacity);
-                let srgb = lab.to_rgb([*c.get(0)?, *c.get(1)?, *c.get(2)?]);
+                let srgb = lab.to_rgb([*c.first()?, *c.get(1)?, *c.get(2)?]);
 
                 AlphaColor::from_rgba8(srgb[0], srgb[1], srgb[2], opacity)
             }
-            ColorSpaceType::Indexed(i) => i.to_rgb(*c.get(0)?, opacity),
-            ColorSpaceType::Separation(s) => s.to_rgba(*c.get(0)?, opacity),
+            ColorSpaceType::Indexed(i) => i.to_rgb(*c.first()?, opacity),
+            ColorSpaceType::Separation(s) => s.to_rgba(*c.first()?, opacity),
             ColorSpaceType::Pattern => BLACK,
             ColorSpaceType::DeviceN(d) => d.to_rgba(c, opacity),
         };
@@ -710,10 +710,10 @@ impl ICCProfile {
             1 => self
                 .0
                 .transform
-                .convert(&[f32_to_u8(*c.get(0)?)], &mut srgb),
+                .convert(&[f32_to_u8(*c.first()?)], &mut srgb),
             3 => self.0.transform.convert(
                 &[
-                    f32_to_u8(*c.get(0)?),
+                    f32_to_u8(*c.first()?),
                     f32_to_u8(*c.get(1)?),
                     f32_to_u8(*c.get(2)?),
                 ],
@@ -721,7 +721,7 @@ impl ICCProfile {
             ),
             4 => self.0.transform.convert(
                 &[
-                    f32_to_u8(*c.get(0)?),
+                    f32_to_u8(*c.first()?),
                     f32_to_u8(*c.get(1)?),
                     f32_to_u8(*c.get(2)?),
                     f32_to_u8(*c.get(3)?),

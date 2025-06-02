@@ -30,7 +30,7 @@ impl CharStringParser<'_> {
 
         self.has_move_to = true;
 
-        self.x += self.stack.at(offset + 0);
+        self.x += self.stack.at(offset);
         self.y += self.stack.at(offset + 1);
         self.builder.move_to(self.x, self.y);
 
@@ -98,7 +98,7 @@ impl CharStringParser<'_> {
 
         let mut i = 0;
         while i < self.stack.len() {
-            self.x += self.stack.at(i + 0);
+            self.x += self.stack.at(i);
             self.y += self.stack.at(i + 1);
             self.builder.line_to(self.x, self.y);
             i += 2;
@@ -186,7 +186,7 @@ impl CharStringParser<'_> {
 
         let mut i = 0;
         while i < self.stack.len() {
-            let x1 = self.x + self.stack.at(i + 0);
+            let x1 = self.x + self.stack.at(i);
             let y1 = self.y + self.stack.at(i + 1);
             let x2 = x1 + self.stack.at(i + 2);
             let y2 = y1 + self.stack.at(i + 3);
@@ -219,7 +219,7 @@ impl CharStringParser<'_> {
 
         let mut i = 0;
         while i < self.stack.len() - 2 {
-            let x1 = self.x + self.stack.at(i + 0);
+            let x1 = self.x + self.stack.at(i);
             let y1 = self.y + self.stack.at(i + 1);
             let x2 = x1 + self.stack.at(i + 2);
             let y2 = y1 + self.stack.at(i + 3);
@@ -230,7 +230,7 @@ impl CharStringParser<'_> {
             i += 6;
         }
 
-        self.x += self.stack.at(i + 0);
+        self.x += self.stack.at(i);
         self.y += self.stack.at(i + 1);
         self.builder.line_to(self.x, self.y);
 
@@ -256,14 +256,14 @@ impl CharStringParser<'_> {
 
         let mut i = 0;
         while i < self.stack.len() - 6 {
-            self.x += self.stack.at(i + 0);
+            self.x += self.stack.at(i);
             self.y += self.stack.at(i + 1);
 
             self.builder.line_to(self.x, self.y);
             i += 2;
         }
 
-        let x1 = self.x + self.stack.at(i + 0);
+        let x1 = self.x + self.stack.at(i);
         let y1 = self.y + self.stack.at(i + 1);
         let x2 = x1 + self.stack.at(i + 2);
         let y2 = y1 + self.stack.at(i + 3);
@@ -296,7 +296,7 @@ impl CharStringParser<'_> {
         }
 
         while i < self.stack.len() {
-            let x1 = self.x + self.stack.at(i + 0);
+            let x1 = self.x + self.stack.at(i);
             let y1 = self.y;
             let x2 = x1 + self.stack.at(i + 1);
             let y2 = y1 + self.stack.at(i + 2);
@@ -333,7 +333,7 @@ impl CharStringParser<'_> {
 
         while i < self.stack.len() {
             let x1 = self.x;
-            let y1 = self.y + self.stack.at(i + 0);
+            let y1 = self.y + self.stack.at(i);
             let x2 = x1 + self.stack.at(i + 1);
             let y2 = y1 + self.stack.at(i + 2);
             self.x = x2;

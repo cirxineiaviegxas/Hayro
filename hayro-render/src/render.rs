@@ -14,7 +14,6 @@ use crate::strip::Strip;
 use crate::tile::Tiles;
 use crate::{flatten, strip};
 use kurbo::{Affine, BezPath, Cap, Join, Rect, Shape, Stroke};
-use peniko::color::palette::css::BLACK;
 use peniko::{BlendMode, Compose, Fill, Mix};
 use std::vec;
 use std::vec::Vec;

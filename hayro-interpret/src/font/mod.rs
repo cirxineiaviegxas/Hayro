@@ -36,13 +36,9 @@ impl<'a> Font<'a> {
         let f_type = match dict.get::<Name>(SUBTYPE)? {
             TYPE1 | MM_TYPE1 => FontType::Type1(Arc::new(Type1Font::new(dict)?)),
             TRUE_TYPE => TrueTypeFont::new(dict)
-                .map(|t| Arc::new(t))
+                .map(Arc::new)
                 .map(FontType::TrueType)
-                .or_else(|| {
-                    Type1Font::new(dict)
-                        .map(|t| Arc::new(t))
-                        .map(FontType::Type1)
-                })?,
+                .or_else(|| Type1Font::new(dict).map(Arc::new).map(FontType::Type1))?,
             TYPE0 => FontType::Type0(Arc::new(Type0Font::new(dict)?)),
             TYPE3 => FontType::Type3(Arc::new(Type3::new(dict))),
             f => {

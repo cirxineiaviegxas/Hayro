@@ -95,7 +95,7 @@ impl EncodeExt for ShadingPattern {
             }
         };
 
-        base_transform = base_transform * Affine::translate((0.5, 0.5));
+        base_transform *= Affine::translate((0.5, 0.5));
         let color_space = self.shading.color_space.clone();
         let (x_advance, y_advance) = x_y_advances(&base_transform);
 
@@ -103,7 +103,7 @@ impl EncodeExt for ShadingPattern {
             .shading
             .background
             .as_ref()
-            .map(|b| color_space.to_rgba(&b, 1.0))
+            .map(|b| color_space.to_rgba(b, 1.0))
             .unwrap_or(TRANSPARENT);
 
         let encoded = EncodedShading {
@@ -270,7 +270,7 @@ impl EncodedShadingType {
                 let mut t = match params {
                     RadialAxialParams::Axial => pos.x as f32,
                     RadialAxialParams::Radial { p1, r } => {
-                        radial_pos(&pos, &p1, *r, extend[0], extend[1]).unwrap_or(f32::MIN)
+                        radial_pos(&pos, p1, *r, extend[0], extend[1]).unwrap_or(f32::MIN)
                     }
                 };
 
@@ -296,8 +296,7 @@ impl EncodedShadingType {
 
                 let val = function.eval(&smallvec![t]).unwrap();
 
-                let color = color_space.to_rgba(&val, 1.0);
-                color
+                color_space.to_rgba(&val, 1.0)
             }
             EncodedShadingType::Sampled { samples, function } => {
                 let sample_point = (pos.x as u16, pos.y as u16);
@@ -307,7 +306,7 @@ impl EncodedShadingType {
                         let val = function.eval(&color.to_smallvec()).unwrap();
                         color_space.to_rgba(&val, 1.0)
                     } else {
-                        color_space.to_rgba(&color, 1.0)
+                        color_space.to_rgba(color, 1.0)
                     }
                 } else {
                     bg_color

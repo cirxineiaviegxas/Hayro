@@ -1,15 +1,12 @@
 use crate::context::Context;
 use crate::device::Device;
-use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
+use crate::font::TextRenderingMode;
 use crate::glyph::Glyph;
-use crate::interpret::path::{clip_impl, fill_path_impl, get_paint, stroke_path_impl};
+use crate::interpret::path::{clip_impl, get_paint};
 use hayro_syntax::document::page::Resources;
-use hayro_syntax::object::dict::keys::P;
 use hayro_syntax::object::string;
-use kurbo::{Affine, Vec2};
+use kurbo::Affine;
 use log::warn;
-use skrifa::GlyphId;
-use yoke::Yokeable;
 
 pub(crate) fn show_text_string<'a>(
     ctx: &mut Context<'a>,

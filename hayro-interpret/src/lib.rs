@@ -6,12 +6,10 @@ use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::name::Name;
 use hayro_syntax::object::number::Number;
-use hayro_syntax::object::string::String;
 use hayro_syntax::object::{Object, dict_or_stream};
-use kurbo::{Affine, Cap, Join, Point, Shape, Vec2};
+use kurbo::{Affine, Cap, Join, Point, Shape};
 use log::warn;
 use peniko::Fill;
-use skrifa::GlyphId;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
 
@@ -34,15 +32,13 @@ pub mod x_object;
 
 use crate::color::ColorSpace;
 use crate::context::Context;
-use crate::font::{Font, TextRenderingMode};
+use crate::font::TextRenderingMode;
 use crate::pattern::ShadingPattern;
 use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
 
-use crate::interpret::path::{
-    clip_impl, fill_path, fill_path_impl, fill_stroke_path, stroke_path, stroke_path_impl,
-};
+use crate::interpret::path::{fill_path, fill_path_impl, fill_stroke_path, stroke_path};
 pub use image::{RgbaImage, StencilImage};
 use interpret::text;
 pub use paint::{Paint, PaintType};
@@ -210,7 +206,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::SetGraphicsState(gs) => {
                 let gs = resources
-                    .get_ext_g_state::<Dict>(&gs.0, Box::new(|_| None), Box::new(|d| Some(d)))
+                    .get_ext_g_state::<Dict>(&gs.0, Box::new(|_| None), Box::new(Some))
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap();
 
@@ -266,7 +262,7 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(&resources, c.0)
+                    context.get_color_space(resources, c.0)
                 };
 
                 context.get_mut().stroke_color = cs.initial_color();
@@ -276,7 +272,7 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(&resources, c.0)
+                    context.get_color_space(resources, c.0)
                 };
 
                 context.get_mut().non_stroke_color = cs.initial_color();
@@ -365,7 +361,7 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.clip_paths.truncate(0);
             }
             TypedOperation::TextFont(t) => {
-                let font = context.get_font(&resources, t.0);
+                let font = context.get_font(resources, t.0);
                 context.get_mut().text_state.font_size = t.1.as_f32();
                 context.get_mut().text_state.font = Some(font);
             }
@@ -433,7 +429,7 @@ pub fn interpret<'a, 'b>(
                 if let Some(x_object) =
                     resources.get_x_object(&x.0, Box::new(|_| None), Box::new(|s| XObject::new(&s)))
                 {
-                    draw_xobject(&x_object, &resources, context, device);
+                    draw_xobject(&x_object, resources, context, device);
                 }
             }
             TypedOperation::InlineImage(i) => {
@@ -446,7 +442,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::Shading(s) => {
                 if let Some(sp) = resources
-                    .get_shading(&s.0, Box::new(|_| None), Box::new(|d| Some(d)))
+                    .get_shading(&s.0, Box::new(|_| None), Box::new(Some))
                     .and_then(|o| dict_or_stream(&o))
                     .and_then(|s| Shading::new(&s.0, s.1.as_ref()))
                     .map(|s| ShadingPattern {
@@ -471,7 +467,6 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::BeginCompatibility(_) => {}
             TypedOperation::EndCompatibility(_) => {}
-            TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::ColorGlyph(_) => {}
             _ => {
                 println!("{:?}", op);
