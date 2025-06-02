@@ -2,31 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::encode::image::EncodedImage;
-use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS, from_rgba8};
+use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS, from_rgba8, Sampler};
 use kurbo::{Point, Vec2};
 
 #[derive(Debug)]
 pub(crate) struct ImageFiller<'a> {
     cur_pos: Point,
     image: &'a EncodedImage,
-    height: f32,
-    height_inv: f32,
-    width: f32,
-    width_inv: f32,
 }
 
 impl<'a> ImageFiller<'a> {
     pub(crate) fn new(image: &'a EncodedImage, start_x: u16, start_y: u16) -> Self {
-        let height = image.pixmap.height() as f32;
-        let width = image.pixmap.width() as f32;
-
         Self {
             cur_pos: image.transform * Point::new(f64::from(start_x), f64::from(start_y)),
             image,
-            width,
-            width_inv: 1.0 / width,
-            height,
-            height_inv: 1.0 / height,
         }
     }
 
@@ -40,42 +29,14 @@ impl<'a> ImageFiller<'a> {
     }
 
     fn run_complex_column(&mut self, col: &mut [f32]) {
-        let extend_point = |mut point: Point| {
-            point.x = f64::from(extend(
-                point.x as f32,
-                self.image.repeat,
-                self.width,
-                self.width_inv,
-            ));
-            point.y = f64::from(extend(
-                point.y as f32,
-                self.image.repeat,
-                self.height,
-                self.height_inv,
-            ));
-
-            point
-        };
-
         let mut pos = self.cur_pos;
 
         for pixel in col.chunks_exact_mut(COLOR_COMPONENTS) {
             let sample =
-                sample_with_interpolation(self.image, pos, self.image.interpolate, extend_point);
+                sample_with_interpolation(self.image, pos, self.image.interpolate);
             pixel.copy_from_slice(&sample);
             pos += self.image.y_advance;
         }
-    }
-}
-
-#[inline(always)]
-fn extend(val: f32, repeat: bool, max: f32, inv_max: f32) -> f32 {
-    const BIAS: f32 = 0.01;
-
-    if !repeat {
-        val.clamp(0.0, max - BIAS)
-    } else {
-        val - (val * inv_max).floor() * max
     }
 }
 
@@ -85,25 +46,15 @@ impl Painter for ImageFiller<'_> {
     }
 }
 
-/// Trait for sampling values from image-like structures
-pub trait Sampleable {
-    /// Sample a single point at the given (x, y) position
-    fn sample(&self, x: u16, y: u16) -> [f32; 4];
-}
-
 /// Sample a point with optional interpolation, applying the given extend function
-pub(crate) fn sample_with_interpolation<F>(
-    sampleable: &impl Sampleable,
+pub(crate) fn sample_with_interpolation(
+    sampleable: &impl Sampler,
     point: Point,
     interpolate: bool,
-    extend: F,
 ) -> [f32; 4]
-where
-    F: Fn(Point) -> Point,
 {
     if !interpolate {
-        let extended_point = extend(point);
-        sampleable.sample(extended_point.x as u16, extended_point.y as u16)
+        sampleable.sample(point)
     } else {
         fn fract(val: f32) -> f32 {
             val - val.floor()
@@ -119,8 +70,7 @@ where
 
         for (x_idx, x) in [-0.5, 0.5].into_iter().enumerate() {
             for (y_idx, y) in [-0.5, 0.5].into_iter().enumerate() {
-                let sample_point = extend(point + Vec2::new(x, y));
-                let color_sample = sampleable.sample(sample_point.x as u16, sample_point.y as u16);
+                let color_sample = sampleable.sample(point + Vec2::new(x, y));
                 let w = cx[x_idx] * cy[y_idx];
 
                 for (component, component_sample) in interpolated_color.iter_mut().zip(color_sample)
@@ -141,8 +91,14 @@ where
     }
 }
 
-impl Sampleable for EncodedImage {
-    fn sample(&self, x: u16, y: u16) -> [f32; 4] {
+impl Sampler for EncodedImage {
+    fn sample(&self, pos: Point) -> [f32; 4] {
+        let mut x = pos.x as u16;
+        let mut y = pos.y as u16;
+        
+        x = x.clamp(0, self.pixmap.width() - 1);
+        y = y.clamp(0, self.pixmap.height() - 1);
+        
         from_rgba8(&self.pixmap.sample(x, y).to_u8_array())
     }
 }

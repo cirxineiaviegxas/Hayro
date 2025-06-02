@@ -8,6 +8,7 @@ use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use rustc_hash::FxHashMap;
 use smallvec::{ToSmallVec, smallvec};
+use crate::fine::Sampler;
 
 #[derive(Debug)]
 pub(crate) struct EncodedShading {
@@ -17,6 +18,14 @@ pub(crate) struct EncodedShading {
     pub(crate) initial_transform: Affine,
     pub(crate) background_color: AlphaColor<Srgb>,
     pub(crate) shading_type: EncodedShadingType,
+}
+
+impl Sampler for EncodedShading {
+    fn sample(&self, pos: Point) -> [f32; 4] {
+        self.shading_type.eval(pos,
+                               self.background_color,
+                               &self.color_space).components
+    }
 }
 
 impl EncodeExt for ShadingPattern {

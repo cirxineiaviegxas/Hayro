@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::encode::shading::EncodedShading;
-use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS};
+use crate::fine::{COLOR_COMPONENTS, Painter, TILE_HEIGHT_COMPONENTS, Sampler};
 use crate::paint::PremulColor;
 use kurbo::Point;
 
@@ -27,12 +27,10 @@ impl<'a> ShadingFiller<'a> {
                 let mut pos = self.cur_pos;
 
                 for pixel in column.chunks_exact_mut(COLOR_COMPONENTS) {
-                    let color = self.shading.shading_type.eval(
+                    let color = self.shading.sample(
                         pos,
-                        self.shading.background_color,
-                        &self.shading.color_space,
                     );
-                    pixel.copy_from_slice(&PremulColor::from_alpha_color(color).0);
+                    pixel.copy_from_slice(&PremulColor(color).0);
 
                     pos += self.shading.y_advance;
                 }

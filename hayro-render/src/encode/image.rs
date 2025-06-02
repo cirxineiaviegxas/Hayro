@@ -8,7 +8,6 @@ use std::sync::Arc;
 pub(crate) struct EncodedImage {
     pub(crate) pixmap: Arc<Pixmap>,
     pub(crate) interpolate: bool,
-    pub(crate) repeat: bool,
     pub(crate) transform: Affine,
     pub(crate) x_advance: Vec2,
     pub(crate) y_advance: Vec2,
@@ -26,7 +25,6 @@ impl EncodeExt for Image {
             pixmap: self.pixmap.clone(),
             interpolate: self.interpolate,
             transform,
-            repeat: self.repeat,
             x_advance,
             y_advance,
         };

@@ -54,8 +54,6 @@ impl From<AlphaColor<Srgb>> for Paint {
 pub struct Image {
     /// The underlying pixmap of the image.
     pub pixmap: Arc<Pixmap>,
-    /// Extend mode in the vertical direction.
-    pub repeat: bool,
     /// Hint for desired rendering quality.
     pub interpolate: bool,
     pub is_stencil: bool,

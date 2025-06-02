@@ -15,7 +15,9 @@ use crate::paint::Paint;
 use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
+use kurbo::Point;
 use peniko::{BlendMode, Compose, Mix};
+use peniko::color::{AlphaColor, Srgb};
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;
 pub(crate) const TILE_HEIGHT_COMPONENTS: usize = Tile::HEIGHT as usize * COLOR_COMPONENTS;
@@ -520,4 +522,9 @@ pub(crate) fn from_rgba8(c: &[u8; 4]) -> [f32; 4] {
     }
 
     rgba32
+}
+
+/// Trait for sampling values from image-like structures
+pub trait Sampler {
+    fn sample(&self, pos: Point) -> [f32; 4];
 }
