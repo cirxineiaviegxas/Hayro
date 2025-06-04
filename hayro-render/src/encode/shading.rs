@@ -18,7 +18,11 @@ pub(crate) struct EncodedShading {
 }
 
 impl Sampler for EncodedShading {
-    fn sample(&self, pos: Point) -> [f32; 4] {
+    fn interpolate(&self) -> bool {
+        false
+    }
+
+    fn sample_impl(&self, pos: Point) -> [f32; 4] {
         self.shading_type
             .eval(pos, self.background_color, &self.color_space)
             .components

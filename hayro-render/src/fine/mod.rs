@@ -13,7 +13,7 @@ use crate::paint::Paint;
 use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
-use kurbo::Point;
+use kurbo::{Point, Vec2};
 use peniko::color::{AlphaColor, Srgb};
 use peniko::{BlendMode, Compose, Mix};
 
@@ -524,5 +524,50 @@ pub(crate) fn from_rgba8(c: &[u8; 4]) -> [f32; 4] {
 
 /// Trait for sampling values from image-like structures
 pub trait Sampler {
-    fn sample(&self, pos: Point) -> [f32; 4];
+    fn interpolate(&self) -> bool;
+    fn sample_impl(&self, pos: Point) -> [f32; 4];
+    fn sample(&self, pos: Point) -> [f32; 4]
+    where
+        Self: Sized,
+    {
+        if self.interpolate() {
+            sample_interpolated(self, pos)
+        } else {
+            self.sample_impl(pos)
+        }
+    }
+}
+
+pub(crate) fn sample_interpolated(sampler: &impl Sampler, pos: Point) -> [f32; 4] {
+    fn fract(val: f32) -> f32 {
+        val - val.floor()
+    }
+
+    let x_fract = fract(pos.x as f32 + 0.5);
+    let y_fract = fract(pos.y as f32 + 0.5);
+
+    let mut interpolated_color = [0.0_f32; 4];
+
+    let cx = [1.0 - x_fract, x_fract];
+    let cy = [1.0 - y_fract, y_fract];
+
+    for (x_idx, x) in [-0.5, 0.5].into_iter().enumerate() {
+        for (y_idx, y) in [-0.5, 0.5].into_iter().enumerate() {
+            let color_sample = sampler.sample_impl(pos + Vec2::new(x, y));
+            let w = cx[x_idx] * cy[y_idx];
+
+            for (component, component_sample) in interpolated_color.iter_mut().zip(color_sample) {
+                *component += w * component_sample;
+            }
+        }
+    }
+
+    for i in 0..COLOR_COMPONENTS {
+        let f32_val = interpolated_color[i]
+            .clamp(0.0, 1.0)
+            .min(interpolated_color[3]);
+        interpolated_color[i] = f32_val;
+    }
+
+    interpolated_color
 }
