@@ -785,5 +785,57 @@
   {
     "id": "font_type3_shape_glyphs",
     "file": "pdfs/font_type3_shape_glyphs.pdf"
+  },
+  {
+    "id": "pattern_tiling_inner_transform",
+    "file": "pdfs/pattern_tiling_inner_transform.pdf"
+  },
+  {
+    "id": "pattern_tiling_large_x_step",
+    "file": "pdfs/pattern_tiling_large_x_step.pdf"
+  },
+  {
+    "id": "pattern_tiling_lines",
+    "file": "pdfs/pattern_tiling_lines.pdf"
+  },
+  {
+    "id": "pattern_tiling_nested",
+    "file": "pdfs/pattern_tiling_nested.pdf"
+  },
+  {
+    "id": "pattern_tiling_rotated",
+    "file": "pdfs/pattern_tiling_rotated.pdf"
+  },
+  {
+    "id": "pattern_tiling_rotated_shape",
+    "file": "pdfs/pattern_tiling_rotated_shape.pdf"
+  },
+  {
+    "id": "pattern_tiling_simple",
+    "file": "pdfs/pattern_tiling_simple.pdf"
+  },
+  {
+    "id": "pattern_tiling_small",
+    "file": "pdfs/pattern_tiling_small.pdf"
+  },
+  {
+    "id": "pattern_tiling_small_cell",
+    "file": "pdfs/pattern_tiling_small_cell.pdf"
+  },
+  {
+    "id": "pattern_tiling_small_x_and_y_step",
+    "file": "pdfs/pattern_tiling_small_x_and_y_step.pdf"
+  },
+  {
+    "id": "pattern_tiling_small_x_step",
+    "file": "pdfs/pattern_tiling_small_x_step.pdf"
+  },
+  {
+    "id": "pattern_tiling_stencil",
+    "file": "pdfs/pattern_tiling_stencil.pdf"
+  },
+  {
+    "id": "pattern_tiling_with_text",
+    "file": "pdfs/pattern_tiling_with_text.pdf"
   }
 ]

@@ -111,6 +111,10 @@
     "file": "pdfs/gradientfill.pdf"
   },
   {
+    "id": "issue15716",
+    "file": "pdfs/issue15716.pdf"
+  },
+  {
     "id": "helloworld-bad",
     "file": "pdfs/helloworld-bad.pdf"
   },
@@ -120,6 +124,10 @@
     "md5": "71ec73831ece9b508ad20efa6ff28642",
     "link": true,
     "last_page": 0
+  },
+  {
+    "id": "pattern_text_embedded_font",
+    "file": "pdfs/pattern_text_embedded_font.pdf"
   },
   {
     "id": "bigboundingbox",
@@ -135,6 +143,10 @@
   {
     "id": "clippath",
     "file": "pdfs/clippath.pdf"
+  },
+  {
+    "id": "issue2177-eq",
+    "file": "pdfs/issue2177.pdf"
   },
   {
     "id": "calgray",

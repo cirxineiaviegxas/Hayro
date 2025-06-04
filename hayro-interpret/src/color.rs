@@ -25,7 +25,7 @@ enum ColorSpaceType {
     DeviceCmyk,
     DeviceGray,
     DeviceRgb,
-    Pattern,
+    Pattern(ColorSpace),
     Indexed(Indexed),
     ICCBased(ICCProfile),
     CalGray(CalGray),
@@ -87,7 +87,11 @@ impl ColorSpaceType {
                     return Some(ColorSpaceType::Separation(Separation::new(&color_array)?));
                 }
                 DEVICE_N => return Some(ColorSpaceType::DeviceN(DeviceN::new(&color_array)?)),
-                PATTERN => return Some(ColorSpaceType::Pattern),
+                PATTERN => {
+                    let _ = iter.next::<Name>();
+                    let cs = iter.next::<Object>().map(|o| ColorSpace::new(o)).unwrap_or(ColorSpace::device_rgb());
+                    return Some(ColorSpaceType::Pattern(cs))
+                },
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
@@ -104,7 +108,7 @@ impl ColorSpaceType {
             DEVICE_GRAY | G => Some(ColorSpaceType::DeviceGray),
             DEVICE_CMYK | CMYK => Some(ColorSpaceType::DeviceCmyk),
             CALCMYK => Some(ColorSpaceType::DeviceCmyk),
-            PATTERN => Some(ColorSpaceType::Pattern),
+            PATTERN => Some(ColorSpaceType::Pattern(ColorSpace::device_rgb())),
             _ => None,
         }
     }
@@ -142,12 +146,19 @@ impl ColorSpace {
 
     /// Return the pattern color space.
     pub fn pattern() -> ColorSpace {
-        Self(Arc::new(ColorSpaceType::Pattern))
+        Self(Arc::new(ColorSpaceType::Pattern(ColorSpace::device_gray())))
+    }
+    
+    pub fn pattern_cs(&self) -> Option<ColorSpace> {
+        match self.0.as_ref() {
+            ColorSpaceType::Pattern(cs) => Some(cs.clone()),
+            _ => None,
+        }
     }
 
     /// Return `true` if the current color space is the pattern color space.
     pub fn is_pattern(&self) -> bool {
-        matches!(self.0.as_ref(), ColorSpaceType::Pattern)
+        matches!(self.0.as_ref(), ColorSpaceType::Pattern(_))
     }
 
     /// Get the default decode array for the color space.
@@ -168,7 +179,7 @@ impl ColorSpace {
             ColorSpaceType::Separation(_) => smallvec![(0.0, 1.0)],
             ColorSpaceType::DeviceN(d) => smallvec![(0.0, 1.0); d.num_components],
             // Not a valid image color space.
-            ColorSpaceType::Pattern => smallvec![(0.0, 1.0)],
+            ColorSpaceType::Pattern(_) => smallvec![(0.0, 1.0)],
         }
     }
 
@@ -189,7 +200,7 @@ impl ColorSpace {
             ColorSpaceType::Lab(_) => smallvec![0.0, 0.0, 0.0],
             ColorSpaceType::Indexed(_) => smallvec![0.0],
             ColorSpaceType::Separation(_) => smallvec![1.0],
-            ColorSpaceType::Pattern => smallvec![0.0],
+            ColorSpaceType::Pattern(c) => c.initial_color(),
             ColorSpaceType::DeviceN(d) => smallvec![1.0; d.num_components],
         }
     }
@@ -206,7 +217,7 @@ impl ColorSpace {
             ColorSpaceType::Lab(_) => 3,
             ColorSpaceType::Indexed(_) => 1,
             ColorSpaceType::Separation(_) => 1,
-            ColorSpaceType::Pattern => 1,
+            ColorSpaceType::Pattern(p) => p.num_components(),
             ColorSpaceType::DeviceN(d) => d.num_components as u8,
         }
     }
@@ -256,7 +267,7 @@ impl ColorSpace {
             }
             ColorSpaceType::Indexed(i) => i.to_rgb(*c.first()?, opacity),
             ColorSpaceType::Separation(s) => s.to_rgba(*c.first()?, opacity),
-            ColorSpaceType::Pattern => BLACK,
+            ColorSpaceType::Pattern(_) => BLACK,
             ColorSpaceType::DeviceN(d) => d.to_rgba(c, opacity),
         };
 

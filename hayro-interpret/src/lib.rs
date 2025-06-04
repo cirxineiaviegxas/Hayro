@@ -290,32 +290,24 @@ pub fn interpret<'a, 'b>(
                 // Ignore for now.
             }
             TypedOperation::NonStrokeColorNamed(n) => {
-                if let Some(pattern) = n.1.and_then(|name| {
+                context.get_mut().non_stroke_color =
+                    n.0.into_iter().map(|n| n.as_f32()).collect();
+                context.get_mut().non_stroke_pattern = n.1.and_then(|name| {
                     resources.get_pattern(
                         &name,
                         Box::new(|_| None),
-                        Box::new(|d| Pattern::new(d)),
+                        Box::new(|d| Pattern::new(d, context, resources)),
                     )
-                }) {
-                    println!("fill pattern: {:?}", pattern);
-                    context.get_mut().non_stroke_pattern = Some(pattern);
-                } else {
-                    context.get_mut().non_stroke_color =
-                        n.0.into_iter().map(|n| n.as_f32()).collect();
-                }
+                });
             }
             TypedOperation::StrokeColorNamed(n) => {
-                if let Some(pattern) = n.1.and_then(|name| {
+                context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
+                context.get_mut().stroke_pattern = n.1.and_then(|name| {
                     resources.get_pattern(
                         &name,
                         Box::new(|_| None),
-                        Box::new(|d| Pattern::new(d)),
-                    )
-                }) {
-                    context.get_mut().stroke_pattern = Some(pattern);
-                } else {
-                    context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
-                }
+                        Box::new(|d| Pattern::new(d, context, resources)),
+                    )});
             }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}
             TypedOperation::MarkedContentPointWithProperties(_) => {}

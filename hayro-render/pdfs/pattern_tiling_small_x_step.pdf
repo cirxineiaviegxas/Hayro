@@ -1,0 +1,199 @@
+%PDF-1.5
+%µ¶
+
+1 0 obj
+<<
+  /Type /Pages
+  /Kids [ 2 0 R ]
+  /Count 1
+>>
+endobj
+
+2 0 obj
+<<
+  /Type /Page
+  /Parent 1 0 R
+  /MediaBox [ 0 0 150 150 ]
+  /Contents 22 0 R
+  /Group <<
+    /Type /Group
+    /S /Transparency
+    /I true
+    /CS /DeviceRGB
+  >>
+  /Resources <<
+    /Pattern <<
+      /p6 6 0 R
+    >>
+    /ExtGState <<
+      /a0 <<
+        /CA 1
+        /ca 1
+      >>
+    >>
+  >>
+>>
+endobj
+
+6 0 obj
+<<
+  /Length 6
+  /PatternType 1
+  /BBox [ 0 0 2000 2000 ]
+  /XStep 1500
+  /YStep 2000
+  /TilingType 1
+  /PaintType 1
+  /Matrix [ .0075 0 0 -.0075 0 150 ]
+  /Resources <<
+    /XObject <<
+      /x7 7 0 R
+    >>
+  >>
+>>
+stream
+/x7 Do
+endstream
+endobj
+
+7 0 obj
+<<
+  /Length 157
+  /Resources <<
+    /ExtGState <<
+      /a0 <<
+        /CA .5
+        /ca .5
+      >>
+    >>
+  >>
+  /Type /XObject
+  /Subtype /Form
+  /BBox [ 0 0 2000 2000 ]
+  /Group <<
+    /Type /Group
+    /S /Transparency
+    /I true
+    /CS /DeviceRGB
+  >>
+>>
+stream
+q
+.501961 .501961 .501961 rg/a0 gs
+0 0 1000 1000 re
+f
+1 0 0 rg
+1000 0 1000 1000 re
+f
+0 0 1 rg
+0 1000 1000 1000 re
+f
+0 .501961 0 rg
+1000 1000 1000 1000 re
+f
+Q
+endstream
+endobj
+
+11 0 obj
+<<
+  /Producer (cairo 1.16.0 \(https://cairographics.org\))
+  /Creator <FEFF0049006E006B0073006300610070006500200031002E0034002E00310020002800680074007400700073003A002F002F0069006E006B00730063006100700065002E006F007200670029>
+  /CreationDate (D:20250605173952Z)
+>>
+endobj
+
+12 0 obj
+<<
+  /Type /Catalog
+  /Pages 1 0 R
+>>
+endobj
+
+22 0 obj
+<<
+  /Length 518
+>>
+stream
+q
+1 0 0 -1 0 150 cm
+/Pattern cs
+/p6 scn/a0 gs
+30 15 m
+120 15 l
+128.309 15 135 21.691 135 30 c
+135 120 l
+135 128.309 128.309 135 120 135 c
+30 135 l
+21.691 135 15 128.309 15 120 c
+15 30 l
+15 21.691 21.691 15 30 15 c
+h
+30 15 m
+f
+Q
+q
+1 0 0 -1 0 150 cm
+0 0 .545098 RG/a0 gs[]0 d
+q
+.75 w
+4 M
+30 15 m
+120 15 l
+128.309 15 135 21.691 135 30 c
+135 120 l
+135 128.309 128.309 135 120 135 c
+30 135 l
+21.691 135 15 128.309 15 120 c
+15 30 l
+15 21.691 21.691 15 30 15 c
+h
+30 15 m
+S
+Q
+q
+0 0 0 SCN
+.75 w
+4 M
+.75 .75 148.5 148.5 re
+S
+Q
+Q
+endstream
+endobj
+
+xref
+0 23
+0000000003 65535 f 
+0000000016 00000 n 
+0000000082 00000 n 
+0000000004 00010 f 
+0000000005 00010 f 
+0000000008 00010 f 
+0000000402 00000 n 
+0000000659 00000 n 
+0000000009 00010 f 
+0000000010 00010 f 
+0000000013 00010 f 
+0000001114 00000 n 
+0000001396 00000 n 
+0000000014 00009 f 
+0000000015 00008 f 
+0000000016 00007 f 
+0000000017 00006 f 
+0000000018 00005 f 
+0000000019 00004 f 
+0000000020 00003 f 
+0000000021 00002 f 
+0000000000 00001 f 
+0000001451 00000 n 
+
+trailer
+<<
+  /Size 23
+  /Info 11 0 R
+  /Root 12 0 R
+>>
+startxref
+2024
+%%EOF

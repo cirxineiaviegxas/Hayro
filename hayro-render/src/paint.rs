@@ -58,6 +58,7 @@ pub struct Image {
     /// Hint for desired rendering quality.
     pub interpolate: bool,
     pub is_stencil: bool,
+    pub is_pattern: bool,
 }
 
 /// A premultiplied color.

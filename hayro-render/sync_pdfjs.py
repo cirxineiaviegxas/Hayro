@@ -71,6 +71,9 @@ class PDFJSSync:
             "personwithdog",
             "issue17065",
             "issue13372",
+            "issue2177-eq",
+            "issue15716",
+            "pattern_text_embedded_font",
         ]
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:

@@ -1,3 +1,4 @@
+use std::cmp::max;
 use crate::encode::{x_y_advances, Buffer};
 use crate::paint::{Image, PaintType};
 use crate::pixmap::Pixmap;
@@ -83,6 +84,7 @@ impl Renderer {
             buffer: Arc::new(buffer),
             interpolate,
             is_stencil,
+            is_pattern: false,
         };
 
         self.0.fill_rect(
@@ -92,19 +94,65 @@ impl Renderer {
         );
     }
 
-    fn convert_paint(&mut self, paint: &hayro_interpret::Paint) -> PaintType {
+    fn convert_paint(&mut self, paint: &hayro_interpret::Paint) -> (PaintType, Affine) {
         match paint.paint_type.clone() {
-            hayro_interpret::PaintType::Color(c) => c.to_rgba().into(),
-            hayro_interpret::PaintType::Pattern(p) => match p {
-                Pattern::Shading(s) => s.into(),
-                Pattern::Tiling(t) => {
-                    panic!("currently unimplemented: {:?}", t);
-                    
-                }
+            hayro_interpret::PaintType::Color(c) => {
+                (c.to_rgba().into(), Affine::IDENTITY)
             },
+            hayro_interpret::PaintType::Pattern(p) => {
+                match p {
+                    Pattern::Shading(s) => (s.into(), paint.paint_transform),
+                    Pattern::Tiling(t) => {
+                        let bbox = t.bbox.get();
+                        let (xs, ys) = {
+                            let (x, y) = x_y_advances(&(paint.paint_transform * t.matrix));
+                            (x.length() as f32, y.length() as f32)
+                        };
+                        
+                        let mut x_step = xs * t.x_step;
+                        let mut y_step = ys * t.y_step;
+                        
+                        let scaled_width = bbox.width() as f32 * xs;
+                        let scaled_height = bbox.height() as f32 * ys;
+                        let pix_width = x_step.abs().ceil() as u16;
+                        let pix_height = y_step.abs().ceil() as u16;
+                        
+                        let mut renderer = Renderer(RenderContext::new(pix_width, pix_height));
+                        let mut initial_transform = Affine::new([xs as f64, 0.0, 0.0, ys as f64, -bbox.x0, -bbox.y0]);
+                        t.interpret(&mut renderer, initial_transform);
+                        let mut pix = Pixmap::new(pix_width, pix_height);
+                        renderer.0.render_to_pixmap(&mut pix);
+                        
+                        // TODO: Add tests
+                        if x_step < 0.0 {
+                            initial_transform = initial_transform * Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
+                            x_step = x_step.abs();
+                        }
+                        
+                        if y_step < 0.0 {
+                            initial_transform = initial_transform * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
+                            y_step = y_step.abs();
+                        }
+                        
+                        let buffer = Buffer::new_u8(pix.data_as_u8_slice().to_vec(), pix_width as u32, pix_height as u32);
+                        
+                        let final_transform = paint.paint_transform * t.matrix * initial_transform.inverse();
+                        
+                        let image = PaintType::Image(Image {
+                            buffer: Arc::new(buffer),
+                            interpolate: true,
+                            is_stencil: false,
+                            is_pattern: true,
+                        });
+
+                        (image.into(), final_transform)
+                    }
+                }
+            }
         }
     }
 }
+
 
 impl Device for Renderer {
     fn set_transform(&mut self, affine: Affine) {
@@ -135,8 +183,8 @@ impl Device for Renderer {
     }
 
     fn stroke_path(&mut self, path: &BezPath, paint: &Paint) {
-        let paint_type = self.convert_paint(paint);
-        self.0.stroke_path(path, paint_type, paint.paint_transform);
+        let (paint_type, paint_transform) = self.convert_paint(paint);
+        self.0.stroke_path(path, paint_type, paint_transform);
     }
 
     fn set_fill_properties(&mut self, fill_props: &FillProps) {
@@ -144,8 +192,8 @@ impl Device for Renderer {
     }
 
     fn fill_path(&mut self, path: &BezPath, paint: &Paint) {
-        let paint_type = self.convert_paint(paint);
-        self.0.fill_path(path, paint_type, paint.paint_transform);
+        let (paint_type, paint_transform) = self.convert_paint(paint);
+        self.0.fill_path(path, paint_type, paint_transform);
     }
 
     fn push_layer(&mut self, clip: Option<&ClipPath>, opacity: f32) {
@@ -172,11 +220,11 @@ impl Device for Renderer {
         self.set_fill_properties(&FillProps {
             fill_rule: Fill::NonZero,
         });
-        let converted_paint = self.convert_paint(paint);
+        let (converted_paint, paint_transform) = self.convert_paint(paint);
         self.0.fill_rect(
             &Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64),
             converted_paint,
-            paint.paint_transform,
+            paint_transform,
         );
         self.draw_image(
             stencil.stencil_data,

@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub(crate) struct EncodedImage {
     pub(crate) buffer: Arc<Buffer<4>>,
     pub(crate) interpolate: bool,
+    pub(crate) is_pattern: bool,
 }
 
 impl EncodeExt for Image {
@@ -17,6 +18,7 @@ impl EncodeExt for Image {
         let encoded = EncodedImage {
             buffer: self.buffer.clone(),
             interpolate: self.interpolate,
+            is_pattern: self.is_pattern,
         };
 
         let shader = Shader::new(transform.inverse(), encoded);
@@ -37,8 +39,15 @@ impl Sampler for EncodedImage {
     }
 
     fn sample_impl(&self, mut pos: Point) -> [f32; 4] {
-        pos.x = pos.x.clamp(0.0, self.buffer.width as f64 - 1.0);
-        pos.y = pos.y.clamp(0.0, self.buffer.height as f64 - 1.0);
+        if self.is_pattern {
+            let extend = |val: f64, max: f64| val - (val / max).floor() * max;
+            pos.x = extend(pos.x, self.buffer.width as f64);
+            pos.y = extend(pos.y, self.buffer.height as f64);
+        }   else {
+            pos.x = pos.x.clamp(0.0, self.buffer.width as f64 - 1.0);
+            pos.y = pos.y.clamp(0.0, self.buffer.height as f64 - 1.0);
+        }
+        
 
         self.buffer.sample(pos)
     }

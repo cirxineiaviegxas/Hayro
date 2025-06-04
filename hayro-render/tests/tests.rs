@@ -187,6 +187,19 @@ use crate::run_test;
 #[test] fn font_type3_filled_glyphs() { run_test("font_type3_filled_glyphs", "pdfs/font_type3_filled_glyphs.pdf", None); }
 #[test] fn font_type3_stroked_glyphs() { run_test("font_type3_stroked_glyphs", "pdfs/font_type3_stroked_glyphs.pdf", None); }
 #[test] fn font_type3_shape_glyphs() { run_test("font_type3_shape_glyphs", "pdfs/font_type3_shape_glyphs.pdf", None); }
+#[test] fn pattern_tiling_inner_transform() { run_test("pattern_tiling_inner_transform", "pdfs/pattern_tiling_inner_transform.pdf", None); }
+#[test] fn pattern_tiling_large_x_step() { run_test("pattern_tiling_large_x_step", "pdfs/pattern_tiling_large_x_step.pdf", None); }
+#[test] fn pattern_tiling_lines() { run_test("pattern_tiling_lines", "pdfs/pattern_tiling_lines.pdf", None); }
+#[test] fn pattern_tiling_nested() { run_test("pattern_tiling_nested", "pdfs/pattern_tiling_nested.pdf", None); }
+#[test] fn pattern_tiling_rotated() { run_test("pattern_tiling_rotated", "pdfs/pattern_tiling_rotated.pdf", None); }
+#[test] fn pattern_tiling_rotated_shape() { run_test("pattern_tiling_rotated_shape", "pdfs/pattern_tiling_rotated_shape.pdf", None); }
+#[test] fn pattern_tiling_simple() { run_test("pattern_tiling_simple", "pdfs/pattern_tiling_simple.pdf", None); }
+#[test] fn pattern_tiling_small() { run_test("pattern_tiling_small", "pdfs/pattern_tiling_small.pdf", None); }
+#[test] fn pattern_tiling_small_cell() { run_test("pattern_tiling_small_cell", "pdfs/pattern_tiling_small_cell.pdf", None); }
+#[test] fn pattern_tiling_small_x_and_y_step() { run_test("pattern_tiling_small_x_and_y_step", "pdfs/pattern_tiling_small_x_and_y_step.pdf", None); }
+#[test] fn pattern_tiling_small_x_step() { run_test("pattern_tiling_small_x_step", "pdfs/pattern_tiling_small_x_step.pdf", None); }
+#[test] fn pattern_tiling_stencil() { run_test("pattern_tiling_stencil", "pdfs/pattern_tiling_stencil.pdf", None); }
+#[test] fn pattern_tiling_with_text() { run_test("pattern_tiling_with_text", "pdfs/pattern_tiling_with_text.pdf", None); }
 #[test] fn pdfjs_mmtype1() { run_test("pdfjs_mmtype1", "pdfs/pdfjs/mmtype1.pdf", None); }
 #[test] fn pdfjs_arabiccidtruetype_pdf() { run_test("pdfjs_arabiccidtruetype_pdf", "pdfs/pdfjs/ArabicCIDTrueType.pdf", None); }
 #[test] fn pdfjs_colorspace_sin() { run_test("pdfjs_colorspace_sin", "pdfs/pdfjs/colorspace_sin.pdf", None); }
@@ -213,11 +226,14 @@ use crate::run_test;
 #[test] fn pdfjs_colorspace_atan() { run_test("pdfjs_colorspace_atan", "pdfs/pdfjs/colorspace_atan.pdf", None); }
 #[test] fn pdfjs_cid_cff() { run_test("pdfjs_cid_cff", "pdfs/pdfjs/cid_cff.pdf", None); }
 #[test] fn pdfjs_gradientfill() { run_test("pdfjs_gradientfill", "pdfs/pdfjs/gradientfill.pdf", None); }
+#[test] fn pdfjs_issue15716() { run_test("pdfjs_issue15716", "pdfs/pdfjs/issue15716.pdf", None); }
 #[test] fn pdfjs_helloworld_bad() { run_test("pdfjs_helloworld_bad", "pdfs/pdfjs/helloworld-bad.pdf", None); }
 #[test] fn pdfjs_issue2006() { run_test("pdfjs_issue2006", "downloads/pdfjs/issue2006.pdf", Some("..=0")); }
+#[test] fn pdfjs_pattern_text_embedded_font() { run_test("pdfjs_pattern_text_embedded_font", "pdfs/pdfjs/pattern_text_embedded_font.pdf", None); }
 #[test] fn pdfjs_bigboundingbox() { run_test("pdfjs_bigboundingbox", "pdfs/pdfjs/bigboundingbox.pdf", None); }
 #[test] fn pdfjs_bug1260585() { run_test("pdfjs_bug1260585", "downloads/pdfjs/bug1260585.pdf", Some("..=0")); }
 #[test] fn pdfjs_clippath() { run_test("pdfjs_clippath", "pdfs/pdfjs/clippath.pdf", None); }
+// #[test] fn pdfjs_issue2177_eq() { run_test("pdfjs_issue2177_eq", "pdfs/pdfjs/issue2177.pdf", None); }
 #[test] fn pdfjs_calgray() { run_test("pdfjs_calgray", "pdfs/pdfjs/calgray.pdf", None); }
 #[test] fn pdfjs_calrgb() { run_test("pdfjs_calrgb", "pdfs/pdfjs/calrgb.pdf", Some("..=7")); }
 #[test] fn pdfjs_issue4227() { run_test("pdfjs_issue4227", "pdfs/pdfjs/coons-allflags-withfunction.pdf", None); }
