@@ -19,6 +19,7 @@ use peniko::color::palette::css::WHITE;
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
+use hayro_interpret::pattern::Pattern;
 
 mod coarse;
 mod encode;
@@ -94,7 +95,13 @@ impl Renderer {
     fn convert_paint(&mut self, paint: &hayro_interpret::Paint) -> PaintType {
         match paint.paint_type.clone() {
             hayro_interpret::PaintType::Color(c) => c.to_rgba().into(),
-            hayro_interpret::PaintType::Shading(s) => s.into(),
+            hayro_interpret::PaintType::Pattern(p) => match p {
+                Pattern::Shading(s) => s.into(),
+                Pattern::Tiling(t) => {
+                    panic!("currently unimplemented: {:?}", t);
+                    
+                }
+            },
         }
     }
 }

@@ -351,9 +351,9 @@ impl<'a> Resources<'a> {
         &self,
         name: &Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
-        mut resolve: Box<dyn FnMut(Dict<'a>) -> Option<U> + '_>,
+        mut resolve: Box<dyn FnMut(Object<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Dict, U>(name, &self.patterns, &mut cache, &mut resolve)
+        self.get_resource::<Object, U>(name, &self.patterns, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()

@@ -136,11 +136,11 @@ impl<'a> Type3<'a> {
 
 struct Type3ShapeGlyphDevice<'a, T: Device> {
     inner: &'a mut T,
-    paint: &'a Paint,
+    paint: &'a Paint<'a>,
 }
 
 impl<'a, T: Device> Type3ShapeGlyphDevice<'a, T> {
-    pub fn new(device: &'a mut T, paint: &'a Paint) -> Self {
+    pub fn new(device: &'a mut T, paint: &'a Paint<'a>) -> Self {
         Self {
             inner: device,
             paint,

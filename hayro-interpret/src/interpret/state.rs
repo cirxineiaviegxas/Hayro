@@ -1,6 +1,6 @@
 use crate::color::{ColorComponents, ColorSpace};
 use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
-use crate::pattern::ShadingPattern;
+use crate::pattern::{Pattern, ShadingPattern};
 use kurbo::{Affine, BezPath, Cap, Join, Vec2};
 use peniko::Fill;
 use smallvec::SmallVec;
@@ -136,13 +136,13 @@ pub(crate) struct State<'a> {
 
     // Stroke paint parameters.
     pub(crate) stroke_color: ColorComponents,
-    pub(crate) stroke_pattern: Option<ShadingPattern>,
+    pub(crate) stroke_pattern: Option<Pattern<'a>>,
     pub(crate) stroke_cs: ColorSpace,
     pub(crate) stroke_alpha: f32,
 
     // Non-stroke paint parameters.
     pub(crate) non_stroke_color: ColorComponents,
-    pub(crate) non_stroke_pattern: Option<ShadingPattern>,
+    pub(crate) non_stroke_pattern: Option<Pattern<'a>>,
     pub(crate) none_stroke_cs: ColorSpace,
     pub(crate) non_stroke_alpha: f32,
 
@@ -159,8 +159,8 @@ pub(crate) struct State<'a> {
     pub(crate) n_clips: u32,
 }
 
-impl State<'_> {
-    pub(crate) fn stroke_data(&self) -> PaintData {
+impl<'a> State<'a> {
+    pub(crate) fn stroke_data(&self) -> PaintData<'a> {
         PaintData {
             alpha: self.stroke_alpha,
             color: self.stroke_color.clone(),
@@ -169,7 +169,7 @@ impl State<'_> {
         }
     }
 
-    pub(crate) fn non_stroke_data(&self) -> PaintData {
+    pub(crate) fn non_stroke_data(&self) -> PaintData<'a> {
         PaintData {
             alpha: self.non_stroke_alpha,
             color: self.non_stroke_color.clone(),
@@ -179,9 +179,9 @@ impl State<'_> {
     }
 }
 
-pub(crate) struct PaintData {
+pub(crate) struct PaintData<'a> {
     pub(crate) alpha: f32,
     pub(crate) color: ColorComponents,
     pub(crate) color_space: ColorSpace,
-    pub(crate) pattern: Option<ShadingPattern>,
+    pub(crate) pattern: Option<Pattern<'a>>,
 }

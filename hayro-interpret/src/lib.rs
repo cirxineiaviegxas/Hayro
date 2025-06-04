@@ -33,7 +33,7 @@ pub mod x_object;
 use crate::color::ColorSpace;
 use crate::context::Context;
 use crate::font::TextRenderingMode;
-use crate::pattern::ShadingPattern;
+use crate::pattern::{Pattern, ShadingPattern};
 use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
@@ -294,9 +294,10 @@ pub fn interpret<'a, 'b>(
                     resources.get_pattern(
                         &name,
                         Box::new(|_| None),
-                        Box::new(|d| ShadingPattern::new(&d)),
+                        Box::new(|d| Pattern::new(d)),
                     )
                 }) {
+                    println!("fill pattern: {:?}", pattern);
                     context.get_mut().non_stroke_pattern = Some(pattern);
                 } else {
                     context.get_mut().non_stroke_color =
@@ -308,7 +309,7 @@ pub fn interpret<'a, 'b>(
                     resources.get_pattern(
                         &name,
                         Box::new(|_| None),
-                        Box::new(|d| ShadingPattern::new(&d)),
+                        Box::new(|d| Pattern::new(d)),
                     )
                 }) {
                     context.get_mut().stroke_pattern = Some(pattern);
@@ -445,10 +446,10 @@ pub fn interpret<'a, 'b>(
                     .get_shading(&s.0, Box::new(|_| None), Box::new(Some))
                     .and_then(|o| dict_or_stream(&o))
                     .and_then(|s| Shading::new(&s.0, s.1.as_ref()))
-                    .map(|s| ShadingPattern {
+                    .map(|s| Pattern::Shading(ShadingPattern {
                         shading: Arc::new(s),
                         matrix: Affine::IDENTITY,
-                    })
+                    }))
                 {
                     context.save_state();
                     context.push_root_transform();

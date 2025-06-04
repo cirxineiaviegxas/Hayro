@@ -79,7 +79,7 @@ pub(crate) fn stroke_path_impl(
     };
 }
 
-pub(crate) fn get_paint(context: &mut Context, is_stroke: bool) -> Paint {
+pub(crate) fn get_paint<'a>(context: &mut Context<'a>, is_stroke: bool) -> Paint<'a> {
     let data = if is_stroke {
         context.get().stroke_data()
     } else {
@@ -88,10 +88,10 @@ pub(crate) fn get_paint(context: &mut Context, is_stroke: bool) -> Paint {
 
     // TODO: use let chains
     if data.color_space.is_pattern() && data.pattern.is_some() {
-        let pattern = data.pattern.unwrap();
+        let pattern = data.pattern.unwrap().clone();
 
         Paint {
-            paint_type: PaintType::Shading(pattern),
+            paint_type: PaintType::Pattern(pattern),
             paint_transform: context.root_transform(),
         }
     } else {
