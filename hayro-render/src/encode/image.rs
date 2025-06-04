@@ -1,13 +1,12 @@
-use crate::encode::{EncodeExt, EncodedPaint, Shader, x_y_advances};
+use crate::encode::{EncodeExt, EncodedPaint, Shader, x_y_advances, Buffer};
 use crate::fine::{COLOR_COMPONENTS, Sampler, from_rgba8};
 use crate::paint::{Image, IndexedPaint, Paint};
-use crate::pixmap::Pixmap;
 use kurbo::{Affine, Point, Vec2};
 use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) struct EncodedImage {
-    pub(crate) pixmap: Arc<Pixmap>,
+    pub(crate) buffer: Arc<Buffer<4>>,
     pub(crate) interpolate: bool,
 }
 
@@ -16,7 +15,7 @@ impl EncodeExt for Image {
         let idx = paints.len();
 
         let encoded = EncodedImage {
-            pixmap: self.pixmap.clone(),
+            buffer: self.buffer.clone(),
             interpolate: self.interpolate,
         };
 
@@ -37,13 +36,10 @@ impl Sampler for EncodedImage {
         self.interpolate
     }
 
-    fn sample_impl(&self, pos: Point) -> [f32; 4] {
-        let mut x = pos.x as u16;
-        let mut y = pos.y as u16;
+    fn sample_impl(&self, mut pos: Point) -> [f32; 4] {
+        pos.x = pos.x.clamp(0.0, self.buffer.width as f64 - 1.0);
+        pos.y = pos.y.clamp(0.0, self.buffer.height as f64 - 1.0);
 
-        x = x.clamp(0, self.pixmap.width() - 1);
-        y = y.clamp(0, self.pixmap.height() - 1);
-
-        from_rgba8(&self.pixmap.sample(x, y).to_u8_array())
+        self.buffer.sample(pos)
     }
 }

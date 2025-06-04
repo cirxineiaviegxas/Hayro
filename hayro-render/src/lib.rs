@@ -1,4 +1,4 @@
-use crate::encode::x_y_advances;
+use crate::encode::{x_y_advances, Buffer};
 use crate::paint::{Image, PaintType};
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
@@ -16,7 +16,6 @@ use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
 use kurbo::{Affine, BezPath, Point, Rect};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
-use peniko::color::{AlphaColor, Srgb};
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
@@ -76,18 +75,11 @@ impl Renderer {
             resized.to_rgba8().into_raw()
         };
 
-        let premul = image_data
-            .chunks_exact(4)
-            .map(|d| {
-                AlphaColor::<Srgb>::from_rgba8(d[0], d[1], d[2], d[3])
-                    .premultiply()
-                    .to_rgba8()
-            })
-            .collect();
-        let pixmap = Pixmap::from_parts(premul, width as u16, height as u16);
+        let mut buffer = Buffer::<4>::new_u8(image_data, width, height);
+        buffer.premultiply();
 
         let image = Image {
-            pixmap: Arc::new(pixmap),
+            buffer: Arc::new(buffer),
             interpolate,
             is_stencil,
         };
