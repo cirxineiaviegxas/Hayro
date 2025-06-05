@@ -33,7 +33,7 @@ pub mod render;
 mod strip;
 mod tile;
 
-struct Renderer(RenderContext);
+struct Renderer(RenderContext, bool);
 
 impl Renderer {
     fn draw_image(
@@ -103,11 +103,23 @@ impl Renderer {
                 match p {
                     Pattern::Shading(s) => (s.into(), paint.paint_transform),
                     Pattern::Tiling(t) => {
+                        const MAX_PIXMAP_SIZE: f32 = 3000.0;
+                        // TODO: Raise this limit and perform downsampling if reached
+                        // (see pdftc_100k_0138.pdf).
+                        const MIN_PIXMAP_SIZE: f32 = 1.0;
+                        
                         let bbox = t.bbox.get();
-                        let (xs, ys) = {
+                        let max_x_scale = MAX_PIXMAP_SIZE / bbox.width() as f32;
+                        let min_x_scale = MIN_PIXMAP_SIZE / bbox.width() as f32;
+                        let max_y_scale = MAX_PIXMAP_SIZE / bbox.height() as f32;
+                        let min_y_scale = MIN_PIXMAP_SIZE / bbox.height() as f32;
+                        
+                        let (mut xs, mut ys) = {
                             let (x, y) = x_y_advances(&(paint.paint_transform * t.matrix));
                             (x.length() as f32, y.length() as f32)
                         };
+                        xs = xs.max(min_x_scale).min(max_x_scale);
+                        ys = ys.max(min_y_scale).min(max_y_scale);
                         
                         let mut x_step = xs * t.x_step;
                         let mut y_step = ys * t.y_step;
@@ -117,7 +129,7 @@ impl Renderer {
                         let pix_width = x_step.abs().ceil() as u16;
                         let pix_height = y_step.abs().ceil() as u16;
                         
-                        let mut renderer = Renderer(RenderContext::new(pix_width, pix_height));
+                        let mut renderer = Renderer(RenderContext::new(pix_width, pix_height), true);
                         let mut initial_transform = Affine::new([xs as f64, 0.0, 0.0, ys as f64, -bbox.x0, -bbox.y0]);
                         t.interpret(&mut renderer, initial_transform);
                         let mut pix = Pixmap::new(pix_width, pix_height);
@@ -165,7 +177,8 @@ impl Device for Renderer {
         let mut line_width = stroke_props.line_width.max(0.01);
         let transformed_width = line_width * min_factor;
 
-        if transformed_width < 1.0 {
+        // Only enforce line width if not inside of pattern.
+        if transformed_width < 1.0 && !self.1 {
             line_width /= transformed_width;
         }
 
@@ -313,7 +326,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         Cache::new(),
         page.xref(),
     );
-    let mut device = Renderer(RenderContext::new(pix_width, pix_height));
+    let mut device = Renderer(RenderContext::new(pix_width, pix_height), false);
 
     device.0.fill_rect(
         &Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
