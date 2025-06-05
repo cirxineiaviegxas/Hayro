@@ -233,7 +233,7 @@ use crate::run_test;
 #[test] fn pdfjs_bigboundingbox() { run_test("pdfjs_bigboundingbox", "pdfs/pdfjs/bigboundingbox.pdf", None); }
 #[test] fn pdfjs_bug1260585() { run_test("pdfjs_bug1260585", "downloads/pdfjs/bug1260585.pdf", Some("..=0")); }
 #[test] fn pdfjs_clippath() { run_test("pdfjs_clippath", "pdfs/pdfjs/clippath.pdf", None); }
-// #[test] fn pdfjs_issue2177_eq() { run_test("pdfjs_issue2177_eq", "pdfs/pdfjs/issue2177.pdf", None); }
+#[test] fn pdfjs_issue2177_eq() { run_test("pdfjs_issue2177_eq", "pdfs/pdfjs/issue2177.pdf", None); }
 #[test] fn pdfjs_calgray() { run_test("pdfjs_calgray", "pdfs/pdfjs/calgray.pdf", None); }
 #[test] fn pdfjs_calrgb() { run_test("pdfjs_calrgb", "pdfs/pdfjs/calrgb.pdf", Some("..=7")); }
 #[test] fn pdfjs_issue4227() { run_test("pdfjs_issue4227", "pdfs/pdfjs/coons-allflags-withfunction.pdf", None); }

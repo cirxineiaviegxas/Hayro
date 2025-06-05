@@ -147,7 +147,7 @@ impl XRef {
             unreachable!();
         };
 
-        let mut locked = map.write().unwrap();
+        let mut locked = map.try_write().unwrap();
         assert!(!locked.repaired);
 
         let (xref_map, _) = fallback_xref_map(data.get());
@@ -163,15 +163,19 @@ impl XRef {
             return None;
         };
 
-        let locked = map.read().unwrap();
+        let locked = map.try_read().unwrap();
+        let repaired = locked.repaired;
 
         let mut r = Reader::new(data.get());
-
-        match *locked.xref_map.get(&id).or_else(|| {
+        
+        let entry = *locked.xref_map.get(&id).or_else(|| {
             // An indirect reference to an undefined object shall not be considered an error by a PDF processor; it
             // shall be treated as a reference to the null object.
             None
-        })? {
+        })?;
+        drop(locked);
+
+        match entry {
             EntryType::Normal(offset) => {
                 r.jump(offset);
 
@@ -188,7 +192,7 @@ impl XRef {
                 };
 
                 // The xref table is broken, try to repair if not already repaired.
-                if locked.repaired {
+                if repaired {
                     error!(
                         "attempt was made at repairing xref, but object {:?} still couldn't be read",
                         id
@@ -197,8 +201,8 @@ impl XRef {
                     None
                 } else {
                     warn!("broken xref, attempting to repair");
+                    println!("dropping read lock");
 
-                    drop(locked);
                     self.repair();
 
                     // Now try reading again.
@@ -240,7 +244,7 @@ pub(crate) fn find_last_xref_pos(data: &[u8]) -> Option<usize> {
 }
 
 /// A type of xref entry.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum EntryType {
     /// An indirect object that is at a specific offset in the original data.
     Normal(usize),
