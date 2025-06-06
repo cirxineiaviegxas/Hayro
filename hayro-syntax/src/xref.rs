@@ -201,7 +201,6 @@ impl XRef {
                     None
                 } else {
                     warn!("broken xref, attempting to repair");
-                    println!("dropping read lock");
 
                     self.repair();
 
