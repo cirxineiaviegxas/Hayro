@@ -17,7 +17,6 @@ use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
 use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
-use std::cmp::max;
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
@@ -141,14 +140,12 @@ impl Renderer {
 
                         // TODO: Add tests
                         if x_step < 0.0 {
-                            initial_transform = initial_transform
-                                * Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
+                            initial_transform *= Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
                             x_step = x_step.abs();
                         }
 
                         if y_step < 0.0 {
-                            initial_transform = initial_transform
-                                * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
+                            initial_transform *= Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
                             y_step = y_step.abs();
                         }
 
@@ -168,7 +165,7 @@ impl Renderer {
                             is_pattern: true,
                         });
 
-                        (image.into(), final_transform)
+                        (image, final_transform)
                     }
                 }
             }

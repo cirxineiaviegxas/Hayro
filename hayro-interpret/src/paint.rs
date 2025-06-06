@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::pattern::{Pattern, ShadingPattern};
+use crate::pattern::Pattern;
 use kurbo::Affine;
 
 #[derive(Clone, Debug)]

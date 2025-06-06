@@ -103,9 +103,9 @@ impl Buffer<4> {
     pub fn premultiply(&mut self) {
         for ch in self.buffer.chunks_exact_mut(4) {
             let alpha = ch[3];
-            ch[0] = ch[0] * alpha;
-            ch[1] = ch[1] * alpha;
-            ch[2] = ch[2] * alpha;
+            ch[0] *= alpha;
+            ch[1] *= alpha;
+            ch[2] *= alpha;
         }
     }
 }

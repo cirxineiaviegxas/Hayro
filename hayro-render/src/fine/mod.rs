@@ -14,7 +14,6 @@ use crate::tile::Tile;
 use core::fmt::Debug;
 use core::iter;
 use kurbo::{Point, Vec2};
-use peniko::color::{AlphaColor, Srgb};
 use peniko::{BlendMode, Compose, Mix};
 
 pub(crate) const COLOR_COMPONENTS: usize = 4;

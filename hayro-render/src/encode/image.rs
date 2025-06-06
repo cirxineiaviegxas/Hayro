@@ -1,7 +1,7 @@
-use crate::encode::{Buffer, EncodeExt, EncodedPaint, Shader, x_y_advances};
-use crate::fine::{COLOR_COMPONENTS, Sampler, from_rgba8};
+use crate::encode::{Buffer, EncodeExt, EncodedPaint, Shader};
+use crate::fine::Sampler;
 use crate::paint::{Image, IndexedPaint, Paint};
-use kurbo::{Affine, Point, Vec2};
+use kurbo::{Affine, Point};
 use std::sync::Arc;
 
 #[derive(Debug)]

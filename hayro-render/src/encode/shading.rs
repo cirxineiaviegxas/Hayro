@@ -1,10 +1,10 @@
-use crate::encode::{EncodeExt, EncodedPaint, Shader, x_y_advances};
+use crate::encode::{EncodeExt, EncodedPaint, Shader};
 use crate::fine::Sampler;
 use crate::paint::{IndexedPaint, Paint};
 use hayro_interpret::color::{ColorComponents, ColorSpace};
 use hayro_interpret::pattern::ShadingPattern;
 use hayro_interpret::shading::{ShadingFunction, ShadingType, Triangle};
-use kurbo::{Affine, Point, Vec2};
+use kurbo::{Affine, Point};
 use peniko::color::palette::css::TRANSPARENT;
 use peniko::color::{AlphaColor, Srgb};
 use rustc_hash::FxHashMap;

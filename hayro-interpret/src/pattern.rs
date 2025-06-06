@@ -4,7 +4,6 @@ use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::Device;
 use crate::glyph::Glyph;
-use crate::interpret::path::get_paint;
 use crate::interpret::state::State;
 use crate::shading::Shading;
 use crate::{FillProps, Paint, PaintType, RgbaImage, StencilImage, StrokeProps, interpret};
@@ -122,12 +121,12 @@ impl<'a> TilingPattern<'a> {
         let non_stroking_paint = Color::new(
             fill_cs,
             state.non_stroke_color.clone(),
-            state.non_stroke_alpha.clone(),
+            state.non_stroke_alpha,
         );
         let stroke_paint = Color::new(
             stroke_cs,
             state.stroke_color.clone(),
-            state.stroke_alpha.clone(),
+            state.stroke_alpha,
         );
 
         Some(Self {

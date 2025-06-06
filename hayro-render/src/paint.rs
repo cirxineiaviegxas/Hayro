@@ -4,7 +4,6 @@
 //! Types for paints.
 
 use crate::encode::Buffer;
-use crate::pixmap::Pixmap;
 use hayro_interpret::pattern::ShadingPattern;
 use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;

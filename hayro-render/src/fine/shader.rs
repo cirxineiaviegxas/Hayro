@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::encode::Shader;
-use crate::encode::shading::EncodedShading;
 use crate::fine::{COLOR_COMPONENTS, Painter, Sampler, TILE_HEIGHT_COMPONENTS};
 use crate::paint::PremulColor;
 use kurbo::Point;
@@ -17,7 +16,7 @@ impl<'a, T: Sampler> ShaderFiller<'a, T> {
     pub(crate) fn new(shader: &'a Shader<T>, start_x: u16, start_y: u16) -> Self {
         Self {
             cur_pos: shader.transform * Point::new(f64::from(start_x), f64::from(start_y)),
-            shader: shader,
+            shader,
         }
     }
 
