@@ -356,7 +356,7 @@ pub fn interpret<'a, 'b>(
             TypedOperation::TextFont(t) => {
                 let font = context.get_font(resources, t.0);
                 context.get_mut().text_state.font_size = t.1.as_f32();
-                context.get_mut().text_state.font = Some(font);
+                context.get_mut().text_state.font = font;
             }
             TypedOperation::ShowText(s) => {
                 text::show_text_string(context, device, resources, s.0);

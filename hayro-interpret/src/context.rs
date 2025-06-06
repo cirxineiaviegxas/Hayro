@@ -22,7 +22,7 @@ pub struct Context<'a> {
     sub_path_start: Point,
     last_point: Point,
     clip: Option<Fill>,
-    font_cache: HashMap<ObjRef, Font<'a>>,
+    font_cache: HashMap<ObjRef, Option<Font<'a>>>,
     root_transforms: Vec<Affine>,
     bbox: Vec<kurbo::Rect>,
     pub(crate) object_cache: Cache,
@@ -154,26 +154,22 @@ impl<'a> Context<'a> {
         self.get_mut().ctm *= transform;
     }
 
-    pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Font<'a> {
+    pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Option<Font<'a>>{
         resources
             .get_font(
                 &name,
                 Box::new(|ref_| {
-                    Some(
-                        self.font_cache
-                            .entry(ref_)
-                            .or_insert_with(|| {
-                                resources
-                                    .resolve_ref::<Dict>(ref_)
-                                    .map(|o| Font::new(&o).unwrap())
-                                    .unwrap()
-                            })
-                            .clone(),
-                    )
+                    self.font_cache
+                        .entry(ref_)
+                        .or_insert_with(|| {
+                            resources
+                                .resolve_ref::<Dict>(ref_)
+                                .and_then(|o| Font::new(&o))
+                        })
+                        .clone()
                 }),
                 Box::new(|c| Font::new(&c)),
             )
-            .unwrap()
     }
 
     pub(crate) fn get_color_space(&mut self, resources: &Resources, name: Name) -> ColorSpace {
