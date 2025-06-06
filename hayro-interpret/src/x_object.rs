@@ -104,7 +104,7 @@ pub(crate) fn draw_form_xobject<'a>(
         }),
         context.get().non_stroke_alpha,
     );
-    
+
     interpret(
         iter,
         &Resources::from_parent(x_object.resources.clone(), resources.clone()),

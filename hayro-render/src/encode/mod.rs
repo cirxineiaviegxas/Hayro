@@ -74,7 +74,7 @@ impl<const C: usize> Buffer<C> {
         let converted = buffer.iter().map(|v| *v as f32 * (1.0 / 255.0)).collect();
         Self::new_f32(converted, width, height)
     }
-    
+
     pub fn new_f32(buffer: Vec<f32>, width: u32, height: u32) -> Buffer<C> {
         assert_eq!(buffer.len() as u32, width * height * C as u32);
 
@@ -84,15 +84,17 @@ impl<const C: usize> Buffer<C> {
             height,
         }
     }
-    
+
     pub fn sample(&self, pos: Point) -> [f32; C] {
         let x = pos.x as u32;
         let y = pos.y as u32;
-        
+
         if x >= self.width || y >= self.height {
             [0.0; C]
-        }   else {
-            self.buffer[C * (x + y * self.width) as usize..][..C].try_into().unwrap()
+        } else {
+            self.buffer[C * (x + y * self.width) as usize..][..C]
+                .try_into()
+                .unwrap()
         }
     }
 }

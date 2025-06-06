@@ -1,5 +1,4 @@
-use std::cmp::max;
-use crate::encode::{x_y_advances, Buffer};
+use crate::encode::{Buffer, x_y_advances};
 use crate::paint::{Image, PaintType};
 use crate::pixmap::Pixmap;
 use crate::render::RenderContext;
@@ -8,6 +7,7 @@ use hayro_interpret::clip_path::ClipPath;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
 use hayro_interpret::glyph::Glyph;
+use hayro_interpret::pattern::Pattern;
 use hayro_interpret::{FillProps, Paint, StencilImage, StrokeProps, interpret};
 use hayro_syntax::document::page::{Page, Rotation};
 use hayro_syntax::pdf::Pdf;
@@ -17,10 +17,10 @@ use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
 use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
+use std::cmp::max;
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use hayro_interpret::pattern::Pattern;
 
 mod coarse;
 mod encode;
@@ -94,11 +94,13 @@ impl Renderer {
         );
     }
 
-    fn convert_paint(&mut self, paint: &hayro_interpret::Paint, is_stroke: bool,) -> (PaintType, Affine) {
+    fn convert_paint(
+        &mut self,
+        paint: &hayro_interpret::Paint,
+        is_stroke: bool,
+    ) -> (PaintType, Affine) {
         match paint.paint_type.clone() {
-            hayro_interpret::PaintType::Color(c) => {
-                (c.to_rgba().into(), Affine::IDENTITY)
-            },
+            hayro_interpret::PaintType::Color(c) => (c.to_rgba().into(), Affine::IDENTITY),
             hayro_interpret::PaintType::Pattern(p) => {
                 match p {
                     Pattern::Shading(s) => (s.into(), paint.paint_transform),
@@ -107,49 +109,58 @@ impl Renderer {
                         // TODO: Raise this limit and perform downsampling if reached
                         // (see pdftc_100k_0138.pdf).
                         const MIN_PIXMAP_SIZE: f32 = 1.0;
-                        
+
                         let bbox = t.bbox.get();
                         let max_x_scale = MAX_PIXMAP_SIZE / bbox.width() as f32;
                         let min_x_scale = MIN_PIXMAP_SIZE / bbox.width() as f32;
                         let max_y_scale = MAX_PIXMAP_SIZE / bbox.height() as f32;
                         let min_y_scale = MIN_PIXMAP_SIZE / bbox.height() as f32;
-                        
+
                         let (mut xs, mut ys) = {
                             let (x, y) = x_y_advances(&(paint.paint_transform * t.matrix));
                             (x.length() as f32, y.length() as f32)
                         };
                         xs = xs.max(min_x_scale).min(max_x_scale);
                         ys = ys.max(min_y_scale).min(max_y_scale);
-                        
+
                         let mut x_step = xs * t.x_step;
                         let mut y_step = ys * t.y_step;
-                        
+
                         let scaled_width = bbox.width() as f32 * xs;
                         let scaled_height = bbox.height() as f32 * ys;
                         let pix_width = x_step.abs().ceil() as u16;
                         let pix_height = y_step.abs().ceil() as u16;
-                        
-                        let mut renderer = Renderer(RenderContext::new(pix_width, pix_height), true);
-                        let mut initial_transform = Affine::new([xs as f64, 0.0, 0.0, ys as f64, -bbox.x0, -bbox.y0]);
+
+                        let mut renderer =
+                            Renderer(RenderContext::new(pix_width, pix_height), true);
+                        let mut initial_transform =
+                            Affine::new([xs as f64, 0.0, 0.0, ys as f64, -bbox.x0, -bbox.y0]);
                         t.interpret(&mut renderer, initial_transform, is_stroke);
                         let mut pix = Pixmap::new(pix_width, pix_height);
                         renderer.0.render_to_pixmap(&mut pix);
-                        
+
                         // TODO: Add tests
                         if x_step < 0.0 {
-                            initial_transform = initial_transform * Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
+                            initial_transform = initial_transform
+                                * Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
                             x_step = x_step.abs();
                         }
-                        
+
                         if y_step < 0.0 {
-                            initial_transform = initial_transform * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
+                            initial_transform = initial_transform
+                                * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
                             y_step = y_step.abs();
                         }
-                        
-                        let buffer = Buffer::new_u8(pix.data_as_u8_slice().to_vec(), pix_width as u32, pix_height as u32);
-                        
-                        let final_transform = paint.paint_transform * t.matrix * initial_transform.inverse();
-                        
+
+                        let buffer = Buffer::new_u8(
+                            pix.data_as_u8_slice().to_vec(),
+                            pix_width as u32,
+                            pix_height as u32,
+                        );
+
+                        let final_transform =
+                            paint.paint_transform * t.matrix * initial_transform.inverse();
+
                         let image = PaintType::Image(Image {
                             buffer: Arc::new(buffer),
                             interpolate: true,
@@ -164,7 +175,6 @@ impl Renderer {
         }
     }
 }
-
 
 impl Device for Renderer {
     fn set_transform(&mut self, affine: Affine) {

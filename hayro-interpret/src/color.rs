@@ -88,9 +88,12 @@ impl ColorSpaceType {
                 DEVICE_N => return Some(ColorSpaceType::DeviceN(DeviceN::new(&color_array)?)),
                 PATTERN => {
                     let _ = iter.next::<Name>();
-                    let cs = iter.next::<Object>().map(|o| ColorSpace::new(o)).unwrap_or(ColorSpace::device_rgb());
-                    return Some(ColorSpaceType::Pattern(cs))
-                },
+                    let cs = iter
+                        .next::<Object>()
+                        .map(|o| ColorSpace::new(o))
+                        .unwrap_or(ColorSpace::device_rgb());
+                    return Some(ColorSpaceType::Pattern(cs));
+                }
                 _ => {
                     warn!("unsupported color space: {}", name.as_str());
                     return None;
@@ -147,7 +150,7 @@ impl ColorSpace {
     pub fn pattern() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::Pattern(ColorSpace::device_gray())))
     }
-    
+
     pub fn pattern_cs(&self) -> Option<ColorSpace> {
         match self.0.as_ref() {
             ColorSpaceType::Pattern(cs) => Some(cs.clone()),

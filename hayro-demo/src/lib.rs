@@ -1,7 +1,7 @@
+use console_error_panic_hook;
 use hayro_syntax::pdf::Pdf;
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
-use console_error_panic_hook;
 
 #[wasm_bindgen]
 pub struct PdfViewer {

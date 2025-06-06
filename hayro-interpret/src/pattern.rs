@@ -1,40 +1,42 @@
-use std::fmt::{Debug, Formatter};
-use crate::shading::Shading;
-use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BBOX, EXT_G_STATE, MATRIX, PAINT_TYPE, RESOURCES, SHADING, X_STEP, Y_STEP};
-use hayro_syntax::object::{Object, dict_or_stream};
-use kurbo::{Affine, BezPath, Shape};
-use log::warn;
-use std::sync::Arc;
-use peniko::Fill;
-use hayro_syntax::content::{TypedIter, UntypedIter};
-use hayro_syntax::document::page::Resources;
-use hayro_syntax::object::rect::Rect;
-use hayro_syntax::object::stream::Stream;
-use hayro_syntax::xref::XRef;
 use crate::cache::Cache;
 use crate::clip_path::ClipPath;
+use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::Device;
-use crate::{interpret, FillProps, Paint, PaintType, RgbaImage, StencilImage, StrokeProps};
-use crate::color::{Color, ColorSpace};
 use crate::glyph::Glyph;
 use crate::interpret::path::get_paint;
 use crate::interpret::state::State;
+use crate::shading::Shading;
+use crate::{FillProps, Paint, PaintType, RgbaImage, StencilImage, StrokeProps, interpret};
+use hayro_syntax::content::{TypedIter, UntypedIter};
+use hayro_syntax::document::page::Resources;
+use hayro_syntax::object::dict::Dict;
+use hayro_syntax::object::dict::keys::{
+    BBOX, EXT_G_STATE, MATRIX, PAINT_TYPE, RESOURCES, SHADING, X_STEP, Y_STEP,
+};
+use hayro_syntax::object::rect::Rect;
+use hayro_syntax::object::stream::Stream;
+use hayro_syntax::object::{Object, dict_or_stream};
+use hayro_syntax::xref::XRef;
+use kurbo::{Affine, BezPath, Shape};
+use log::warn;
+use peniko::Fill;
+use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum Pattern<'a> {
     Shading(ShadingPattern),
-    Tiling(TilingPattern<'a>)
+    Tiling(TilingPattern<'a>),
 }
 
 impl<'a> Pattern<'a> {
     pub fn new(object: Object<'a>, ctx: &Context<'a>, resources: &Resources<'a>) -> Option<Self> {
         if let Some(dict) = object.clone().into_dict() {
             Some(Self::Shading(ShadingPattern::new(&dict)?))
-        }   else if let Some(stream) = object.clone().into_stream() {
+        } else if let Some(stream) = object.clone().into_stream() {
             Some(Self::Tiling(TilingPattern::new(stream, ctx, resources)?))
-        }   else { 
+        } else {
             None
         }
     }
@@ -77,8 +79,8 @@ pub struct TilingPattern<'a> {
     pub matrix: Affine,
     stream: Stream<'a>,
     is_color: bool,
-    pub(crate) stroke_paint: Color, 
-    pub(crate) non_stroking_paint: Color, 
+    pub(crate) stroke_paint: Color,
+    pub(crate) non_stroking_paint: Color,
     pub(crate) state: Box<State<'a>>,
     pub(crate) parent_resources: Resources<'a>,
     pub(crate) cache: Cache,
@@ -94,7 +96,7 @@ impl Debug for TilingPattern<'_> {
 impl<'a> TilingPattern<'a> {
     pub fn new(stream: Stream<'a>, ctx: &Context<'a>, resources: &Resources<'a>) -> Option<Self> {
         let dict = stream.dict();
-        
+
         let bbox = dict.get::<Rect>(BBOX)?;
         let x_step = dict.get::<f32>(X_STEP)?;
         let y_step = dict.get::<f32>(Y_STEP)?;
@@ -103,15 +105,31 @@ impl<'a> TilingPattern<'a> {
             .get::<[f64; 6]>(MATRIX)
             .map(Affine::new)
             .unwrap_or_default();
-        
+
         let state = ctx.get();
-        
-        let fill_cs = ctx.get().none_stroke_cs.pattern_cs().unwrap_or(ColorSpace::device_gray());
-        let stroke_cs = ctx.get().stroke_cs.pattern_cs().unwrap_or(ColorSpace::device_gray());
-        
-        let non_stroking_paint = Color::new(fill_cs, state.non_stroke_color.clone(), state.non_stroke_alpha.clone());
-        let stroke_paint = Color::new(stroke_cs, state.stroke_color.clone(), state.stroke_alpha.clone());
-        
+
+        let fill_cs = ctx
+            .get()
+            .none_stroke_cs
+            .pattern_cs()
+            .unwrap_or(ColorSpace::device_gray());
+        let stroke_cs = ctx
+            .get()
+            .stroke_cs
+            .pattern_cs()
+            .unwrap_or(ColorSpace::device_gray());
+
+        let non_stroking_paint = Color::new(
+            fill_cs,
+            state.non_stroke_color.clone(),
+            state.non_stroke_alpha.clone(),
+        );
+        let stroke_paint = Color::new(
+            stroke_cs,
+            state.stroke_color.clone(),
+            state.stroke_alpha.clone(),
+        );
+
         Some(Self {
             bbox,
             x_step,
@@ -124,11 +142,16 @@ impl<'a> TilingPattern<'a> {
             state: Box::new(ctx.get().clone()),
             parent_resources: resources.clone(),
             cache: ctx.object_cache.clone(),
-            xref: ctx.xref
+            xref: ctx.xref,
         })
     }
-    
-    pub fn interpret(&self, device: &mut impl Device, initial_transform: Affine, is_stroke: bool) -> Option<()> {
+
+    pub fn interpret(
+        &self,
+        device: &mut impl Device,
+        initial_transform: Affine,
+        is_stroke: bool,
+    ) -> Option<()> {
         let mut state = (*self.state).clone();
         state.ctm = initial_transform;
 
@@ -147,7 +170,7 @@ impl<'a> TilingPattern<'a> {
             self.parent_resources.clone(),
         );
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
-        
+
         let clip_path = ClipPath {
             path: initial_transform * self.bbox.get().to_path(0.1),
             fill: Fill::NonZero,
@@ -156,23 +179,25 @@ impl<'a> TilingPattern<'a> {
 
         if self.is_color {
             interpret(iter, &resources, &mut context, device);
-        }   else {
-            let paint = if !is_stroke { Paint {
-                paint_transform: Default::default(),
-                paint_type: PaintType::Color(self.non_stroking_paint.clone()),
-            } } else {
+        } else {
+            let paint = if !is_stroke {
+                Paint {
+                    paint_transform: Default::default(),
+                    paint_type: PaintType::Color(self.non_stroking_paint.clone()),
+                }
+            } else {
                 Paint {
                     paint_transform: Default::default(),
                     paint_type: PaintType::Color(self.stroke_paint.clone()),
                 }
             };
-            
+
             let mut device = StencilPatternDevice::new(device, &paint);
             interpret(iter, &resources, &mut context, &mut device);
         }
-        
+
         device.pop();
-        
+
         Some(())
     }
 }

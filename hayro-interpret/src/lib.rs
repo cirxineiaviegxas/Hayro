@@ -290,8 +290,7 @@ pub fn interpret<'a, 'b>(
                 // Ignore for now.
             }
             TypedOperation::NonStrokeColorNamed(n) => {
-                context.get_mut().non_stroke_color =
-                    n.0.into_iter().map(|n| n.as_f32()).collect();
+                context.get_mut().non_stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 context.get_mut().non_stroke_pattern = n.1.and_then(|name| {
                     resources.get_pattern(
                         &name,
@@ -307,7 +306,8 @@ pub fn interpret<'a, 'b>(
                         &name,
                         Box::new(|_| None),
                         Box::new(|d| Pattern::new(d, context, resources)),
-                    )});
+                    )
+                });
             }
             TypedOperation::BeginMarkedContentWithProperties(_) => {}
             TypedOperation::MarkedContentPointWithProperties(_) => {}
@@ -438,10 +438,12 @@ pub fn interpret<'a, 'b>(
                     .get_shading(&s.0, Box::new(|_| None), Box::new(Some))
                     .and_then(|o| dict_or_stream(&o))
                     .and_then(|s| Shading::new(&s.0, s.1.as_ref()))
-                    .map(|s| Pattern::Shading(ShadingPattern {
-                        shading: Arc::new(s),
-                        matrix: Affine::IDENTITY,
-                    }))
+                    .map(|s| {
+                        Pattern::Shading(ShadingPattern {
+                            shading: Arc::new(s),
+                            matrix: Affine::IDENTITY,
+                        })
+                    })
                 {
                     context.save_state();
                     context.push_root_transform();

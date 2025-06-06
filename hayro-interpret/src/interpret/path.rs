@@ -87,7 +87,7 @@ pub(crate) fn get_paint<'a>(context: &Context<'a>, is_stroke: bool) -> Paint<'a>
     };
 
     // TODO: use let chains
-    if data.color_space.is_pattern() && data.pattern.is_some()  {
+    if data.color_space.is_pattern() && data.pattern.is_some() {
         let pattern = data.pattern.unwrap().clone();
 
         Paint {

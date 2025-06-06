@@ -167,7 +167,7 @@ impl XRef {
         let repaired = locked.repaired;
 
         let mut r = Reader::new(data.get());
-        
+
         let entry = *locked.xref_map.get(&id).or_else(|| {
             // An indirect reference to an undefined object shall not be considered an error by a PDF processor; it
             // shall be treated as a reference to the null object.

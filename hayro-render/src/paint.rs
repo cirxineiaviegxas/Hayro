@@ -3,11 +3,11 @@
 
 //! Types for paints.
 
+use crate::encode::Buffer;
 use crate::pixmap::Pixmap;
 use hayro_interpret::pattern::ShadingPattern;
 use peniko::color::{AlphaColor, Srgb};
 use std::sync::Arc;
-use crate::encode::Buffer;
 
 /// A paint that needs to be resolved via its index.
 // In the future, we might add additional flags, that's why we have

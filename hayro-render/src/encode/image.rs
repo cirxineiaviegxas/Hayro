@@ -1,4 +1,4 @@
-use crate::encode::{EncodeExt, EncodedPaint, Shader, x_y_advances, Buffer};
+use crate::encode::{Buffer, EncodeExt, EncodedPaint, Shader, x_y_advances};
 use crate::fine::{COLOR_COMPONENTS, Sampler, from_rgba8};
 use crate::paint::{Image, IndexedPaint, Paint};
 use kurbo::{Affine, Point, Vec2};
@@ -43,11 +43,10 @@ impl Sampler for EncodedImage {
             let extend = |val: f64, max: f64| val - (val / max).floor() * max;
             pos.x = extend(pos.x, self.buffer.width as f64);
             pos.y = extend(pos.y, self.buffer.height as f64);
-        }   else {
+        } else {
             pos.x = pos.x.clamp(0.0, self.buffer.width as f64 - 1.0);
             pos.y = pos.y.clamp(0.0, self.buffer.height as f64 - 1.0);
         }
-        
 
         self.buffer.sample(pos)
     }
