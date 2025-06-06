@@ -1,0 +1,985 @@
+%PDF-1.4
+%µ¶
+
+1 0 obj
+<<
+  /S /D
+>>
+endobj
+
+2 0 obj
+<<
+  /Nums [ 0 1 0 R ]
+>>
+endobj
+
+3 0 obj
+<<
+  /CreationDate (D:20050531114104-07'00')
+  /ModDate (D:20050531114104-07'00')
+  /Creator (dvips\(k\) 5.92b Copyright 2002 Radical Eye Software)
+  /Title (test.dvi)
+  /Producer (http://createpdf.adobe.com V5.6.4)
+>>
+endobj
+
+4 0 obj
+<<
+  /Type /Metadata
+  /Subtype /XML
+  /Length 1002
+>>
+stream
+<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d' bytes='1001'?><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#' xmlns:iX='http://ns.adobe.com/iX/1.0/'><rdf:Description about='' xmlns='http://ns.adobe.com/pdf/1.3/' xmlns:pdf='http://ns.adobe.com/pdf/1.3/' pdf:CreationDate='2005-05-31T18:41:04Z' pdf:ModDate='2005-05-31T18:41:04Z' pdf:Producer='http://createpdf.adobe.com V5.6.4' pdf:Title='test.dvi'><pdf:Creator>dvips(k) 5.92b Copyright 2002 Radical Eye Software</pdf:Creator></rdf:Description>
+<rdf:Description about='' xmlns='http://ns.adobe.com/xap/1.0/' xmlns:xap='http://ns.adobe.com/xap/1.0/' xap:CreateDate='2005-05-31T18:41:04Z' xap:ModifyDate='2005-05-31T18:41:04Z' xap:MetadataDate='2005-05-31T18:41:04Z'><xap:Title><rdf:Alt><rdf:li xml:lang='x-default'>test.dvi</rdf:li></rdf:Alt></xap:Title></rdf:Description>
+<rdf:Description about='' xmlns='http://purl.org/dc/elements/1.1/' xmlns:dc='http://purl.org/dc/elements/1.1/' dc:title='test.dvi'/>
+</rdf:RDF><?xpacket end='r'?>
+
+endstream
+endobj
+
+5 0 obj
+<<
+  /Type /Pages
+  /Kids [ 8 0 R ]
+  /Count 1
+>>
+endobj
+
+7 0 obj
+<<
+  /Type /Catalog
+  /Pages 5 0 R
+  /Metadata 4 0 R
+  /PageLabels 2 0 R
+>>
+endobj
+
+8 0 obj
+<<
+  /Type /Page
+  /Parent 5 0 R
+  /Resources <<
+    /Pattern <<
+      /P1 18 0 R
+      /P2 20 0 R
+      /P3 22 0 R
+      /P4 24 0 R
+      /P5 26 0 R
+      /P6 28 0 R
+      /P7 30 0 R
+      /P8 32 0 R
+      /P9 34 0 R
+      /P10 36 0 R
+      /P11 38 0 R
+      /P12 41 0 R
+    >>
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+    /Font <<
+      /F1 11 0 R
+      /F2 14 0 R
+      /F3 13 0 R
+    >>
+  >>
+  /Contents 47 0 R
+  /MediaBox [ 0 0 612 792 ]
+  /CropBox [ 0 0 612 792 ]
+  /Rotate 0
+>>
+endobj
+
+10 0 obj
+<<
+  /Type /FontDescriptor
+  /Ascent 698
+  /CapHeight 681
+  /Descent -207
+  /Flags 34
+  /FontBBox [ -40 -250 1009 912 ]
+  /FontName /JJKMCC+PLRoman10-Regular
+  /ItalicAngle 0
+  /StemV 69
+  /XHeight 434
+  /StemH 31
+  /CharSet (/S/i/m/p/l/e/a/t/r/n/s/E/x/c/b/o/u/d/g/f/T/F/w/h/one)
+  /FontFile3 15 0 R
+>>
+endobj
+
+11 0 obj
+<<
+  /Type /Font
+  /Subtype /Type1
+  /FirstChar 49
+  /LastChar 120
+  /Widths [ 500 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 681 653
+      0 0 0 0 0 0 0 0 0 0 0 0 556 722 0 0 0 0 0 0 0 0 0 0 0 0
+      500 556 444 556 444 306 500 556 278 0 0 278 833 556 500
+      556 0 392 394 389 556 0 722 528 ]
+  /Encoding /WinAnsiEncoding
+  /BaseFont /JJKMCC+PLRoman10-Regular
+  /FontDescriptor 10 0 R
+>>
+endobj
+
+13 0 obj
+<<
+  /Type /Font
+  /Subtype /Type1
+  /Encoding /WinAnsiEncoding
+  /BaseFont /Times-BoldItalic
+>>
+endobj
+
+14 0 obj
+<<
+  /Type /Font
+  /Subtype /Type1
+  /Encoding /WinAnsiEncoding
+  /BaseFont /Times-Roman
+>>
+endobj
+
+15 0 obj
+<<
+  /Subtype /Type1C
+  /Length 6854
+  /Filter /ASCIIHexDecode
+>>
+stream
+0100040200010101194a4a4b4d43432b504c526f6d616e31302d526567756c61
+72000101011ef81b01f81c04f81d0c1663fb8efa85fa2405f7530ff76911ad1c
+0d0c12000301015d6374436f7079726967687420284329203139393720416d65
+726963616e204d617468656d61746963616c20536f63696574792e20416c6c20
+5269676874732052657365727665642e20416461707461636a6120504c204a4d
+4e20313939374e6f726d616c504c526f6d616e31302d526567756c6172000001
+001200002601003401004208004d04005303005801001a0200010004004900ba
+012a01d2024402ce034b03a90429048a04f205c90647069c06d90792080e0870
+08e9094f09f40a3d0a920b450bfff8a00e208baaf8b0aab79f01f770d503f7ba
+f91415a38b8d741e4b4d338b6b1b6c079fc68ba5bf1ffc9a0767887f311e6b6c
+068eaee28bb31bb3e28b88ae1faa6b07318896b01f0eff00498e388baaf7c7aa
+f7acad01f71ce4f75aa403f920f796157206fb2e727442fb401bfb19065c8992
+ac1ff79fe507ec966b361fa4f79d720635806c2a1e31f78406ac8d92ba1ef715
+06f72da654fb1f9b1fa4066ff77505fcc76ca306d88d80671ffca0076789803e
+1e736cf8d5060eff002dc8008baaf7baaaf7b9ad01f71ce4f754a4f723a403f8
+daf93c15fcb96ca306d88d80671ffca0076789803e1e736c068eaed98bb21bb4
+e68b88af1faa6a072c8b98ae1ff78ae107eb956b361fa4f79d720637816a2b1e
+35f79106ac8d92ba1ef70c06f72aa453fb1e9b1fa4060e75aaf930a701c3cbf7
+cfcb03f7f1f81815fb14aa054d9a64c1c51ad1c1c8d9f73ba1fb385e911e858c
+8b85961b988b909e1ff75d079c8b9280848a8a7f841e685205a86d62b4321bfb
+0337332138c042d9701f9687be7fd17aa684a984a76608a071956a6a1a445943
+376e3f90bc561e51c188cb8aaf08958a838b881b7e8b84791ffb5c077a8b8496
+928c8d96921e8c8e8eacc01e69aacb67e41bf709dbedf702ef49dd379f1f0eff
+007338e48baaf839a0f741b001afa4f793e4f793a403f92ef93915fcf70678fb
+7505a406f735999aacf72b1b9da58b89951fa0878b80741afca307698b7d221e
+636c068eb4f18bb91bb9f28b88b41faa6307228b99ad1ff8a3079f8b999d8f1e
+8d96a68b9e1bf72b9a6afb35991fa4060e2085aaf76ba0a6e5bba101b5d8f763
+d0d4a403f7e1d715638fa661ba1ba0c899dc1fc3725307517285806a87b8901e
+f75c07b58bb267b01eb264599b5b1b39465c496d9f7aa5a79d9fa59786ac5d8c
+1faea6bc96ab1bbcc464321f6607588845884c6d08406972575f1a3aec72cacd
+b9b3ba9e1e84f7381527072c43695e5a62aebdc2b5def739911e0e80a1f82da1
+f766b501f5cdf79ede03f740f80d15f7d107fb2480056c07d193845a1ffce8a4
+078c8c9399a6ba08749ab559d51bf70bf3edf715f71329eefb063d605c797b1f
+8efb9b15f762079e8b8c969b1ec3b2c293a31bb8af7165a31fa5628e52621a66
+894f6e5e1e6c76656a551b5e67a3b0731f7da08b8e9d1a0effff5d723880a4f7
+ace7b0a401addef757e703f7fbf816156288856d7e1a719d77a7a59f9ca9cf3f
+b23efb112ffb00fb10fb14ee28f708f71aabf70c9595818b8882898785891e2e
+6e4a7f661b5633b6f735f737ddb5c094ca8a67ae1f0e80a1f82da1f766b501ad
+def79ecd03f810c2154907f7279605aa07458392bc1ff8f307fb2480056c07d1
+93845a1ffb6c07af6e60a5551bfb0a2229fb15fb13ed28f706cbb8adaba41ff7
+a004fb6107798b89807a1e5b6d5e75601b5e67a5b1731f71b488c4b41ab08dc7
+a8b81eaaa0b1acc11baeb57c5eaa1f967a8b89791a0effff5d723880a4f76da0
+f742a101a7def782cd03f81af77b15a18e8ba0ee55ecfb11fb082f24fb11fb1a
+f42af707f70eb8f7039e95838d8682898583891f2468318b811b5963a9b0741f
+6dbb8bcdaf1a8ca015f72991dfa4ad1bf295fb1b641f0efffed28e968baaf805
+aaf734df93a101f704cde7e203f746f82415f706aafb09f70806e3bbbbb78e9a
+8b849a1e7f87797e721a749b77a6a89a9fa3b066ac56453656211efb073c6cda
+fbd8075e808b481e6c078cb2ba8da71bb3ba8b88b31faa7607418996af1f0e20
+fb62a2f752c5dfa2f78ba201c7d6f742d6aebf03f772f74015348befa2a68cab
+9aa41f9793a2a7b31be28b2774708a6b7c721f7f83746f631b2893156fb2b488
+9e1be8d0d0d8b07bb072a21fadafaf909d1b8d908b8a8e1f808786807f1a7a98
+7f9b959e92a29c7fab64775f8562611eac61618e751b2e46463e5fa165a4761f
+7e7c796a681a6c9865aa771e4f7a6b60631a43ee54f70ef70af3bed9ae7dbe58
+a71ea756518b4e1b72608b8c841f6b8f76aaab1a8f8ba29c9f1ef713fbff1526
+46bec0b9b1b0b78e1fc606e1f7048b35554459291f0e8baaf819a1f766b501f7
+02d0f765d003f85df79015e18baa6caf1e9c7d6a9f511b375f4f677b1f8af7f0
+06fb2480056c07d193845a1ffc9c075e808b481e6c078caebe8da61ba5bf898a
+ad1faa0748808bb81ff74c07f3d2c3cbca9655521efb7d075e808b481e6c078c
+aebe8da61ba5bf898aad1faa0757728ba98a1f0efffeb6c76a8baaf805b5f70d
+f501f703cd03f745f84e15fb2080056c07cc94855a1ffba1075e808b481e6c07
+8cabc18da31baeae898aad1faa07498790b21f8ff8b115ab72a06f6c75707170
+a171aaa7a4a0ab1e0efffeb6c76a8baaf901b501f703cd03f745f94a15fb2480
+056c07d193845a1ffc9c075e808b481e6c078cacc08da41ba4bc898ab01faa07
+48808bb81f0eff00e255548baaf819a101f702d0f765d0f765d003f702f7ec15
+fba0075e808b481e6c078caebe8da61ba5bf898aad1faa0748808bb81ff74c07
+f3d2c3cbca9655521efb7d075e808b481e6c078caebe8da61ba5bf898aad1faa
+0748808bb81ff74c07f3d2c3cbca9655521efb7d075e808b481e6c078caebe8d
+a61ba5bf898aad1faa0757728ba98a1ff75307e18baa6caf1e9c7d6a9f511b37
+5f4f657a1fe27d41965e1b425c604d6f1ff407fb2180056c07d193845a1f0e8b
+aaf819a101f702d0f765d003f702f7ec15fba0075e808b481e6c078caebe8da6
+1ba5bf898aad1faa0748808bb81ff74c07f3d2c3cbca9655521efb7d075e808b
+481e6c078caebe8da61ba5bf898aad1faa0757728ba98a1ff75307e18baa6caf
+1e9c7d6a9f511b425c604d6f1ff407fb2180056c07d193845a1f0e2080a4f830
+a101a7def7a9de03f86bf76a15f71427f5fb0dfb112afb01fb11fb15f32bf709
+f70df0edf7131efb71fb5c15605fa0b9701f72b78bc8af1ab28bc1a3b71eb9a6
+baa0b31bb7b67560a51fa5608b51651a678b55755f1e5e755f6e591b0efb56aa
+f72ca1f82aa401f5d0f79bde03f743f7e515bea8bca8be1bd4c833fb05fb0d45
+374163659fb4701f7da08b8c9f1a54047b90b555d71bf70bf3edf715f7132aee
+fb043d615f75771fcd07fb2480056c07d292855f1ffc68075e808b481e6c078c
+adbf8da51ba6be898aae1faa0748808bb81ff73c070effff28aaaa8baaf819a1
+01f5cdf5e103f740d915f72e07eeb5e4d7928d8b8a8d1e888a777f711a6fa07c
+a19da497abab6ca860426748607d1ef70207fb1f80056c07d193845a1ffba007
+5e808b481e6c078cb2ba8da71bb3ba8b88b31faa7607418996af1f0effff2b71
+c880a1f8369e01acbbf77bbb03f764f75615a187dd7b431a5868633d3767c4e0
+781e98888a8f811b7e8b84791ffb18077a8b8496908c8c9e9e1e8d8d8b8d9d9e
+0861b7b88aa01bf707b9ced3c06da97f971f6aab649361930853964898c51aae
+a5b4e1f70290316c8d1e828c948b8d1b988b909e1ff0079c8b928086898b7f7e
+1e88878182878808a765628b7c1bfb0e654853689b6fa6751fab71a785d37d08
+0effff25e38e80a4f7279ff76faaf7389f01f3d0f71aa403f741f82415f723aa
+fb23f74c72068a396d2029870875e0fba807fb0fe87fafd2a7d2cb1ec4725407
+416d6566488be69c1e0e80a1f819b501f702d0f765d003f81bda153107f72496
+05aa07458392bc1ff7f707fb2780056c07d193845a1ffb4607345b47423787ba
+bf1ef7e007fb2780056c07d98b88321ffb2a073d8b30f72cc3b7a7c9a81e0eff
+007338e480a0f81aaa019df94103f8fff7e4159dbdaa98ae8c08aa0789756e8a
+751b6e5e8d8c781f6c07af8aa1796e1a858b89867e1e30fb9428f7ab0587978a
+8d901aa6b28b9f1eaa078a6e5889731b6d6e8c8d6d1f6c07b09b897e951f9085
+966d927835fb86182cf79f0586978b8d8f1aa6b28b9f1eaa078a6d5389741b87
+568c8d671f6c07bd97886b971ff712fbf6057d908e83981b988d9199901ff0f7
+aff1fbb005808f8e83981b988e94958f1f0effffb0c8008baaf805aa0197f88c
+03f7b3f77f15a9b1b1bca3a5aaafb49aba8c08aa0789716d8a711b6d568d8c7e
+1f6c07a089937e7b1a7b817e86851e4d3d3df00582958b8d911a9a9a949f8c1e
+aa078a7149897b1b765c8c8d701f6c07d18c8a4fba1feefb155c4f8b895c5219
+515b5089761b6c078da5aa8ca51ba8b5898aa31faa07758e84989a1aa1a8acc8
+d31ea8649380b259089380987b851a82827c708a1e6c078ca9c38da11ba6b28a
+89a91faa0755798da8741f0e75a1f8439cf76e9691a1061ea045454547ff0c09
+aa0ad00b1e555a55554f14f8f315>
+endstream
+endobj
+
+16 0 obj
+<<
+  /Type /ExtGState
+  /SA false
+  /SM .02
+  /TR2 /Default
+>>
+endobj
+
+18 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ 1 0 0 1 100.92 712.86 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ 0 0 22.677 22.677 ]
+  /XStep 22.677
+  /YStep 22.677
+  /Length 77
+>>
+stream
+q
+0 g/GS1 gs
+0 11.339 11.339 -11.339 re
+f
+11.339 22.677 11.339 -11.339 re
+f
+Q
+endstream
+endobj
+
+20 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ 1 0 0 1 100.92 712.86 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ 0 0 17.008 17.008 ]
+  /XStep 17.008
+  /YStep 17.008
+  /Length 72
+>>
+stream
+q
+.7 g/GS1 gs
+0 8.504 8.504 -8.504 re
+f
+8.504 17.008 8.504 -8.504 re
+f
+Q
+endstream
+endobj
+
+22 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ 1 0 .17 1 134.92 611.98 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ 0 0 5.66901 5.66901 ]
+  /XStep 5.66901
+  /YStep 5.66901
+  /Length 112
+>>
+stream
+q
+1 i
+0 0 5.669 5.669 re
+W
+n
+0 g/GS1 gs
+0 0 m
+2.835 0 l
+2.835 2.835 l
+0 2.835 l
+f
+2.835 2.835 2.835 2.835 re
+f
+Q
+endstream
+endobj
+
+24 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ .866 .5 -.5 .866 134.92 611.98 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -8.01801 0 8.01801 16.035 ]
+  /XStep 16.035
+  /YStep 16.035
+  /Length 123
+>>
+stream
+q
+1 i
+8.018 16.035 m
+8.018 0 l
+-8.018 0 l
+-8.018 16.035 l
+W
+n
+.7 g/GS1 gs
+0 0 m
+8.018 8.018 l
+0 16.035 l
+-8.018 8.018 l
+f
+Q
+endstream
+endobj
+
+26 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ .966 1.5 -.327 2.59801 134.92 482.14 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -4.009 0 4.009 8.01801 ]
+  /XStep 8.819
+  /YStep 5.345
+  /Length 99
+>>
+stream
+q
+1 i
+-4.009 8.018 8.018 -8.018 re
+W
+n
+.5 g/GS1 gs
+0 0 m
+4.009 4.009 l
+0 8.018 l
+-4.009 4.009 l
+f
+Q
+endstream
+endobj
+
+28 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ .98199 .19099 -.093 1.00101 134.92 482.14 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ 0 0 11.339 22.677 ]
+  /XStep 13.606
+  /YStep 27.21201
+  /Length 203
+>>
+stream
+q
+1 i
+0 22.677 11.339 -22.677 re
+W
+n[]0 d
+0 G
+1 j
+.48 w/GS1 gs
+0 G
+5.669 0 m
+11.339 11.339 l
+5.669 22.677 l
+0 11.339 l
+s
+0 G
+1 J
+11.339 11.339 m
+0 11.339 l
+0 0 m
+11.339 0 l
+11.339 22.677 m
+0 22.677 l
+S
+Q
+endstream
+endobj
+
+30 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ .707 -.707 .707 .707 216.92 393.22 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -1 0 1 4 ]
+  /XStep 2
+  /YStep 4
+  /Length 72
+>>
+stream
+q
+1 i
+-1 0 2 4 re
+W
+n[]0 d
+0 G
+1 J
+1 j
+.233 w/GS1 gs
+0 G
+0 0 m
+0 4 l
+S
+Q
+endstream
+endobj
+
+32 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ 1 0 .17 1 91.92 225.26 ]
+  /PatternType 1
+  /Resources <<
+    /Font <<
+      /F2 14 0 R
+    >>
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -4.702 -1.70599 4.702 1.70599 ]
+  /XStep 9.405
+  /YStep 3.412
+  /Length 111
+>>
+stream
+q
+1 i
+-4.702 -1.706 9.405 3.412 re
+W
+n
+0 g
+BT/F2 1 Tf
+4.9813 0 0 4.9813 -4.7024 -1.6712 Tm/GS1 gs
+(abcd)Tj
+ET
+Q
+endstream
+endobj
+
+34 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ 1 0 .17 1 91.92 225.26 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ 0 0 5.66901 5.66901 ]
+  /XStep 5.66901
+  /YStep 5.66901
+  /Length 112
+>>
+stream
+q
+1 i
+0 5.669 m
+0 0 l
+5.669 0 l
+5.669 5.669 l
+W
+n
+0 g/GS1 gs
+0 0 2.835 2.835 re
+f
+2.835 2.835 2.835 2.835 re
+f
+Q
+endstream
+endobj
+
+36 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ .707 .707 -.707 .707 91.92 225.26 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -1 0 1 4 ]
+  /XStep 2
+  /YStep 4
+  /Length 73
+>>
+stream
+q
+1 i
+-1 4 2 -4 re
+W
+n[]0 d
+0 G
+1 J
+1 j
+.233 w/GS1 gs
+0 G
+0 0 m
+0 4 l
+S
+Q
+endstream
+endobj
+
+38 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ .707 -.707 .707 .707 91.92 225.26 ]
+  /PatternType 1
+  /Resources <<
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -1 0 1 4 ]
+  /XStep 2
+  /YStep 4
+  /Length 86
+>>
+stream
+q
+1 i
+-1 4 m
+-1 0 l
+1 0 l
+1 4 l
+W
+n[]0 d
+0 G
+1 J
+1 j
+.233 w/GS1 gs
+0 G
+0 0 m
+0 4 l
+S
+Q
+endstream
+endobj
+
+39 0 obj
+<<
+  /Type /Font
+  /Subtype /Type1
+  /Encoding /WinAnsiEncoding
+  /BaseFont /Courier
+>>
+endobj
+
+41 0 obj
+<<
+  /Type /Pattern
+  /Matrix [ 1 0 .17 1 91.92 225.26 ]
+  /PatternType 1
+  /Resources <<
+    /Font <<
+      /F4 39 0 R
+    >>
+    /ExtGState <<
+      /GS1 16 0 R
+    >>
+  >>
+  /PaintType 1
+  /TilingType 1
+  /BBox [ -27.55 -2.177 27.55 2.177 ]
+  /XStep 55.10001
+  /YStep 4.355
+  /Length 159
+>>
+stream
+q
+1 i
+-27.55 -2.177 55.1 4.355 re
+W
+n
+0 g
+BT/F4 1 Tf
+4.9813 0 0 4.9813 -27.5499 -1.2088 Tm/GS1 gs
+-.0001 Tc[(xyz)-714.2(XYZ)-1453.2(ZYX)-1453.1005(zyx)]TJ
+ET
+Q
+endstream
+endobj
+
+47 0 obj
+<<
+  /Length 5392
+>>
+stream
+q
+/Pattern cs
+/P1 scn/GS1 gs
+1 i
+131.606 730.577 m
+128.787 735.46 124.143 739.022 118.697 740.482 c
+113.251 741.941 107.448 741.178 102.564 738.358 c
+97.681 735.539 94.119 730.895 92.659 725.449 c
+91.2 720.003 91.963 714.2 94.783 709.317 c
+97.602 704.433 102.246 700.871 107.692 699.412 c
+113.138 697.952 118.941 698.716 123.824 701.535 c
+128.708 704.354 132.27 708.998 133.729 714.444 c
+135.189 719.89 134.425 725.693 131.606 730.577 c
+f
+/P2 scn
+100.92 769.553 56.69301 -56.692995 re
+f
+0 g
+BT
+-.0014 Tc/F1 1 Tf
+9.9626 0 0 9.9626 161.28 697.86 Tm[(Simple)-339.90013(pa)-7.300002(tter)-7.2000019(n).1(s)]TJ
+ET
+/Pattern cs
+/P3 scn
+177.44 611.98 m
+177.44 623.257 172.959 634.072 164.985 642.045 c
+157.012 650.019 146.197 654.5 134.92 654.5 c
+123.643 654.5 112.828 650.019 104.855 642.045 c
+96.881 634.072 92.4 623.257 92.4 611.98 c
+92.4 600.703 96.881 589.888 104.855 581.915 c
+112.828 573.941 123.643 569.46 134.92 569.46 c
+146.197 569.46 157.012 573.941 164.985 581.915 c
+172.959 589.888 177.44 600.703 177.44 611.98 c
+f
+1 g
+205.786 640.326 m
+205.786 651.604 201.306 662.418 193.332 670.392 c
+185.358 678.366 174.544 682.846 163.266 682.846 c
+151.989 682.846 141.175 678.366 133.201 670.392 c
+125.227 662.418 120.747 651.604 120.747 640.326 c
+120.747 629.049 125.227 618.235 133.201 610.261 c
+141.175 602.287 151.989 597.807 163.266 597.807 c
+174.544 597.807 185.358 602.287 193.332 610.261 c
+201.306 618.235 205.786 629.049 205.786 640.326 c
+f
+/Pattern cs
+/P4 scn
+205.786 640.326 m
+205.786 651.604 201.306 662.418 193.332 670.392 c
+185.358 678.366 174.544 682.846 163.266 682.846 c
+151.989 682.846 141.175 678.366 133.201 670.392 c
+125.227 662.418 120.747 651.604 120.747 640.326 c
+120.747 629.049 125.227 618.235 133.201 610.261 c
+141.175 602.287 151.989 597.807 163.266 597.807 c
+174.544 597.807 185.358 602.287 193.332 610.261 c
+201.306 618.235 205.786 629.049 205.786 640.326 c
+f
+0 g
+BT
+9.9626 0 0 9.9626 209.28 568.98 Tm[(E)-7.400002(x)-3.6000009(plicit)-323.2(b)-24(o)-7.300002(unding)-344.60005(b)-24(o)16.8(x)-328.8(a)-7.300002(nd)-325.10014(tr)-7.2000019(a)-7.300002(n).1(sfo)-7.300002(r)-7.2000019(ma)-7.300002(tio)-7.300002(n).1(s)]TJ
+ET
+/Pattern cs
+/P5 scn
+177.44 482.14 m
+177.44 493.417 172.959 504.232 164.985 512.205 c
+157.012 520.179 146.197 524.66 134.92 524.66 c
+123.643 524.66 112.828 520.179 104.855 512.205 c
+96.881 504.232 92.4 493.417 92.4 482.14 c
+92.4 470.863 96.881 460.048 104.855 452.075 c
+112.828 444.101 123.643 439.62 134.92 439.62 c
+146.197 439.62 157.012 444.101 164.985 452.075 c
+172.959 460.048 177.44 470.863 177.44 482.14 c
+f[]0 d
+0 G
+1 j
+.48 w
+177.44 482.14 m
+177.44 493.417 172.959 504.232 164.985 512.205 c
+157.012 520.179 146.197 524.66 134.92 524.66 c
+123.643 524.66 112.828 520.179 104.855 512.205 c
+96.881 504.232 92.4 493.417 92.4 482.14 c
+92.4 470.863 96.881 460.048 104.855 452.075 c
+112.828 444.101 123.643 439.62 134.92 439.62 c
+146.197 439.62 157.012 444.101 164.985 452.075 c
+172.959 460.048 177.44 470.863 177.44 482.14 c
+s
+1 g
+205.786 510.486 m
+205.786 521.764 201.306 532.578 193.332 540.552 c
+185.358 548.526 174.544 553.006 163.266 553.006 c
+151.989 553.006 141.175 548.526 133.201 540.552 c
+125.227 532.578 120.747 521.764 120.747 510.486 c
+120.747 499.209 125.227 488.395 133.201 480.421 c
+141.175 472.447 151.989 467.967 163.266 467.967 c
+174.544 467.967 185.358 472.447 193.332 480.421 c
+201.306 488.395 205.786 499.209 205.786 510.486 c
+f
+/Pattern cs
+/P6 scn
+205.786 510.486 m
+205.786 521.764 201.306 532.578 193.332 540.552 c
+185.358 548.526 174.544 553.006 163.266 553.006 c
+151.989 553.006 141.175 548.526 133.201 540.552 c
+125.227 532.578 120.747 521.764 120.747 510.486 c
+120.747 499.209 125.227 488.395 133.201 480.421 c
+141.175 472.447 151.989 467.967 163.266 467.967 c
+174.544 467.967 185.358 472.447 193.332 480.421 c
+201.306 488.395 205.786 499.209 205.786 510.486 c
+f
+0 G
+205.786 510.486 m
+205.786 521.764 201.306 532.578 193.332 540.552 c
+185.358 548.526 174.544 553.006 163.266 553.006 c
+151.989 553.006 141.175 548.526 133.201 540.552 c
+125.227 532.578 120.747 521.764 120.747 510.486 c
+120.747 499.209 125.227 488.395 133.201 480.421 c
+141.175 472.447 151.989 467.967 163.266 467.967 c
+174.544 467.967 185.358 472.447 193.332 480.421 c
+201.306 488.395 205.786 499.209 205.786 510.486 c
+s
+0 g
+0 G
+BT
+.0036 Tc
+9.9626 0 0 9.9626 210.24 439.14 Tm
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G[(T)87.4(r)-2.200001(an)5.100002(sf)8(orm)5.8(a)-2.3(t)7(i)4.300002(on)5.100002(s)-300.60005(a)-2.3(n)5.100002(d)-332.2(cel)4.300002(l)-332.90013(s).6(p)5.100002(a)-2.3(ci)4.300002(n)5.100002(g)]TJ
+/Pattern cs
+/P7 scn
+0 G
+0 Tc/F2 1 Tf
+89.6638 0 0 89.6638 92.378 363.1383 Tm
+(ABCD)Tj
+0 g
+0 G
+-.0005 Tc/F1 1 Tf
+9.9626 0 0 9.9626 345.24 362.22 Tm
+0 G
+0 G
+0 G
+0 G[(Filling)-343.7(l).2(a)-6.4(b)-23.100008(el)]TJ
+/Pattern cs
+/P8 scn
+0 G
+0 Tc/F3 1 Tf
+89.6638 0 0 89.6638 91.92 225.26 Tm
+(ABCD)Tj
+1 g
+0 G
+-.2231 TL
+.1115 .2231 Td
+(ABCD)Tj
+/Pattern cs
+/P9 scn
+0 G
+0 TL
+0 0 Td
+(ABCD)Tj
+1 g
+0 G
+-.2231 TL
+.1115 .2231 Td
+(ABCD)Tj
+/Pattern cs
+/P10 scn
+0 G
+0 TL
+0 0 Td
+(ABCD)Tj
+/P11 scn
+0 G
+T*
+0 G
+(ABCD)Tj
+1 g
+0 G
+-.2231 TL
+.1115 .2231 Td
+(ABCD)Tj
+/Pattern cs
+/P12 scn
+0 G
+0 TL
+0 0 Td
+(ABCD)Tj
+0 g
+0 G
+-.0006 Tc/F1 1 Tf
+9.9626 0 0 9.9626 370.2 223.26 Tm
+0 G
+0 G
+0 G
+0 G
+0 G
+0 G[(Filling)-343.8001(t)2.800001(ext)-334.4(a)-6.5(nd)-336.4(with)-336.4(text)]TJ
+0 G
+0 Tc
+11.8523 TL
+-6.697 -11.8523 Td
+(1)Tj
+ET
+Q
+endstream
+endobj
+
+xref
+0 48
+0000000006 65535 f 
+0000000016 00000 n 
+0000000046 00000 n 
+0000000088 00000 n 
+0000000323 00000 n 
+0000001414 00000 n 
+0000000009 00004 f 
+0000001480 00000 n 
+0000001572 00000 n 
+0000000012 00004 f 
+0000002075 00000 n 
+0000002395 00000 n 
+0000000017 00004 f 
+0000002800 00000 n 
+0000002914 00000 n 
+0000003023 00000 n 
+0000009978 00000 n 
+0000000019 00004 f 
+0000010058 00000 n 
+0000000021 00004 f 
+0000010416 00000 n 
+0000000023 00004 f 
+0000010769 00000 n 
+0000000025 00004 f 
+0000011169 00000 n 
+0000000027 00004 f 
+0000011591 00000 n 
+0000000029 00004 f 
+0000011989 00000 n 
+0000000031 00004 f 
+0000012496 00000 n 
+0000000033 00004 f 
+0000012843 00000 n 
+0000000035 00004 f 
+0000013284 00000 n 
+0000000037 00004 f 
+0000013683 00000 n 
+0000000040 00004 f 
+0000014030 00000 n 
+0000014390 00000 n 
+0000000042 00004 f 
+0000014495 00000 n 
+0000000043 00004 f 
+0000000044 00004 f 
+0000000045 00003 f 
+0000000046 00002 f 
+0000000000 00001 f 
+0000014983 00000 n 
+
+trailer
+<<
+  /Size 48
+  /Info 3 0 R
+  /Root 7 0 R
+  /ID [ <6AF928C7FCF5BB57E46C89611B8002A9> <C149C4A408808D5AC2A2D3705773494A> ]
+>>
+startxref
+20431
+%%EOF
