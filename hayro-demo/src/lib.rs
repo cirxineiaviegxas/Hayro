@@ -1,6 +1,7 @@
 use hayro_syntax::pdf::Pdf;
 use std::sync::Arc;
 use wasm_bindgen::prelude::*;
+use console_error_panic_hook;
 
 #[wasm_bindgen]
 pub struct PdfViewer {
@@ -13,6 +14,7 @@ pub struct PdfViewer {
 impl PdfViewer {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
+        console_error_panic_hook::set_once();
         Self {
             pdf: None,
             current_page: 0,
