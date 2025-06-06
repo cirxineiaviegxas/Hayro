@@ -128,7 +128,7 @@ impl<'a> TilingPattern<'a> {
         })
     }
     
-    pub fn interpret(&self, device: &mut impl Device, initial_transform: Affine) -> Option<()> {
+    pub fn interpret(&self, device: &mut impl Device, initial_transform: Affine, is_stroke: bool) -> Option<()> {
         let mut state = (*self.state).clone();
         state.ctm = initial_transform;
 
@@ -157,17 +157,17 @@ impl<'a> TilingPattern<'a> {
         if self.is_color {
             interpret(iter, &resources, &mut context, device);
         }   else {
-            let fill_paint = Paint {
+            let paint = if !is_stroke { Paint {
                 paint_transform: Default::default(),
                 paint_type: PaintType::Color(self.non_stroking_paint.clone()),
-            };
-
-            let stroke_paint = Paint {
-                paint_transform: Default::default(),
-                paint_type: PaintType::Color(self.stroke_paint.clone()),
+            } } else {
+                Paint {
+                    paint_transform: Default::default(),
+                    paint_type: PaintType::Color(self.stroke_paint.clone()),
+                }
             };
             
-            let mut device = StencilPatternDevice::new(device, &stroke_paint, &fill_paint);
+            let mut device = StencilPatternDevice::new(device, &paint);
             interpret(iter, &resources, &mut context, &mut device);
         }
         
@@ -179,16 +179,14 @@ impl<'a> TilingPattern<'a> {
 
 struct StencilPatternDevice<'a, T: Device> {
     inner: &'a mut T,
-    stroke_paint: &'a Paint<'a>,
-    non_stroking_paint: &'a Paint<'a>,
+    paint: &'a Paint<'a>,
 }
 
 impl<'a, T: Device> StencilPatternDevice<'a, T> {
-    pub fn new(device: &'a mut T, stroke_paint: &'a Paint<'a>, non_stroking_paint: &'a Paint<'a>) -> Self {
+    pub fn new(device: &'a mut T, paint: &'a Paint<'a>) -> Self {
         Self {
             inner: device,
-            stroke_paint,
-            non_stroking_paint
+            paint,
         }
     }
 }
@@ -200,7 +198,7 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
     }
 
     fn stroke_path(&mut self, path: &BezPath, _: &Paint) {
-        self.inner.stroke_path(path, self.stroke_paint)
+        self.inner.stroke_path(path, self.paint)
     }
 
     fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
@@ -208,7 +206,7 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
     }
 
     fn fill_path(&mut self, path: &BezPath, _: &Paint) {
-        self.inner.fill_path(path, self.non_stroking_paint)
+        self.inner.fill_path(path, self.paint)
     }
 
     fn set_fill_properties(&mut self, fill_props: &FillProps) {
@@ -220,17 +218,17 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
     }
 
     fn fill_glyph(&mut self, glyph: &Glyph<'_>, _: &Paint) {
-        self.inner.fill_glyph(glyph, self.non_stroking_paint)
+        self.inner.fill_glyph(glyph, self.paint)
     }
 
     fn stroke_glyph(&mut self, glyph: &Glyph<'_>, _: &Paint) {
-        self.inner.stroke_glyph(glyph, self.stroke_paint)
+        self.inner.stroke_glyph(glyph, self.paint)
     }
 
     fn draw_rgba_image(&mut self, _: RgbaImage) {}
 
     fn draw_stencil_image(&mut self, stencil: StencilImage, _: &Paint) {
-        self.inner.draw_stencil_image(stencil, self.non_stroking_paint);
+        self.inner.draw_stencil_image(stencil, self.paint);
     }
 
     fn pop(&mut self) {

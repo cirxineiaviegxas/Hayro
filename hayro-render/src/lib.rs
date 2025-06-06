@@ -14,7 +14,7 @@ use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
 use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
-use kurbo::{Affine, BezPath, Point, Rect};
+use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
 use std::io::Cursor;
@@ -94,7 +94,7 @@ impl Renderer {
         );
     }
 
-    fn convert_paint(&mut self, paint: &hayro_interpret::Paint) -> (PaintType, Affine) {
+    fn convert_paint(&mut self, paint: &hayro_interpret::Paint, is_stroke: bool,) -> (PaintType, Affine) {
         match paint.paint_type.clone() {
             hayro_interpret::PaintType::Color(c) => {
                 (c.to_rgba().into(), Affine::IDENTITY)
@@ -131,7 +131,7 @@ impl Renderer {
                         
                         let mut renderer = Renderer(RenderContext::new(pix_width, pix_height), true);
                         let mut initial_transform = Affine::new([xs as f64, 0.0, 0.0, ys as f64, -bbox.x0, -bbox.y0]);
-                        t.interpret(&mut renderer, initial_transform);
+                        t.interpret(&mut renderer, initial_transform, is_stroke);
                         let mut pix = Pixmap::new(pix_width, pix_height);
                         renderer.0.render_to_pixmap(&mut pix);
                         
@@ -196,7 +196,7 @@ impl Device for Renderer {
     }
 
     fn stroke_path(&mut self, path: &BezPath, paint: &Paint) {
-        let (paint_type, paint_transform) = self.convert_paint(paint);
+        let (paint_type, paint_transform) = self.convert_paint(paint, true);
         self.0.stroke_path(path, paint_type, paint_transform);
     }
 
@@ -205,7 +205,7 @@ impl Device for Renderer {
     }
 
     fn fill_path(&mut self, path: &BezPath, paint: &Paint) {
-        let (paint_type, paint_transform) = self.convert_paint(paint);
+        let (paint_type, paint_transform) = self.convert_paint(paint, false);
         self.0.fill_path(path, paint_type, paint_transform);
     }
 
@@ -233,7 +233,7 @@ impl Device for Renderer {
         self.set_fill_properties(&FillProps {
             fill_rule: Fill::NonZero,
         });
-        let (converted_paint, paint_transform) = self.convert_paint(paint);
+        let (converted_paint, paint_transform) = self.convert_paint(paint, false);
         self.0.fill_rect(
             &Rect::new(0.0, 0.0, stencil.width as f64, stencil.height as f64),
             converted_paint,
