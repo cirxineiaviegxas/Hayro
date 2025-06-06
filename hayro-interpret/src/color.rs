@@ -51,7 +51,6 @@ impl ColorSpaceType {
 
             match name {
                 ICC_BASED => {
-                    // TODO: Cache this (test file: https://issues.apache.org/jira/projects/PDFBOX/issues/PDFBOX-6008?filter=allopenissues)
                     let icc_stream = iter.next::<Stream>()?;
                     let dict = icc_stream.dict();
                     let num_components = dict.get::<usize>(N)?;
@@ -623,7 +622,6 @@ impl Separation {
     }
 
     fn to_rgba(&self, c: f32, opacity: f32) -> AlphaColor<Srgb> {
-        // TODO: Handle /All and /None
         let res = self
             .tint_transform
             .eval(smallvec![c])
@@ -645,7 +643,7 @@ impl DeviceN {
         let mut iter = array.flex_iter();
         // Skip `/DeviceN`
         let _ = iter.next::<Name>()?;
-        // Skip `Name`. TODO: Handle `/None`.
+        // Skip `Name`.
         let num_components = iter.next::<Array>()?.iter::<Name>().count();
         let alternate_space = ColorSpace::new(iter.next::<Object>()?);
         let tint_transform = Function::new(&iter.next::<Object>()?)?;

@@ -104,7 +104,7 @@ pub(crate) fn draw_form_xobject<'a>(
         }),
         context.get().non_stroke_alpha,
     );
-    // TODO: XObjects inherit from page resources?
+    
     interpret(
         iter,
         &Resources::from_parent(x_object.resources.clone(), resources.clone()),
@@ -252,9 +252,6 @@ impl<'a> ImageXObject<'a> {
             } else if let Some(mask) = self.dict.get::<Stream>(MASK) {
                 if let Some(obj) = ImageXObject::new(&mask) {
                     let mut mask_data = obj.decode_raw();
-
-                    // TODO: This is a temporary hack, we should implement resized masks
-                    // properly in hayro-render
 
                     // Mask doesn't necessarily have the same dimensions.
                     if obj.width != self.width || obj.height != self.height {
