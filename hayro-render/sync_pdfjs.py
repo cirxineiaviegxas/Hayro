@@ -412,8 +412,14 @@ class PDFJSSync:
             print(f"\n📦 Processing {entry_id} ({'link' if is_link else 'pdf'})...")
             
             if is_link:
-                # Handle .link files
-                link_file_path = self.pdfjs_pdfs_dir / f"{entry_id}.pdf.link"
+                # Handle .link files - use the file path from manifest
+                file_path = entry.get("file", f"pdfs/{entry_id}.pdf")
+                if file_path.startswith("pdfs/"):
+                    actual_filename = file_path[5:]  # Remove "pdfs/" prefix
+                else:
+                    actual_filename = file_path
+                    
+                link_file_path = self.pdfjs_pdfs_dir / f"{actual_filename}.link"
                 if not link_file_path.exists():
                     print(f"✘ Link file not found: {link_file_path}")
                     failed_count += 1
