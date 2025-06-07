@@ -176,5 +176,35 @@
   {
     "id": "issue18816",
     "file": "pdfs/issue18816.pdf"
+  },
+  {
+    "id": "20130226130259",
+    "file": "pdfs/20130226130259.link",
+    "md5": "c33e90a1b369c508573023d2434b950f",
+    "link": true,
+    "first_page": 0,
+    "last_page": 0
+  },
+  {
+    "id": "aboutstacks",
+    "file": "pdfs/aboutstacks.link",
+    "md5": "6e7c8416a293ba2d83bc8dd20c6ccf51",
+    "link": true,
+    "last_page": 0
+  },
+  {
+    "id": "arabiccidtruetype-text",
+    "file": "pdfs/ArabicCIDTrueType.pdf"
+  },
+  {
+    "id": "boundingBox_invalid",
+    "file": "pdfs/boundingBox_invalid.pdf"
+  },
+  {
+    "id": "bpl13210",
+    "file": "pdfs/bpl13210.link",
+    "md5": "8a08512baa9fa95378d9ad4b995947c7",
+    "link": true,
+    "last_page": 4
   }
 ]

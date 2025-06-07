@@ -262,7 +262,7 @@ impl Cff {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        *self.widths.get(code as usize).unwrap()
+        self.widths.get(code as usize).copied().unwrap_or(0.0)
     }
 }
 

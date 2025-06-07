@@ -396,7 +396,8 @@ impl<'a> Resources<'a> {
 const POINTS_PER_INCH: f64 = 72.0;
 const POINTS_PER_MM: f64 = 1.0 / (10.0 * 2.54) * POINTS_PER_INCH;
 
-const A4: Rect = Rect(kurbo::Rect {
+/// The dimension of an A4 page.
+pub const A4: Rect = Rect(kurbo::Rect {
     x0: 0.0,
     y0: 0.0,
     x1: 210.0 * POINTS_PER_MM,

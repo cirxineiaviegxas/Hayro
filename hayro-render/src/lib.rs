@@ -9,10 +9,10 @@ use hayro_interpret::device::Device;
 use hayro_interpret::glyph::Glyph;
 use hayro_interpret::pattern::Pattern;
 use hayro_interpret::{FillProps, Paint, StencilImage, StrokeProps, interpret};
-use hayro_syntax::document::page::{Page, Rotation};
+use hayro_syntax::document::page::{Page, Rotation, A4};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
-use image::imageops::FilterType;
+use image::imageops::{crop, FilterType};
 use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
 use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
@@ -20,6 +20,7 @@ use peniko::color::palette::css::WHITE;
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
+use hayro_interpret::util::FloatExt;
 
 mod coarse;
 mod encode;
@@ -305,7 +306,12 @@ impl Device for Renderer {
 pub fn render(page: &Page, scale: f32) -> Pixmap {
     let crop_box = page.crop_box();
 
-    let (unscaled_width, unscaled_height) = (crop_box.width(), crop_box.height());
+    let (unscaled_width, unscaled_height) =  if (crop_box.width() as f32).is_nearly_zero() || (crop_box.height() as f32).is_nearly_zero() {
+        (A4.get().width(), A4.get().height())
+    }   else {
+        (crop_box.width(), crop_box.height())
+    };
+    
     let (mut pix_width, mut pix_height) = (unscaled_width, unscaled_height);
 
     let rotation_transform = Affine::scale(scale as f64)
@@ -352,6 +358,10 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         WHITE.into(),
         Affine::IDENTITY,
     );
+    device.push_clip_path(&ClipPath {
+        path: initial_transform * crop_box.to_path(0.1),
+        fill: Fill::NonZero,
+    });
 
     device.set_transform(initial_transform);
 
@@ -361,6 +371,8 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         &mut state,
         &mut device,
     );
+    
+    device.pop_clip_path();
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
     device.0.render_to_pixmap(&mut pixmap);
