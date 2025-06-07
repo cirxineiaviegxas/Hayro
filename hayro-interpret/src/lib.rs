@@ -27,7 +27,7 @@ pub mod mask;
 mod paint;
 pub mod pattern;
 pub mod shading;
-mod util;
+pub mod util;
 pub mod x_object;
 
 use crate::color::ColorSpace;

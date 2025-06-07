@@ -4,14 +4,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use walkdir::WalkDir;
 
-const MAX_PAGES: usize = 3;
+const MAX_PAGES: usize = 5;
 
 fn main() {
     if let Ok(()) = log::set_logger(&LOGGER) {
         log::set_max_level(log::LevelFilter::Warn);
     }
 
-    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/shading");
+    let root_dir = Path::new("/Users/lstampfl/Downloads/pdfs/900k");
 
     let mut entries = WalkDir::new(root_dir)
         .into_iter()
@@ -27,9 +27,9 @@ fn main() {
 
     entries.sort();
 
-    let entries = &entries;
+    let entries = &entries[0..100];
 
-    render_pdfium(entries);
+    // render_pdfium(entries);
     render_hayro(entries);
 }
 

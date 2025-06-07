@@ -204,6 +204,8 @@ use crate::run_test;
 #[test] fn pdftc_100l_0138() { run_test("pdftc_100l_0138", "pdfs/pdftc_100k_0138.pdf", None); }
 #[test] fn pdftc_100l_1071() { run_test("pdftc_100l_1071", "pdfs/pdftc_100k_1071.pdf", None); }
 #[test] fn pdftc_100l_1731() { run_test("pdftc_100l_1731", "pdfs/pdftc_100k_1731.pdf", None); }
+#[test] fn pdftc_900k_0007_page_4() { run_test("pdftc_900k_0007_page_4", "pdfs/pdftc_900k_0007_page_4.pdf", None); }
+#[test] fn pdftc_900k_0012_page_1() { run_test("pdftc_900k_0012_page_1", "pdfs/pdftc_900k_0012_page_1.pdf", None); }
 #[test] fn pdfjs_mmtype1() { run_test("pdfjs_mmtype1", "pdfs/pdfjs/mmtype1.pdf", None); }
 #[test] fn pdfjs_arabiccidtruetype_pdf() { run_test("pdfjs_arabiccidtruetype_pdf", "pdfs/pdfjs/ArabicCIDTrueType.pdf", None); }
 #[test] fn pdfjs_colorspace_sin() { run_test("pdfjs_colorspace_sin", "pdfs/pdfjs/colorspace_sin.pdf", None); }

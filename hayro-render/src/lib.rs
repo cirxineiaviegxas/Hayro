@@ -127,8 +127,8 @@ impl Renderer {
 
                         let scaled_width = bbox.width() as f32 * xs;
                         let scaled_height = bbox.height() as f32 * ys;
-                        let pix_width = x_step.abs().ceil() as u16;
-                        let pix_height = y_step.abs().ceil() as u16;
+                        let pix_width = x_step.abs().round() as u16;
+                        let pix_height = y_step.abs().round() as u16;
 
                         let mut renderer =
                             Renderer(RenderContext::new(pix_width, pix_height), true);

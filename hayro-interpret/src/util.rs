@@ -41,7 +41,7 @@ impl CodeMapExt for CmapSubtable<'_> {
 const SCALAR_NEARLY_ZERO: f32 = 1.0 / (1 << 12) as f32;
 
 /// A number of useful methods for f32 numbers.
-pub(crate) trait FloatExt: Sized + Sub<f32, Output = f32> + Copy {
+pub trait FloatExt: Sized + Sub<f32, Output = f32> + Copy {
     /// Whether the number is approximately 0.
     fn is_nearly_zero(&self) -> bool {
         self.is_nearly_zero_within_tolerance(SCALAR_NEARLY_ZERO)
