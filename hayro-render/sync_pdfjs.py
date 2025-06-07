@@ -23,84 +23,18 @@ import shutil
 from pathlib import Path
 from typing import List, Dict, Any
 
-# Whitelist - these tests are always included (if not blacklisted)
-WHITELIST = [
-    "calgray",
-    "calrgb",
-    "devicen", 
-    "mmtype1",
-    "standard_fonts",
-    "jbig2_symbol_offset",
-    # "jbig2_huffman_1", (Already included in our test suite)
-    # "jbig2_huffman_2", BLank test from what I can tell (the specific page range)
-    "colorspace_atan",
-    "colorspace_cos",
-    "colorspace_sin",
-    "issue2642", 
-    # TODO: Takes very long?
-    # "ccitt_EndOfBlock_false",
-    "cid_cff",
-    "cmykjpeg",
-    "colors",
-    "images_1bit_grayscale",
-    "arabiccidtruetype-pdf",
-    "clippath",
-    "close-path-bug",
-    "complex_ttf_font",
-    "german-umlaut-r",
-    "gradientfill",
-    "helloworld-bad",
-    "jp2k-resetprob",
-    "rotated",
-    # "ShowText-ShadingPattern",
-    "simpletype3font",
-    "bigboundingbox",
-    # "Type3WordSpacing",
-    # "xobject-image",
-    # "ZapfDingbats",
-    "IndexedCS_negative_and_high",  # Regular PDF test
-    "operator-in-TJ-array",
-    "issue4379",
-    "zerowidthline",
-    "issue2006",
-    "issue840",
-    "issue14297",
-    "type4psfunc",
-    "issue6296",
-    "bug1260585",
-    "issue2948",
-    "issue17848",
-    "issue6231_1",
-    "issue4227",
-    "issue6549",
-    "issue18816",
-    "tensor-allflags-withfunction",
-    "personwithdog",
-    "issue17065",
-    "issue13372",
-    "issue2177-eq",
-    "issue15716",
-    "pattern_text_embedded_font",
-    "alphatrans",
-]
-
-# Blacklist - tests matching these patterns will be excluded
-BLACKLIST = [
-    "annotation_*", 
-    "annotation-*", 
-    "xfa",
-    "forms_*",      
-    "*highlight*",      
-    "*textfields*",      
+def load_list_from_file(file_path: Path) -> List[str]:
+    """Load a list of patterns from a text file, one per line."""
+    if not file_path.exists():
+        return []
     
-    "blendmode",
-    "ccitt_EndOfBlock_false",  # Takes very long
-    "jbig2_huffman_2",        # Blank test
-    "ShowText-ShadingPattern", # Problematic test
-    "Type3WordSpacing",        # Problematic test
-    "xobject-image",           # Problematic test
-    "ZapfDingbats",            # Problematic test
-]
+    patterns = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):  # Skip empty lines and comments
+                patterns.append(line)
+    return patterns
 
 class PDFJSSync:
     def __init__(self, max_alphabetical_tests: int = 0):
@@ -116,6 +50,12 @@ class PDFJSSync:
         # Maximum number of alphabetical tests to include (in addition to whitelist)
         self.max_alphabetical_tests = max_alphabetical_tests
         
+        # Load whitelist and blacklist from files
+        self.whitelist_path = self.script_dir / "whitelist.txt"
+        self.blacklist_path = self.script_dir / "blacklist.txt"
+        self.whitelist = load_list_from_file(self.whitelist_path)
+        self.blacklist = load_list_from_file(self.blacklist_path)
+        
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
         """Load the PDF.js test manifest."""
         if not self.pdfjs_manifest_path.exists():
@@ -126,15 +66,23 @@ class PDFJSSync:
             
     def matches_whitelist(self, test_id: str) -> bool:
         """Check if test_id matches any pattern in the whitelist."""
-        for pattern in WHITELIST:
+        for pattern in self.whitelist:
             if fnmatch.fnmatch(test_id, pattern):
                 return True
         return False
         
     def matches_blacklist(self, test_id: str) -> bool:
         """Check if test_id matches any pattern in the blacklist."""
-        for pattern in BLACKLIST:
+        for pattern in self.blacklist:
             if fnmatch.fnmatch(test_id, pattern):
+                return True
+        return False
+        
+    def has_excluded_flags(self, entry: Dict[str, Any]) -> bool:
+        """Check if entry has flags that should be excluded."""
+        excluded_flags = ['annotations', 'enableXfa', 'forms', 'print', 'optionalContent']
+        for flag in excluded_flags:
+            if entry.get(flag, False):
                 return True
         return False
         
@@ -359,14 +307,12 @@ class PDFJSSync:
     def sync(self):
         """Main synchronization function."""
         print("🚀 Starting PDF.js test synchronization...")
-        print(f"📋 Whitelist patterns: {len(WHITELIST)} entries")
-        print(f"🚫 Blacklist patterns: {len(BLACKLIST)} entries")
+        print(f"📋 Whitelist patterns: {len(self.whitelist)} entries")
+        print(f"🚫 Blacklist patterns: {len(self.blacklist)} entries")
         print(f"🔤 Max alphabetical tests: {self.max_alphabetical_tests}")
+        print(f"🚫 Excluded flags: annotations, enableXfa, forms, print, optionalContent")
         
-        # Load existing manifest for cleanup
-        existing_entries = self.load_existing_pdfjs_manifest()
-        if existing_entries:
-            print(f"📄 Found existing manifest with {len(existing_entries)} entries")
+        # This will be loaded later in the filtering section
         
         # Load PDF.js manifest
         try:
@@ -376,32 +322,54 @@ class PDFJSSync:
             print(f"✘ Failed to load PDF.js manifest: {e}")
             return
             
-        # Filter entries using combined whitelist + alphabetical + blacklist logic
+        # Load existing manifest to know which tests are already ported
+        existing_entries = self.load_existing_pdfjs_manifest()
+        existing_ids = {entry["id"] for entry in existing_entries}
+        
+        # Filter entries using combined whitelist + alphabetical + blacklist + flags logic
         matching_entries = []
         
-        # Step 1: Add explicitly whitelisted entries (not blacklisted)
+        # Step 1: Add explicitly whitelisted entries (not blacklisted, not with excluded flags)
         whitelisted_entries = []
         for entry in pdfjs_manifest:
-            if self.matches_whitelist(entry["id"]) and not self.matches_blacklist(entry["id"]):
+            if (self.matches_whitelist(entry["id"]) and 
+                not self.matches_blacklist(entry["id"]) and 
+                not self.has_excluded_flags(entry)):
                 whitelisted_entries.append(entry)
                 matching_entries.append(entry)
                 
         print(f"📋 Found {len(whitelisted_entries)} whitelisted entries")
         
-        # Step 2: Add first N alphabetical entries (excluding already whitelisted)
+        # Step 2: Add first N alphabetical entries (excluding already whitelisted and existing)
         if self.max_alphabetical_tests > 0:
-            alphabetical_entries = self.get_first_n_alphabetical_tests(pdfjs_manifest, self.max_alphabetical_tests)
             whitelisted_ids = {entry["id"] for entry in whitelisted_entries}
+            all_existing_ids = existing_ids | whitelisted_ids
             
-            added_alphabetical = 0
-            for entry in alphabetical_entries:
-                if entry["id"] not in whitelisted_ids:
-                    matching_entries.append(entry)
-                    added_alphabetical += 1
-                    
-            print(f"🔤 Added {added_alphabetical} alphabetical entries (max: {self.max_alphabetical_tests})")
-                
-        print(f"🎯 Total matching entries: {len(matching_entries)}")
+            alphabetical_entries = self.get_first_n_alphabetical_tests(
+                pdfjs_manifest, 
+                self.max_alphabetical_tests, 
+                all_existing_ids
+            )
+            
+            matching_entries.extend(alphabetical_entries)
+            print(f"🔤 Added {len(alphabetical_entries)} alphabetical entries (max: {self.max_alphabetical_tests})")
+        
+        # Calculate statistics
+        total_tests = len(pdfjs_manifest)
+        excluded_by_flags = len([e for e in pdfjs_manifest if self.has_excluded_flags(e)])
+        excluded_by_blacklist = len([e for e in pdfjs_manifest if self.matches_blacklist(e["id"])])
+        already_ported = len(existing_ids)
+        available_for_porting = total_tests - excluded_by_flags - excluded_by_blacklist
+        not_yet_ported = available_for_porting - already_ported
+        
+        print(f"📊 Statistics:")
+        print(f"  Total tests in PDF.js: {total_tests}")
+        print(f"  Excluded by flags: {excluded_by_flags}")
+        print(f"  Excluded by blacklist: {excluded_by_blacklist}")
+        print(f"  Already ported: {already_ported}")
+        print(f"  Available for porting: {available_for_porting}")
+        print(f"  Not yet ported: {not_yet_ported}")
+        print(f"🎯 Total matching entries for this sync: {len(matching_entries)}")
         
         # Get current whitelist IDs for cleanup
         current_whitelist_ids = {entry["id"] for entry in matching_entries}
@@ -487,16 +455,24 @@ class PDFJSSync:
         except Exception as e:
             print(f"✘ Failed to write manifest_pdfjs.json: {e}")
 
-    def get_first_n_alphabetical_tests(self, all_entries: List[Dict[str, Any]], n: int) -> List[Dict[str, Any]]:
-        """Get the first N tests in alphabetical order, excluding blacklisted tests."""
+    def get_first_n_alphabetical_tests(self, all_entries: List[Dict[str, Any]], n: int, existing_ids: set = None) -> List[Dict[str, Any]]:
+        """Get the first N tests in alphabetical order, excluding blacklisted tests and existing tests."""
         if n <= 0:
             return []
             
-        # Filter out blacklisted tests and sort alphabetically
-        non_blacklisted = [entry for entry in all_entries if not self.matches_blacklist(entry["id"])]
-        sorted_entries = sorted(non_blacklisted, key=lambda x: x["id"].lower())
+        if existing_ids is None:
+            existing_ids = set()
+            
+        # Filter out blacklisted tests, tests with excluded flags, and existing tests
+        filtered_entries = []
+        for entry in all_entries:
+            if (not self.matches_blacklist(entry["id"]) and 
+                not self.has_excluded_flags(entry) and 
+                entry["id"] not in existing_ids):
+                filtered_entries.append(entry)
         
-        # Return first N entries
+        # Sort alphabetically and return first N entries
+        sorted_entries = sorted(filtered_entries, key=lambda x: x["id"].lower())
         return sorted_entries[:n]
         
     def preview_selection(self):
@@ -508,9 +484,15 @@ class PDFJSSync:
             print(f"✘ Failed to load PDF.js manifest: {e}")
             return
             
+        # Load existing manifest
+        existing_entries = self.load_existing_pdfjs_manifest()
+        existing_ids = {entry["id"] for entry in existing_entries}
+        
         # Get whitelisted entries
         whitelisted_entries = [entry for entry in pdfjs_manifest 
-                             if self.matches_whitelist(entry["id"]) and not self.matches_blacklist(entry["id"])]
+                             if (self.matches_whitelist(entry["id"]) and 
+                                 not self.matches_blacklist(entry["id"]) and 
+                                 not self.has_excluded_flags(entry))]
         
         print(f"\n📋 Whitelisted entries ({len(whitelisted_entries)}):")
         for entry in sorted(whitelisted_entries, key=lambda x: x["id"]):
@@ -518,19 +500,38 @@ class PDFJSSync:
             
         # Get alphabetical entries
         if self.max_alphabetical_tests > 0:
-            alphabetical_entries = self.get_first_n_alphabetical_tests(pdfjs_manifest, self.max_alphabetical_tests)
             whitelisted_ids = {entry["id"] for entry in whitelisted_entries}
-            new_alphabetical = [entry for entry in alphabetical_entries if entry["id"] not in whitelisted_ids]
+            all_existing_ids = existing_ids | whitelisted_ids
             
-            print(f"\n🔤 Additional alphabetical entries ({len(new_alphabetical)}):")
-            for entry in new_alphabetical:
+            alphabetical_entries = self.get_first_n_alphabetical_tests(
+                pdfjs_manifest, 
+                self.max_alphabetical_tests, 
+                all_existing_ids
+            )
+            
+            print(f"\n🔤 Additional alphabetical entries ({len(alphabetical_entries)}):")
+            for entry in alphabetical_entries:
                 print(f"  - {entry['id']}")
+        else:
+            alphabetical_entries = []
                 
-        # Show blacklisted count
-        blacklisted_entries = [entry for entry in pdfjs_manifest if self.matches_blacklist(entry["id"])]
-        print(f"\n🚫 Blacklisted entries: {len(blacklisted_entries)}")
+        # Show statistics
+        total_tests = len(pdfjs_manifest)
+        excluded_by_flags = len([e for e in pdfjs_manifest if self.has_excluded_flags(e)])
+        excluded_by_blacklist = len([e for e in pdfjs_manifest if self.matches_blacklist(e["id"])])
+        already_ported = len(existing_ids)
+        available_for_porting = total_tests - excluded_by_flags - excluded_by_blacklist
+        not_yet_ported = available_for_porting - already_ported
         
-        total_selected = len(whitelisted_entries) + (len(new_alphabetical) if self.max_alphabetical_tests > 0 else 0)
+        print(f"\n📊 Statistics:")
+        print(f"  Total tests in PDF.js: {total_tests}")
+        print(f"  Excluded by flags: {excluded_by_flags}")
+        print(f"  Excluded by blacklist: {excluded_by_blacklist}")
+        print(f"  Already ported: {already_ported}")
+        print(f"  Available for porting: {available_for_porting}")
+        print(f"  Not yet ported: {not_yet_ported}")
+        
+        total_selected = len(whitelisted_entries) + len(alphabetical_entries)
         print(f"\n🎯 Total entries that would be selected: {total_selected}")
 
 def main():

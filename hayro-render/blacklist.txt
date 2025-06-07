@@ -1,0 +1,24 @@
+# Annotation-related tests
+annotation_*
+annotation-*
+
+# XFA and form-related tests  
+*xfa*
+forms_*
+*textfields*
+
+# UI/visual tests that are problematic
+*highlight*
+*optionalcontent*
+blendmode
+
+# Tests that take too long or are problematic
+ccitt_EndOfBlock_false
+jbig2_huffman_2
+ShowText-ShadingPattern
+Type3WordSpacing
+xobject-image
+ZapfDingbats
+
+# Specific tests to exclude
+artofwar
