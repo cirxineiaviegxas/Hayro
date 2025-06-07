@@ -1,3 +1,20 @@
+"""
+PDF.js Test Synchronization Script
+
+This script synchronizes PDF test files from a PDF.js repository to the local project.
+It supports three types of test selection:
+
+1. Whitelist: Explicitly listed tests that are always included (if not blacklisted)
+2. Alphabetical: First N tests in alphabetical order (configurable via --max-alphabetical)
+3. Blacklist: Pattern-based exclusion of tests (supports wildcards like annotation_*)
+
+Usage:
+    python sync_pdfjs.py                           # Sync only whitelisted tests
+    python sync_pdfjs.py --max-alphabetical 20    # Sync whitelist + first 20 alphabetical tests
+    python sync_pdfjs.py --preview                 # Preview selection without syncing
+    python sync_pdfjs.py --list-blacklisted       # Show blacklisted tests
+"""
+
 import json
 import hashlib
 import requests
@@ -6,8 +23,86 @@ import shutil
 from pathlib import Path
 from typing import List, Dict, Any
 
+# Whitelist - these tests are always included (if not blacklisted)
+WHITELIST = [
+    "calgray",
+    "calrgb",
+    "devicen", 
+    "mmtype1",
+    "standard_fonts",
+    "jbig2_symbol_offset",
+    # "jbig2_huffman_1", (Already included in our test suite)
+    # "jbig2_huffman_2", BLank test from what I can tell (the specific page range)
+    "colorspace_atan",
+    "colorspace_cos",
+    "colorspace_sin",
+    "issue2642", 
+    # TODO: Takes very long?
+    # "ccitt_EndOfBlock_false",
+    "cid_cff",
+    "cmykjpeg",
+    "colors",
+    "images_1bit_grayscale",
+    "arabiccidtruetype-pdf",
+    "clippath",
+    "close-path-bug",
+    "complex_ttf_font",
+    "german-umlaut-r",
+    "gradientfill",
+    "helloworld-bad",
+    "jp2k-resetprob",
+    "rotated",
+    # "ShowText-ShadingPattern",
+    "simpletype3font",
+    "bigboundingbox",
+    # "Type3WordSpacing",
+    # "xobject-image",
+    # "ZapfDingbats",
+    "IndexedCS_negative_and_high",  # Regular PDF test
+    "operator-in-TJ-array",
+    "issue4379",
+    "zerowidthline",
+    "issue2006",
+    "issue840",
+    "issue14297",
+    "type4psfunc",
+    "issue6296",
+    "bug1260585",
+    "issue2948",
+    "issue17848",
+    "issue6231_1",
+    "issue4227",
+    "issue6549",
+    "issue18816",
+    "tensor-allflags-withfunction",
+    "personwithdog",
+    "issue17065",
+    "issue13372",
+    "issue2177-eq",
+    "issue15716",
+    "pattern_text_embedded_font",
+]
+
+# Blacklist - tests matching these patterns will be excluded
+BLACKLIST = [
+    "annotation_*", 
+    "annotation-*", 
+    "xfa"
+    "forms_*",      
+    "highlight",      
+    "textfields",      
+    
+    "blendmode",
+    "ccitt_EndOfBlock_false",  # Takes very long
+    "jbig2_huffman_2",        # Blank test
+    "ShowText-ShadingPattern", # Problematic test
+    "Type3WordSpacing",        # Problematic test
+    "xobject-image",           # Problematic test
+    "ZapfDingbats",            # Problematic test
+]
+
 class PDFJSSync:
-    def __init__(self):
+    def __init__(self, max_alphabetical_tests: int = 0):
         self.script_dir = Path(__file__).resolve().parent
         self.pdfjs_test_dir = Path("/Users/lstampfl/Programming/GitHub/pdf.js/test")
         self.pdfjs_pdfs_dir = self.pdfjs_test_dir / "pdfs"
@@ -17,64 +112,8 @@ class PDFJSSync:
         self.our_downloads_dir = self.script_dir / "downloads"
         self.our_pdfjs_manifest_path = self.script_dir / "manifest_pdfjs.json"
         
-        self.whitelist = [
-            "calgray",
-            "calrgb",
-            "devicen",
-            "mmtype1",
-            "standard_fonts",
-            "jbig2_symbol_offset",
-            # "jbig2_huffman_1", (Already included in our test suite)
-            # "jbig2_huffman_2", BLank test from what I can tell (the specific page range)
-            "colorspace_atan",
-            "colorspace_cos",
-            "colorspace_sin",
-            "issue2642", 
-            # TODO: Takes very long?
-            # "ccitt_EndOfBlock_false",
-            "cid_cff",
-            "cmykjpeg",
-            "colors",
-            "images_1bit_grayscale",
-            "arabiccidtruetype-pdf",
-            "clippath",
-            "close-path-bug",
-            "complex_ttf_font",
-            "german-umlaut-r",
-            "gradientfill",
-            "helloworld-bad",
-            "jp2k-resetprob",
-            "rotated",
-            # "ShowText-ShadingPattern",
-            "simpletype3font",
-            "bigboundingbox",
-            # "Type3WordSpacing",
-            # "xobject-image",
-            # "ZapfDingbats",
-            "IndexedCS_negative_and_high",  # Regular PDF test
-            "operator-in-TJ-array",
-            "issue4379",
-            "zerowidthline",
-            "issue2006",
-            "issue840",
-            "issue14297",
-            "type4psfunc",
-            "issue6296",
-            "bug1260585",
-            "issue2948",
-            "issue17848",
-            "issue6231_1",
-            "issue4227",
-            "issue6549",
-            "issue18816",
-            "tensor-allflags-withfunction",
-            "personwithdog",
-            "issue17065",
-            "issue13372",
-            "issue2177-eq",
-            "issue15716",
-            "pattern_text_embedded_font",
-        ]
+        # Maximum number of alphabetical tests to include (in addition to whitelist)
+        self.max_alphabetical_tests = max_alphabetical_tests
         
     def load_pdfjs_manifest(self) -> List[Dict[str, Any]]:
         """Load the PDF.js test manifest."""
@@ -86,7 +125,14 @@ class PDFJSSync:
             
     def matches_whitelist(self, test_id: str) -> bool:
         """Check if test_id matches any pattern in the whitelist."""
-        for pattern in self.whitelist:
+        for pattern in WHITELIST:
+            if fnmatch.fnmatch(test_id, pattern):
+                return True
+        return False
+        
+    def matches_blacklist(self, test_id: str) -> bool:
+        """Check if test_id matches any pattern in the blacklist."""
+        for pattern in BLACKLIST:
             if fnmatch.fnmatch(test_id, pattern):
                 return True
         return False
@@ -312,7 +358,9 @@ class PDFJSSync:
     def sync(self):
         """Main synchronization function."""
         print("🚀 Starting PDF.js test synchronization...")
-        print(f"📋 Whitelist patterns: {', '.join(self.whitelist)}")
+        print(f"📋 Whitelist patterns: {len(WHITELIST)} entries")
+        print(f"🚫 Blacklist patterns: {len(BLACKLIST)} entries")
+        print(f"🔤 Max alphabetical tests: {self.max_alphabetical_tests}")
         
         # Load existing manifest for cleanup
         existing_entries = self.load_existing_pdfjs_manifest()
@@ -327,13 +375,32 @@ class PDFJSSync:
             print(f"✘ Failed to load PDF.js manifest: {e}")
             return
             
-        # Filter entries based on whitelist
+        # Filter entries using combined whitelist + alphabetical + blacklist logic
         matching_entries = []
+        
+        # Step 1: Add explicitly whitelisted entries (not blacklisted)
+        whitelisted_entries = []
         for entry in pdfjs_manifest:
-            if self.matches_whitelist(entry["id"]):
+            if self.matches_whitelist(entry["id"]) and not self.matches_blacklist(entry["id"]):
+                whitelisted_entries.append(entry)
                 matching_entries.append(entry)
                 
-        print(f"🎯 Found {len(matching_entries)} matching entries")
+        print(f"📋 Found {len(whitelisted_entries)} whitelisted entries")
+        
+        # Step 2: Add first N alphabetical entries (excluding already whitelisted)
+        if self.max_alphabetical_tests > 0:
+            alphabetical_entries = self.get_first_n_alphabetical_tests(pdfjs_manifest, self.max_alphabetical_tests)
+            whitelisted_ids = {entry["id"] for entry in whitelisted_entries}
+            
+            added_alphabetical = 0
+            for entry in alphabetical_entries:
+                if entry["id"] not in whitelisted_ids:
+                    matching_entries.append(entry)
+                    added_alphabetical += 1
+                    
+            print(f"🔤 Added {added_alphabetical} alphabetical entries (max: {self.max_alphabetical_tests})")
+                
+        print(f"🎯 Total matching entries: {len(matching_entries)}")
         
         # Get current whitelist IDs for cleanup
         current_whitelist_ids = {entry["id"] for entry in matching_entries}
@@ -419,8 +486,83 @@ class PDFJSSync:
         except Exception as e:
             print(f"✘ Failed to write manifest_pdfjs.json: {e}")
 
+    def get_first_n_alphabetical_tests(self, all_entries: List[Dict[str, Any]], n: int) -> List[Dict[str, Any]]:
+        """Get the first N tests in alphabetical order, excluding blacklisted tests."""
+        if n <= 0:
+            return []
+            
+        # Filter out blacklisted tests and sort alphabetically
+        non_blacklisted = [entry for entry in all_entries if not self.matches_blacklist(entry["id"])]
+        sorted_entries = sorted(non_blacklisted, key=lambda x: x["id"].lower())
+        
+        # Return first N entries
+        return sorted_entries[:n]
+        
+    def preview_selection(self):
+        """Preview which tests would be selected without running the sync."""
+        try:
+            pdfjs_manifest = self.load_pdfjs_manifest()
+            print(f"📄 Loaded PDF.js manifest with {len(pdfjs_manifest)} total entries")
+        except Exception as e:
+            print(f"✘ Failed to load PDF.js manifest: {e}")
+            return
+            
+        # Get whitelisted entries
+        whitelisted_entries = [entry for entry in pdfjs_manifest 
+                             if self.matches_whitelist(entry["id"]) and not self.matches_blacklist(entry["id"])]
+        
+        print(f"\n📋 Whitelisted entries ({len(whitelisted_entries)}):")
+        for entry in sorted(whitelisted_entries, key=lambda x: x["id"]):
+            print(f"  - {entry['id']}")
+            
+        # Get alphabetical entries
+        if self.max_alphabetical_tests > 0:
+            alphabetical_entries = self.get_first_n_alphabetical_tests(pdfjs_manifest, self.max_alphabetical_tests)
+            whitelisted_ids = {entry["id"] for entry in whitelisted_entries}
+            new_alphabetical = [entry for entry in alphabetical_entries if entry["id"] not in whitelisted_ids]
+            
+            print(f"\n🔤 Additional alphabetical entries ({len(new_alphabetical)}):")
+            for entry in new_alphabetical:
+                print(f"  - {entry['id']}")
+                
+        # Show blacklisted count
+        blacklisted_entries = [entry for entry in pdfjs_manifest if self.matches_blacklist(entry["id"])]
+        print(f"\n🚫 Blacklisted entries: {len(blacklisted_entries)}")
+        
+        total_selected = len(whitelisted_entries) + (len(new_alphabetical) if self.max_alphabetical_tests > 0 else 0)
+        print(f"\n🎯 Total entries that would be selected: {total_selected}")
+
 def main():
-    syncer = PDFJSSync()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Sync PDF.js test files')
+    parser.add_argument('--max-alphabetical', type=int, default=0,
+                        help='Maximum number of alphabetical tests to include (default: 0)')
+    parser.add_argument('--list-blacklisted', action='store_true',
+                        help='List tests that would be blacklisted and exit')
+    parser.add_argument('--preview', action='store_true',
+                        help='Preview which tests would be selected without syncing')
+    
+    args = parser.parse_args()
+    
+    syncer = PDFJSSync(max_alphabetical_tests=args.max_alphabetical)
+    
+    if args.list_blacklisted:
+        # Load PDF.js manifest and show blacklisted entries
+        try:
+            pdfjs_manifest = syncer.load_pdfjs_manifest()
+            blacklisted_entries = [entry for entry in pdfjs_manifest if syncer.matches_blacklist(entry["id"])]
+            print(f"📋 Blacklisted entries ({len(blacklisted_entries)}):")
+            for entry in sorted(blacklisted_entries, key=lambda x: x["id"]):
+                print(f"  - {entry['id']}")
+        except Exception as e:
+            print(f"✘ Failed to load PDF.js manifest: {e}")
+        return
+        
+    if args.preview:
+        syncer.preview_selection()
+        return
+    
     syncer.sync()
 
 if __name__ == '__main__':
