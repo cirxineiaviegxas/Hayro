@@ -444,10 +444,14 @@ pub fn interpret<'a, 'b>(
                     let st = context.get_mut();
                     st.non_stroke_pattern = Some(sp);
                     st.none_stroke_cs = ColorSpace::pattern();
+                    
+                    device.push_transparency_group(st.non_stroke_alpha);
 
                     let bbox = context.bbox().to_path(0.1);
                     let inverted_bbox = context.get().ctm.inverse() * bbox;
                     fill_path_impl(context, device, Some(&inverted_bbox), None);
+                    
+                    device.pop_transparency_group();
 
                     context.restore_state();
                 } else {

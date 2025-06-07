@@ -150,6 +150,7 @@ pub(crate) fn draw_image_xobject(
     ]));
     let transform = context.get().ctm;
     device.set_transform(transform);
+    device.push_transparency_group(context.get().non_stroke_alpha);
 
     if x_object.is_image_mask {
         let stencil = StencilImage {
@@ -170,6 +171,8 @@ pub(crate) fn draw_image_xobject(
 
         device.draw_rgba_image(image);
     }
+    
+    device.pop_transparency_group();
 
     context.restore_state();
 }

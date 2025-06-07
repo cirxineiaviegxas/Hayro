@@ -60,6 +60,10 @@
     "file": "pdfs/close-path-bug.pdf"
   },
   {
+    "id": "alphatrans",
+    "file": "pdfs/alphatrans.pdf"
+  },
+  {
     "id": "colorspace_cos",
     "file": "pdfs/colorspace_cos.pdf"
   },

@@ -81,16 +81,17 @@ WHITELIST = [
     "issue2177-eq",
     "issue15716",
     "pattern_text_embedded_font",
+    "alphatrans",
 ]
 
 # Blacklist - tests matching these patterns will be excluded
 BLACKLIST = [
     "annotation_*", 
     "annotation-*", 
-    "xfa"
+    "xfa",
     "forms_*",      
-    "highlight",      
-    "textfields",      
+    "*highlight*",      
+    "*textfields*",      
     
     "blendmode",
     "ccitt_EndOfBlock_false",  # Takes very long

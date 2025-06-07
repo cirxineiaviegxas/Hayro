@@ -230,6 +230,7 @@ use crate::run_test;
 #[test] fn pdfjs_IndexedCS_negative_and_high() { run_test("pdfjs_IndexedCS_negative_and_high", "pdfs/pdfjs/IndexedCS_negative_and_high.pdf", None); }
 #[test] fn pdfjs_issue13372() { run_test("pdfjs_issue13372", "pdfs/pdfjs/issue13372.pdf", None); }
 #[test] fn pdfjs_close_path_bug() { run_test("pdfjs_close_path_bug", "pdfs/pdfjs/close-path-bug.pdf", None); }
+#[test] fn pdfjs_alphatrans() { run_test("pdfjs_alphatrans", "pdfs/pdfjs/alphatrans.pdf", None); }
 #[test] fn pdfjs_colorspace_cos() { run_test("pdfjs_colorspace_cos", "pdfs/pdfjs/colorspace_cos.pdf", None); }
 #[test] fn pdfjs_devicen() { run_test("pdfjs_devicen", "pdfs/pdfjs/devicen.pdf", None); }
 #[test] fn pdfjs_cmykjpeg() { run_test("pdfjs_cmykjpeg", "pdfs/pdfjs/cmykjpeg.pdf", None); }
