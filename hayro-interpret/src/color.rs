@@ -38,7 +38,6 @@ enum ColorSpaceType {
 impl ColorSpaceType {
     fn new(object: Object) -> Option<Self> {
         Self::new_inner(object)
-            .warn_none("unsupported color space or failed to process it")
     }
 
     fn new_inner(object: Object) -> Option<ColorSpaceType> {
