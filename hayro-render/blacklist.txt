@@ -22,3 +22,7 @@ ZapfDingbats
 
 # Specific tests to exclude
 artofwar
+
+# skrifa issue
+bug1050040
+bug1065245

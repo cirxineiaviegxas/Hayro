@@ -72,6 +72,51 @@
     "last_page": 0
   },
   {
+    "id": "bug1046314",
+    "file": "pdfs/bug1046314.pdf"
+  },
+  {
+    "id": "bug1057544",
+    "file": "pdfs/bug1057544.pdf"
+  },
+  {
+    "id": "bug1064894",
+    "file": "pdfs/bug1064894.link",
+    "md5": "22971b6a24912bca9c773379c10ef18a",
+    "link": true,
+    "first_page": 0,
+    "last_page": 0
+  },
+  {
+    "id": "bug1068432",
+    "file": "pdfs/bug1068432.pdf"
+  },
+  {
+    "id": "bug1072164",
+    "file": "pdfs/bug1072164.link",
+    "md5": "cfee3c51e8464aa44218f4eaf27e084b",
+    "link": true
+  },
+  {
+    "id": "bug1077808",
+    "file": "pdfs/bug1077808.link",
+    "md5": "4a4bfc27e3fafe2f74e7a4a4cd04b8dc",
+    "link": true,
+    "last_page": 0
+  },
+  {
+    "id": "bug1108301",
+    "file": "pdfs/bug1108301.pdf"
+  },
+  {
+    "id": "bug1108753",
+    "file": "pdfs/bug1108753.link",
+    "md5": "a7aaf92d55b4602afb0ca3d75198b56b",
+    "link": true,
+    "first_page": 0,
+    "last_page": 0
+  },
+  {
     "id": "bug1260585",
     "file": "pdfs/bug1260585.link",
     "md5": "9415b1eb00a43c97c15328cd4c8d136a",
