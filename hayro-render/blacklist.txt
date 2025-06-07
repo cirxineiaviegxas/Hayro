@@ -25,4 +25,26 @@ artofwar
 
 # skrifa issue
 bug1050040
+
+#investigate
 bug1065245
+bug1132849
+bug1130815
+bug1130815-eq
+bug1130815-text
+bug1157493
+bug1250079
+bug1308536
+bug1365930
+bug1354114
+bug1425312
+bug1443140
+bug1652224
+bug1659412
+bug1671312_ArialNarrow
+bug1671312_reduced
+bug1650302_reduce
+
+# smask
+bug1123803
+bug1199237

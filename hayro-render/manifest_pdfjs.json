@@ -117,11 +117,107 @@
     "last_page": 0
   },
   {
+    "id": "bug1140761",
+    "file": "pdfs/bug1140761.link",
+    "md5": "b74eced7634d4f248dc6265f8225d432",
+    "link": true,
+    "first_page": 0,
+    "last_page": 0
+  },
+  {
+    "id": "bug1142033",
+    "file": "pdfs/bug1142033.link",
+    "md5": "1d9afd397e89a0f52c056f449ec93daa",
+    "link": true,
+    "last_page": 0
+  },
+  {
+    "id": "bug1146106",
+    "file": "pdfs/bug1146106.pdf"
+  },
+  {
+    "id": "bug1151216",
+    "file": "pdfs/bug1151216.pdf"
+  },
+  {
+    "id": "bug1175962",
+    "file": "pdfs/bug1175962.pdf"
+  },
+  {
+    "id": "bug1186827",
+    "file": "pdfs/bug1186827.pdf"
+  },
+  {
+    "id": "bug1200096",
+    "file": "pdfs/bug1200096.pdf"
+  },
+  {
+    "id": "bug1245391",
+    "file": "pdfs/bug1245391_reduced.pdf"
+  },
+  {
+    "id": "bug1245391-text",
+    "file": "pdfs/bug1245391_reduced.pdf"
+  },
+  {
+    "id": "bug1252420",
+    "file": "pdfs/bug1252420.pdf"
+  },
+  {
     "id": "bug1260585",
     "file": "pdfs/bug1260585.link",
     "md5": "9415b1eb00a43c97c15328cd4c8d136a",
     "link": true,
     "last_page": 0
+  },
+  {
+    "id": "bug1292316",
+    "file": "pdfs/bug1292316.link",
+    "md5": "f0a815ada0276059242f264653cfd2bc",
+    "link": true,
+    "last_page": 0
+  },
+  {
+    "id": "bug1337429",
+    "file": "pdfs/bug1337429.pdf"
+  },
+  {
+    "id": "bug1392647",
+    "file": "pdfs/bug1392647.pdf"
+  },
+  {
+    "id": "bug1393476",
+    "file": "pdfs/bug1393476.link",
+    "md5": "163ee8727c77f27ee651eec777bb20a9",
+    "link": true
+  },
+  {
+    "id": "bug1473809",
+    "file": "pdfs/bug1473809.pdf"
+  },
+  {
+    "id": "bug1513120-text",
+    "file": "pdfs/bug1513120_reduced.pdf"
+  },
+  {
+    "id": "bug1529502",
+    "file": "pdfs/bug1529502.pdf"
+  },
+  {
+    "id": "bug1539074",
+    "file": "pdfs/bug1539074.pdf"
+  },
+  {
+    "id": "bug1539074_1",
+    "file": "pdfs/bug1539074.1.pdf"
+  },
+  {
+    "id": "bug1627427",
+    "file": "pdfs/bug1627427_reduced.pdf"
+  },
+  {
+    "id": "bug1703683_page2_reduced",
+    "file": "pdfs/bug1703683_page2_reduced.pdf"
   },
   {
     "id": "calgray",
