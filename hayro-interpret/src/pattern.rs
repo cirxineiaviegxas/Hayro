@@ -174,7 +174,7 @@ impl<'a> TilingPattern<'a> {
             path: initial_transform * self.bbox.get().to_path(0.1),
             fill: Fill::NonZero,
         };
-        device.push_layer(Some(&clip_path), 1.0);
+        device.push_clip_path(&clip_path);
 
         if self.is_color {
             interpret(iter, &resources, &mut context, device);
@@ -195,7 +195,7 @@ impl<'a> TilingPattern<'a> {
             interpret(iter, &resources, &mut context, &mut device);
         }
 
-        device.pop();
+        device.pop_clip_path();
 
         Some(())
     }
@@ -237,8 +237,12 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
         self.inner.set_fill_properties(fill_props)
     }
 
-    fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32) {
-        self.inner.push_layer(clip_path, opacity)
+    fn push_clip_path(&mut self, clip_path: &ClipPath) {
+        self.inner.push_clip_path(clip_path)
+    }
+
+    fn push_transparency_group(&mut self, _: f32) {
+        
     }
 
     fn fill_glyph(&mut self, glyph: &Glyph<'_>, _: &Paint) {
@@ -255,7 +259,11 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
         self.inner.draw_stencil_image(stencil, self.paint);
     }
 
-    fn pop(&mut self) {
-        self.inner.pop()
+    fn pop_clip_path(&mut self) {
+        self.inner.pop_clip_path();
+    }
+
+    fn pop_transparency_group(&mut self) {
+        
     }
 }

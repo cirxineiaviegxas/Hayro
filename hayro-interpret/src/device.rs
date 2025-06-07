@@ -11,10 +11,12 @@ pub trait Device {
     fn set_stroke_properties(&mut self, stroke_props: &StrokeProps);
     fn fill_path(&mut self, path: &BezPath, paint: &Paint);
     fn set_fill_properties(&mut self, fill_props: &FillProps);
-    fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32);
+    fn push_clip_path(&mut self, clip_path: &ClipPath);
+    fn push_transparency_group(&mut self, opacity: f32);
     fn fill_glyph(&mut self, glyph: &Glyph<'_>, paint: &Paint);
     fn stroke_glyph(&mut self, glyph: &Glyph<'_>, paint: &Paint);
     fn draw_rgba_image(&mut self, image: RgbaImage);
     fn draw_stencil_image(&mut self, stencil: StencilImage, paint: &Paint);
-    fn pop(&mut self);
+    fn pop_clip_path(&mut self);
+    fn pop_transparency_group(&mut self);
 }

@@ -218,13 +218,10 @@ pub fn interpret<'a, 'b>(
             TypedOperation::EndPath(_) => {
                 if let Some(clip) = *context.clip() {
                     device.set_transform(context.get().ctm);
-                    device.push_layer(
-                        Some(&ClipPath {
-                            path: context.path().clone(),
-                            fill: clip,
-                        }),
-                        1.0,
-                    );
+                    device.push_clip_path(&ClipPath {
+                        path: context.path().clone(),
+                        fill: clip,
+                    });
 
                     *(context.clip_mut()) = None;
                     context.get_mut().n_clips += 1;
@@ -341,13 +338,10 @@ pub fn interpret<'a, 'b>(
 
                 if has_outline {
                     device.set_transform(context.get().ctm);
-                    device.push_layer(
-                        Some(&ClipPath {
-                            path: context.get().text_state.clip_paths.clone(),
-                            fill: Fill::NonZero,
-                        }),
-                        1.0,
-                    );
+                    device.push_clip_path(&ClipPath {
+                        path: context.get().text_state.clip_paths.clone(),
+                        fill: Fill::NonZero,
+                    });
                     context.get_mut().n_clips += 1;
                 }
 
@@ -482,7 +476,7 @@ fn restore_state(ctx: &mut Context, device: &mut impl Device) {
     let target_clips = ctx.get().n_clips;
 
     while num_clips > target_clips {
-        device.pop();
+        device.pop_clip_path();
         num_clips -= 1;
     }
 }

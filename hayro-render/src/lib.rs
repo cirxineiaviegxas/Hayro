@@ -216,13 +216,6 @@ impl Device for Renderer {
         self.0.fill_path(path, paint_type, paint_transform);
     }
 
-    fn push_layer(&mut self, clip: Option<&ClipPath>, opacity: f32) {
-        self.0
-            .set_fill_rule(clip.map(|c| c.fill).unwrap_or(Fill::NonZero));
-        self.0
-            .push_layer(clip.map(|c| &c.path), None, Some(opacity), None)
-    }
-
     fn draw_rgba_image(&mut self, image: hayro_interpret::RgbaImage) {
         self.0.set_anti_aliasing(false);
         self.draw_image(
@@ -237,7 +230,7 @@ impl Device for Renderer {
 
     fn draw_stencil_image(&mut self, stencil: StencilImage, paint: &Paint) {
         self.0.set_anti_aliasing(false);
-        self.push_layer(None, 1.0);
+        self.push_transparency_group(1.0);
         let old_rule = self.0.fill_rule;
         self.set_fill_properties(&FillProps {
             fill_rule: Fill::NonZero,
@@ -255,7 +248,7 @@ impl Device for Renderer {
             true,
             stencil.interpolate,
         );
-        self.pop();
+        self.pop_transparency_group();
 
         self.set_fill_properties(&FillProps {
             fill_rule: old_rule,
@@ -263,9 +256,6 @@ impl Device for Renderer {
         self.0.set_anti_aliasing(true);
     }
 
-    fn pop(&mut self) {
-        self.0.pop_layer();
-    }
 
     fn fill_glyph(&mut self, glyph: &Glyph<'_>, paint: &Paint) {
         match glyph {
@@ -289,6 +279,26 @@ impl Device for Renderer {
                 s.interpret(self, paint);
             }
         }
+    }
+
+    fn push_clip_path(&mut self, clip_path: &ClipPath) {
+        self.0
+            .set_fill_rule(clip_path.fill);
+        self.0
+            .push_layer(Some(&clip_path.path), None, None, None)
+    }
+
+    fn push_transparency_group(&mut self, opacity: f32) {
+        self.0
+            .push_layer(None, None, Some(opacity), None)
+    }
+
+    fn pop_clip_path(&mut self) {
+        self.0.pop_layer();
+    }
+
+    fn pop_transparency_group(&mut self) {
+        self.0.pop_layer();
     }
 }
 
@@ -345,14 +355,14 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
 
     device.set_transform(initial_transform);
 
-    device.push_layer(None, 1.0);
+    device.push_transparency_group(1.0);
     interpret(
         page.typed_operations(),
         page.resources(),
         &mut state,
         &mut device,
     );
-    device.pop();
+    device.pop_transparency_group();
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
     device.0.render_to_pixmap(&mut pixmap);

@@ -94,33 +94,37 @@ pub(crate) fn draw_form_xobject<'a>(
     context.push_root_transform();
 
     device.set_transform(context.get().ctm);
-    let opacity = if x_object.is_transparency_group {
-        context.get().non_stroke_alpha
-    }   else {
-        1.0
-    };
     
-    device.push_layer(
-        Some(&ClipPath {
-            path: Rect::new(
-                x_object.bbox[0] as f64,
-                x_object.bbox[1] as f64,
-                x_object.bbox[2] as f64,
-                x_object.bbox[3] as f64,
-            )
-            .to_path(0.1),
-            fill: Fill::NonZero,
-        }),
-        opacity,
-    );
 
+    
+    if x_object.is_transparency_group {
+        device.push_transparency_group(context.get().non_stroke_alpha);
+    }
+
+    device.push_clip_path(&ClipPath {
+        path: Rect::new(
+            x_object.bbox[0] as f64,
+            x_object.bbox[1] as f64,
+            x_object.bbox[2] as f64,
+            x_object.bbox[3] as f64,
+        )
+            .to_path(0.1),
+        fill: Fill::NonZero,
+    });
+    
     interpret(
         iter,
         &Resources::from_parent(x_object.resources.clone(), resources.clone()),
         context,
         device,
     );
-    device.pop();
+
+    device.pop_clip_path();
+    
+    if x_object.is_transparency_group {
+        device.pop_transparency_group();
+    }
+    
     context.pop_root_transform();
     context.restore_state();
 }

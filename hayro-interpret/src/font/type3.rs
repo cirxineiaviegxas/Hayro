@@ -170,9 +170,14 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.set_fill_properties(fill_props)
     }
 
-    fn push_layer(&mut self, clip_path: Option<&ClipPath>, opacity: f32) {
-        self.inner.push_layer(clip_path, opacity)
+    fn push_clip_path(&mut self, clip_path: &ClipPath) {
+        self.inner.push_clip_path(clip_path)
     }
+
+    fn push_transparency_group(&mut self, _: f32) {
+        
+    }
+
 
     fn fill_glyph(&mut self, _: &Glyph<'_>, _: &Paint) {}
 
@@ -184,7 +189,11 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.draw_stencil_image(stencil, self.paint);
     }
 
-    fn pop(&mut self) {
-        self.inner.pop()
+    fn pop_clip_path(&mut self) {
+        self.inner.pop_clip_path()
+    }
+
+    fn pop_transparency_group(&mut self) {
+        
     }
 }
