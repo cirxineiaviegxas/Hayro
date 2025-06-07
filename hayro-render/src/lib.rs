@@ -355,14 +355,12 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
 
     device.set_transform(initial_transform);
 
-    device.push_transparency_group(1.0);
     interpret(
         page.typed_operations(),
         page.resources(),
         &mut state,
         &mut device,
     );
-    device.pop_transparency_group();
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);
     device.0.render_to_pixmap(&mut pixmap);
