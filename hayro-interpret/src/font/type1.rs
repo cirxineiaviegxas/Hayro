@@ -5,13 +5,14 @@ use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{FONT_DESC, FONT_FILE, FONT_FILE3};
+use hayro_syntax::object::dict::keys::{BASE_FONT, FONT_DESC, FONT_FILE, FONT_FILE3};
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use hayro_syntax::object::name::Name;
 
 #[derive(Debug)]
 pub(crate) struct Type1Font(Kind);
@@ -73,7 +74,7 @@ impl Standard {
     pub fn new(dict: &Dict) -> Standard {
         let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
         let base_font = select_standard_font(dict)
-            .warn_none("couldnt find appropriate font")
+            .warn_none(&format!("couldnt find appropriate font for {}, falling back to Times New Roman.", dict.get::<Name>(BASE_FONT).map(|n| n.as_str().to_string()).unwrap_or("unknown".to_string())))
             .unwrap_or(StandardFont::TimesRoman);
         let widths = read_widths(dict, &descriptor);
 
