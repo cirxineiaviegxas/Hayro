@@ -39,6 +39,7 @@ pub struct FormXObject<'a> {
     pub decoded: Vec<u8>,
     matrix: Affine,
     bbox: [f32; 4],
+    is_transparency_group: bool,
     resources: Dict<'a>,
 }
 
@@ -54,10 +55,12 @@ impl<'a> FormXObject<'a> {
                 .unwrap_or([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
         );
         let bbox = dict.get::<[f32; 4]>(BBOX).unwrap();
+        let is_transparency_group = dict.get::<Dict>(GROUP).is_some();
 
         Some(Self {
             decoded,
             matrix,
+            is_transparency_group,
             bbox,
             resources,
         })
@@ -91,6 +94,12 @@ pub(crate) fn draw_form_xobject<'a>(
     context.push_root_transform();
 
     device.set_transform(context.get().ctm);
+    let opacity = if x_object.is_transparency_group {
+        context.get().non_stroke_alpha
+    }   else {
+        1.0
+    };
+    
     device.push_layer(
         Some(&ClipPath {
             path: Rect::new(
@@ -102,7 +111,7 @@ pub(crate) fn draw_form_xobject<'a>(
             .to_path(0.1),
             fill: Fill::NonZero,
         }),
-        context.get().non_stroke_alpha,
+        opacity,
     );
 
     interpret(
