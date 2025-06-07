@@ -874,5 +874,10 @@
   {
     "id": "pdftc_900k_0240_page_2",
     "file": "pdfs/pdftc_900k_0240_page_2.pdf"
+  },
+  {
+    "id": "pdftc_900k_0319_page_1",
+    "comment": "note that hinting here is not optimal, the characters look way too bold.",
+    "file": "pdfs/pdftc_900k_0319_page_1.pdf"
   }
 ]

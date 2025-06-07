@@ -4,7 +4,7 @@ use kurbo::{Affine, BezPath};
 use once_cell::sync::Lazy;
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
-use skrifa::outline::DrawSettings;
+use skrifa::outline::{DrawSettings, HintingInstance, HintingOptions, InterpreterVersion};
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
@@ -199,9 +199,19 @@ impl OpenTypeFontBlob {
         let font_ref_yoke =
             Yoke::<OTFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
                 let font_ref = FontRef::from_index(data.as_ref(), index).unwrap();
+                
+                let hinting_instance = HintingInstance::new(
+                    &font_ref.outline_glyphs(),
+                    Size::new(UNITS_PER_EM),
+                    LocationRef::default(),
+                    HintingOptions::default(),
+                    InterpreterVersion::_35
+                ).ok();
+                
                 OTFYoke {
                     font_ref: font_ref.clone(),
                     outline_glyphs: font_ref.outline_glyphs(),
+                    hinting_instance,
                     glyph_metrics: font_ref
                         .glyph_metrics(Size::new(UNITS_PER_EM), LocationRef::default()),
                 }
@@ -224,7 +234,16 @@ impl OpenTypeFontBlob {
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
-        let draw_settings = DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default());
+        
+        let draw_settings = if let Some(instance) = self.0.get().hinting_instance.as_ref() {
+            // Note: We always hint at the font size `UNITS_PER_EM`, which obviously isn't very useful. We don't do this
+            // for better text quality (right now), but instead because there are some PDFs with obscure fonts that
+            // actually render wrongly if hinting is disabled!
+            // Adding proper hinting support is definitely planned for the future, though.
+            DrawSettings::hinted(instance, false)
+        }   else {
+            DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default())
+        };
 
         let Some(outline) = self.outline_glyphs().get(glyph) else {
             return BezPath::new();
@@ -254,6 +273,7 @@ fn convert_matrix(matrix: Matrix) -> Affine {
 struct OTFYoke<'a> {
     pub font_ref: FontRef<'a>,
     pub glyph_metrics: GlyphMetrics<'a>,
+    pub hinting_instance: Option<HintingInstance>,
     pub outline_glyphs: OutlineGlyphCollection<'a>,
 }
 
