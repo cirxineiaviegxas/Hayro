@@ -63,7 +63,7 @@ pub mod lzw {
     fn decode_impl(data: &[u8], early_change: bool) -> Option<Vec<u8>> {
         let mut table = Table::new(early_change);
 
-        let bit_size = BitSize::from_u8(table.code_length())?;
+        let mut bit_size = BitSize::from_u8(table.code_length())?;
         let mut reader = BitReader::new(data);
         let mut decoded = vec![];
         let mut prev = None;
@@ -75,6 +75,7 @@ pub mod lzw {
                 CLEAR_TABLE => {
                     table.clear();
                     prev = None;
+                    bit_size = BitSize::from_u8(table.code_length())?;
                 }
                 EOD => return Some(decoded),
                 new => {
@@ -91,6 +92,7 @@ pub mod lzw {
                         decoded.extend_from_slice(table.register(prev, new_byte)?);
                     }
 
+                    bit_size = BitSize::from_u8(table.code_length())?;
                     prev = Some(new);
                 }
             }
