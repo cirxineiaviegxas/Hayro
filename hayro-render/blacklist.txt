@@ -1,18 +1,13 @@
-# Annotation-related tests
 annotation_*
 annotation-*
-
-# XFA and form-related tests  
 *xfa*
 forms_*
 *textfields*
-
-# UI/visual tests that are problematic
 *highlight*
 *optionalcontent*
 blendmode
 
-# Tests that take too long or are problematic
+# Look into it
 ccitt_EndOfBlock_false
 jbig2_huffman_2
 ShowText-ShadingPattern
@@ -23,7 +18,7 @@ ZapfDingbats
 # Specific tests to exclude
 artofwar
 
-# skrifa issue
+# CMAP table is broken, therefore we can't map codepoint to a glyph
 bug1050040
 
 #investigate
