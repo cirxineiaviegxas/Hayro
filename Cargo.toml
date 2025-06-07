@@ -10,13 +10,11 @@ hex = { version = "0.4.3" }
 kurbo = { version = "0.11.1" }
 jpeg2k = { version = "0.9.1", default-features = false, features = ["openjp2"] }
 log = { version = "0.4.22" }
-pdf-writer = { version = "0.13.0" }
 once_cell = { version = "1.20.3" }
 rustc-hash = { version = "2.1.0" }
 smallvec = { version = "1.13.2" }
 zune-jpeg = { version = "0.4.14" }
-miniz_oxide = {version = "0.8.2"}
-snafu = { version = "0.8.5"}
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
 itertools = "0.14.0"
 peniko = { version = "0.4.0", features = ["bytemuck"] }
 qcms = "0.3.0"

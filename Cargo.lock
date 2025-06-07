@@ -587,12 +587,12 @@ dependencies = [
 name = "hayro-syntax"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "hex",
  "itertools 0.14.0",
  "jpeg2k",
  "kurbo",
  "log",
- "miniz_oxide",
  "once_cell",
  "rustc-hash",
  "smallvec",

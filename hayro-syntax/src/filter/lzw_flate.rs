@@ -9,20 +9,34 @@ use log::warn;
 pub mod flate {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
     use crate::object::dict::Dict;
+    use flate2::read::{ZlibDecoder, DeflateDecoder};
+    use std::io::Read;
 
     /// Decode a flate-encoded stream.
     pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
-        let decoded = zlib(data).or_else(|| deflate(data))?;
+        let decoded = zlib_stream(data).or_else(|| deflate_stream(data))?;
         let params = PredictorParams::from_params(&params);
         apply_predictor(decoded, &params)
     }
 
-    fn zlib(data: &[u8]) -> Option<Vec<u8>> {
-        miniz_oxide::inflate::decompress_to_vec_zlib(data).ok()
+    fn zlib_stream(data: &[u8]) -> Option<Vec<u8>> {
+        let mut decoder = ZlibDecoder::new(data);
+        let mut result = Vec::new();
+        
+        match decoder.read_to_end(&mut result) {
+            Ok(_) => Some(result),
+            Err(_) => None,
+        }
     }
 
-    fn deflate(data: &[u8]) -> Option<Vec<u8>> {
-        miniz_oxide::inflate::decompress_to_vec(data).ok()
+    fn deflate_stream(data: &[u8]) -> Option<Vec<u8>> {
+        let mut decoder = DeflateDecoder::new(data);
+        let mut result = Vec::new();
+        
+        match decoder.read_to_end(&mut result) {
+            Ok(_) => Some(result),
+            Err(_) => None,
+        }
     }
 }
 
@@ -416,9 +430,9 @@ impl Predictor for Paeth {
 #[rustfmt::skip]
 mod tests {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor, flate, lzw};
-use crate::object::dict::Dict;
+    use crate::object::dict::Dict;
 
-#[test]
+    #[test]
     fn decode_lzw() {
         let input = [0x80, 0x0B, 0x60, 0x50, 0x22, 0x0C, 0x0C, 0x85, 0x01];
         let decoded = lzw::decode(&input, Dict::default()).unwrap();
