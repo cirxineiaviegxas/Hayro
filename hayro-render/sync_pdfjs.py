@@ -372,8 +372,12 @@ class PDFJSSync:
         print(f"🎯 Total matching entries for this sync: {len(matching_entries)}")
         
         # Get IDs that should be kept (not cleaned up)
-        # This includes: whitelisted tests, and tests that are NOT blacklisted AND don't have excluded flags
+        # This includes: explicitly whitelisted tests, tests already in our manifest, 
+        # and tests that are NOT blacklisted AND don't have excluded flags
         keep_ids = set()
+        
+        # Always keep tests that are already in our manifest (they're working)
+        keep_ids.update(existing_ids)
         
         for entry in pdfjs_manifest:
             test_id = entry["id"]
@@ -450,14 +454,29 @@ class PDFJSSync:
             our_manifest_entries.append(our_entry)
             success_count += 1
             
+        # Merge with existing entries that should be kept
+        all_manifest_entries = []
+        new_entry_ids = {entry["id"] for entry in our_manifest_entries}
+        
+        # Add existing entries that should be kept (not in current selection)
+        for existing_entry in existing_entries:
+            if existing_entry["id"] not in new_entry_ids and existing_entry["id"] in keep_ids:
+                all_manifest_entries.append(existing_entry)
+                
+        # Add newly processed entries
+        all_manifest_entries.extend(our_manifest_entries)
+        
+        # Sort by ID for consistent ordering
+        all_manifest_entries.sort(key=lambda x: x["id"])
+        
         # Write our PDF.js manifest
         try:
             with open(self.our_pdfjs_manifest_path, 'w') as f:
-                json.dump(our_manifest_entries, f, indent=2)
+                json.dump(all_manifest_entries, f, indent=2)
                 
             print(f"\n🎉 Synchronization complete!")
-            print(f"📄 Created manifest_pdfjs.json with {len(our_manifest_entries)} entries")
-            print(f"📊 Summary: {success_count} successful, {failed_count} failed")
+            print(f"📄 Updated manifest_pdfjs.json with {len(all_manifest_entries)} total entries")
+            print(f"📊 Summary: {success_count} new/updated, {failed_count} failed, {len(existing_entries) - len([e for e in existing_entries if e['id'] not in keep_ids])} preserved")
             
             # Clean up stale files from old locations
             self.cleanup_stale_files()
