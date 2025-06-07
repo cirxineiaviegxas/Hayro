@@ -117,7 +117,7 @@ impl Shading {
     pub fn new(dict: &Dict, stream: Option<&Stream>) -> Option<Self> {
         let shading_num = dict.get::<u8>(SHADING_TYPE)?;
 
-        let color_space = ColorSpace::new(dict.get(COLORSPACE)?);
+        let color_space = ColorSpace::new(dict.get(COLORSPACE)?)?;
 
         let shading_type = match shading_num {
             1 => {

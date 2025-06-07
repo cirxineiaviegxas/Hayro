@@ -28,7 +28,7 @@ impl<'a> XObject<'a> {
     pub fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
         match dict.get::<Name>(SUBTYPE).unwrap() {
-            IMAGE => Some(Self::ImageXObject(ImageXObject::new(stream)?)),
+            IMAGE => Some(Self::ImageXObject(ImageXObject::new(stream, |_| None)?)),
             FORM => Some(Self::FormXObject(FormXObject::new(stream)?)),
             _ => unimplemented!(),
         }
@@ -174,7 +174,7 @@ pub struct ImageXObject<'a> {
 }
 
 impl<'a> ImageXObject<'a> {
-    pub(crate) fn new(stream: &Stream<'a>) -> Option<Self> {
+    pub(crate) fn new(stream: &Stream<'a>, resolve_cs: impl FnOnce(&Name) -> Option<ColorSpace>) -> Option<Self> {
         let dict = stream.dict();
 
         let decoded = stream.decoded_image()?;
@@ -197,9 +197,12 @@ impl<'a> ImageXObject<'a> {
         let color_space = if image_mask {
             ColorSpace::device_gray()
         } else {
-            dict.get::<Object>(CS)
-                .or_else(|| dict.get::<Object>(COLORSPACE))
-                .map(|c| ColorSpace::new(c))
+            let cs_obj = dict.get::<Object>(CS)
+                .or_else(|| dict.get::<Object>(COLORSPACE));
+            
+                cs_obj.clone().and_then(|c| ColorSpace::new(c))
+                    // Inline images can also refer to color spaces by name.
+                    .or_else(|| cs_obj.and_then(|c| c.into_name()).and_then(|n| resolve_cs(&n)))
                 .or_else(|| {
                     decoded.color_space.map(|c| match c {
                         hayro_syntax::filter::ImageColorSpace::Gray => ColorSpace::device_gray(),
@@ -248,9 +251,9 @@ impl<'a> ImageXObject<'a> {
                 .collect()
         } else {
             let s_mask = if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
-                ImageXObject::new(&s_mask).map(|s| s.decode_raw())
+                ImageXObject::new(&s_mask, |_| None).map(|s| s.decode_raw())
             } else if let Some(mask) = self.dict.get::<Stream>(MASK) {
-                if let Some(obj) = ImageXObject::new(&mask) {
+                if let Some(obj) = ImageXObject::new(&mask, |_| None) {
                     let mut mask_data = obj.decode_raw();
 
                     // Mask doesn't necessarily have the same dimensions.

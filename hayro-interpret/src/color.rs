@@ -36,10 +36,9 @@ enum ColorSpaceType {
 }
 
 impl ColorSpaceType {
-    fn new(object: Object) -> Self {
+    fn new(object: Object) -> Option<Self> {
         Self::new_inner(object)
             .warn_none("unsupported color space or failed to process it")
-            .unwrap_or(ColorSpaceType::DeviceGray)
     }
 
     fn new_inner(object: Object) -> Option<ColorSpaceType> {
@@ -59,7 +58,7 @@ impl ColorSpaceType {
                         .map(ColorSpaceType::ICCBased)
                         .or_else(|| {
                             dict.get::<Object>(ALTERNATE)
-                                .map(|o| ColorSpaceType::new(o))
+                                .and_then(|o| ColorSpaceType::new(o))
                         })
                         .or_else(|| match dict.get::<u8>(N) {
                             Some(1) => Some(ColorSpaceType::DeviceGray),
@@ -90,7 +89,7 @@ impl ColorSpaceType {
                     let _ = iter.next::<Name>();
                     let cs = iter
                         .next::<Object>()
-                        .map(|o| ColorSpace::new(o))
+                        .and_then(|o| ColorSpace::new(o))
                         .unwrap_or(ColorSpace::device_rgb());
                     return Some(ColorSpaceType::Pattern(cs));
                 }
@@ -122,8 +121,8 @@ pub struct ColorSpace(Arc<ColorSpaceType>);
 
 impl ColorSpace {
     /// Create a new color space from the given object.
-    pub fn new(object: Object) -> ColorSpace {
-        Self(Arc::new(ColorSpaceType::new(object)))
+    pub fn new(object: Object) -> Option<ColorSpace> {
+        Some(Self(Arc::new(ColorSpaceType::new(object)?)))
     }
 
     /// Create a new color space from the name.
@@ -558,7 +557,7 @@ impl Indexed {
         let mut iter = array.flex_iter();
         // Skip name
         let _ = iter.next::<Name>()?;
-        let base_color_space = ColorSpace::new(iter.next::<Object>()?);
+        let base_color_space = ColorSpace::new(iter.next::<Object>()?)?;
         let hival = iter.next::<u8>()?;
 
         let values = {
@@ -611,7 +610,7 @@ impl Separation {
         // Skip `/Separation`
         let _ = iter.next::<Name>()?;
         let name = iter.next::<Name>()?;
-        let alternate_space = ColorSpace::new(iter.next::<Object>()?);
+        let alternate_space = ColorSpace::new(iter.next::<Object>()?)?;
         let tint_transform = Function::new(&iter.next::<Object>()?)?;
 
         if matches!(name.as_str(), "All" | "None") {
@@ -648,7 +647,7 @@ impl DeviceN {
         let _ = iter.next::<Name>()?;
         // Skip `Name`.
         let num_components = iter.next::<Array>()?.iter::<Name>().count();
-        let alternate_space = ColorSpace::new(iter.next::<Object>()?);
+        let alternate_space = ColorSpace::new(iter.next::<Object>()?)?;
         let tint_transform = Function::new(&iter.next::<Object>()?)?;
 
         Some(Self {

@@ -262,7 +262,7 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(resources, c.0)
+                    context.get_color_space(resources, c.0).unwrap_or(ColorSpace::device_gray())
                 };
 
                 context.get_mut().stroke_color = cs.initial_color();
@@ -272,7 +272,7 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(resources, c.0)
+                    context.get_color_space(resources, c.0).unwrap_or(ColorSpace::device_gray())
                 };
 
                 context.get_mut().non_stroke_color = cs.initial_color();
@@ -426,7 +426,7 @@ pub fn interpret<'a, 'b>(
                 }
             }
             TypedOperation::InlineImage(i) => {
-                if let Some(x_object) = ImageXObject::new(&i.0) {
+                if let Some(x_object) = ImageXObject::new(&i.0, |name| context.get_color_space(resources, name.clone())) {
                     draw_image_xobject(&x_object, context, device)
                 }
             }
