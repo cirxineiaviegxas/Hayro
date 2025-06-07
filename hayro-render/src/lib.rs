@@ -224,6 +224,7 @@ impl Device for Renderer {
     }
 
     fn draw_rgba_image(&mut self, image: hayro_interpret::RgbaImage) {
+        self.0.set_anti_aliasing(false);
         self.draw_image(
             image.image_data,
             image.width,
@@ -231,6 +232,7 @@ impl Device for Renderer {
             false,
             image.interpolate,
         );
+        self.0.set_anti_aliasing(true);
     }
 
     fn draw_stencil_image(&mut self, stencil: StencilImage, paint: &Paint) {
