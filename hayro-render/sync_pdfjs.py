@@ -371,12 +371,22 @@ class PDFJSSync:
         print(f"  Not yet ported: {not_yet_ported}")
         print(f"🎯 Total matching entries for this sync: {len(matching_entries)}")
         
-        # Get current whitelist IDs for cleanup
-        current_whitelist_ids = {entry["id"] for entry in matching_entries}
+        # Get IDs that should be kept (not cleaned up)
+        # This includes: whitelisted tests, and tests that are NOT blacklisted AND don't have excluded flags
+        keep_ids = set()
         
-        # Clean up entries that are no longer in whitelist
+        for entry in pdfjs_manifest:
+            test_id = entry["id"]
+            # Keep if explicitly whitelisted
+            if self.matches_whitelist(test_id):
+                keep_ids.add(test_id)
+            # Or keep if not blacklisted and doesn't have excluded flags
+            elif not self.matches_blacklist(test_id) and not self.has_excluded_flags(entry):
+                keep_ids.add(test_id)
+        
+        # Clean up entries that should no longer be kept (blacklisted or have excluded flags)
         if existing_entries:
-            self.cleanup_removed_entries(existing_entries, current_whitelist_ids)
+            self.cleanup_removed_entries(existing_entries, keep_ids)
         
         if not matching_entries:
             print("ℹ No entries matched the whitelist patterns.")

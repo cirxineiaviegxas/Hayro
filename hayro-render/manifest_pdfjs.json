@@ -178,33 +178,29 @@
     "file": "pdfs/issue18816.pdf"
   },
   {
-    "id": "20130226130259",
-    "file": "pdfs/20130226130259.link",
-    "md5": "c33e90a1b369c508573023d2434b950f",
-    "link": true,
+    "id": "bug1011159",
+    "file": "pdfs/bug1011159.pdf",
+    "last_page": 0
+  },
+  {
+    "id": "bug1020858",
+    "file": "pdfs/bug1020858.pdf"
+  },
+  {
+    "id": "bug1027533",
+    "file": "pdfs/bug1027533.pdf"
+  },
+  {
+    "id": "bug1028735",
+    "file": "pdfs/bug1028735.pdf",
     "first_page": 0,
     "last_page": 0
   },
   {
-    "id": "aboutstacks",
-    "file": "pdfs/aboutstacks.link",
-    "md5": "6e7c8416a293ba2d83bc8dd20c6ccf51",
+    "id": "bug1037816",
+    "file": "pdfs/bug1037816.link",
+    "md5": "8a45299d7b102a9c1cadb8883b8debc9",
     "link": true,
     "last_page": 0
-  },
-  {
-    "id": "arabiccidtruetype-text",
-    "file": "pdfs/ArabicCIDTrueType.pdf"
-  },
-  {
-    "id": "boundingBox_invalid",
-    "file": "pdfs/boundingBox_invalid.pdf"
-  },
-  {
-    "id": "bpl13210",
-    "file": "pdfs/bpl13210.link",
-    "md5": "8a08512baa9fa95378d9ad4b995947c7",
-    "link": true,
-    "last_page": 4
   }
 ]

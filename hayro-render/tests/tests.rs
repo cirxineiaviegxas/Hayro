@@ -257,11 +257,11 @@ use crate::run_test;
 #[test] fn pdfjs_operator_in_TJ_array() { run_test("pdfjs_operator_in_TJ_array", "pdfs/pdfjs/operator-in-TJ-array.pdf", None); }
 #[test] fn pdfjs_issue17065() { run_test("pdfjs_issue17065", "pdfs/pdfjs/issue17065.pdf", None); }
 #[test] fn pdfjs_issue18816() { run_test("pdfjs_issue18816", "pdfs/pdfjs/issue18816.pdf", None); }
-#[test] fn pdfjs_20130226130259() { run_test("pdfjs_20130226130259", "downloads/pdfjs/20130226130259.pdf", Some("0..=0")); }
-#[test] fn pdfjs_aboutstacks() { run_test("pdfjs_aboutstacks", "downloads/pdfjs/aboutstacks.pdf", Some("..=0")); }
-#[test] fn pdfjs_arabiccidtruetype_text() { run_test("pdfjs_arabiccidtruetype_text", "pdfs/pdfjs/ArabicCIDTrueType.pdf", None); }
-#[test] fn pdfjs_boundingBox_invalid() { run_test("pdfjs_boundingBox_invalid", "pdfs/pdfjs/boundingBox_invalid.pdf", None); }
-#[test] fn pdfjs_bpl13210() { run_test("pdfjs_bpl13210", "downloads/pdfjs/bpl13210.pdf", Some("..=4")); }
+#[test] fn pdfjs_bug1011159() { run_test("pdfjs_bug1011159", "pdfs/pdfjs/bug1011159.pdf", Some("..=0")); }
+#[test] fn pdfjs_bug1020858() { run_test("pdfjs_bug1020858", "pdfs/pdfjs/bug1020858.pdf", None); }
+#[test] fn pdfjs_bug1027533() { run_test("pdfjs_bug1027533", "pdfs/pdfjs/bug1027533.pdf", None); }
+#[test] fn pdfjs_bug1028735() { run_test("pdfjs_bug1028735", "pdfs/pdfjs/bug1028735.pdf", Some("0..=0")); }
+#[test] fn pdfjs_bug1037816() { run_test("pdfjs_bug1037816", "downloads/pdfjs/bug1037816.pdf", Some("..=0")); }
 #[test] fn pdfbox_615_1() { run_test("pdfbox_615_1", "downloads/pdfbox/615_1.pdf", None); }
 #[test] fn pdfbox_615_2() { run_test("pdfbox_615_2", "downloads/pdfbox/615_2.pdf", None); }
 #[test] fn pdfbox_795() { run_test("pdfbox_795", "downloads/pdfbox/795.pdf", None); }
