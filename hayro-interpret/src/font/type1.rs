@@ -12,6 +12,7 @@ use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use log::warn;
 use hayro_syntax::object::name::Name;
 
 #[derive(Debug)]
@@ -19,12 +20,17 @@ pub(crate) struct Type1Font(Kind);
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let inner = if is_cff(dict) {
+        
+        
+        let inner = if let Some(standard) = Standard::new(dict) {
+            Self(Kind::Standard(standard))
+        } else if is_cff(dict) {
             Self(Kind::Cff(Cff::new(dict)?))
         } else if is_type1(dict) {
             Self(Kind::Type1(Type1::new(dict)))
         } else {
-            Self(Kind::Standard(Standard::new(dict)))
+            warn!("unable to load type1 font, falling back to Times New Roman");
+            Self(Kind::Standard(Standard::new_with_standard(dict, StandardFont::TimesRoman)))
         };
 
         Some(inner)
@@ -71,11 +77,12 @@ struct Standard {
 }
 
 impl Standard {
-    pub fn new(dict: &Dict) -> Standard {
+    pub fn new(dict: &Dict) -> Option<Standard> {
+        Some(Self::new_with_standard(dict, select_standard_font(dict)?))
+    }
+    
+    fn new_with_standard(dict: &Dict, base_font: StandardFont) -> Self {
         let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
-        let base_font = select_standard_font(dict)
-            .warn_none(&format!("couldnt find appropriate font for {}, falling back to Times New Roman.", dict.get::<Name>(BASE_FONT).map(|n| n.as_str().to_string()).unwrap_or("unknown".to_string())))
-            .unwrap_or(StandardFont::TimesRoman);
         let widths = read_widths(dict, &descriptor);
 
         let (encoding, encoding_map) = read_encoding(dict);
@@ -219,8 +226,8 @@ struct Cff {
 
 impl Cff {
     pub fn new(dict: &Dict) -> Option<Self> {
-        let descriptor = dict.get::<Dict>(FONT_DESC).unwrap();
-        let data = descriptor.get::<Stream>(FONT_FILE3).unwrap();
+        let descriptor = dict.get::<Dict>(FONT_DESC)?;
+        let data = descriptor.get::<Stream>(FONT_FILE3)?;
         let font = CffFontBlob::new(Arc::new(data.decoded().unwrap().to_vec()))?;
 
         let (encoding, encodings) = read_encoding(dict);
@@ -262,7 +269,7 @@ impl Cff {
     }
 
     pub fn glyph_width(&self, code: u8) -> f32 {
-        self.widths.get(code as usize).copied().unwrap_or(0.0)
+        self.widths.get(code as usize).copied().unwrap()
     }
 }
 
