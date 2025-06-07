@@ -43,8 +43,8 @@ pub mod flate {
 pub mod lzw {
     use crate::bit::{BitReader, BitSize};
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
-
     use crate::object::dict::Dict;
+    use log::warn;
 
     /// Decode a LZW-encoded stream.
     pub fn decode(data: &[u8], params: Dict) -> Option<Vec<u8>> {
@@ -62,14 +62,20 @@ pub mod lzw {
 
     fn decode_impl(data: &[u8], early_change: bool) -> Option<Vec<u8>> {
         let mut table = Table::new(early_change);
-
         let mut bit_size = BitSize::from_u8(table.code_length())?;
         let mut reader = BitReader::new(data);
         let mut decoded = vec![];
         let mut prev = None;
 
         loop {
-            let next = reader.read(bit_size)? as usize;
+            let next = match reader.read(bit_size) {
+                Some(code) => code as usize,
+                None => {
+                    
+                    warn!("Premature EOF in LZW stream, EOD code missing");
+                    return Some(decoded);
+                }
+            };
 
             match next {
                 CLEAR_TABLE => {
@@ -79,17 +85,29 @@ pub mod lzw {
                 }
                 EOD => return Some(decoded),
                 new => {
-                    if let Some(entry) = table.get(new) {
+                    if new > table.size() {
+                        warn!("Invalid LZW code: {} (table size: {})", new, table.size());
+                        return None;
+                    }
+                    
+                    if new < table.size() {
+                        let entry = table.get(new)?;
+                        let first_byte = entry[0];
                         decoded.extend_from_slice(entry);
-
-                        if let Some(prev) = prev {
-                            let _ = table.register(prev, entry[0])?;
+                        
+                        if let Some(prev_code) = prev {
+                            table.register(prev_code, first_byte);
                         }
+                    } else if new == table.size() && prev.is_some() {
+                        let prev_code = prev.unwrap();
+                        let prev_entry = table.get(prev_code)?;
+                        let first_byte = prev_entry[0];
+                        
+                        let new_entry = table.register(prev_code, first_byte)?;
+                        decoded.extend_from_slice(new_entry);
                     } else {
-                        let prev = prev?;
-                        let new_byte = table.get(prev)?[0];
-
-                        decoded.extend_from_slice(table.register(prev, new_byte)?);
+                        warn!("LZW decode error: code {} not found and prev is None", new);
+                        return None;
                     }
 
                     bit_size = BitSize::from_u8(table.code_length())?;
@@ -101,16 +119,16 @@ pub mod lzw {
 
     struct Table {
         early_change: bool,
-        entries: Vec<Vec<u8>>,
+        entries: Vec<Option<Vec<u8>>>,
     }
 
     impl Table {
         fn new(early_change: bool) -> Self {
-            let mut entries: Vec<_> = (0..=255).map(|b| vec![b]).collect();
+            let mut entries: Vec<_> = (0..=255).map(|b| Some(vec![b])).collect();
 
             // Clear table and EOD don't have any data.
-            entries.push(vec![0]);
-            entries.push(vec![0]);
+            entries.push(None); // 256 = CLEAR_TABLE
+            entries.push(None); // 257 = EOD
 
             Self {
                 early_change,
@@ -122,9 +140,8 @@ pub mod lzw {
             if self.entries.len() >= MAX_ENTRIES {
                 None
             } else {
-                self.entries.push(entry);
-
-                self.entries.last().map(|v| &**v)
+                self.entries.push(Some(entry));
+                self.entries.last()?.as_ref().map(|v| &**v)
             }
         }
 
@@ -138,11 +155,15 @@ pub mod lzw {
         }
 
         fn get(&self, index: usize) -> Option<&[u8]> {
-            self.entries.get(index).map(|v| &**v)
+            self.entries.get(index)?.as_ref().map(|v| &**v)
         }
 
         fn clear(&mut self) {
             self.entries.truncate(INITIAL_SIZE as usize);
+        }
+
+        fn size(&self) -> usize {
+            self.entries.len()
         }
 
         fn code_length(&self) -> u8 {
