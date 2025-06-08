@@ -1,17 +1,18 @@
 pub mod cff;
 mod charset;
-pub(crate) mod charstring;
+mod charstring;
 mod dict;
 mod encoding;
 mod index;
-pub(crate) mod parser;
+mod parser;
 mod std_names;
 
 use core::convert::TryFrom;
 
-use parser::{FromData, TryNumFrom};
+use parser::{FromData};
 
 pub use cff::Table;
+use crate::util::TryNumFrom;
 
 /// A list of errors that can occur during a CFF glyph outlining.
 #[allow(missing_docs)]

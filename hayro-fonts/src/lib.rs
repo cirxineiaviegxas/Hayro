@@ -1,9 +1,11 @@
+use crate::util::TryNumFrom;
+
 pub mod cff;
 pub mod type1;
 
 pub(crate) mod argstack;
+mod util;
 
-use crate::cff::parser::TryNumFrom;
 
 /// A type-safe wrapper for glyph ID.
 #[repr(transparent)]
