@@ -110,7 +110,7 @@ impl Renderer {
                         // (see pdftc_100k_0138.pdf).
                         const MIN_PIXMAP_SIZE: f32 = 1.0;
 
-                        let bbox = t.bbox.get();
+                        let bbox = t.bbox;
                         let max_x_scale = MAX_PIXMAP_SIZE / bbox.width() as f32;
                         let min_x_scale = MIN_PIXMAP_SIZE / bbox.width() as f32;
                         let max_y_scale = MAX_PIXMAP_SIZE / bbox.height() as f32;
@@ -307,7 +307,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     let crop_box = page.crop_box();
 
     let (unscaled_width, unscaled_height) =  if (crop_box.width() as f32).is_nearly_zero() || (crop_box.height() as f32).is_nearly_zero() {
-        (A4.get().width(), A4.get().height())
+        (A4.width(), A4.height())
     }   else {
         (crop_box.width(), crop_box.height())
     };

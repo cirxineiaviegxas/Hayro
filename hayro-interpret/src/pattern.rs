@@ -171,7 +171,7 @@ impl<'a> TilingPattern<'a> {
         let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
 
         let clip_path = ClipPath {
-            path: initial_transform * self.bbox.get().to_path(0.1),
+            path: initial_transform * self.bbox.to_path(0.1),
             fill: Fill::NonZero,
         };
         device.push_clip_path(&clip_path);

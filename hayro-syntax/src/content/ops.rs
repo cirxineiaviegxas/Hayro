@@ -14,7 +14,7 @@ use log::warn;
 
 include!("ops_generated.rs");
 
-// Need to special-case those because they have variable arguments
+// Need to special-case those because they have variable arguments.
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StrokeColorNamed<'a>(

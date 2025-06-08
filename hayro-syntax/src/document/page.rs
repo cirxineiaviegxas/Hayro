@@ -142,11 +142,11 @@ impl<'a> Page<'a> {
         let resources =
             Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
 
-        let crop_box = crop_box.get().intersect(media_box.get());
+        let crop_box = crop_box.intersect(media_box);
 
         Self {
             inner: dict,
-            media_box: media_box.get(),
+            media_box,
             crop_box,
             rotation,
             page_streams: OnceCell::new(),
@@ -397,9 +397,9 @@ const POINTS_PER_INCH: f64 = 72.0;
 const POINTS_PER_MM: f64 = 1.0 / (10.0 * 2.54) * POINTS_PER_INCH;
 
 /// The dimension of an A4 page.
-pub const A4: Rect = Rect(kurbo::Rect {
+pub const A4: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
     x1: 210.0 * POINTS_PER_MM,
     y1: 297.0 * POINTS_PER_MM,
-});
+};

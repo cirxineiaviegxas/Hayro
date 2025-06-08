@@ -5,16 +5,7 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
 use crate::xref::XRef;
 
-/// A rectangle.
-#[derive(Clone, Copy, Debug)]
-pub struct Rect(pub(crate) kurbo::Rect);
-
-impl Rect {
-    /// Get the inner `kurbo` rectangle.
-    pub fn get(&self) -> kurbo::Rect {
-        self.0
-    }
-}
+pub use kurbo::Rect;
 
 impl Readable<'_> for Rect {
     fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
@@ -26,12 +17,12 @@ impl Readable<'_> for Rect {
 fn from_arr(array: &Array) -> Option<Rect> {
     let mut iter = array.iter::<f32>();
 
-    Some(Rect(kurbo::Rect::new(
+    Some(Rect::new(
         iter.next()? as f64,
         iter.next()? as f64,
         iter.next()? as f64,
         iter.next()? as f64,
-    )))
+    ))
 }
 
 impl TryFrom<Object<'_>> for Rect {

@@ -87,7 +87,7 @@ impl RenderContext {
                 i.encode_into(&mut self.encoded_paints, paint_transform)
             }
             PaintType::ShadingPattern(s) => {
-                self.paint_bbox = s.shading.bbox.map(|r| r.get());
+                self.paint_bbox = s.shading.bbox;
                 s.encode_into(&mut self.encoded_paints, paint_transform)
             }
         }
