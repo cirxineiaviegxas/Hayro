@@ -1,8 +1,8 @@
-## hayro-font
+# hayro-font
 
 This crate is a fork of the [`ttf-parser`](https://github.com/harfbuzz/ttf-parser) library, but with the majority of the functionality completely stripped away. The purpose of this crate is to be a light-weight font parser for CFF and Type1 fonts, as they can be found in PDFs. Only the code for parsing CFF fonts has been retained, while code for parsing Type1 fonts was newly added. 
 
-### License
+## License
 
 Licensed under either of
 
@@ -12,9 +12,3 @@ Licensed under either of
   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
-
-### Contribution
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
-dual licensed as above, without any additional terms or conditions.
