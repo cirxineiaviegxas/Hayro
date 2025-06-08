@@ -427,7 +427,7 @@ pub fn interpret<'a, 'b>(
                 if let Some(x_object) = ImageXObject::new(&i.0, |name| {
                     context.get_color_space(resources, name.clone())
                 }) {
-                    draw_image_xobject(&x_object, context, device)
+                    draw_image_xobject(&x_object, context, device);
                 }
             }
             TypedOperation::TextRise(t) => {
