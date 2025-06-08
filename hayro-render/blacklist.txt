@@ -22,10 +22,6 @@ artofwar
 bug1050040
 
 #investigate
-bug1130815
-bug1130815-eq
-
-bug1157493
 bug1250079
 bug1308536
 bug1365930
@@ -45,3 +41,5 @@ bug1199237
 # this pdf is pretty broken, and while we can display most of it, some of the images are cut off, seemingly because the
 # flate decompressor doesn't process everything
 bug1130815-text
+bug1130815
+bug1130815-eq

@@ -15,6 +15,7 @@ use kurbo::{Affine, BezPath, Cap, Join, Point};
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
+use log::warn;
 
 pub struct Context<'a> {
     states: Vec<State<'a>>,
@@ -103,7 +104,11 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn restore_state(&mut self) {
-        self.states.pop();
+        if self.states.len() > 1 {
+            self.states.pop();
+        }   else {
+            warn!("overflow in `restore_state");
+        }
     }
 
     pub(crate) fn path(&self) -> &BezPath {
