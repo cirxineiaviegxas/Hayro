@@ -1,6 +1,6 @@
 use crate::font::Encoding;
 use crate::font::blob::OpenTypeFontBlob;
-use crate::font::encoding::{GLYPH_NAMES, mac_os_roman, mac_roman};
+use crate::font::generated::{glyph_names, mac_os_roman, mac_roman};
 use crate::util::{CodeMapExt, OptionLog};
 use bitflags::bitflags;
 use hayro_syntax::object::Object;
@@ -105,8 +105,7 @@ impl TrueTypeFont {
                             };
 
                             glyph = glyph.or_else(|| {
-                                GLYPH_NAMES
-                                    .get(lookup)
+                                glyph_names::get(lookup)
                                     .map(|n| n.to_string())
                                     .or_else(|| {
                                         lookup

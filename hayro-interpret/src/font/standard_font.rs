@@ -4,7 +4,7 @@ use crate::font::blob::{
     HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD,
     TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
-use crate::font::encoding::{metrics, standard, symbol, zapf_dings};
+use crate::font::generated::{metrics, standard, symbol, zapf_dings};
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::BASE_FONT;
 use hayro_syntax::object::name::Name;

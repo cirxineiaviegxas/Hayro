@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::font::cid::Type0Font;
-use crate::font::encoding::{mac_expert, mac_os_roman, mac_roman, standard, win_ansi};
+use crate::font::generated::{mac_expert, mac_os_roman, mac_roman, standard, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
@@ -22,7 +22,7 @@ pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
 mod blob;
 mod cid;
-pub(crate) mod encoding;
+pub(crate) mod generated;
 mod standard_font;
 mod true_type;
 mod type1;

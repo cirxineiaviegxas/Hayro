@@ -1,6 +1,6 @@
 use crate::font::Encoding;
 use crate::font::blob::{CffFontBlob, Type1FontBlob};
-use crate::font::encoding::{mac_expert, mac_roman, standard, win_ansi};
+use crate::font::generated::{mac_expert, mac_roman, standard, win_ansi};
 use crate::font::standard_font::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
 use hayro_syntax::object::dict::Dict;
