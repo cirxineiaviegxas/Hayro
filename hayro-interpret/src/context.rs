@@ -203,6 +203,10 @@ impl<'a> Context<'a> {
             dash_offset: state.dash_offset,
         }
     }
+    
+    pub(crate) fn num_states(&self) -> usize {
+        self.states.len()
+    }
 
     pub(crate) fn fill_props(&self) -> FillProps {
         let state = self.get();

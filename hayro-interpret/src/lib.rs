@@ -64,6 +64,8 @@ pub fn interpret<'a, 'b>(
     context: &mut Context<'a>,
     device: &mut impl Device,
 ) {
+    let num_states = context.num_states();
+    
     save_sate(context);
 
     for op in ops {
@@ -473,7 +475,9 @@ pub fn interpret<'a, 'b>(
         }
     }
 
-    restore_state(context, device);
+    while context.num_states() > num_states {
+        restore_state(context, device);
+    }
 }
 
 fn save_sate(ctx: &mut Context) {
