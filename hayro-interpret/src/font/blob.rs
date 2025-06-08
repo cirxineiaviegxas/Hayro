@@ -4,7 +4,7 @@ use kurbo::{Affine, BezPath};
 use once_cell::sync::Lazy;
 use skrifa::instance::{LocationRef, Size};
 use skrifa::metrics::GlyphMetrics;
-use skrifa::outline::{DrawSettings, HintingInstance, HintingOptions, InterpreterVersion};
+use skrifa::outline::{DrawSettings, Engine, HintingInstance, HintingOptions, Target};
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId, MetadataProvider, OutlineGlyphCollection};
 use std::fmt::{Debug, Formatter};
@@ -200,14 +200,20 @@ impl OpenTypeFontBlob {
             Yoke::<OTFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
                 let font_ref = FontRef::from_index(data.as_ref(), index).unwrap();
 
-                let hinting_instance = HintingInstance::new(
-                    &font_ref.outline_glyphs(),
-                    Size::new(UNITS_PER_EM),
-                    LocationRef::default(),
-                    HintingOptions::default(),
-                    InterpreterVersion::_35,
-                )
-                .ok();
+                let hinting_instance = if font_ref.outline_glyphs().require_interpreter() {
+                    HintingInstance::new(
+                        &font_ref.outline_glyphs(),
+                        Size::new(UNITS_PER_EM),
+                        LocationRef::default(),
+                        HintingOptions {
+                            engine: Engine::Interpreter,
+                            target: Target::Mono,
+                        },
+                    )
+                        .ok()
+                }   else {
+                    None
+                };
 
                 OTFYoke {
                     font_ref: font_ref.clone(),
@@ -240,7 +246,6 @@ impl OpenTypeFontBlob {
             // Note: We always hint at the font size `UNITS_PER_EM`, which obviously isn't very useful. We don't do this
             // for better text quality (right now), but instead because there are some PDFs with obscure fonts that
             // actually render wrongly if hinting is disabled!
-            // Adding proper hinting support is definitely planned for the future, though.
             DrawSettings::hinted(instance, false)
         } else {
             DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default())
