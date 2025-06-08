@@ -141,9 +141,7 @@ impl<'a> Page<'a> {
         let xref = resources.xref;
         let resources =
             Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
-
-        let crop_box = crop_box.intersect(media_box);
-
+        
         Self {
             inner: dict,
             media_box,
@@ -197,7 +195,7 @@ impl<'a> Page<'a> {
     }
 
     /// Get the media box of the page.
-    pub fn media_box(&self) -> kurbo::Rect {
+    pub fn media_box(&self) -> Rect {
         self.media_box
     }
 
@@ -207,7 +205,7 @@ impl<'a> Page<'a> {
     }
 
     /// Get the crop box of the page.
-    pub fn crop_box(&self) -> kurbo::Rect {
+    pub fn crop_box(&self) -> Rect {
         self.crop_box
     }
 

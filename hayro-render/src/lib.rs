@@ -304,7 +304,7 @@ impl Device for Renderer {
 }
 
 pub fn render(page: &Page, scale: f32) -> Pixmap {
-    let crop_box = page.crop_box();
+    let crop_box = page.crop_box().intersect(page.media_box());
 
     let (unscaled_width, unscaled_height) =  if (crop_box.width() as f32).is_nearly_zero() || (crop_box.height() as f32).is_nearly_zero() {
         (A4.width(), A4.height())
