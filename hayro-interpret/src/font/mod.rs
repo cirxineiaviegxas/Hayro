@@ -5,7 +5,7 @@ use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
 use crate::glyph::{Glyph, OutlineGlyph, Type3Glyph};
-use hayro_fonts::OutlineBuilder;
+use hayro_font::OutlineBuilder;
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;

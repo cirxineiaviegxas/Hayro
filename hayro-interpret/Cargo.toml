@@ -14,7 +14,7 @@ once_cell = "1.21.3"
 phf = { workspace = true, features = ["macros"] }
 skrifa = { workspace = true }
 yoke = { workspace = true, features = ["derive"]}
-hayro-fonts = { workspace = true }
+hayro-font = { workspace = true }
 bitflags = "2.9.0"
 
 [features]
