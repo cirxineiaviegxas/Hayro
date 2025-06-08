@@ -903,5 +903,10 @@
   {
     "id": "pdftc_900k_1016_page_3",
     "file": "pdfs/pdftc_900k_1016_page_3.pdf"
+  },
+  {
+    "id": "pdf_render_issue14",
+    "file": "pdfs/pdf_render_issue14.link",
+    "link": true
   }
 ]
