@@ -131,11 +131,11 @@ pub(crate) fn draw_image_xobject(
     x_object: &ImageXObject<'_>,
     context: &mut Context<'_>,
     device: &mut impl Device,
-) -> Option<()> {
+) {
     let width = x_object.width as f64;
     let height = x_object.height as f64;
 
-    let data = x_object.as_rgba8()?;
+    let data = x_object.as_rgba8();
 
     context.save_state();
     context.pre_concat_affine(Affine::new([
@@ -173,8 +173,6 @@ pub(crate) fn draw_image_xobject(
     device.pop_transparency_group();
 
     context.restore_state();
-    
-    Some(())
 }
 
 pub struct ImageXObject<'a> {
@@ -265,20 +263,27 @@ impl<'a> ImageXObject<'a> {
         })
     }
 
-    pub fn as_rgba8(&self) -> Option<Vec<u8>> {
-        if self.is_image_mask {
-            let decoded = self.decode_raw();
-            if decoded.len() != self.width as usize * self.height as usize {
-                return None;
+    pub fn as_rgba8(&self) -> Vec<u8> {
+        fn fix(mut image: Vec<u8>, length: usize, filler: u8) -> Vec<u8> {
+            image.truncate(length);
+            
+            while image.len() < length {
+                image.push(filler);
             }
             
-            Some(decoded
+            image
+        }
+        
+        if self.is_image_mask {
+            let decoded = self.decode_raw();
+            
+            fix(decoded
                 .iter()
                 .flat_map(|alpha| {
                     let alpha = ((1.0 - *alpha) * 255.0 + 0.5) as u8;
                     [0, 0, 0, alpha]
                 })
-                .collect())
+                .collect(), self.width as usize * self.height as usize * 4, 255)
         } else {
             let s_mask = if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
                 ImageXObject::new(&s_mask, |_| None).map(|s| s.decode_raw())
@@ -325,11 +330,7 @@ impl<'a> ImageXObject<'a> {
                 .flat_map(|(v, alpha)| self.color_space.to_rgba(v, alpha).to_rgba8().to_u8_array())
                 .collect::<Vec<_>>();
 
-            if self.width as usize * self.height as usize * 4 != decoded.len() {
-                None
-            }   else {
-                Some(decoded)
-            }
+            fix(decoded, self.width as usize * self.height as usize * 4, 0)
         }
     }
 
