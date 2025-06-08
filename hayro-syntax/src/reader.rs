@@ -221,14 +221,14 @@ impl<'a> Reader<'a> {
     pub(crate) fn read_white_space(&mut self) -> Option<()> {
         if self.peek_byte()?.is_ascii_whitespace() {
             let w = self.read_byte()?;
-            
+
             if w == b'\r' && self.peek_byte().is_some_and(|b| b == b'\n') {
                 self.read_byte()?;
             }
-            
+
             return Some(());
         }
-        
+
         None
     }
 

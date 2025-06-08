@@ -1,6 +1,6 @@
+use super::StringId;
 use super::charset::Charset;
 use super::parser::{FromData, LazyArray16, Stream};
-use super::StringId;
 use crate::GlyphId;
 
 /// The Standard Encoding as defined in the Adobe Technical Note #5176 Appendix B.

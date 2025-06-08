@@ -65,7 +65,7 @@ pub fn interpret<'a, 'b>(
     device: &mut impl Device,
 ) {
     let num_states = context.num_states();
-    
+
     save_sate(context);
 
     for op in ops {

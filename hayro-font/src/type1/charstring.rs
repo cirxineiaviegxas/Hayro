@@ -1,9 +1,9 @@
-use crate::argstack::ArgumentsStack;
 use crate::OutlineError;
+use crate::argstack::ArgumentsStack;
+use crate::type1::Parameters;
 use crate::type1::charstring_parser::CharStringParser;
 use crate::type1::operator::{sb_operator, tb_operator};
 use crate::type1::stream::Stream;
-use crate::type1::Parameters;
 use crate::{Builder, OutlineBuilder, RectF};
 use log::{debug, error, trace, warn};
 
@@ -184,7 +184,11 @@ fn _parse_char_string(
                         let accent_char_string = ctx
                             .params
                             .charstrings
-                            .get(&accent_char.ok_or(OutlineError::InvalidSeacCode)?.to_string())
+                            .get(
+                                &accent_char
+                                    .ok_or(OutlineError::InvalidSeacCode)?
+                                    .to_string(),
+                            )
                             .ok_or(OutlineError::InvalidSeacCode)?;
                         _parse_char_string(ctx, accent_char_string, depth + 1, p)?;
                         break;

@@ -13,9 +13,9 @@ use core::convert::TryFrom;
 
 use parser::FromData;
 
-pub use cff::Table;
 use crate::OutlineError;
 use crate::util::TryNumFrom;
+pub use cff::Table;
 
 /// A type-safe wrapper for string ID.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug)]

@@ -210,8 +210,8 @@ impl OpenTypeFontBlob {
                             target: Target::Mono,
                         },
                     )
-                        .ok()
-                }   else {
+                    .ok()
+                } else {
                     None
                 };
 

@@ -12,10 +12,10 @@ use hayro_syntax::object::name::Name;
 use hayro_syntax::object::r#ref::ObjRef;
 use hayro_syntax::xref::XRef;
 use kurbo::{Affine, BezPath, Cap, Join, Point};
+use log::warn;
 use peniko::Fill;
 use smallvec::smallvec;
 use std::collections::HashMap;
-use log::warn;
 
 pub struct Context<'a> {
     states: Vec<State<'a>>,
@@ -106,7 +106,7 @@ impl<'a> Context<'a> {
     pub(crate) fn restore_state(&mut self) {
         if self.states.len() > 1 {
             self.states.pop();
-        }   else {
+        } else {
             warn!("overflow in `restore_state");
         }
     }
@@ -208,7 +208,7 @@ impl<'a> Context<'a> {
             dash_offset: state.dash_offset,
         }
     }
-    
+
     pub(crate) fn num_states(&self) -> usize {
         self.states.len()
     }

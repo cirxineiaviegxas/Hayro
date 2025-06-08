@@ -2,13 +2,11 @@ use crate::util::TryNumFrom;
 
 #[forbid(unsafe_code)]
 #[forbid(missing_docs)]
-
 pub mod cff;
 pub mod type1;
 
 mod argstack;
 mod util;
-
 
 /// A type-safe wrapper for glyph ID.
 #[repr(transparent)]

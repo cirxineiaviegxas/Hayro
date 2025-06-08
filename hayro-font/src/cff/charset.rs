@@ -1,5 +1,5 @@
-use super::parser::{FromData, LazyArray16, Stream};
 use super::StringId;
+use super::parser::{FromData, LazyArray16, Stream};
 use crate::GlyphId;
 use core::num::NonZeroU16;
 

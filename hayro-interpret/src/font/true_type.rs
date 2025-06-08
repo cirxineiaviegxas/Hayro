@@ -1,6 +1,6 @@
 use crate::font::Encoding;
 use crate::font::blob::OpenTypeFontBlob;
-use crate::font::encoding::{mac_os_roman, mac_roman, GLYPH_NAMES};
+use crate::font::encoding::{GLYPH_NAMES, mac_os_roman, mac_roman};
 use crate::util::{CodeMapExt, OptionLog};
 use bitflags::bitflags;
 use hayro_syntax::object::Object;
@@ -83,9 +83,13 @@ impl TrueTypeFont {
 
         let mut glyph = None;
 
-        if self.is_non_symbolic() 
-        {
-            let Some(lookup) = self.differences.get(&code).map(|s| s.as_str()).or_else(|| self.encoding.lookup(code)) else {
+        if self.is_non_symbolic() {
+            let Some(lookup) = self
+                .differences
+                .get(&code)
+                .map(|s| s.as_str())
+                .or_else(|| self.encoding.lookup(code))
+            else {
                 return GlyphId::NOTDEF;
             };
 
@@ -94,19 +98,25 @@ impl TrueTypeFont {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 1 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             let convert = |input: &str| {
-                                u32::from_str_radix(input, 16).ok()
+                                u32::from_str_radix(input, 16)
+                                    .ok()
                                     .and_then(|n| char::from_u32(n))
                                     .map(|s| s.to_string())
                             };
-                            
+
                             glyph = glyph.or_else(|| {
                                 GLYPH_NAMES
                                     .get(lookup)
                                     .map(|n| n.to_string())
                                     .or_else(|| {
-                                        lookup.starts_with("uni")
+                                        lookup
+                                            .starts_with("uni")
                                             .then(|| lookup.get(3..).and_then(convert))
-                                            .or_else(|| lookup.starts_with("u").then(|| lookup.get(1..).and_then(convert)))
+                                            .or_else(|| {
+                                                lookup
+                                                    .starts_with("u")
+                                                    .then(|| lookup.get(1..).and_then(convert))
+                                            })
                                             .flatten()
                                     })
                                     .and_then(|n| n.chars().next())

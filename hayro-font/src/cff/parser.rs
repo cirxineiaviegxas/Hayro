@@ -165,7 +165,6 @@ impl NumFrom<char> for usize {
     }
 }
 
-
 /// A slice-like container that converts internal binary data only on access.
 ///
 /// Array values are stored in a continuous data chunk.

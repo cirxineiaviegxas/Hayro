@@ -1,5 +1,5 @@
-use log::{error, warn};
 use super::stream::Stream;
+use log::{error, warn};
 
 pub(crate) fn decrypt(data: &[u8]) -> Option<Vec<u8>> {
     let mut stream = Stream::new(data);
@@ -20,7 +20,7 @@ pub(crate) fn decrypt(data: &[u8]) -> Option<Vec<u8>> {
 
     let Some(b00) = b00 else {
         error!("b00 was None");
-        
+
         return None;
     };
 
@@ -54,7 +54,7 @@ pub(crate) fn decrypt(data: &[u8]) -> Option<Vec<u8>> {
         Some(out)
     } else {
         warn!("non-binary decryption is unimplemented");
-        
+
         None
     }
 }

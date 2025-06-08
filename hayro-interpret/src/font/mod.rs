@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::font::cid::Type0Font;
-use crate::font::encoding::{win_ansi, standard, mac_os_roman, mac_roman, mac_expert};
+use crate::font::encoding::{mac_expert, mac_os_roman, mac_roman, standard, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
@@ -189,8 +189,7 @@ impl Encoding {
     fn lookup(&self, code: u8) -> Option<&'static str> {
         match self {
             Encoding::Standard => standard::get(code),
-            Encoding::MacRoman => mac_roman::get(code)
-                .or_else(|| mac_os_roman::get(code)),
+            Encoding::MacRoman => mac_roman::get(code).or_else(|| mac_os_roman::get(code)),
             Encoding::WinAnsi => win_ansi::get(code),
             Encoding::MacExpert => mac_expert::get(code),
             Encoding::BuiltIn => None,

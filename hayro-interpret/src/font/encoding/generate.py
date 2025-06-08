@@ -91,6 +91,13 @@ use phf::phf_map;"""
     for (font, file) in fonts:
         with open(ASSETS_DIR / "font_metrics" / f"{file}.afm") as file:
             start += f"""\n
+            
+pub(crate) fn get(code: u8) -> Option<&'static str> {{
+            SYMBOL
+            .get(&code)
+            .copied()
+            }}
+
 pub(crate) static {font}: phf::Map<&'static str, f32> = phf_map! {{
 """
 

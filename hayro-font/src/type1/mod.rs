@@ -114,7 +114,7 @@ impl<'a> Table<'a> {
                 _ => {}
             }
         }
-        
+
         Some(())
     }
 
@@ -211,7 +211,7 @@ impl<'a> Stream<'a> {
                     self.read_byte();
                 } else {
                     error!("invalid charstring in start, expected RD");
-                    
+
                     return None;
                 }
             }
@@ -227,7 +227,7 @@ impl<'a> Stream<'a> {
             if tok == ND || tok == ND_ALT {
             } else {
                 error!("invalid charstring in end, expected ND, found {:?}", tok);
-                
+
                 return None;
             }
         }
@@ -238,8 +238,7 @@ impl<'a> Stream<'a> {
     fn parse_subroutines(&mut self, len_iv: usize) -> Option<HashMap<u32, Vec<u8>>> {
         let mut subroutines = HashMap::new();
 
-        let num_subrs =
-            u32::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()?;
+        let num_subrs = u32::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()?;
 
         if num_subrs < 1 {
             return Some(subroutines);
@@ -259,14 +258,14 @@ impl<'a> Stream<'a> {
                     break;
                 } else {
                     error!("invalid sequence noaccess");
-                    
+
                     return None;
                 }
             }
 
             if token != b"dup" {
                 error!("expected dup, got token {:?} instead", &token);
-                
+
                 return None;
             }
 
@@ -277,15 +276,18 @@ impl<'a> Stream<'a> {
 
             if tok != RD && tok != RD_ALT {
                 error!("invalid subroutine start token {:?}", tok);
-                
+
                 return None;
             } else {
                 // Whitespace
                 self.read_byte();
             }
-            
+
             let encrypted_bytes = self.read_bytes(bin_len as usize)?;
-            subroutines.insert(subr_idx as u32, decrypt_charstring(encrypted_bytes, len_iv)?);
+            subroutines.insert(
+                subr_idx as u32,
+                decrypt_charstring(encrypted_bytes, len_iv)?,
+            );
 
             let mut tok = self.next_token()?;
             if tok == NP || tok == NP_ALT {
@@ -298,12 +300,12 @@ impl<'a> Stream<'a> {
                 if tok == b"put" {
                 } else {
                     error!("invalid subroutine end {:?}", tok);
-                    
+
                     return None;
                 }
             } else {
                 error!("invalid subroutine end token {:?}", tok);
-                
+
                 return None;
             }
         }
@@ -444,19 +446,18 @@ impl<'a> Stream<'a> {
 
             if token != b"dup" {
                 error!("Unexpected token {:?}", token);
-                
+
                 return None;
             }
 
-            let code =
-                u8::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()?;
+            let code = u8::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()?;
             let glyph_name = std::str::from_utf8(&self.next_token()?[1..])
                 .ok()?
                 .to_string();
 
             if self.next_token()? != b"put" {
                 error!("Unexpected token {:?}", token);
-                
+
                 return None;
             }
 

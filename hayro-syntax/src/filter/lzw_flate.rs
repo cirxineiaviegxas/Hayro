@@ -27,7 +27,7 @@ pub mod flate {
 
         if !result.is_empty() {
             Some(result)
-        }   else {
+        } else {
             None
         }
     }
@@ -40,7 +40,7 @@ pub mod flate {
 
         if !result.is_empty() {
             Some(result)
-        }   else {
+        } else {
             None
         }
     }

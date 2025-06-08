@@ -266,24 +266,28 @@ impl<'a> ImageXObject<'a> {
     pub fn as_rgba8(&self) -> Vec<u8> {
         fn fix(mut image: Vec<u8>, length: usize, filler: u8) -> Vec<u8> {
             image.truncate(length);
-            
+
             while image.len() < length {
                 image.push(filler);
             }
-            
+
             image
         }
-        
+
         if self.is_image_mask {
             let decoded = self.decode_raw();
-            
-            fix(decoded
-                .iter()
-                .flat_map(|alpha| {
-                    let alpha = ((1.0 - *alpha) * 255.0 + 0.5) as u8;
-                    [0, 0, 0, alpha]
-                })
-                .collect(), self.width as usize * self.height as usize * 4, 255)
+
+            fix(
+                decoded
+                    .iter()
+                    .flat_map(|alpha| {
+                        let alpha = ((1.0 - *alpha) * 255.0 + 0.5) as u8;
+                        [0, 0, 0, alpha]
+                    })
+                    .collect(),
+                self.width as usize * self.height as usize * 4,
+                255,
+            )
         } else {
             let s_mask = if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
                 ImageXObject::new(&s_mask, |_| None).map(|s| s.decode_raw())
@@ -321,10 +325,9 @@ impl<'a> ImageXObject<'a> {
 
             let s_mask =
                 s_mask.unwrap_or_else(|| vec![1.0; self.width as usize * self.height as usize]);
-            
 
-
-            let decoded = self.decode_raw()
+            let decoded = self
+                .decode_raw()
                 .chunks(self.color_space.num_components() as usize)
                 .zip(s_mask)
                 .flat_map(|(v, alpha)| self.color_space.to_rgba(v, alpha).to_rgba8().to_u8_array())

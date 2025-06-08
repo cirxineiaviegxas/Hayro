@@ -1,7 +1,7 @@
-use crate::argstack::ArgumentsStack;
-use crate::OutlineError;
-use crate::type1::stream::Stream;
 use crate::Builder;
+use crate::OutlineError;
+use crate::argstack::ArgumentsStack;
+use crate::type1::stream::Stream;
 
 pub(crate) struct CharStringParser<'a> {
     pub stack: ArgumentsStack<'a>,

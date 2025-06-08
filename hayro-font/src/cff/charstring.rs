@@ -1,5 +1,5 @@
 use super::parser::{Fixed, Stream};
-use super::{f32_abs, IsEven};
+use super::{IsEven, f32_abs};
 use crate::argstack::ArgumentsStack;
 use crate::{Builder, OutlineError};
 

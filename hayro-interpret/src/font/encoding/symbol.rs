@@ -2,9 +2,7 @@
 use phf::phf_map;
 
 pub(crate) fn get(code: u8) -> Option<&'static str> {
-    SYMBOL
-        .get(&code)
-        .copied()
+    SYMBOL.get(&code).copied()
 }
 
 static SYMBOL: phf::Map<u8, &'static str> = phf_map! {

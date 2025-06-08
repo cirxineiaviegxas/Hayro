@@ -2,15 +2,11 @@
 use phf::phf_map;
 
 pub(crate) fn get(code: u8) -> Option<&'static str> {
-    MAC_OS_ROMAN
-        .get(&code)
-        .copied()
+    MAC_OS_ROMAN.get(&code).copied()
 }
 
 pub(crate) fn get_inverse(name: &str) -> Option<u8> {
-    MAC_OS_ROMAN_INVERSE
-        .get(name)
-        .copied()
+    MAC_OS_ROMAN_INVERSE.get(name).copied()
 }
 
 static MAC_OS_ROMAN: phf::Map<u8, &'static str> = phf_map! {
