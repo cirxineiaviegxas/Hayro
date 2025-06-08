@@ -8,6 +8,10 @@
     "last_page": 0
   },
   {
+    "id": "IdentityToUnicodeMap_charCodeOf",
+    "file": "pdfs/IdentityToUnicodeMap_charCodeOf.pdf"
+  },
+  {
     "id": "IndexedCS_negative_and_high",
     "file": "pdfs/IndexedCS_negative_and_high.pdf"
   },
@@ -232,6 +236,28 @@
     "file": "pdfs/bug1703683_page2_reduced.pdf"
   },
   {
+    "id": "bug1743245",
+    "file": "pdfs/bug1743245.pdf"
+  },
+  {
+    "id": "bug1791583",
+    "file": "pdfs/bug1791583.link",
+    "md5": "1ff6badc865c9a5e9a0dc0b7131ffe28",
+    "link": true
+  },
+  {
+    "id": "bug893730",
+    "file": "pdfs/bug893730.pdf"
+  },
+  {
+    "id": "bug894572",
+    "file": "pdfs/bug894572.pdf"
+  },
+  {
+    "id": "bug911034",
+    "file": "pdfs/bug911034.pdf"
+  },
+  {
     "id": "calgray",
     "file": "pdfs/calgray.pdf"
   },
@@ -285,6 +311,12 @@
     "file": "pdfs/images_1bit_grayscale.pdf"
   },
   {
+    "id": "issue1309",
+    "file": "pdfs/issue1309.link",
+    "md5": "e835fb7f3dab3073ad37d0bd3c6399fa",
+    "link": true
+  },
+  {
     "id": "issue13372",
     "file": "pdfs/issue13372.pdf"
   },
@@ -320,6 +352,13 @@
     "file": "pdfs/issue2177.pdf"
   },
   {
+    "id": "issue2618",
+    "file": "pdfs/issue2618.link",
+    "md5": "2c554a99a52288ca1a44a422eeafb8fb",
+    "link": true,
+    "last_page": 0
+  },
+  {
     "id": "issue2642",
     "file": "pdfs/issue2642.link",
     "md5": "b6679861fdce3bbab0c1fa51bb7f5077",
@@ -327,8 +366,34 @@
     "last_page": 0
   },
   {
+    "id": "issue2884_reduced",
+    "file": "pdfs/issue2884_reduced.pdf",
+    "last_page": 0
+  },
+  {
     "id": "issue2948",
     "file": "pdfs/issue2948.pdf"
+  },
+  {
+    "id": "issue3384",
+    "file": "pdfs/issue3384.link",
+    "md5": "57e31e83c165f16609528ad5ec5825ba",
+    "link": true,
+    "first_page": 0,
+    "last_page": 0
+  },
+  {
+    "id": "issue3566",
+    "file": "pdfs/issue3566.pdf",
+    "last_page": 0
+  },
+  {
+    "id": "issue3584",
+    "file": "pdfs/issue3584.pdf"
+  },
+  {
+    "id": "issue4061",
+    "file": "pdfs/issue4061.pdf"
   },
   {
     "id": "issue4227",
@@ -337,6 +402,40 @@
   {
     "id": "issue4379",
     "file": "pdfs/issue4379.pdf"
+  },
+  {
+    "id": "issue4573",
+    "file": "pdfs/issue4573.pdf",
+    "first_page": 0,
+    "last_page": 0
+  },
+  {
+    "id": "issue4706",
+    "file": "pdfs/issue4706.pdf"
+  },
+  {
+    "id": "issue5138",
+    "file": "pdfs/issue5138.pdf"
+  },
+  {
+    "id": "issue5202",
+    "file": "pdfs/issue5202.pdf"
+  },
+  {
+    "id": "issue5238",
+    "file": "pdfs/issue5238.pdf"
+  },
+  {
+    "id": "issue5256",
+    "file": "pdfs/issue5256.pdf"
+  },
+  {
+    "id": "issue5470",
+    "file": "pdfs/issue5470.pdf"
+  },
+  {
+    "id": "issue5677",
+    "file": "pdfs/issue5677.pdf"
   },
   {
     "id": "issue6231_1",
@@ -349,6 +448,14 @@
     "link": true,
     "first_page": 1,
     "last_page": 2
+  },
+  {
+    "id": "issue6769",
+    "file": "pdfs/issue6769.pdf"
+  },
+  {
+    "id": "issue6769_no_matrix",
+    "file": "pdfs/issue6769_no_matrix.pdf"
   },
   {
     "id": "issue840",

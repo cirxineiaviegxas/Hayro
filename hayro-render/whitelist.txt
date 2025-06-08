@@ -1,30 +1,21 @@
-# Color space and device tests
 calgray
 calrgb
 devicen
 mmtype1
 standard_fonts
-
-# Image and compression tests
 jbig2_symbol_offset
 cmykjpeg
 colors
 images_1bit_grayscale
 jp2k-resetprob
-
-# Colorspace functions
 colorspace_atan
 colorspace_cos
 colorspace_sin
-
-# Font and text tests
 arabiccidtruetype-pdf
 complex_ttf_font
 german-umlaut-r
 simpletype3font
 pattern_text_embedded_font
-
-# Basic rendering tests
 clippath
 close-path-bug
 gradientfill
@@ -36,7 +27,6 @@ operator-in-TJ-array
 zerowidthline
 alphatrans
 
-# Issue fixes that are stable
 issue2642
 issue4379
 issue2006
@@ -54,9 +44,40 @@ issue13372
 issue2177-eq
 issue15716
 
-# Other stable tests
 cid_cff
 type4psfunc
 bug1260585
 tensor-allflags-withfunction
 personwithdog 
+
+bug893730
+bug894572
+bug898853
+bug911034
+bug1175962
+bug1186827
+bug1743245
+bug1791583
+bug1872721
+cid_cff
+german-umlaut-r
+IdentityToUnicodeMap_charCodeOf
+issue1309
+issue2618
+issue2884_reduced
+issue3384
+issue3566
+issue3584
+issue4061
+issue4550
+issue4573
+issue4665
+issue4706
+issue5138
+issue5202
+issue5238
+issue5256
+issue5470
+issue5677
+issue6769_no_matrix
+issue6769
