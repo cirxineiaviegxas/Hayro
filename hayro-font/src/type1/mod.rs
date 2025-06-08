@@ -1,3 +1,5 @@
+//! Reading Type1 tables.
+
 mod charstring;
 mod charstring_parser;
 mod decrypt;
@@ -68,7 +70,7 @@ impl<'a> Table<'a> {
                 b"/Metrics" => s.skip_dict(),
                 b"/StrokeWidth" => s.skip_token(),
                 b"/FontMatrix" => {
-                    let matrix = s.read_font_matrix();
+                    let matrix = s.read_font_matrix()?;
                     params.font_matrix = Matrix {
                         sx: matrix[0],
                         kx: matrix[1],
@@ -78,13 +80,10 @@ impl<'a> Table<'a> {
                         ty: matrix[5],
                     };
                 }
-                b"/Encoding" => params.encoding_type = s.read_encoding(),
+                b"/Encoding" => params.encoding_type = s.read_encoding()?,
                 b"eexec" => {
-                    let decrypted = decrypt(s.tail().unwrap());
-                    Self::parse_eexec(&decrypted, &mut params);
-                }
-                b"/Private" => {
-                    println!("reached private dict");
+                    let decrypted = decrypt(s.tail()?)?;
+                    Self::parse_eexec(&decrypted, &mut params)?;
                 }
                 _ => {}
             }
@@ -96,7 +95,7 @@ impl<'a> Table<'a> {
         })
     }
 
-    fn parse_eexec(data: &[u8], params: &mut Parameters) {
+    fn parse_eexec(data: &[u8], params: &mut Parameters) -> Option<()> {
         let mut s = Stream::new(data);
 
         let mut len_iv = 4;
@@ -104,21 +103,22 @@ impl<'a> Table<'a> {
         while let Some(token) = s.next_token() {
             match token {
                 b"/Subrs" => {
-                    params.subroutines = s.parse_subroutines(len_iv);
+                    params.subroutines = s.parse_subroutines(len_iv)?;
                 }
                 b"/CharStrings" => {
-                    params.charstrings = s.parse_charstrings(len_iv).unwrap();
+                    params.charstrings = s.parse_charstrings(len_iv)?;
                 }
                 b"/lenIV" => {
-                    len_iv = s.next_int() as usize;
+                    len_iv = s.next_int()? as usize;
                 }
                 _ => {}
             }
         }
+        
+        Some(())
     }
 
     /// Returns a font transformation matrix.
-    #[inline]
     pub fn matrix(&self) -> Matrix {
         self.params.font_matrix
     }
@@ -127,7 +127,7 @@ impl<'a> Table<'a> {
     pub fn outline(&self, string: &str, builder: &mut dyn OutlineBuilder) -> Option<()> {
         let data = self.params.charstrings.get(string)?;
 
-        parse_char_string(data, &self.params, builder).unwrap();
+        parse_char_string(data, &self.params, builder).ok()?;
 
         Some(())
     }
@@ -147,8 +147,8 @@ const NP: &[u8] = b"NP";
 const NP_ALT: &[u8] = b"|";
 
 impl<'a> Stream<'a> {
-    fn next_int(&mut self) -> i32 {
-        i32::from_str(std::str::from_utf8(self.next_token().unwrap()).unwrap()).unwrap()
+    fn next_int(&mut self) -> Option<i32> {
+        i32::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()
     }
 
     fn parse_charstrings(&mut self, len_iv: usize) -> Option<HashMap<String, Vec<u8>>> {
@@ -168,13 +168,13 @@ impl<'a> Stream<'a> {
                 .iter()
                 .all(|b| matches!(*b, b'#') || b.is_ascii_digit())
             {
-                int_token = Some(i32::from_str(std::str::from_utf8(token).unwrap()).unwrap());
+                int_token = Some(i32::from_str(std::str::from_utf8(token).ok()?).ok()?);
             } else if token == RD || token == RD_ALT {
                 break;
             }
         }
 
-        let (first_glyph_name, int_token) = (first_glyph_name.unwrap(), int_token.unwrap());
+        let (first_glyph_name, int_token) = (first_glyph_name?, int_token?);
 
         let mut is_first = true;
 
@@ -193,7 +193,7 @@ impl<'a> Stream<'a> {
 
                 self.read_byte();
             } else {
-                let tok = self.next_token().unwrap();
+                let tok = self.next_token()?;
                 if tok == b"end" {
                     break;
                 }
@@ -204,45 +204,49 @@ impl<'a> Stream<'a> {
                     glyph_name = tok;
                 }
 
-                bin_len = self.next_int();
-                let tok = self.next_token().unwrap();
+                bin_len = self.next_int()?;
+                let tok = self.next_token()?;
 
                 if tok == RD || tok == RD_ALT {
                     self.read_byte();
                 } else {
-                    panic!("invalid charstring in start, expected RD");
+                    error!("invalid charstring in start, expected RD");
+                    
+                    return None;
                 }
             }
 
-            let encrypted_bytes = self.read_bytes(bin_len as usize).unwrap();
-            let decrypted_bytes = decrypt_charstring(encrypted_bytes, len_iv);
+            let encrypted_bytes = self.read_bytes(bin_len as usize)?;
+            let decrypted_bytes = decrypt_charstring(encrypted_bytes, len_iv)?;
             charstrings.insert(
-                std::str::from_utf8(glyph_name).unwrap().to_string(),
+                std::str::from_utf8(glyph_name).ok()?.to_string(),
                 decrypted_bytes,
             );
 
-            let tok = self.next_token().unwrap();
+            let tok = self.next_token()?;
             if tok == ND || tok == ND_ALT {
             } else {
-                panic!("invalid charstring in end, expected ND, found {:?}", tok);
+                error!("invalid charstring in end, expected ND, found {:?}", tok);
+                
+                return None;
             }
         }
 
         Some(charstrings)
     }
 
-    fn parse_subroutines(&mut self, len_iv: usize) -> HashMap<u32, Vec<u8>> {
+    fn parse_subroutines(&mut self, len_iv: usize) -> Option<HashMap<u32, Vec<u8>>> {
         let mut subroutines = HashMap::new();
 
         let num_subrs =
-            u32::from_str(std::str::from_utf8(self.next_token().unwrap()).unwrap()).unwrap();
+            u32::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()?;
 
         if num_subrs < 1 {
-            return subroutines;
+            return Some(subroutines);
         }
 
         if !self.skip_until_before(b"dup", |b| matches!(b, ND | ND_ALT | b"noaccess")) {
-            return subroutines;
+            return Some(subroutines);
         }
 
         while let Some(token) = self.next_token() {
@@ -254,48 +258,57 @@ impl<'a> Stream<'a> {
                 if self.next_token() == Some(b"def") {
                     break;
                 } else {
-                    panic!("invallid sequence noaccess");
+                    error!("invalid sequence noaccess");
+                    
+                    return None;
                 }
             }
 
             if token != b"dup" {
-                panic!("expected dup, got token {:?} instead", &token);
+                error!("expected dup, got token {:?} instead", &token);
+                
+                return None;
             }
 
-            let subr_idx = self.next_int();
-            let bin_len = self.next_int();
+            let subr_idx = self.next_int()?;
+            let bin_len = self.next_int()?;
 
-            let tok = self.next_token().unwrap();
+            let tok = self.next_token()?;
 
             if tok != RD && tok != RD_ALT {
-                panic!("invalid subroutine start token {:?}", tok);
+                error!("invalid subroutine start token {:?}", tok);
+                
+                return None;
             } else {
-                // WHitespace
+                // Whitespace
                 self.read_byte();
             }
+            
+            let encrypted_bytes = self.read_bytes(bin_len as usize)?;
+            subroutines.insert(subr_idx as u32, decrypt_charstring(encrypted_bytes, len_iv)?);
 
-            // TODO: Decrypt
-            let encrypted_bytes = self.read_bytes(bin_len as usize).unwrap();
-            subroutines.insert(subr_idx as u32, decrypt_charstring(encrypted_bytes, len_iv));
-
-            let mut tok = self.next_token().unwrap();
+            let mut tok = self.next_token()?;
             if tok == NP || tok == NP_ALT {
             } else if tok == b"noaccess" {
-                tok = self.next_token().unwrap();
+                tok = self.next_token()?;
                 if tok == b"def" {
                     break;
                 }
 
                 if tok == b"put" {
                 } else {
-                    panic!("invallid subroutine end {:?}", tok);
+                    error!("invalid subroutine end {:?}", tok);
+                    
+                    return None;
                 }
             } else {
-                panic!("invalid subroutine end token {:?}", tok);
+                error!("invalid subroutine end token {:?}", tok);
+                
+                return None;
             }
         }
 
-        subroutines
+        Some(subroutines)
     }
 
     fn peek_token(&mut self) -> Option<&'a [u8]> {
@@ -388,7 +401,7 @@ impl<'a> Stream<'a> {
         None
     }
 
-    fn read_font_matrix(&mut self) -> [f32; 6] {
+    fn read_font_matrix(&mut self) -> Option<[f32; 6]> {
         let mut entries = [0.0f32; 6];
         let mut idx = 0;
 
@@ -396,7 +409,7 @@ impl<'a> Stream<'a> {
         self.skip_token();
 
         while let Some(token) = self.next_token() {
-            entries[idx] = f32::from_str(std::str::from_utf8(token).unwrap()).unwrap();
+            entries[idx] = f32::from_str(std::str::from_utf8(token).ok()?).ok()?;
 
             idx += 1;
             if idx == 5 {
@@ -407,21 +420,21 @@ impl<'a> Stream<'a> {
         // Skip `]`.
         self.skip_token();
 
-        entries
+        Some(entries)
     }
 
-    fn read_encoding(&mut self) -> EncodingType {
+    fn read_encoding(&mut self) -> Option<EncodingType> {
         let mut map = HashMap::new();
 
-        let t1 = self.next_token().unwrap();
-        let t2 = self.next_token().unwrap();
+        let t1 = self.next_token()?;
+        let t2 = self.next_token()?;
 
         if t1 == b"StandardEncoding" && t2 == b"def" {
-            return EncodingType::Standard;
+            return Some(EncodingType::Standard);
         }
 
         if !self.skip_until_before(b"dup", |b| matches!(b, b"def" | b"readonly")) {
-            return EncodingType::Custom(Arc::new(map));
+            return Some(EncodingType::Custom(Arc::new(map)));
         }
 
         while let Some(token) = self.next_token() {
@@ -430,23 +443,27 @@ impl<'a> Stream<'a> {
             }
 
             if token != b"dup" {
-                panic!("Unexpected token {:?}", token);
+                error!("Unexpected token {:?}", token);
+                
+                return None;
             }
 
             let code =
-                u8::from_str(std::str::from_utf8(self.next_token().unwrap()).unwrap()).unwrap();
-            let glyph_name = std::str::from_utf8(&self.next_token().unwrap()[1..])
-                .unwrap()
+                u8::from_str(std::str::from_utf8(self.next_token()?).ok()?).ok()?;
+            let glyph_name = std::str::from_utf8(&self.next_token()?[1..])
+                .ok()?
                 .to_string();
 
-            if self.next_token().unwrap() != b"put" {
-                panic!("Unexpected token {:?}", token);
+            if self.next_token()? != b"put" {
+                error!("Unexpected token {:?}", token);
+                
+                return None;
             }
 
             map.insert(code, glyph_name);
         }
 
-        EncodingType::Custom(Arc::new(map))
+        Some(EncodingType::Custom(Arc::new(map)))
     }
 
     fn skip_dict(&mut self) {
@@ -495,7 +512,9 @@ impl<'a> Stream<'a> {
                 return true;
             }
 
-            self.next_token().unwrap();
+            if self.next_token().is_none() {
+                return false;
+            }
 
             if stop(token) {
                 break;
@@ -506,20 +525,20 @@ impl<'a> Stream<'a> {
     }
 }
 
-fn decrypt_charstring(data: &[u8], len_iv: usize) -> Vec<u8> {
+fn decrypt_charstring(data: &[u8], len_iv: usize) -> Option<Vec<u8>> {
     let mut r = 4330;
     let mut cb: Copied<Iter<u8>> = data.iter().copied();
     let mut decrypted = vec![];
 
     for _ in 0..len_iv {
-        let _ = decrypt_byte(cb.next().unwrap(), &mut r);
+        let _ = decrypt_byte(cb.next()?, &mut r);
     }
 
     for byte in cb {
         decrypted.push(decrypt_byte(byte, &mut r))
     }
 
-    decrypted
+    Some(decrypted)
 }
 
 fn is_whitespace(c: u8) -> bool {

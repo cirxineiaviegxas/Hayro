@@ -1,6 +1,7 @@
+use log::{error, warn};
 use super::stream::Stream;
 
-pub(crate) fn decrypt(data: &[u8]) -> Vec<u8> {
+pub(crate) fn decrypt(data: &[u8]) -> Option<Vec<u8>> {
     let mut stream = Stream::new(data);
     stream.skip_whitespaces();
 
@@ -10,7 +11,7 @@ pub(crate) fn decrypt(data: &[u8]) -> Vec<u8> {
     let mut decrypt = |b: u8| decrypt_byte(b, &mut r);
 
     for _ in 0..1000 {
-        let c = stream.read_byte().unwrap();
+        let c = stream.read_byte()?;
         if !is_white_space_after_token_eexec(c) {
             b00 = Some(c);
             break;
@@ -18,14 +19,16 @@ pub(crate) fn decrypt(data: &[u8]) -> Vec<u8> {
     }
 
     let Some(b00) = b00 else {
-        panic!("b00 was None");
+        error!("b00 was None");
+        
+        return None;
     };
 
     let mut b = [0u8; 4];
     b[0] = b00;
 
     for i in 1..=3 {
-        let c = stream.read_byte().unwrap();
+        let c = stream.read_byte()?;
         b[i] = c;
     }
 
@@ -44,13 +47,15 @@ pub(crate) fn decrypt(data: &[u8]) -> Vec<u8> {
             decrypt(b[i]);
         }
 
-        for b in stream.tail().unwrap() {
+        for b in stream.tail()? {
             out.push(decrypt(*b));
         }
 
-        out
+        Some(out)
     } else {
-        unimplemented!()
+        warn!("non-binary decryption is unimplemented");
+        
+        None
     }
 }
 

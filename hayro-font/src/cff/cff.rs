@@ -976,6 +976,7 @@ impl<'a> Table<'a> {
         }
     }
 
+    /// Convert a CID to its correpsonding glyph id.
     pub fn glyph_index_by_cid(&self, cid: u16) -> Option<GlyphId> {
         match self.kind {
             FontKind::SID(_) => None,
@@ -983,6 +984,7 @@ impl<'a> Table<'a> {
         }
     }
 
+    /// Whether the font is a CID font.
     pub fn is_cid(&self) -> bool {
         matches!(self.kind, FontKind::CID(_))
     }

@@ -1,3 +1,5 @@
+//! Reading CFF tables.
+
 pub mod cff;
 mod charset;
 mod charstring;

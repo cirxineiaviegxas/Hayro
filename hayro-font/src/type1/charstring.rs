@@ -35,7 +35,7 @@ pub(crate) fn parse_char_string(
     };
 
     let stack = ArgumentsStack {
-        data: &mut [0.0; MAX_ARGUMENTS_STACK_LEN], // 192B
+        data: &mut [0.0; MAX_ARGUMENTS_STACK_LEN],
         len: 0,
         max_len: MAX_ARGUMENTS_STACK_LEN,
     };

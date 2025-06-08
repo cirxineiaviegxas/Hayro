@@ -1,4 +1,3 @@
-// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
 pub(crate) static STANDARD: phf::Map<u8, &'static str> = phf_map! {
