@@ -2,7 +2,7 @@ use crate::Paint;
 use crate::color::Color;
 use crate::context::Context;
 use crate::device::Device;
-use crate::glyph::Glyph;
+use crate::font::Glyph;
 use crate::paint::PaintType;
 use kurbo::{Affine, BezPath};
 use log::warn;

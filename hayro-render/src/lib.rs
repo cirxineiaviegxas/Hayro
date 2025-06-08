@@ -6,7 +6,7 @@ use hayro_interpret::cache::Cache;
 use hayro_interpret::clip_path::ClipPath;
 use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
-use hayro_interpret::glyph::Glyph;
+use hayro_interpret::font::Glyph;
 use hayro_interpret::pattern::Pattern;
 use hayro_interpret::util::FloatExt;
 use hayro_interpret::{FillProps, Paint, StencilImage, StrokeProps, interpret};

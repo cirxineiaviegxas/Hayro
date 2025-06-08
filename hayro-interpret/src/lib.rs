@@ -19,8 +19,7 @@ pub mod color;
 pub mod context;
 mod convert;
 pub mod device;
-mod font;
-pub mod glyph;
+pub mod font;
 mod image;
 mod interpret;
 pub mod mask;
@@ -32,11 +31,11 @@ pub mod x_object;
 
 use crate::color::ColorSpace;
 use crate::context::Context;
-use crate::font::TextRenderingMode;
 use crate::pattern::{Pattern, ShadingPattern};
 use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
+use interpret::text::TextRenderingMode;
 
 use crate::interpret::path::{fill_path, fill_path_impl, fill_stroke_path, stroke_path};
 pub use image::{RgbaImage, StencilImage};

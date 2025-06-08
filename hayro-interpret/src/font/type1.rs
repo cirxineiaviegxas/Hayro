@@ -1,6 +1,6 @@
 use crate::font::Encoding;
 use crate::font::blob::{CffFontBlob, Type1FontBlob};
-use crate::font::generated::{mac_expert, mac_roman, standard, win_ansi};
+use crate::font::glyph_simulator::GlyphSimulator;
 use crate::font::standard_font::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
 use hayro_syntax::object::dict::Dict;
@@ -9,7 +9,6 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
 use log::warn;
 use skrifa::GlyphId;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,16 +16,16 @@ use std::sync::Arc;
 pub(crate) struct Type1Font(Kind);
 
 impl Type1Font {
-    pub fn new(dict: &Dict) -> Option<Self> {
-        let inner = if let Some(standard) = Standard::new(dict) {
+    pub(crate) fn new(dict: &Dict) -> Option<Self> {
+        let inner = if let Some(standard) = StandardKind::new(dict) {
             Self(Kind::Standard(standard))
         } else if is_cff(dict) {
-            Self(Kind::Cff(Cff::new(dict)?))
+            Self(Kind::Cff(CffKind::new(dict)?))
         } else if is_type1(dict) {
-            Self(Kind::Type1(Type1::new(dict)))
+            Self(Kind::Type1(Type1Kind::new(dict)))
         } else {
             warn!("unable to load type1 font, falling back to Times New Roman");
-            Self(Kind::Standard(Standard::new_with_standard(
+            Self(Kind::Standard(StandardKind::new_with_standard(
                 dict,
                 StandardFont::TimesRoman,
             )))
@@ -35,7 +34,7 @@ impl Type1Font {
         Some(inner)
     }
 
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    pub(crate) fn map_code(&self, code: u8) -> GlyphId {
         match &self.0 {
             Kind::Standard(s) => s.map_code(code),
             Kind::Type1(s) => s.map_code(code),
@@ -43,7 +42,7 @@ impl Type1Font {
         }
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    pub(crate) fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         match &self.0 {
             Kind::Standard(s) => s.outline_glyph(glyph),
             Kind::Cff(c) => c.outline_glyph(glyph),
@@ -51,7 +50,7 @@ impl Type1Font {
         }
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
+    pub(crate) fn glyph_width(&self, code: u8) -> Option<f32> {
         match &self.0 {
             Kind::Standard(s) => s.glyph_width(code),
             Kind::Cff(c) => c.glyph_width(code),
@@ -62,21 +61,21 @@ impl Type1Font {
 
 #[derive(Debug)]
 enum Kind {
-    Standard(Standard),
-    Cff(Cff),
-    Type1(Type1),
+    Standard(StandardKind),
+    Cff(CffKind),
+    Type1(Type1Kind),
 }
 
 #[derive(Debug)]
-struct Standard {
+struct StandardKind {
     base_font: StandardFont,
     encoding: Encoding,
     widths: Vec<f32>,
     encodings: HashMap<u8, String>,
 }
 
-impl Standard {
-    pub fn new(dict: &Dict) -> Option<Standard> {
+impl StandardKind {
+    fn new(dict: &Dict) -> Option<StandardKind> {
         Some(Self::new_with_standard(dict, select_standard_font(dict)?))
     }
 
@@ -101,15 +100,12 @@ impl Standard {
             .get(&code)
             .map(String::as_str)
             .or_else(|| match self.encoding {
-                Encoding::Standard => standard::get(code),
-                Encoding::MacRoman => mac_roman::get(code),
-                Encoding::WinAnsi => win_ansi::get(code),
-                Encoding::MacExpert => mac_expert::get(code),
                 Encoding::BuiltIn => bf.code_to_name(code),
+                _ => self.encoding.map_code(code),
             })
     }
 
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    fn map_code(&self, code: u8) -> GlyphId {
         self.code_to_ps_name(code)
             .and_then(|c| {
                 self.base_font
@@ -121,19 +117,15 @@ impl Standard {
             .unwrap_or(GlyphId::NOTDEF)
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         self.base_font.get_blob().outline_glyph(glyph)
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
-        self.widths
-            .get(code as usize)
-            .copied()
-            .or_else(|| {
-                self.code_to_ps_name(code)
-                    .and_then(|c| self.base_font.get_width(c))
-            })
-            .unwrap_or(0.0)
+    fn glyph_width(&self, code: u8) -> Option<f32> {
+        self.widths.get(code as usize).copied().or_else(|| {
+            self.code_to_ps_name(code)
+                .and_then(|c| self.base_font.get_width(c))
+        })
     }
 }
 
@@ -150,7 +142,7 @@ fn is_type1(dict: &Dict) -> bool {
 }
 
 #[derive(Debug)]
-struct Type1 {
+struct Type1Kind {
     font: Type1FontBlob,
     encoding: Encoding,
     widths: Vec<f32>,
@@ -158,8 +150,8 @@ struct Type1 {
     glyph_simulator: GlyphSimulator,
 }
 
-impl Type1 {
-    pub fn new(dict: &Dict) -> Self {
+impl Type1Kind {
+    fn new(dict: &Dict) -> Self {
         let descriptor = dict.get::<Dict>(FONT_DESC).unwrap();
         let data = descriptor.get::<Stream>(FONT_FILE).unwrap();
         let font = Type1FontBlob::new(Arc::new(data.decoded().unwrap().to_vec()));
@@ -182,7 +174,7 @@ impl Type1 {
         self.glyph_simulator.string_to_glyph(string)
     }
 
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    fn map_code(&self, code: u8) -> GlyphId {
         let table = self.font.table();
 
         let get_glyph = |entry: &str| self.string_to_glyph(entry);
@@ -191,17 +183,14 @@ impl Type1 {
             Some(get_glyph(entry))
         } else {
             match self.encoding {
-                Encoding::Standard => standard::get(code).map(|v| get_glyph(v)),
-                Encoding::MacRoman => mac_roman::get(code).map(|v| get_glyph(v)),
-                Encoding::WinAnsi => win_ansi::get(code).map(get_glyph),
-                Encoding::MacExpert => mac_expert::get(code).map(|v| get_glyph(v)),
                 Encoding::BuiltIn => table.code_to_string(code).map(get_glyph),
+                _ => self.encoding.map_code(code).map(get_glyph),
             }
         }
         .unwrap_or(GlyphId::NOTDEF)
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         self.font.outline_glyph(
             self.glyph_simulator
                 .glyph_to_string(glyph)
@@ -210,24 +199,24 @@ impl Type1 {
         )
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
-        *self.widths.get(code as usize).unwrap()
+    fn glyph_width(&self, code: u8) -> Option<f32> {
+        self.widths.get(code as usize).copied()
     }
 }
 
 #[derive(Debug)]
-struct Cff {
+struct CffKind {
     font: CffFontBlob,
     encoding: Encoding,
     widths: Vec<f32>,
     encodings: HashMap<u8, String>,
 }
 
-impl Cff {
-    pub fn new(dict: &Dict) -> Option<Self> {
+impl CffKind {
+    fn new(dict: &Dict) -> Option<Self> {
         let descriptor = dict.get::<Dict>(FONT_DESC)?;
         let data = descriptor.get::<Stream>(FONT_FILE3)?;
-        let font = CffFontBlob::new(Arc::new(data.decoded().unwrap().to_vec()))?;
+        let font = CffFontBlob::new(Arc::new(data.decoded()?.to_vec()))?;
 
         let (encoding, encodings) = read_encoding(dict);
         let widths = read_widths(dict, &descriptor);
@@ -240,7 +229,7 @@ impl Cff {
         })
     }
 
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    fn map_code(&self, code: u8) -> GlyphId {
         let table = self.font.table();
 
         let get_glyph = |entry: &str| {
@@ -253,71 +242,18 @@ impl Cff {
             get_glyph(entry)
         } else {
             match self.encoding {
-                Encoding::Standard => standard::get(code).and_then(|v| get_glyph(v)),
-                Encoding::MacRoman => mac_roman::get(code).and_then(|v| get_glyph(v)),
-                Encoding::WinAnsi => win_ansi::get(code).and_then(get_glyph),
-                Encoding::MacExpert => mac_expert::get(code).and_then(|v| get_glyph(v)),
                 Encoding::BuiltIn => table.glyph_index(code).map(|g| GlyphId::new(g.0 as u32)),
+                _ => self.encoding.map_code(code).and_then(get_glyph),
             }
         }
         .unwrap_or(GlyphId::NOTDEF)
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         self.font.outline_glyph(glyph)
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
-        self.widths.get(code as usize).copied().unwrap()
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct GlyphSimulator {
-    // We simulate that Type1 glyphs have glyph IDs so we can handle them transparently
-    // to OpenType fonts.
-    glyph_to_string: RefCell<HashMap<GlyphId, String>>,
-    string_to_glyph: RefCell<HashMap<String, GlyphId>>,
-    glyph_counter: RefCell<u32>,
-}
-
-impl GlyphSimulator {
-    pub(crate) fn new() -> Self {
-        let mut glyph_to_string = HashMap::new();
-        glyph_to_string.insert(GlyphId::NOTDEF, "notdef".to_string());
-
-        let mut string_to_glyph = HashMap::new();
-        string_to_glyph.insert("notdef".to_string(), GlyphId::NOTDEF);
-
-        Self {
-            glyph_to_string: RefCell::new(glyph_to_string),
-            string_to_glyph: RefCell::new(string_to_glyph),
-            glyph_counter: RefCell::new(1),
-        }
-    }
-
-    pub(crate) fn string_to_glyph(&self, string: &str) -> GlyphId {
-        if let Some(g) = self.string_to_glyph.borrow().get(string) {
-            *g
-        } else {
-            let gid = GlyphId::new(*self.glyph_counter.borrow());
-            self.string_to_glyph
-                .borrow_mut()
-                .insert(string.to_string(), gid);
-            self.glyph_to_string
-                .borrow_mut()
-                .insert(gid, string.to_string());
-
-            *self.glyph_counter.borrow_mut() += 1;
-
-            gid
-        }
-    }
-
-    pub(crate) fn glyph_to_string(&self, glyph: GlyphId) -> Option<String> {
-        self.glyph_to_string
-            .borrow()
-            .get(&glyph)
-            .map(|s| s.to_string())
+    fn glyph_width(&self, code: u8) -> Option<f32> {
+        self.widths.get(code as usize).copied()
     }
 }

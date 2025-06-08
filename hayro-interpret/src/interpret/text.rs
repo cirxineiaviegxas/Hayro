@@ -1,7 +1,6 @@
 use crate::context::Context;
 use crate::device::Device;
-use crate::font::TextRenderingMode;
-use crate::glyph::Glyph;
+use crate::font::Glyph;
 use crate::interpret::path::{clip_impl, get_paint};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::string;
@@ -81,4 +80,17 @@ pub(crate) fn show_glyph<'a>(ctx: &mut Context<'a>, device: &mut impl Device, gl
             device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum TextRenderingMode {
+    #[default]
+    Fill,
+    Stroke,
+    FillStroke,
+    Invisible,
+    FillAndClip,
+    StrokeAndClip,
+    FillAndStrokeAndClip,
+    Clip,
 }

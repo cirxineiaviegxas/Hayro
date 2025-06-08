@@ -1,5 +1,5 @@
 use crate::clip_path::ClipPath;
-use crate::glyph::Glyph;
+use crate::font::Glyph;
 use crate::image::{RgbaImage, StencilImage};
 use crate::paint::Paint;
 use crate::{FillProps, StrokeProps};

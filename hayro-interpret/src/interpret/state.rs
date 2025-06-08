@@ -1,5 +1,6 @@
 use crate::color::{ColorComponents, ColorSpace};
-use crate::font::{Font, TextRenderingMode, UNITS_PER_EM};
+use crate::font::{Font, UNITS_PER_EM};
+use crate::interpret::text::TextRenderingMode;
 use crate::pattern::Pattern;
 use kurbo::{Affine, BezPath, Cap, Join, Vec2};
 use peniko::Fill;

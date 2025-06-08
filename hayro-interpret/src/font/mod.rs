@@ -1,38 +1,94 @@
+use crate::Paint;
+use crate::cache::Cache;
 use crate::context::Context;
+use crate::device::Device;
 use crate::font::cid::Type0Font;
 use crate::font::generated::{mac_expert, mac_os_roman, mac_roman, standard, win_ansi};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
-use crate::glyph::{Glyph, OutlineGlyph, Type3Glyph};
-use hayro_font::OutlineBuilder;
+use crate::interpret::state::State;
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
+use hayro_syntax::xref::XRef;
 use kurbo::{Affine, BezPath, Vec2};
+use outline::OutlineFont;
 use skrifa::GlyphId;
-use skrifa::outline::OutlinePen;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
-pub(crate) const UNITS_PER_EM: f32 = 1000.0;
-
 mod blob;
 mod cid;
-pub(crate) mod generated;
+mod generated;
+mod glyph_simulator;
+pub(crate) mod outline;
 mod standard_font;
 mod true_type;
 mod type1;
 pub(crate) mod type3;
 
+pub(crate) const UNITS_PER_EM: f32 = 1000.0;
+
+/// A glyph that can be drawn.
+pub enum Glyph<'a> {
+    /// A glyph defined by an outline.
+    Outline(OutlineGlyph),
+    /// A glyph defined by PDF drawing instructions.
+    Shape(Type3Glyph<'a>),
+}
+
+impl Glyph<'_> {
+    pub(crate) fn glyph_transform(&self) -> Affine {
+        match self {
+            Glyph::Outline(o) => o.glyph_transform,
+            Glyph::Shape(s) => s.glyph_transform,
+        }
+    }
+}
+
+/// A glyph defined by an outline.
 #[derive(Clone, Debug)]
-pub struct Font<'a>(FontType<'a>);
+pub struct OutlineGlyph {
+    pub(crate) id: GlyphId,
+    pub(crate) font: OutlineFont,
+    /// A transform that should be applied to the glyph before drawing.
+    pub glyph_transform: Affine,
+}
+
+impl OutlineGlyph {
+    /// Return the outline of the glyph, assuming an upem value of 1000.
+    pub fn outline(&self) -> BezPath {
+        self.font.outline_glyph(self.id)
+    }
+}
+
+pub struct Type3Glyph<'a> {
+    pub(crate) font: Arc<Type3<'a>>,
+    pub(crate) glyph_id: GlyphId,
+    pub(crate) state: State<'a>,
+    pub(crate) parent_resources: Resources<'a>,
+    pub(crate) cache: Cache,
+    pub(crate) glyph_transform: Affine,
+    pub(crate) xref: &'a XRef,
+}
+
+/// A glyph defined by PDF drawing instructions.
+impl<'a> Type3Glyph<'a> {
+    /// Draw the type3 glyph to the given device.
+    pub fn interpret(&self, device: &mut impl Device, paint: &Paint) {
+        self.font.render_glyph(self, paint, device);
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct Font<'a>(FontType<'a>);
 
 impl<'a> Font<'a> {
-    pub fn new(dict: &Dict<'a>) -> Option<Self> {
+    pub(crate) fn new(dict: &Dict<'a>) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)? {
             TYPE1 | MM_TYPE1 => FontType::Type1(Arc::new(Type1Font::new(dict)?)),
             TRUE_TYPE => TrueTypeFont::new(dict)
@@ -54,7 +110,7 @@ impl<'a> Font<'a> {
         Some(Self(f_type))
     }
 
-    pub fn map_code(&self, code: u16) -> GlyphId {
+    pub(crate) fn map_code(&self, code: u16) -> GlyphId {
         match &self.0 {
             FontType::Type1(f) => {
                 debug_assert!(code <= u8::MAX as u16);
@@ -75,7 +131,7 @@ impl<'a> Font<'a> {
         }
     }
 
-    pub fn get_glyph(
+    pub(crate) fn get_glyph(
         &self,
         glyph: GlyphId,
         ctx: &mut Context<'a>,
@@ -127,12 +183,12 @@ impl<'a> Font<'a> {
         }
     }
 
-    pub fn code_advance(&self, code: u16) -> Vec2 {
+    pub(crate) fn code_advance(&self, code: u16) -> Vec2 {
         match &self.0 {
             FontType::Type1(t) => {
                 debug_assert!(code <= u8::MAX as u16);
 
-                Vec2::new(t.glyph_width(code as u8) as f64, 0.0)
+                Vec2::new(t.glyph_width(code as u8).unwrap_or(0.0) as f64, 0.0)
             }
             FontType::TrueType(t) => {
                 debug_assert!(code <= u8::MAX as u16);
@@ -148,7 +204,7 @@ impl<'a> Font<'a> {
         }
     }
 
-    pub fn origin_displacement(&self, code: u16) -> Vec2 {
+    pub(crate) fn origin_displacement(&self, code: u16) -> Vec2 {
         match &self.0 {
             FontType::Type1(_) => Vec2::default(),
             FontType::TrueType(_) => Vec2::default(),
@@ -157,7 +213,7 @@ impl<'a> Font<'a> {
         }
     }
 
-    pub fn code_len(&self) -> usize {
+    pub(crate) fn code_len(&self) -> usize {
         match &self.0 {
             FontType::Type1(_) => 1,
             FontType::TrueType(_) => 1,
@@ -166,50 +222,12 @@ impl<'a> Font<'a> {
         }
     }
 
-    pub fn is_horizontal(&self) -> bool {
+    pub(crate) fn is_horizontal(&self) -> bool {
         match &self.0 {
             FontType::Type1(_) => true,
             FontType::TrueType(_) => true,
             FontType::Type0(t) => t.is_horizontal(),
             FontType::Type3(_) => true,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum Encoding {
-    Standard,
-    MacRoman,
-    WinAnsi,
-    MacExpert,
-    BuiltIn,
-}
-
-impl Encoding {
-    fn lookup(&self, code: u8) -> Option<&'static str> {
-        match self {
-            Encoding::Standard => standard::get(code),
-            Encoding::MacRoman => mac_roman::get(code).or_else(|| mac_os_roman::get(code)),
-            Encoding::WinAnsi => win_ansi::get(code),
-            Encoding::MacExpert => mac_expert::get(code),
-            Encoding::BuiltIn => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum OutlineFont {
-    Type1(Arc<Type1Font>),
-    TrueType(Arc<TrueTypeFont>),
-    Type0(Arc<Type0Font>),
-}
-
-impl OutlineFont {
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
-        match self {
-            OutlineFont::Type1(t) => t.outline_glyph(glyph),
-            OutlineFont::TrueType(t) => t.outline_glyph(glyph),
-            OutlineFont::Type0(t) => t.outline_glyph(glyph),
         }
     }
 }
@@ -222,67 +240,23 @@ enum FontType<'a> {
     Type3(Arc<Type3<'a>>),
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub enum TextRenderingMode {
-    #[default]
-    Fill,
-    Stroke,
-    FillStroke,
-    Invisible,
-    FillAndClip,
-    StrokeAndClip,
-    FillAndStrokeAndClip,
-    Clip,
+#[derive(Debug)]
+enum Encoding {
+    Standard,
+    MacRoman,
+    WinAnsi,
+    MacExpert,
+    BuiltIn,
 }
 
-struct OutlinePath(BezPath);
-
-// Note that we flip the y-axis to match our coordinate system.
-impl OutlinePen for OutlinePath {
-    #[inline]
-    fn move_to(&mut self, x: f32, y: f32) {
-        self.0.move_to((x, y));
-    }
-
-    #[inline]
-    fn line_to(&mut self, x: f32, y: f32) {
-        self.0.line_to((x, y));
-    }
-
-    #[inline]
-    fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
-        self.0.curve_to((cx0, cy0), (cx1, cy1), (x, y));
-    }
-
-    #[inline]
-    fn quad_to(&mut self, cx: f32, cy: f32, x: f32, y: f32) {
-        self.0.quad_to((cx, cy), (x, y));
-    }
-
-    #[inline]
-    fn close(&mut self) {
-        self.0.close_path();
-    }
-}
-
-impl OutlineBuilder for OutlinePath {
-    fn move_to(&mut self, x: f32, y: f32) {
-        self.0.move_to((x, y));
-    }
-
-    fn line_to(&mut self, x: f32, y: f32) {
-        self.0.line_to((x, y));
-    }
-
-    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
-        self.0.quad_to((x1, y1), (x, y));
-    }
-
-    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
-        self.0.curve_to((x1, y1), (x2, y2), (x, y));
-    }
-
-    fn close(&mut self) {
-        self.0.close_path();
+impl Encoding {
+    fn map_code(&self, code: u8) -> Option<&'static str> {
+        match self {
+            Encoding::Standard => standard::get(code),
+            Encoding::MacRoman => mac_roman::get(code).or_else(|| mac_os_roman::get(code)),
+            Encoding::WinAnsi => win_ansi::get(code),
+            Encoding::MacExpert => mac_expert::get(code),
+            Encoding::BuiltIn => None,
+        }
     }
 }

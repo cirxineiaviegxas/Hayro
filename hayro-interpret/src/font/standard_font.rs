@@ -29,7 +29,7 @@ pub(crate) enum StandardFont {
 }
 
 impl StandardFont {
-    pub fn code_to_name(&self, code: u8) -> Option<&'static str> {
+    pub(crate) fn code_to_name(&self, code: u8) -> Option<&'static str> {
         match self {
             Self::Symbol => symbol::get(code),
             // Note that this font does not return postscript character names,
@@ -39,7 +39,7 @@ impl StandardFont {
         }
     }
 
-    pub fn get_blob(&self) -> CffFontBlob {
+    pub(crate) fn get_blob(&self) -> CffFontBlob {
         match self {
             StandardFont::Helvetica => HELVETICA_REGULAR.clone(),
             StandardFont::HelveticaBold => HELVETICA_BOLD.clone(),
@@ -58,7 +58,7 @@ impl StandardFont {
         }
     }
 
-    pub fn get_width(&self, name: &str) -> Option<f32> {
+    pub(crate) fn get_width(&self, name: &str) -> Option<f32> {
         match self {
             StandardFont::Helvetica => metrics::HELVETICA.get(name).copied(),
             StandardFont::HelveticaBold => metrics::HELVETICA_BOLD.get(name).copied(),

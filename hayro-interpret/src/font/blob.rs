@@ -1,4 +1,5 @@
-use crate::font::{OutlinePath, UNITS_PER_EM};
+use crate::font::UNITS_PER_EM;
+use crate::font::outline::OutlinePath;
 use hayro_font::{Matrix, cff, type1};
 use kurbo::{Affine, BezPath};
 use once_cell::sync::Lazy;
@@ -111,6 +112,7 @@ type OpenTypeFontYoke = Yoke<OTFYoke<'static>, FontData>;
 type CffFontYoke = Yoke<CFFYoke<'static>, FontData>;
 type Type1FontYoke = Yoke<Type1Yoke<'static>, FontData>;
 
+/// A font blob for type 1 fonts.
 #[derive(Clone)]
 pub struct Type1FontBlob(Arc<Type1FontYoke>);
 
@@ -121,7 +123,7 @@ impl Debug for Type1FontBlob {
 }
 
 impl Type1FontBlob {
-    pub fn new(data: FontData) -> Self {
+    pub(crate) fn new(data: FontData) -> Self {
         let yoke = Yoke::<Type1Yoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
             let table = type1::Table::parse(data.as_ref()).unwrap();
             Type1Yoke { table }
@@ -134,7 +136,7 @@ impl Type1FontBlob {
         &self.0.as_ref().get().table
     }
 
-    pub fn outline_glyph(&self, name: &str) -> BezPath {
+    pub(crate) fn outline_glyph(&self, name: &str) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
 
         self.table().outline(name, &mut path).unwrap_or_default();
@@ -143,6 +145,7 @@ impl Type1FontBlob {
     }
 }
 
+/// A font blob for CFF-based fonts.
 #[derive(Clone)]
 pub struct CffFontBlob(Arc<CffFontYoke>);
 
@@ -153,7 +156,7 @@ impl Debug for CffFontBlob {
 }
 
 impl CffFontBlob {
-    pub fn new(data: FontData) -> Option<Self> {
+    pub(crate) fn new(data: FontData) -> Option<Self> {
         let _ = cff::Table::parse(data.as_ref().as_ref())?;
 
         let yoke = Yoke::<CFFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
@@ -168,7 +171,7 @@ impl CffFontBlob {
         &self.0.as_ref().get().table
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    pub(crate) fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
 
         let Ok(_) = self
@@ -182,8 +185,9 @@ impl CffFontBlob {
     }
 }
 
+/// A font blob for OpenType fonts.
 #[derive(Clone)]
-pub struct OpenTypeFontBlob(Arc<OpenTypeFontYoke>);
+pub(crate) struct OpenTypeFontBlob(Arc<OpenTypeFontYoke>);
 
 impl Debug for OpenTypeFontBlob {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -192,7 +196,7 @@ impl Debug for OpenTypeFontBlob {
 }
 
 impl OpenTypeFontBlob {
-    pub fn new(data: FontData, index: u32) -> Option<Self> {
+    pub(crate) fn new(data: FontData, index: u32) -> Option<Self> {
         // Check first whether the font is valid so we can unwrap in the closure.
         let _ = FontRef::from_index(data.as_ref().as_ref(), index).ok()?;
 
@@ -227,11 +231,11 @@ impl OpenTypeFontBlob {
         Some(Self(Arc::new(font_ref_yoke)))
     }
 
-    pub fn font_ref(&self) -> &FontRef {
+    pub(crate) fn font_ref(&self) -> &FontRef {
         &self.0.as_ref().get().font_ref
     }
 
-    pub fn glyph_metrics(&self) -> &GlyphMetrics {
+    pub(crate) fn glyph_metrics(&self) -> &GlyphMetrics {
         &self.0.as_ref().get().glyph_metrics
     }
 
@@ -239,7 +243,7 @@ impl OpenTypeFontBlob {
         &self.0.as_ref().get().outline_glyphs
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    pub(crate) fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
 
         let draw_settings = if let Some(instance) = self.0.get().hinting_instance.as_ref() {
@@ -259,7 +263,7 @@ impl OpenTypeFontBlob {
         path.0
     }
 
-    pub fn num_glyphs(&self) -> u16 {
+    pub(crate) fn num_glyphs(&self) -> u16 {
         self.font_ref().maxp().map(|m| m.num_glyphs()).unwrap_or(0)
     }
 }
@@ -277,18 +281,18 @@ fn convert_matrix(matrix: Matrix) -> Affine {
 
 #[derive(Yokeable, Clone)]
 struct OTFYoke<'a> {
-    pub font_ref: FontRef<'a>,
-    pub glyph_metrics: GlyphMetrics<'a>,
-    pub hinting_instance: Option<HintingInstance>,
-    pub outline_glyphs: OutlineGlyphCollection<'a>,
+    font_ref: FontRef<'a>,
+    glyph_metrics: GlyphMetrics<'a>,
+    hinting_instance: Option<HintingInstance>,
+    outline_glyphs: OutlineGlyphCollection<'a>,
 }
 
 #[derive(Yokeable, Clone)]
 struct CFFYoke<'a> {
-    pub table: cff::Table<'a>,
+    table: cff::Table<'a>,
 }
 
 #[derive(Yokeable, Clone)]
 struct Type1Yoke<'a> {
-    pub table: type1::Table<'a>,
+    table: type1::Table<'a>,
 }

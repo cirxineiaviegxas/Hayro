@@ -20,12 +20,11 @@ pub(crate) struct Type0Font {
     dw2: (f32, f32),
     widths: HashMap<u16, f32>,
     widths2: HashMap<u16, [f32; 3]>,
-    // TODO: Add widths2
     cid_to_gid_map: CidToGIdMap,
 }
 
 impl Type0Font {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    pub(crate) fn new(dict: &Dict) -> Option<Self> {
         let encoding = dict
             .get::<Name>(ENCODING)
             .warn_none("CID fonts with custom encoding are currently unsupported")?;
@@ -63,7 +62,7 @@ impl Type0Font {
         })
     }
 
-    pub fn map_code(&self, code: u16) -> GlyphId {
+    pub(crate) fn map_code(&self, code: u16) -> GlyphId {
         match &self.font_type {
             FontType::TrueType(_) => self.cid_to_gid_map.map(code),
             FontType::Cff(c) => {
@@ -81,14 +80,14 @@ impl Type0Font {
         }
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    pub(crate) fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         match &self.font_type {
             FontType::TrueType(t) => t.outline_glyph(glyph),
             FontType::Cff(c) => c.outline_glyph(glyph),
         }
     }
 
-    pub fn code_advance(&self, code: u16) -> Vec2 {
+    pub(crate) fn code_advance(&self, code: u16) -> Vec2 {
         if self.horizontal {
             Vec2::new(self.horizontal_width(code) as f64, 0.0)
         } else if let Some([w, _, _]) = self.widths2.get(&code) {
@@ -102,15 +101,15 @@ impl Type0Font {
         self.widths.get(&code).copied().unwrap_or(self.dw)
     }
 
-    pub fn is_horizontal(&self) -> bool {
+    pub(crate) fn is_horizontal(&self) -> bool {
         self.horizontal
     }
 
-    pub fn code_len(&self) -> usize {
+    pub(crate) fn code_len(&self) -> usize {
         2
     }
 
-    pub fn origin_displacement(&self, code: u16) -> Vec2 {
+    pub(crate) fn origin_displacement(&self, code: u16) -> Vec2 {
         if self.is_horizontal() {
             Vec2::default()
         } else if let Some([_, v1, v2]) = self.widths2.get(&code) {
@@ -180,7 +179,7 @@ enum CidToGIdMap {
 }
 
 impl CidToGIdMap {
-    pub fn new(dict: &Dict) -> Option<Self> {
+    fn new(dict: &Dict) -> Option<Self> {
         if let Some(name) = dict.get::<Name>(CID_TO_GID_MAP) {
             if name == IDENTITY {
                 Some(CidToGIdMap::Identity)
@@ -203,7 +202,7 @@ impl CidToGIdMap {
         }
     }
 
-    pub fn map(&self, code: u16) -> GlyphId {
+    fn map(&self, code: u16) -> GlyphId {
         match self {
             CidToGIdMap::Identity => GlyphId::new(code as u32),
             CidToGIdMap::Mapped(map) => map.get(&code).copied().unwrap_or(GlyphId::NOTDEF),

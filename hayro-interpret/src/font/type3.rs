@@ -1,10 +1,9 @@
 use crate::clip_path::ClipPath;
 use crate::context::Context;
 use crate::device::Device;
-use crate::font::UNITS_PER_EM;
+use crate::font::glyph_simulator::GlyphSimulator;
 use crate::font::true_type::{read_encoding, read_widths};
-use crate::font::type1::GlyphSimulator;
-use crate::glyph::{Glyph, Type3Glyph};
+use crate::font::{Glyph, Type3Glyph, UNITS_PER_EM};
 use crate::image::{RgbaImage, StencilImage};
 use crate::paint::Paint;
 use crate::{FillProps, StrokeProps, interpret};
@@ -19,7 +18,7 @@ use skrifa::GlyphId;
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct Type3<'a> {
+pub(crate) struct Type3<'a> {
     widths: Vec<f32>,
     encodings: HashMap<u8, String>,
     dict: Dict<'a>,
@@ -29,7 +28,7 @@ pub struct Type3<'a> {
 }
 
 impl<'a> Type3<'a> {
-    pub fn new(dict: &Dict<'a>) -> Self {
+    pub(crate) fn new(dict: &Dict<'a>) -> Self {
         let (_, encodings) = read_encoding(dict);
         let widths = read_widths(dict, dict);
 
@@ -61,14 +60,14 @@ impl<'a> Type3<'a> {
         }
     }
 
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    pub(crate) fn map_code(&self, code: u8) -> GlyphId {
         self.encodings
             .get(&code)
             .map(|g| self.glyph_simulator.string_to_glyph(g))
             .unwrap_or(GlyphId::NOTDEF)
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
+    pub(crate) fn glyph_width(&self, code: u8) -> f32 {
         (*self.widths.get(code as usize).unwrap() * self.matrix.as_coeffs()[0] as f32)
             * UNITS_PER_EM
     }

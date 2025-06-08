@@ -3,7 +3,7 @@ use crate::clip_path::ClipPath;
 use crate::color::{Color, ColorSpace};
 use crate::context::Context;
 use crate::device::Device;
-use crate::glyph::Glyph;
+use crate::font::Glyph;
 use crate::interpret::state::State;
 use crate::shading::Shading;
 use crate::{FillProps, Paint, PaintType, RgbaImage, StencilImage, StrokeProps, interpret};

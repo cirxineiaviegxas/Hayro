@@ -30,7 +30,7 @@ pub(crate) struct TrueTypeFont {
 }
 
 impl TrueTypeFont {
-    pub fn new(dict: &Dict) -> Option<TrueTypeFont> {
+    pub(crate) fn new(dict: &Dict) -> Option<TrueTypeFont> {
         let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
 
         let font_flags = descriptor.get::<u32>(FLAGS).and_then(FontFlags::from_bits);
@@ -55,7 +55,7 @@ impl TrueTypeFont {
 
         Some(Self {
             base_font,
-            differences: differences,
+            differences,
             widths,
             glyph_names,
             font_flags,
@@ -64,7 +64,7 @@ impl TrueTypeFont {
         })
     }
 
-    pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
+    pub(crate) fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         self.base_font.outline_glyph(glyph)
     }
 
@@ -75,8 +75,7 @@ impl TrueTypeFont {
             .unwrap_or(false)
     }
 
-    // TODO: Cache this
-    pub fn map_code(&self, code: u8) -> GlyphId {
+    pub(crate) fn map_code(&self, code: u8) -> GlyphId {
         if let Some(glyph) = self.cached_mappings.borrow().get(&code) {
             return *glyph;
         }
@@ -88,7 +87,7 @@ impl TrueTypeFont {
                 .differences
                 .get(&code)
                 .map(|s| s.as_str())
-                .or_else(|| self.encoding.lookup(code))
+                .or_else(|| self.encoding.map_code(code))
             else {
                 return GlyphId::NOTDEF;
             };
@@ -172,7 +171,7 @@ impl TrueTypeFont {
         glyph
     }
 
-    pub fn glyph_width(&self, code: u8) -> f32 {
+    pub(crate) fn glyph_width(&self, code: u8) -> f32 {
         self.widths
             .get(code as usize)
             .copied()
@@ -249,7 +248,6 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
     let mut map = HashMap::new();
 
     if let Some(encoding_dict) = dict.get::<Dict>(ENCODING) {
-        // Note that those only exist for Type1 and Type3 fonts, not for TrueType fonts.
         if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
             let entries = differences.iter::<Object>();
 
