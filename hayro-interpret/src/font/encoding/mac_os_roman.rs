@@ -1,7 +1,19 @@
 // See <https://github.com/apache/pdfbox/blob/4438b8fdc67a3a9ebfb194595d0e81f88b708a37/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/font/encoding/MacOSRomanEncoding.java.java>
 use phf::phf_map;
 
-pub(crate) static MAC_OS_ROMAN: phf::Map<u8, &'static str> = phf_map! {
+pub(crate) fn get(code: u8) -> Option<&'static str> {
+    MAC_OS_ROMAN
+        .get(&code)
+        .copied()
+}
+
+pub(crate) fn get_inverse(name: &str) -> Option<u8> {
+    MAC_OS_ROMAN_INVERSE
+        .get(name)
+        .copied()
+}
+
+static MAC_OS_ROMAN: phf::Map<u8, &'static str> = phf_map! {
     173u8 => "notequal",
     176u8 => "infinity",
     178u8 => "lessequal",
@@ -20,7 +32,7 @@ pub(crate) static MAC_OS_ROMAN: phf::Map<u8, &'static str> = phf_map! {
     240u8 => "apple"
 };
 
-pub(crate) static MAC_OS_ROMAN_INVERSE: phf::Map<&'static str, u8> = phf_map! {
+static MAC_OS_ROMAN_INVERSE: phf::Map<&'static str, u8> = phf_map! {
     "notequal" => 0o0255u8,
     "infinity" => 0o0260u8,
     "lessequal" => 0o0262u8,

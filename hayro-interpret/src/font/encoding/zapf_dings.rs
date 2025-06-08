@@ -1,7 +1,13 @@
 // THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
-pub(crate) static ZAPF_DING_BATS: phf::Map<u8, &'static str> = phf_map! {
+pub(crate) fn get(code: u8) -> Option<&'static str> {
+    ZAPF_DING_BATS
+        .get(&code)
+        .copied()
+}
+
+static ZAPF_DING_BATS: phf::Map<u8, &'static str> = phf_map! {
     32u8 => "space",
     33u8 => "a1",
     34u8 => "a2",

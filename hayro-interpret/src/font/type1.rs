@@ -1,7 +1,7 @@
 use crate::font::Encoding;
 use crate::font::blob::{CffFontBlob, Type1FontBlob};
-use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, STANDARD, win_ansi};
-use crate::font::standard::{StandardFont, select_standard_font};
+use crate::font::encoding::{mac_expert, mac_roman, standard, win_ansi};
+use crate::font::standard_font::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::{FONT_DESC, FONT_FILE, FONT_FILE3};
@@ -101,10 +101,10 @@ impl Standard {
             .get(&code)
             .map(String::as_str)
             .or_else(|| match self.encoding {
-                Encoding::Standard => STANDARD.get(&code).copied(),
-                Encoding::MacRoman => MAC_ROMAN.get(&code).copied(),
+                Encoding::Standard => standard::get(code),
+                Encoding::MacRoman => mac_roman::get(code),
                 Encoding::WinAnsi => win_ansi::get(code),
-                Encoding::MacExpert => MAC_EXPERT.get(&code).copied(),
+                Encoding::MacExpert => mac_expert::get(code),
                 Encoding::BuiltIn => bf.code_to_name(code),
             })
     }
@@ -191,10 +191,10 @@ impl Type1 {
             Some(get_glyph(entry))
         } else {
             match self.encoding {
-                Encoding::Standard => STANDARD.get(&code).map(|v| get_glyph(v)),
-                Encoding::MacRoman => MAC_ROMAN.get(&code).map(|v| get_glyph(v)),
+                Encoding::Standard => standard::get(code).map(|v| get_glyph(v)),
+                Encoding::MacRoman => mac_roman::get(code).map(|v| get_glyph(v)),
                 Encoding::WinAnsi => win_ansi::get(code).map(get_glyph),
-                Encoding::MacExpert => MAC_EXPERT.get(&code).map(|v| get_glyph(v)),
+                Encoding::MacExpert => mac_expert::get(code).map(|v| get_glyph(v)),
                 Encoding::BuiltIn => table.code_to_string(code).map(get_glyph),
             }
         }
@@ -253,10 +253,10 @@ impl Cff {
             get_glyph(entry)
         } else {
             match self.encoding {
-                Encoding::Standard => STANDARD.get(&code).and_then(|v| get_glyph(v)),
-                Encoding::MacRoman => MAC_ROMAN.get(&code).and_then(|v| get_glyph(v)),
+                Encoding::Standard => standard::get(code).and_then(|v| get_glyph(v)),
+                Encoding::MacRoman => mac_roman::get(code).and_then(|v| get_glyph(v)),
                 Encoding::WinAnsi => win_ansi::get(code).and_then(get_glyph),
-                Encoding::MacExpert => MAC_EXPERT.get(&code).and_then(|v| get_glyph(v)),
+                Encoding::MacExpert => mac_expert::get(code).and_then(|v| get_glyph(v)),
                 Encoding::BuiltIn => table.glyph_index(code).map(|g| GlyphId::new(g.0 as u32)),
             }
         }

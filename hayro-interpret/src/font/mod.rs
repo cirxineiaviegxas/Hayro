@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::font::cid::Type0Font;
-use crate::font::encoding::{MAC_EXPERT, MAC_OS_ROMAN, MAC_ROMAN, STANDARD, win_ansi};
+use crate::font::encoding::{win_ansi, standard, mac_os_roman, mac_roman, mac_expert};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
@@ -23,7 +23,7 @@ pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 mod blob;
 mod cid;
 pub(crate) mod encoding;
-mod standard;
+mod standard_font;
 mod true_type;
 mod type1;
 pub(crate) mod type3;
@@ -188,13 +188,11 @@ enum Encoding {
 impl Encoding {
     fn lookup(&self, code: u8) -> Option<&'static str> {
         match self {
-            Encoding::Standard => STANDARD.get(&code).copied(),
-            Encoding::MacRoman => MAC_ROMAN
-                .get(&code)
-                .copied()
-                .or_else(|| MAC_OS_ROMAN.get(&code).copied()),
+            Encoding::Standard => standard::get(code),
+            Encoding::MacRoman => mac_roman::get(code)
+                .or_else(|| mac_os_roman::get(code)),
             Encoding::WinAnsi => win_ansi::get(code),
-            Encoding::MacExpert => MAC_EXPERT.get(&code).copied(),
+            Encoding::MacExpert => mac_expert::get(code),
             Encoding::BuiltIn => None,
         }
     }

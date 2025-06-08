@@ -1,6 +1,6 @@
 use crate::font::Encoding;
 use crate::font::blob::OpenTypeFontBlob;
-use crate::font::encoding::{GLYPH_NAMES, MAC_OS_ROMAN_INVERSE, MAC_ROMAN_INVERSE};
+use crate::font::encoding::{mac_os_roman, mac_roman, GLYPH_NAMES};
 use crate::util::{CodeMapExt, OptionLog};
 use bitflags::bitflags;
 use hayro_syntax::object::Object;
@@ -121,10 +121,9 @@ impl TrueTypeFont {
                     if record.platform_id() == PlatformId::Macintosh && record.encoding_id() == 0 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
                             glyph = glyph.or_else(|| {
-                                MAC_OS_ROMAN_INVERSE
-                                    .get(lookup)
-                                    .or_else(|| MAC_ROMAN_INVERSE.get(lookup))
-                                    .and_then(|c| subtable.map_codepoint(*c))
+                                mac_os_roman::get_inverse(lookup)
+                                    .or_else(|| mac_roman::get_inverse(lookup))
+                                    .and_then(|c| subtable.map_codepoint(c))
                                     .filter(|g| *g != GlyphId::NOTDEF)
                             })
                         }

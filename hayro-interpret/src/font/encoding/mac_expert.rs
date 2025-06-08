@@ -1,7 +1,13 @@
 // See <https://github.com/apache/pdfbox/blob/4438b8fdc67a3a9ebfb194595d0e81f88b708a37/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/font/encoding/MacExpertEncoding.java>
 use phf::phf_map;
 
-pub(crate) static MAC_EXPERT: phf::Map<u8, &'static str> = phf_map! {
+pub(crate) fn get(code: u8) -> Option<&'static str> {
+    MAC_EXPERT
+        .get(&code)
+        .copied()
+}
+
+static MAC_EXPERT: phf::Map<u8, &'static str> = phf_map! {
     190u8 => "AEsmall",
     135u8 => "Aacutesmall",
     137u8 => "Acircumflexsmall",

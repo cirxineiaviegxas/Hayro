@@ -2,7 +2,19 @@
 
 use phf::phf_map;
 
-pub(crate) static MAC_ROMAN: phf::Map<u8, &'static str> = phf_map! {
+pub(crate) fn get(code: u8) -> Option<&'static str> {
+    MAC_ROMAN
+        .get(&code)
+        .copied()
+}
+
+pub(crate) fn get_inverse(name: &str) -> Option<u8> {
+    MAC_ROMAN_INVERSE
+        .get(name)
+        .copied()
+}
+
+static MAC_ROMAN: phf::Map<u8, &'static str> = phf_map! {
     65u8 => "A",
     174u8 => "AE",
     231u8 => "Aacute",
@@ -213,7 +225,7 @@ pub(crate) static MAC_ROMAN: phf::Map<u8, &'static str> = phf_map! {
     202u8 => "nbspace",
 };
 
-pub(crate) static MAC_ROMAN_INVERSE: phf::Map<&'static str, u8> = phf_map! {
+static MAC_ROMAN_INVERSE: phf::Map<&'static str, u8> = phf_map! {
      "A" => 65u8,
      "AE" => 174u8,
      "Aacute" => 231u8,

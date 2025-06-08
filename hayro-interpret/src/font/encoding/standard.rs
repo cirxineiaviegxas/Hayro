@@ -1,7 +1,13 @@
 // THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
-pub(crate) static STANDARD: phf::Map<u8, &'static str> = phf_map! {
+pub(crate) fn get(code: u8) -> Option<&'static str> {
+    STANDARD
+        .get(&code)
+        .copied()
+}
+
+static STANDARD: phf::Map<u8, &'static str> = phf_map! {
     32u8 => "space",
     33u8 => "exclam",
     34u8 => "quotedbl",

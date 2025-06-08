@@ -4,8 +4,7 @@ use crate::font::blob::{
     HELVETICA_BOLD, HELVETICA_BOLD_ITALIC, HELVETICA_ITALIC, HELVETICA_REGULAR, TIMES_BOLD,
     TIMES_ITALIC, TIMES_REGULAR, TIMES_ROMAN_BOLD_ITALIC, ZAPF_DINGS_BAT,
 };
-use crate::font::encoding::metrics;
-use crate::font::encoding::{STANDARD, SYMBOL, ZAPF_DING_BATS};
+use crate::font::encoding::{metrics, standard, symbol, zapf_dings};
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::BASE_FONT;
 use hayro_syntax::object::name::Name;
@@ -32,13 +31,12 @@ pub(crate) enum StandardFont {
 impl StandardFont {
     pub fn code_to_name(&self, code: u8) -> Option<&'static str> {
         match self {
-            Self::Symbol => SYMBOL.get(&code),
+            Self::Symbol => symbol::get(code),
             // Note that this font does not return postscript character names,
             // but instead has a custom encoding.
-            Self::ZapfDingBats => ZAPF_DING_BATS.get(&code),
-            _ => STANDARD.get(&code),
+            Self::ZapfDingBats => zapf_dings::get(code),
+            _ => standard::get(code),
         }
-        .copied()
     }
 
     pub fn get_blob(&self) -> CffFontBlob {
