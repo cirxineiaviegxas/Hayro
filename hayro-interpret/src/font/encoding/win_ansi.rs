@@ -1,5 +1,4 @@
 // See <https://github.com/apache/pdfbox/blob/4438b8fdc67a3a9ebfb194595d0e81f88b708a37/pdfbox/src/main/java/org/apache/pdfbox/pdmodel/font/encoding/WinAnsiEncoding.java>
-
 use phf::phf_map;
 
 pub(crate) fn get(code: u8) -> Option<&'static str> {

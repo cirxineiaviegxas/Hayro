@@ -1,7 +1,10 @@
-// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
-pub(crate) static GLYPH_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
+pub(crate) fn get(name: &str) -> Option<&'static str> {
+    GLYPH_NAMES.get(name).copied()
+}
+
+static GLYPH_NAMES: phf::Map<&'static str, &'static str> = phf_map! {
     "A" => "\u{0041}",
     "AE" => "\u{00C6}",
     "AEacute" => "\u{01FC}",

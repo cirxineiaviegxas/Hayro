@@ -1,4 +1,3 @@
-// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
 pub(crate) fn get(code: u8) -> Option<&'static str> {

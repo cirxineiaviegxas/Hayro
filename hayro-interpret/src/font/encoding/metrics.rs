@@ -1,4 +1,3 @@
-// THIS FILE WAS AUTO-GENERATED, DO NOT EDIT MANUALLY!
 use phf::phf_map;
 
 pub(crate) static COURIER: phf::Map<&'static str, f32> = phf_map! {
