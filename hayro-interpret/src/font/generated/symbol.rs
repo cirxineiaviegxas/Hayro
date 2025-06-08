@@ -1,5 +1,6 @@
 use phf::phf_map;
 
+/// Map a code to a glyph name using symbol encoding.
 pub(crate) fn get(code: u8) -> Option<&'static str> {
     SYMBOL.get(&code).copied()
 }

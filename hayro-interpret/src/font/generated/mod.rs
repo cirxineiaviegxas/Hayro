@@ -1,3 +1,6 @@
+//! This module contains various generated tables to encode code points or
+//! get the metrics for the standard fonts.
+
 pub(crate) mod glyph_names;
 pub(crate) mod mac_expert;
 pub(crate) mod mac_os_roman;
