@@ -1,7 +1,5 @@
-
-
 /// Just like TryFrom<N>, but for numeric types not supported by the Rust's std.
-pub trait TryNumFrom<T>: Sized {
+pub(crate) trait TryNumFrom<T>: Sized {
     /// Casts between numeric types.
     fn try_num_from(_: T) -> Option<Self>;
 }

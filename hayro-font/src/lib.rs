@@ -3,7 +3,7 @@ use crate::util::TryNumFrom;
 pub mod cff;
 pub mod type1;
 
-pub(crate) mod argstack;
+mod argstack;
 mod util;
 
 
@@ -188,7 +188,7 @@ impl Default for Matrix {
     }
 }
 
-/// A list of errors that can occur during a CFF/Type1 glyph outlining.
+/// A list of errors that can occur during CFF/Type1 glyph outlining.
 #[allow(missing_docs)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OutlineError {

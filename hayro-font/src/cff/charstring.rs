@@ -4,18 +4,18 @@ use crate::argstack::ArgumentsStack;
 use crate::{Builder, OutlineError};
 
 pub(crate) struct CharStringParser<'a> {
-    pub stack: ArgumentsStack<'a>,
-    pub builder: &'a mut Builder<'a>,
-    pub x: f32,
-    pub y: f32,
-    pub has_move_to: bool,
-    pub is_first_move_to: bool,
-    pub width_only: bool, // Exit right after the glyph width is parsed.
+    pub(crate) stack: ArgumentsStack<'a>,
+    pub(crate) builder: &'a mut Builder<'a>,
+    pub(crate) x: f32,
+    pub(crate) y: f32,
+    pub(crate) has_move_to: bool,
+    pub(crate) is_first_move_to: bool,
+    pub(crate) width_only: bool, // Exit right after the glyph width is parsed.
 }
 
 impl CharStringParser<'_> {
     #[inline]
-    pub fn parse_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
+    pub(crate) fn parse_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
         // dx1 dy1
 
         if self.stack.len() != offset + 2 {
@@ -39,7 +39,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_horizontal_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
+    pub(crate) fn parse_horizontal_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
         // dx1
 
         if self.stack.len() != offset + 1 {
@@ -62,7 +62,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vertical_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
+    pub(crate) fn parse_vertical_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
         // dy1
 
         if self.stack.len() != offset + 1 {
@@ -85,7 +85,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_line_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_line_to(&mut self) -> Result<(), OutlineError> {
         // {dxa dya}+
 
         if !self.has_move_to {
@@ -109,7 +109,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_horizontal_line_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_horizontal_line_to(&mut self) -> Result<(), OutlineError> {
         // dx1 {dya dxb}*
         //     {dxa dyb}+
 
@@ -141,7 +141,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vertical_line_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_vertical_line_to(&mut self) -> Result<(), OutlineError> {
         // dy1 {dxa dyb}*
         //     {dya dxb}+
 
@@ -173,7 +173,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_curve_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_curve_to(&mut self) -> Result<(), OutlineError> {
         // {dxa dya dxb dyb dxc dyc}+
 
         if !self.has_move_to {
@@ -202,7 +202,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_curve_line(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_curve_line(&mut self) -> Result<(), OutlineError> {
         // {dxa dya dxb dyb dxc dyc}+ dxd dyd
 
         if !self.has_move_to {
@@ -239,7 +239,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_line_curve(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_line_curve(&mut self) -> Result<(), OutlineError> {
         // {dxa dya}+ dxb dyb dxc dyc dxd dyd
 
         if !self.has_move_to {
@@ -276,7 +276,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hh_curve_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_hh_curve_to(&mut self) -> Result<(), OutlineError> {
         // dy1? {dxa dxb dyb dxc}+
 
         if !self.has_move_to {
@@ -312,7 +312,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vv_curve_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_vv_curve_to(&mut self) -> Result<(), OutlineError> {
         // dx1? {dya dxb dyb dyc}+
 
         if !self.has_move_to {
@@ -348,7 +348,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hv_curve_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_hv_curve_to(&mut self) -> Result<(), OutlineError> {
         // dx1 dx2 dy2 dy3 {dya dxb dyb dxc dxd dxe dye dyf}* dxf?
         //                 {dxa dxb dyb dyc dyd dxe dye dxf}+ dyf?
 
@@ -401,7 +401,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vh_curve_to(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_vh_curve_to(&mut self) -> Result<(), OutlineError> {
         // dy1 dx2 dy2 dx3 {dxa dxb dyb dyc dyd dxe dye dxf}* dyf?
         //                 {dya dxb dyb dxc dxd dxe dye dyf}+ dxf?
 
@@ -454,7 +454,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_flex(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_flex(&mut self) -> Result<(), OutlineError> {
         // dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 dx6 dy6 fd
 
         if !self.has_move_to {
@@ -485,7 +485,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_flex1(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_flex1(&mut self) -> Result<(), OutlineError> {
         // dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 d6
 
         if !self.has_move_to {
@@ -521,7 +521,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hflex(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_hflex(&mut self) -> Result<(), OutlineError> {
         // dx1 dx2 dy2 dx3 dx4 dx5 dx6
 
         if !self.has_move_to {
@@ -551,7 +551,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hflex1(&mut self) -> Result<(), OutlineError> {
+    pub(crate) fn parse_hflex1(&mut self) -> Result<(), OutlineError> {
         // dx1 dy1 dx2 dy2 dx3 dx4 dx5 dy5 dx6
 
         if !self.has_move_to {
@@ -581,14 +581,14 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_int1(&mut self, op: u8) -> Result<(), OutlineError> {
+    pub(crate) fn parse_int1(&mut self, op: u8) -> Result<(), OutlineError> {
         let n = i16::from(op) - 139;
         self.stack.push(f32::from(n))?;
         Ok(())
     }
 
     #[inline]
-    pub fn parse_int2(&mut self, op: u8, s: &mut Stream) -> Result<(), OutlineError> {
+    pub(crate) fn parse_int2(&mut self, op: u8, s: &mut Stream) -> Result<(), OutlineError> {
         let b1 = s.read::<u8>().ok_or(OutlineError::ReadOutOfBounds)?;
         let n = (i16::from(op) - 247) * 256 + i16::from(b1) + 108;
         debug_assert!((108..=1131).contains(&n));
@@ -597,7 +597,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_int3(&mut self, op: u8, s: &mut Stream) -> Result<(), OutlineError> {
+    pub(crate) fn parse_int3(&mut self, op: u8, s: &mut Stream) -> Result<(), OutlineError> {
         let b1 = s.read::<u8>().ok_or(OutlineError::ReadOutOfBounds)?;
         let n = -(i16::from(op) - 251) * 256 - i16::from(b1) - 108;
         debug_assert!((-1131..=-108).contains(&n));
@@ -606,7 +606,7 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_fixed(&mut self, s: &mut Stream) -> Result<(), OutlineError> {
+    pub(crate) fn parse_fixed(&mut self, s: &mut Stream) -> Result<(), OutlineError> {
         let n = s.read::<Fixed>().ok_or(OutlineError::ReadOutOfBounds)?;
         self.stack.push(n.0)?;
         Ok(())

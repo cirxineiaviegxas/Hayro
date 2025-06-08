@@ -17,7 +17,7 @@ use crate::util::TryNumFrom;
 
 /// A type-safe wrapper for string ID.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug)]
-pub struct StringId(u16);
+pub(crate) struct StringId(u16);
 
 impl FromData for StringId {
     const SIZE: usize = 2;

@@ -5,7 +5,7 @@ use crate::GlyphId;
 
 /// The Standard Encoding as defined in the Adobe Technical Note #5176 Appendix B.
 #[rustfmt::skip]
-pub const STANDARD_ENCODING: [u8; 256] = [
+pub(crate) const STANDARD_ENCODING: [u8; 256] = [
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
       1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,  16,
@@ -83,21 +83,21 @@ impl Default for EncodingKind<'_> {
 }
 
 impl Encoding<'_> {
-    pub fn new_standard() -> Self {
+    pub(crate) fn new_standard() -> Self {
         Encoding {
             kind: EncodingKind::Standard,
             supplemental: LazyArray16::default(),
         }
     }
 
-    pub fn new_expert() -> Self {
+    pub(crate) fn new_expert() -> Self {
         Encoding {
             kind: EncodingKind::Expert,
             supplemental: LazyArray16::default(),
         }
     }
 
-    pub fn code_to_gid(&self, charset: &Charset, code: u8) -> Option<GlyphId> {
+    pub(crate) fn code_to_gid(&self, charset: &Charset, code: u8) -> Option<GlyphId> {
         if !self.supplemental.is_empty() {
             if let Some(ref s) = self.supplemental.into_iter().find(|s| s.code == code) {
                 return charset.sid_to_gid(s.name);
