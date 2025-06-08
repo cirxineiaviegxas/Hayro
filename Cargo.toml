@@ -28,5 +28,5 @@ qcms = "0.3.0"
 phf = { version = "0.11.3" }
 skrifa = { path = "../fontations/skrifa" }
 yoke = { version = "0.8.0" }
-hayro-font-parser = { path = "./hayro-font-parser" }
+hayro-fonts = { path = "./hayro-fonts" }
 walkdir = "2.5.0"

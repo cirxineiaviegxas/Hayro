@@ -93,7 +93,7 @@ impl Charset<'_> {
                 }
             }
             Charset::Expert | Charset::ExpertSubset => None,
-            Charset::Format0(ref array) => {
+            Charset::Format0(array) => {
                 // First glyph is omitted, so we have to add 1.
                 array
                     .into_iter()
@@ -149,7 +149,7 @@ impl Charset<'_> {
                 .get(usize::from(gid.0))
                 .cloned()
                 .map(StringId),
-            Charset::Format0(ref array) => {
+            Charset::Format0(array) => {
                 if gid.0 == 0 {
                     Some(StringId(0))
                 } else {

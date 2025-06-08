@@ -699,7 +699,7 @@ impl Default for FDSelect<'_> {
 impl FDSelect<'_> {
     fn font_dict_index(&self, glyph_id: GlyphId) -> Option<u8> {
         match self {
-            FDSelect::Format0(ref array) => array.get(glyph_id.0),
+            FDSelect::Format0(array) => array.get(glyph_id.0),
             FDSelect::Format3(data) => {
                 let mut s = Stream::new(data);
                 let number_of_ranges = s.read::<u16>()?;

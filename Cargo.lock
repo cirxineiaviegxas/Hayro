@@ -540,7 +540,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hayro-font-parser"
+name = "hayro-fonts"
 version = "0.1.0"
 dependencies = [
  "log",
@@ -552,7 +552,7 @@ name = "hayro-interpret"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.9.0",
- "hayro-font-parser",
+ "hayro-fonts",
  "hayro-syntax",
  "kurbo",
  "log",
