@@ -199,15 +199,16 @@ impl OpenTypeFontBlob {
         let font_ref_yoke =
             Yoke::<OTFYoke<'static>, FontData>::attach_to_cart(data.clone(), |data| {
                 let font_ref = FontRef::from_index(data.as_ref(), index).unwrap();
-                
+
                 let hinting_instance = HintingInstance::new(
                     &font_ref.outline_glyphs(),
                     Size::new(UNITS_PER_EM),
                     LocationRef::default(),
                     HintingOptions::default(),
-                    InterpreterVersion::_35
-                ).ok();
-                
+                    InterpreterVersion::_35,
+                )
+                .ok();
+
                 OTFYoke {
                     font_ref: font_ref.clone(),
                     outline_glyphs: font_ref.outline_glyphs(),
@@ -234,14 +235,14 @@ impl OpenTypeFontBlob {
 
     pub fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         let mut path = OutlinePath(BezPath::new());
-        
+
         let draw_settings = if let Some(instance) = self.0.get().hinting_instance.as_ref() {
             // Note: We always hint at the font size `UNITS_PER_EM`, which obviously isn't very useful. We don't do this
             // for better text quality (right now), but instead because there are some PDFs with obscure fonts that
             // actually render wrongly if hinting is disabled!
             // Adding proper hinting support is definitely planned for the future, though.
             DrawSettings::hinted(instance, false)
-        }   else {
+        } else {
             DrawSettings::unhinted(Size::new(UNITS_PER_EM), LocationRef::default())
         };
 

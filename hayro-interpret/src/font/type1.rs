@@ -3,25 +3,21 @@ use crate::font::blob::{CffFontBlob, Type1FontBlob};
 use crate::font::encoding::{MAC_EXPERT, MAC_ROMAN, STANDARD, win_ansi};
 use crate::font::standard::{StandardFont, select_standard_font};
 use crate::font::true_type::{read_encoding, read_widths};
-use crate::util::OptionLog;
 use hayro_syntax::object::dict::Dict;
-use hayro_syntax::object::dict::keys::{BASE_FONT, FONT_DESC, FONT_FILE, FONT_FILE3};
+use hayro_syntax::object::dict::keys::{FONT_DESC, FONT_FILE, FONT_FILE3};
 use hayro_syntax::object::stream::Stream;
 use kurbo::BezPath;
+use log::warn;
 use skrifa::GlyphId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
-use log::warn;
-use hayro_syntax::object::name::Name;
 
 #[derive(Debug)]
 pub(crate) struct Type1Font(Kind);
 
 impl Type1Font {
     pub fn new(dict: &Dict) -> Option<Self> {
-        
-        
         let inner = if let Some(standard) = Standard::new(dict) {
             Self(Kind::Standard(standard))
         } else if is_cff(dict) {
@@ -30,7 +26,10 @@ impl Type1Font {
             Self(Kind::Type1(Type1::new(dict)))
         } else {
             warn!("unable to load type1 font, falling back to Times New Roman");
-            Self(Kind::Standard(Standard::new_with_standard(dict, StandardFont::TimesRoman)))
+            Self(Kind::Standard(Standard::new_with_standard(
+                dict,
+                StandardFont::TimesRoman,
+            )))
         };
 
         Some(inner)
@@ -80,7 +79,7 @@ impl Standard {
     pub fn new(dict: &Dict) -> Option<Standard> {
         Some(Self::new_with_standard(dict, select_standard_font(dict)?))
     }
-    
+
     fn new_with_standard(dict: &Dict, base_font: StandardFont) -> Self {
         let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
         let widths = read_widths(dict, &descriptor);

@@ -154,25 +154,28 @@ impl<'a> Context<'a> {
         self.get_mut().ctm *= transform;
     }
 
-    pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Option<Font<'a>>{
-        resources
-            .get_font(
-                &name,
-                Box::new(|ref_| {
-                    self.font_cache
-                        .entry(ref_)
-                        .or_insert_with(|| {
-                            resources
-                                .resolve_ref::<Dict>(ref_)
-                                .and_then(|o| Font::new(&o))
-                        })
-                        .clone()
-                }),
-                Box::new(|c| Font::new(&c)),
-            )
+    pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Option<Font<'a>> {
+        resources.get_font(
+            &name,
+            Box::new(|ref_| {
+                self.font_cache
+                    .entry(ref_)
+                    .or_insert_with(|| {
+                        resources
+                            .resolve_ref::<Dict>(ref_)
+                            .and_then(|o| Font::new(&o))
+                    })
+                    .clone()
+            }),
+            Box::new(|c| Font::new(&c)),
+        )
     }
 
-    pub(crate) fn get_color_space(&mut self, resources: &Resources, name: Name) -> Option<ColorSpace> {
+    pub(crate) fn get_color_space(
+        &mut self,
+        resources: &Resources,
+        name: Name,
+    ) -> Option<ColorSpace> {
         resources
             .get_color_space(
                 &name,

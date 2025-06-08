@@ -9,7 +9,7 @@ pub fn decode(data: &[u8], _: Dict) -> Option<Vec<u8>> {
     // TODO: Handle the color transform attribute
     let mut decoder = zune_jpeg::JpegDecoder::new(data);
     decoder.decode_headers().ok()?;
-    
+
     let mut out_colorspace = match decoder.get_input_colorspace().unwrap() {
         ColorSpace::RGB | ColorSpace::RGBA | ColorSpace::YCbCr => ColorSpace::RGB,
         ColorSpace::Luma | ColorSpace::LumaA => ColorSpace::Luma,
@@ -27,7 +27,7 @@ pub fn decode(data: &[u8], _: Dict) -> Option<Vec<u8>> {
         // not the proper way to solve this, but it solves a test case.
         if matches!(out_colorspace, ColorSpace::YCCK | ColorSpace::CMYK) {
             out_colorspace = ColorSpace::RGB;
-        }   else {
+        } else {
             out_colorspace = ColorSpace::CMYK;
         }
 

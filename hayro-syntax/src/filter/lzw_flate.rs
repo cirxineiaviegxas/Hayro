@@ -9,7 +9,7 @@ use log::warn;
 pub mod flate {
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
     use crate::object::dict::Dict;
-    use flate2::read::{ZlibDecoder, DeflateDecoder};
+    use flate2::read::{DeflateDecoder, ZlibDecoder};
     use std::io::Read;
 
     /// Decode a flate-encoded stream.
@@ -22,7 +22,7 @@ pub mod flate {
     fn zlib_stream(data: &[u8]) -> Option<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(data);
         let mut result = Vec::new();
-        
+
         match decoder.read_to_end(&mut result) {
             Ok(_) => Some(result),
             Err(_) => None,
@@ -32,7 +32,7 @@ pub mod flate {
     fn deflate_stream(data: &[u8]) -> Option<Vec<u8>> {
         let mut decoder = DeflateDecoder::new(data);
         let mut result = Vec::new();
-        
+
         match decoder.read_to_end(&mut result) {
             Ok(_) => Some(result),
             Err(_) => None,
@@ -71,7 +71,6 @@ pub mod lzw {
             let next = match reader.read(bit_size) {
                 Some(code) => code as usize,
                 None => {
-                    
                     warn!("Premature EOF in LZW stream, EOD code missing");
                     return Some(decoded);
                 }
@@ -89,12 +88,12 @@ pub mod lzw {
                         warn!("Invalid LZW code: {} (table size: {})", new, table.size());
                         return None;
                     }
-                    
+
                     if new < table.size() {
                         let entry = table.get(new)?;
                         let first_byte = entry[0];
                         decoded.extend_from_slice(entry);
-                        
+
                         if let Some(prev_code) = prev {
                             table.register(prev_code, first_byte);
                         }
@@ -102,7 +101,7 @@ pub mod lzw {
                         let prev_code = prev.unwrap();
                         let prev_entry = table.get(prev_code)?;
                         let first_byte = prev_entry[0];
-                        
+
                         let new_entry = table.register(prev_code, first_byte)?;
                         decoded.extend_from_slice(new_entry);
                     } else {
@@ -215,9 +214,9 @@ impl PredictorParams {
             16 => Some(2 * raw),
             _ => {
                 warn!("invalid bits per component {}", self.bits_per_component);
-                
+
                 None
-            },
+            }
         }
     }
 }
@@ -339,9 +338,9 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                         )?,
                         n => {
                             warn!("invalid PNG predictor {}", n);
-                            
+
                             return None;
-                        },
+                        }
                     }
                 } else if i == 2 {
                     apply::<Sub>(

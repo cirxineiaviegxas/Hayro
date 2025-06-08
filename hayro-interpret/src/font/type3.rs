@@ -174,10 +174,7 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.push_clip_path(clip_path)
     }
 
-    fn push_transparency_group(&mut self, _: f32) {
-        
-    }
-
+    fn push_transparency_group(&mut self, _: f32) {}
 
     fn fill_glyph(&mut self, _: &Glyph<'_>, _: &Paint) {}
 
@@ -193,7 +190,5 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.pop_clip_path()
     }
 
-    fn pop_transparency_group(&mut self) {
-        
-    }
+    fn pop_transparency_group(&mut self) {}
 }

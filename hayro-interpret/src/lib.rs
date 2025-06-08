@@ -259,7 +259,9 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(resources, c.0).unwrap_or(ColorSpace::device_gray())
+                    context
+                        .get_color_space(resources, c.0)
+                        .unwrap_or(ColorSpace::device_gray())
                 };
 
                 context.get_mut().stroke_color = cs.initial_color();
@@ -269,7 +271,9 @@ pub fn interpret<'a, 'b>(
                 let cs = if let Some(named) = ColorSpace::new_from_name(c.0.clone()) {
                     named
                 } else {
-                    context.get_color_space(resources, c.0).unwrap_or(ColorSpace::device_gray())
+                    context
+                        .get_color_space(resources, c.0)
+                        .unwrap_or(ColorSpace::device_gray())
                 };
 
                 context.get_mut().non_stroke_color = cs.initial_color();
@@ -420,7 +424,9 @@ pub fn interpret<'a, 'b>(
                 }
             }
             TypedOperation::InlineImage(i) => {
-                if let Some(x_object) = ImageXObject::new(&i.0, |name| context.get_color_space(resources, name.clone())) {
+                if let Some(x_object) = ImageXObject::new(&i.0, |name| {
+                    context.get_color_space(resources, name.clone())
+                }) {
                     draw_image_xobject(&x_object, context, device)
                 }
             }
@@ -444,13 +450,13 @@ pub fn interpret<'a, 'b>(
                     let st = context.get_mut();
                     st.non_stroke_pattern = Some(sp);
                     st.none_stroke_cs = ColorSpace::pattern();
-                    
+
                     device.push_transparency_group(st.non_stroke_alpha);
 
                     let bbox = context.bbox().to_path(0.1);
                     let inverted_bbox = context.get().ctm.inverse() * bbox;
                     fill_path_impl(context, device, Some(&inverted_bbox), None);
-                    
+
                     device.pop_transparency_group();
 
                     context.restore_state();

@@ -94,9 +94,7 @@ pub(crate) fn draw_form_xobject<'a>(
     context.push_root_transform();
 
     device.set_transform(context.get().ctm);
-    
 
-    
     if x_object.is_transparency_group {
         device.push_transparency_group(context.get().non_stroke_alpha);
     }
@@ -108,10 +106,10 @@ pub(crate) fn draw_form_xobject<'a>(
             x_object.bbox[2] as f64,
             x_object.bbox[3] as f64,
         )
-            .to_path(0.1),
+        .to_path(0.1),
         fill: Fill::NonZero,
     });
-    
+
     interpret(
         iter,
         &Resources::from_parent(x_object.resources.clone(), resources.clone()),
@@ -120,11 +118,11 @@ pub(crate) fn draw_form_xobject<'a>(
     );
 
     device.pop_clip_path();
-    
+
     if x_object.is_transparency_group {
         device.pop_transparency_group();
     }
-    
+
     context.pop_root_transform();
     context.restore_state();
 }
@@ -171,7 +169,7 @@ pub(crate) fn draw_image_xobject(
 
         device.draw_rgba_image(image);
     }
-    
+
     device.pop_transparency_group();
 
     context.restore_state();
@@ -190,7 +188,10 @@ pub struct ImageXObject<'a> {
 }
 
 impl<'a> ImageXObject<'a> {
-    pub(crate) fn new(stream: &Stream<'a>, resolve_cs: impl FnOnce(&Name) -> Option<ColorSpace>) -> Option<Self> {
+    pub(crate) fn new(
+        stream: &Stream<'a>,
+        resolve_cs: impl FnOnce(&Name) -> Option<ColorSpace>,
+    ) -> Option<Self> {
         let dict = stream.dict();
 
         let decoded = stream.decoded_image()?;
@@ -213,12 +214,19 @@ impl<'a> ImageXObject<'a> {
         let color_space = if image_mask {
             ColorSpace::device_gray()
         } else {
-            let cs_obj = dict.get::<Object>(CS)
+            let cs_obj = dict
+                .get::<Object>(CS)
                 .or_else(|| dict.get::<Object>(COLORSPACE));
-            
-                cs_obj.clone().and_then(|c| ColorSpace::new(c))
-                    // Inline images can also refer to color spaces by name.
-                    .or_else(|| cs_obj.and_then(|c| c.into_name()).and_then(|n| resolve_cs(&n)))
+
+            cs_obj
+                .clone()
+                .and_then(|c| ColorSpace::new(c))
+                // Inline images can also refer to color spaces by name.
+                .or_else(|| {
+                    cs_obj
+                        .and_then(|c| c.into_name())
+                        .and_then(|n| resolve_cs(&n))
+                })
                 .or_else(|| {
                     decoded.color_space.map(|c| match c {
                         hayro_syntax::filter::ImageColorSpace::Gray => ColorSpace::device_gray(),

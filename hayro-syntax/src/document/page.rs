@@ -141,7 +141,7 @@ impl<'a> Page<'a> {
         let xref = resources.xref;
         let resources =
             Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
-        
+
         Self {
             inner: dict,
             media_box,

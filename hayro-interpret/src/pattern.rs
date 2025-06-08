@@ -123,11 +123,7 @@ impl<'a> TilingPattern<'a> {
             state.non_stroke_color.clone(),
             state.non_stroke_alpha,
         );
-        let stroke_paint = Color::new(
-            stroke_cs,
-            state.stroke_color.clone(),
-            state.stroke_alpha,
-        );
+        let stroke_paint = Color::new(stroke_cs, state.stroke_color.clone(), state.stroke_alpha);
 
         Some(Self {
             bbox,
@@ -241,9 +237,7 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
         self.inner.push_clip_path(clip_path)
     }
 
-    fn push_transparency_group(&mut self, _: f32) {
-        
-    }
+    fn push_transparency_group(&mut self, _: f32) {}
 
     fn fill_glyph(&mut self, glyph: &Glyph<'_>, _: &Paint) {
         self.inner.fill_glyph(glyph, self.paint)
@@ -263,7 +257,5 @@ impl<T: Device> Device for StencilPatternDevice<'_, T> {
         self.inner.pop_clip_path();
     }
 
-    fn pop_transparency_group(&mut self) {
-        
-    }
+    fn pop_transparency_group(&mut self) {}
 }

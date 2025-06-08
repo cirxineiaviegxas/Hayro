@@ -8,11 +8,12 @@ use hayro_interpret::context::Context;
 use hayro_interpret::device::Device;
 use hayro_interpret::glyph::Glyph;
 use hayro_interpret::pattern::Pattern;
+use hayro_interpret::util::FloatExt;
 use hayro_interpret::{FillProps, Paint, StencilImage, StrokeProps, interpret};
-use hayro_syntax::document::page::{Page, Rotation, A4};
+use hayro_syntax::document::page::{A4, Page, Rotation};
 use hayro_syntax::pdf::Pdf;
 use image::codecs::png::PngEncoder;
-use image::imageops::{crop, FilterType};
+use image::imageops::FilterType;
 use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
 use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
@@ -20,7 +21,6 @@ use peniko::color::palette::css::WHITE;
 use std::io::Cursor;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use hayro_interpret::util::FloatExt;
 
 mod coarse;
 mod encode;
@@ -141,12 +141,14 @@ impl Renderer {
 
                         // TODO: Add tests
                         if x_step < 0.0 {
-                            initial_transform *= Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
+                            initial_transform *=
+                                Affine::new([-1.0, 0.0, 0.0, 1.0, scaled_width as f64, 0.0]);
                             x_step = x_step.abs();
                         }
 
                         if y_step < 0.0 {
-                            initial_transform *= Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
+                            initial_transform *=
+                                Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, scaled_height as f64]);
                             y_step = y_step.abs();
                         }
 
@@ -257,7 +259,6 @@ impl Device for Renderer {
         self.0.set_anti_aliasing(true);
     }
 
-
     fn fill_glyph(&mut self, glyph: &Glyph<'_>, paint: &Paint) {
         match glyph {
             Glyph::Outline(o) => {
@@ -283,15 +284,12 @@ impl Device for Renderer {
     }
 
     fn push_clip_path(&mut self, clip_path: &ClipPath) {
-        self.0
-            .set_fill_rule(clip_path.fill);
-        self.0
-            .push_layer(Some(&clip_path.path), None, None, None)
+        self.0.set_fill_rule(clip_path.fill);
+        self.0.push_layer(Some(&clip_path.path), None, None, None)
     }
 
     fn push_transparency_group(&mut self, opacity: f32) {
-        self.0
-            .push_layer(None, None, Some(opacity), None)
+        self.0.push_layer(None, None, Some(opacity), None)
     }
 
     fn pop_clip_path(&mut self) {
@@ -306,12 +304,14 @@ impl Device for Renderer {
 pub fn render(page: &Page, scale: f32) -> Pixmap {
     let crop_box = page.crop_box().intersect(page.media_box());
 
-    let (unscaled_width, unscaled_height) =  if (crop_box.width() as f32).is_nearly_zero() || (crop_box.height() as f32).is_nearly_zero() {
+    let (unscaled_width, unscaled_height) = if (crop_box.width() as f32).is_nearly_zero()
+        || (crop_box.height() as f32).is_nearly_zero()
+    {
         (A4.width(), A4.height())
-    }   else {
+    } else {
         (crop_box.width(), crop_box.height())
     };
-    
+
     let (mut pix_width, mut pix_height) = (unscaled_width, unscaled_height);
 
     let rotation_transform = Affine::scale(scale as f64)
@@ -371,7 +371,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         &mut state,
         &mut device,
     );
-    
+
     device.pop_clip_path();
 
     let mut pixmap = Pixmap::new(pix_width, pix_height);

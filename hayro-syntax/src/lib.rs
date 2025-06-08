@@ -3,7 +3,7 @@ A low-level library for reading PDF files.
 
 This crate implements most of the points in the `Syntax` chapter of the PDF reference, and therefore
 serves as a very good basis for building various abstractions on top of it, without having to reimplement
-the PDF parsing logic. 
+the PDF parsing logic.
 
 This crate does not provide more high-level functionality, such as parsing fonts or color spaces.
 Such functionality is out-of-scope for `hayro-syntax`, since this crate is supposed to be
@@ -44,9 +44,9 @@ I would like to highlight the following limitations:
 
 - There are still features missing, for example, support for encrypted PDFs. In addition to that,
   many properties (like page annotations) are currently not exposed.
-- This crate is for read-only processing, you cannot directly use it to manipulate PDF files. 
+- This crate is for read-only processing, you cannot directly use it to manipulate PDF files.
   If you need to do that, there are other crates in the Rust ecosystem that are suitable for this.
-- I do want to note that the main reason this crate exists is to serve as a foundation for 
+- I do want to note that the main reason this crate exists is to serve as a foundation for
   `hayro-render`. Therefore, I am not planning on adding many other features that aren't needed
   to rasterize PDFs. But I am open to feedback, and if the crate covers everything
   you need, you are more than free to use it directly!
@@ -63,17 +63,11 @@ feature, unless you absolutely need to be able to support such images.
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use self::object::ObjectIdentifier;
-use crate::object::stream::Stream;
-use crate::xref::XRef;
-use once_cell::sync::OnceCell;
-use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
-use std::sync::atomic::AtomicUsize;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub mod bit_reader;
 pub mod content;
+pub(crate) mod data;
 pub mod document;
 pub mod filter;
 pub mod function;
@@ -83,7 +77,6 @@ pub mod reader;
 pub mod trivia;
 pub(crate) mod util;
 pub mod xref;
-pub(crate) mod data;
 
 const NUM_SLOTS: usize = 10000;
 
