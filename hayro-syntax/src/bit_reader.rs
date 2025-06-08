@@ -52,7 +52,7 @@ impl<'a> BitReader<'a> {
         }
     }
 
-    /// Read a bit with the given bit size from the stream.
+    /// Read the given number of bits from the byte stream.
     pub fn read(&mut self, bit_size: BitSize) -> Option<u32> {
         let byte_pos = self.byte_pos();
 
