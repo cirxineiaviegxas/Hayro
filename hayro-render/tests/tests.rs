@@ -279,6 +279,7 @@ use crate::run_test;
 #[test] fn pdfjs_colorspace_cos() { run_test("pdfjs_colorspace_cos", "pdfs/pdfjs/colorspace_cos.pdf", None); }
 #[test] fn pdfjs_colorspace_sin() { run_test("pdfjs_colorspace_sin", "pdfs/pdfjs/colorspace_sin.pdf", None); }
 #[test] fn pdfjs_devicen() { run_test("pdfjs_devicen", "pdfs/pdfjs/devicen.pdf", None); }
+#[test] fn pdfjs_endchar() { run_test("pdfjs_endchar", "pdfs/pdfjs/endchar.pdf", None); }
 #[test] fn pdfjs_gradientfill() { run_test("pdfjs_gradientfill", "pdfs/pdfjs/gradientfill.pdf", None); }
 #[test] fn pdfjs_helloworld_bad() { run_test("pdfjs_helloworld_bad", "pdfs/pdfjs/helloworld-bad.pdf", None); }
 #[test] fn pdfjs_images_1bit_grayscale() { run_test("pdfjs_images_1bit_grayscale", "pdfs/pdfjs/images_1bit_grayscale.pdf", None); }

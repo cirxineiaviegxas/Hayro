@@ -299,6 +299,10 @@
     "file": "pdfs/devicen.pdf"
   },
   {
+    "id": "endchar",
+    "file": "pdfs/endchar.pdf"
+  },
+  {
     "id": "gradientfill",
     "file": "pdfs/gradientfill.pdf"
   },

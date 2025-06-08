@@ -85,7 +85,14 @@ impl Charset<'_> {
         }
 
         match self {
-            Charset::ISOAdobe | Charset::Expert | Charset::ExpertSubset => None,
+            Charset::ISOAdobe => {
+                if sid.0 <= 228 {
+                    Some(GlyphId(sid.0))
+                } else {
+                    None
+                }
+            }
+            Charset::Expert | Charset::ExpertSubset => None,
             Charset::Format0(ref array) => {
                 // First glyph is omitted, so we have to add 1.
                 array
