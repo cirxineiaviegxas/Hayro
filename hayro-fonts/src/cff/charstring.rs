@@ -1,7 +1,7 @@
 use super::parser::{Fixed, Stream};
-use super::{f32_abs, CFFError, IsEven};
+use super::{f32_abs, IsEven};
 use crate::argstack::ArgumentsStack;
-use crate::Builder;
+use crate::{Builder, OutlineError};
 
 pub(crate) struct CharStringParser<'a> {
     pub stack: ArgumentsStack<'a>,
@@ -15,11 +15,11 @@ pub(crate) struct CharStringParser<'a> {
 
 impl CharStringParser<'_> {
     #[inline]
-    pub fn parse_move_to(&mut self, offset: usize) -> Result<(), CFFError> {
+    pub fn parse_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
         // dx1 dy1
 
         if self.stack.len() != offset + 2 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         if self.is_first_move_to {
@@ -39,11 +39,11 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_horizontal_move_to(&mut self, offset: usize) -> Result<(), CFFError> {
+    pub fn parse_horizontal_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
         // dx1
 
         if self.stack.len() != offset + 1 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         if self.is_first_move_to {
@@ -62,11 +62,11 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vertical_move_to(&mut self, offset: usize) -> Result<(), CFFError> {
+    pub fn parse_vertical_move_to(&mut self, offset: usize) -> Result<(), OutlineError> {
         // dy1
 
         if self.stack.len() != offset + 1 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         if self.is_first_move_to {
@@ -85,15 +85,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_line_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_line_to(&mut self) -> Result<(), OutlineError> {
         // {dxa dya}+
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len().is_odd() {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let mut i = 0;
@@ -109,16 +109,16 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_horizontal_line_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_horizontal_line_to(&mut self) -> Result<(), OutlineError> {
         // dx1 {dya dxb}*
         //     {dxa dyb}+
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.is_empty() {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let mut i = 0;
@@ -141,16 +141,16 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vertical_line_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_vertical_line_to(&mut self) -> Result<(), OutlineError> {
         // dy1 {dxa dyb}*
         //     {dya dxb}+
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.is_empty() {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let mut i = 0;
@@ -173,15 +173,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_curve_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_curve_to(&mut self) -> Result<(), OutlineError> {
         // {dxa dya dxb dyb dxc dyc}+
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() % 6 != 0 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let mut i = 0;
@@ -202,19 +202,19 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_curve_line(&mut self) -> Result<(), CFFError> {
+    pub fn parse_curve_line(&mut self) -> Result<(), OutlineError> {
         // {dxa dya dxb dyb dxc dyc}+ dxd dyd
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() < 8 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         if (self.stack.len() - 2) % 6 != 0 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let mut i = 0;
@@ -239,19 +239,19 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_line_curve(&mut self) -> Result<(), CFFError> {
+    pub fn parse_line_curve(&mut self) -> Result<(), OutlineError> {
         // {dxa dya}+ dxb dyb dxc dyc dxd dyd
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() < 8 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         if (self.stack.len() - 6).is_odd() {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let mut i = 0;
@@ -276,11 +276,11 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hh_curve_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_hh_curve_to(&mut self) -> Result<(), OutlineError> {
         // dy1? {dxa dxb dyb dxc}+
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         let mut i = 0;
@@ -292,7 +292,7 @@ impl CharStringParser<'_> {
         }
 
         if (self.stack.len() - i) % 4 != 0 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         while i < self.stack.len() {
@@ -312,11 +312,11 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vv_curve_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_vv_curve_to(&mut self) -> Result<(), OutlineError> {
         // dx1? {dya dxb dyb dyc}+
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         let mut i = 0;
@@ -328,7 +328,7 @@ impl CharStringParser<'_> {
         }
 
         if (self.stack.len() - i) % 4 != 0 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         while i < self.stack.len() {
@@ -348,22 +348,22 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hv_curve_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_hv_curve_to(&mut self) -> Result<(), OutlineError> {
         // dx1 dx2 dy2 dy3 {dya dxb dyb dxc dxd dxe dye dyf}* dxf?
         //                 {dxa dxb dyb dyc dyd dxe dye dxf}+ dyf?
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() < 4 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         self.stack.reverse();
         while !self.stack.is_empty() {
             if self.stack.len() < 4 {
-                return Err(CFFError::InvalidArgumentsStackLength);
+                return Err(OutlineError::InvalidArgumentsStackLength);
             }
 
             let x1 = self.x + self.stack.pop();
@@ -381,7 +381,7 @@ impl CharStringParser<'_> {
             }
 
             if self.stack.len() < 4 {
-                return Err(CFFError::InvalidArgumentsStackLength);
+                return Err(OutlineError::InvalidArgumentsStackLength);
             }
 
             let x1 = self.x;
@@ -401,22 +401,22 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_vh_curve_to(&mut self) -> Result<(), CFFError> {
+    pub fn parse_vh_curve_to(&mut self) -> Result<(), OutlineError> {
         // dy1 dx2 dy2 dx3 {dxa dxb dyb dyc dyd dxe dye dxf}* dyf?
         //                 {dya dxb dyb dxc dxd dxe dye dyf}+ dxf?
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() < 4 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         self.stack.reverse();
         while !self.stack.is_empty() {
             if self.stack.len() < 4 {
-                return Err(CFFError::InvalidArgumentsStackLength);
+                return Err(OutlineError::InvalidArgumentsStackLength);
             }
 
             let x1 = self.x;
@@ -434,7 +434,7 @@ impl CharStringParser<'_> {
             }
 
             if self.stack.len() < 4 {
-                return Err(CFFError::InvalidArgumentsStackLength);
+                return Err(OutlineError::InvalidArgumentsStackLength);
             }
 
             let x1 = self.x + self.stack.pop();
@@ -454,15 +454,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_flex(&mut self) -> Result<(), CFFError> {
+    pub fn parse_flex(&mut self) -> Result<(), OutlineError> {
         // dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 dx6 dy6 fd
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() != 13 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let dx1 = self.x + self.stack.at(0);
@@ -485,15 +485,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_flex1(&mut self) -> Result<(), CFFError> {
+    pub fn parse_flex1(&mut self) -> Result<(), OutlineError> {
         // dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 d6
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() != 11 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let dx1 = self.x + self.stack.at(0);
@@ -521,15 +521,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hflex(&mut self) -> Result<(), CFFError> {
+    pub fn parse_hflex(&mut self) -> Result<(), OutlineError> {
         // dx1 dx2 dy2 dx3 dx4 dx5 dx6
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() != 7 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let dx1 = self.x + self.stack.at(0);
@@ -551,15 +551,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_hflex1(&mut self) -> Result<(), CFFError> {
+    pub fn parse_hflex1(&mut self) -> Result<(), OutlineError> {
         // dx1 dy1 dx2 dy2 dx3 dx4 dx5 dy5 dx6
 
         if !self.has_move_to {
-            return Err(CFFError::MissingMoveTo);
+            return Err(OutlineError::MissingMoveTo);
         }
 
         if self.stack.len() != 9 {
-            return Err(CFFError::InvalidArgumentsStackLength);
+            return Err(OutlineError::InvalidArgumentsStackLength);
         }
 
         let dx1 = self.x + self.stack.at(0);
@@ -581,15 +581,15 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_int1(&mut self, op: u8) -> Result<(), CFFError> {
+    pub fn parse_int1(&mut self, op: u8) -> Result<(), OutlineError> {
         let n = i16::from(op) - 139;
         self.stack.push(f32::from(n))?;
         Ok(())
     }
 
     #[inline]
-    pub fn parse_int2(&mut self, op: u8, s: &mut Stream) -> Result<(), CFFError> {
-        let b1 = s.read::<u8>().ok_or(CFFError::ReadOutOfBounds)?;
+    pub fn parse_int2(&mut self, op: u8, s: &mut Stream) -> Result<(), OutlineError> {
+        let b1 = s.read::<u8>().ok_or(OutlineError::ReadOutOfBounds)?;
         let n = (i16::from(op) - 247) * 256 + i16::from(b1) + 108;
         debug_assert!((108..=1131).contains(&n));
         self.stack.push(f32::from(n))?;
@@ -597,8 +597,8 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_int3(&mut self, op: u8, s: &mut Stream) -> Result<(), CFFError> {
-        let b1 = s.read::<u8>().ok_or(CFFError::ReadOutOfBounds)?;
+    pub fn parse_int3(&mut self, op: u8, s: &mut Stream) -> Result<(), OutlineError> {
+        let b1 = s.read::<u8>().ok_or(OutlineError::ReadOutOfBounds)?;
         let n = -(i16::from(op) - 251) * 256 - i16::from(b1) - 108;
         debug_assert!((-1131..=-108).contains(&n));
         self.stack.push(f32::from(n))?;
@@ -606,8 +606,8 @@ impl CharStringParser<'_> {
     }
 
     #[inline]
-    pub fn parse_fixed(&mut self, s: &mut Stream) -> Result<(), CFFError> {
-        let n = s.read::<Fixed>().ok_or(CFFError::ReadOutOfBounds)?;
+    pub fn parse_fixed(&mut self, s: &mut Stream) -> Result<(), OutlineError> {
+        let n = s.read::<Fixed>().ok_or(OutlineError::ReadOutOfBounds)?;
         self.stack.push(n.0)?;
         Ok(())
     }

@@ -17,9 +17,9 @@ use super::encoding::{parse_encoding, Encoding, STANDARD_ENCODING};
 use super::index::{parse_index, skip_index, Index};
 use super::parser::{LazyArray16, NumFrom, Stream};
 use super::std_names::STANDARD_NAMES;
-use super::{calc_subroutine_bias, conv_subroutine_index, CFFError, IsEven, StringId};
+use super::{calc_subroutine_bias, conv_subroutine_index, IsEven, StringId};
 use crate::argstack::ArgumentsStack;
-use crate::{Builder, DummyOutline, GlyphId, Matrix, OutlineBuilder, Rect, RectF};
+use crate::{Builder, OutlineError, DummyOutline, GlyphId, Matrix, OutlineBuilder, Rect, RectF};
 use crate::util::TryNumFrom;
 
 // Limits according to the Adobe Technical Note #5176, chapter 4 DICT Data.
@@ -333,7 +333,7 @@ fn parse_char_string(
     glyph_id: GlyphId,
     width_only: bool,
     builder: &mut dyn OutlineBuilder,
-) -> Result<(Rect, Option<f32>), CFFError> {
+) -> Result<(Rect, Option<f32>), OutlineError> {
     let local_subrs = match metadata.kind {
         FontKind::SID(ref sid) => Some(sid.local_subrs),
         FontKind::CID(_) => None, // Will be resolved on request.
@@ -375,17 +375,17 @@ fn parse_char_string(
     }
 
     if !ctx.has_endchar {
-        return Err(CFFError::MissingEndChar);
+        return Err(OutlineError::MissingEndChar);
     }
 
     let bbox = parser.builder.bbox;
 
     // Check that bbox was changed.
     if bbox.is_default() {
-        return Err(CFFError::ZeroBBox);
+        return Err(OutlineError::ZeroBBox);
     }
 
-    let rect = bbox.to_rect().ok_or(CFFError::BboxOverflow)?;
+    let rect = bbox.to_rect().ok_or(OutlineError::BboxOverflow)?;
     Ok((rect, ctx.width))
 }
 
@@ -394,14 +394,14 @@ fn _parse_char_string(
     char_string: &[u8],
     depth: u8,
     p: &mut CharStringParser,
-) -> Result<(), CFFError> {
+) -> Result<(), OutlineError> {
     let mut s = Stream::new(char_string);
     while !s.at_end() {
-        let op = s.read::<u8>().ok_or(CFFError::ReadOutOfBounds)?;
+        let op = s.read::<u8>().ok_or(OutlineError::ReadOutOfBounds)?;
         match op {
             0 | 2 | 9 | 13 | 15 | 16 | 17 => {
                 // Reserved.
-                return Err(CFFError::InvalidOperator);
+                return Err(OutlineError::InvalidOperator);
             }
             operator::HORIZONTAL_STEM
             | operator::VERTICAL_STEM
@@ -450,11 +450,11 @@ fn _parse_char_string(
             }
             operator::CALL_LOCAL_SUBROUTINE => {
                 if p.stack.is_empty() {
-                    return Err(CFFError::InvalidArgumentsStackLength);
+                    return Err(OutlineError::InvalidArgumentsStackLength);
                 }
 
                 if depth == STACK_LIMIT {
-                    return Err(CFFError::NestingLimitReached);
+                    return Err(OutlineError::NestingLimitReached);
                 }
 
                 // Parse and remember the local subroutine for the current glyph.
@@ -472,15 +472,15 @@ fn _parse_char_string(
                     let index = conv_subroutine_index(p.stack.pop(), subroutine_bias)?;
                     let char_string = local_subrs
                         .get(index)
-                        .ok_or(CFFError::InvalidSubroutineIndex)?;
+                        .ok_or(OutlineError::InvalidSubroutineIndex)?;
                     _parse_char_string(ctx, char_string, depth + 1, p)?;
                 } else {
-                    return Err(CFFError::NoLocalSubroutines);
+                    return Err(OutlineError::NoLocalSubroutines);
                 }
 
                 if ctx.has_endchar && !ctx.has_seac {
                     if !s.at_end() {
-                        return Err(CFFError::DataAfterEndChar);
+                        return Err(OutlineError::DataAfterEndChar);
                     }
 
                     break;
@@ -491,23 +491,23 @@ fn _parse_char_string(
             }
             TWO_BYTE_OPERATOR_MARK => {
                 // flex
-                let op2 = s.read::<u8>().ok_or(CFFError::ReadOutOfBounds)?;
+                let op2 = s.read::<u8>().ok_or(OutlineError::ReadOutOfBounds)?;
                 match op2 {
                     operator::HFLEX => p.parse_hflex()?,
                     operator::FLEX => p.parse_flex()?,
                     operator::HFLEX1 => p.parse_hflex1()?,
                     operator::FLEX1 => p.parse_flex1()?,
                     operator::DOTSECTION => {}
-                    _ => return Err(CFFError::UnsupportedOperator),
+                    _ => return Err(OutlineError::UnsupportedOperator),
                 }
             }
             operator::ENDCHAR => {
                 if p.stack.len() == 4 || (ctx.width.is_none() && p.stack.len() == 5) {
                     // Process 'seac'.
                     let accent_char = seac_code_to_glyph_id(&ctx.metadata.charset, p.stack.pop())
-                        .ok_or(CFFError::InvalidSeacCode)?;
+                        .ok_or(OutlineError::InvalidSeacCode)?;
                     let base_char = seac_code_to_glyph_id(&ctx.metadata.charset, p.stack.pop())
-                        .ok_or(CFFError::InvalidSeacCode)?;
+                        .ok_or(OutlineError::InvalidSeacCode)?;
                     let dy = p.stack.pop();
                     let dx = p.stack.pop();
 
@@ -518,14 +518,14 @@ fn _parse_char_string(
                     ctx.has_seac = true;
 
                     if depth == STACK_LIMIT {
-                        return Err(CFFError::NestingLimitReached);
+                        return Err(OutlineError::NestingLimitReached);
                     }
 
                     let base_char_string = ctx
                         .metadata
                         .char_strings
                         .get(u32::from(base_char.0))
-                        .ok_or(CFFError::InvalidSeacCode)?;
+                        .ok_or(OutlineError::InvalidSeacCode)?;
                     _parse_char_string(ctx, base_char_string, depth + 1, p)?;
                     p.x = dx;
                     p.y = dy;
@@ -534,7 +534,7 @@ fn _parse_char_string(
                         .metadata
                         .char_strings
                         .get(u32::from(accent_char.0))
-                        .ok_or(CFFError::InvalidSeacCode)?;
+                        .ok_or(OutlineError::InvalidSeacCode)?;
                     _parse_char_string(ctx, accent_char_string, depth + 1, p)?;
                 } else if p.stack.len() == 1 && ctx.width.is_none() {
                     ctx.width = Some(p.stack.pop());
@@ -546,7 +546,7 @@ fn _parse_char_string(
                 }
 
                 if !s.at_end() {
-                    return Err(CFFError::DataAfterEndChar);
+                    return Err(OutlineError::DataAfterEndChar);
                 }
 
                 ctx.has_endchar = true;
@@ -606,16 +606,16 @@ fn _parse_char_string(
                 p.parse_hh_curve_to()?;
             }
             operator::SHORT_INT => {
-                let n = s.read::<i16>().ok_or(CFFError::ReadOutOfBounds)?;
+                let n = s.read::<i16>().ok_or(OutlineError::ReadOutOfBounds)?;
                 p.stack.push(f32::from(n))?;
             }
             operator::CALL_GLOBAL_SUBROUTINE => {
                 if p.stack.is_empty() {
-                    return Err(CFFError::InvalidArgumentsStackLength);
+                    return Err(OutlineError::InvalidArgumentsStackLength);
                 }
 
                 if depth == STACK_LIMIT {
-                    return Err(CFFError::NestingLimitReached);
+                    return Err(OutlineError::NestingLimitReached);
                 }
 
                 let subroutine_bias = calc_subroutine_bias(ctx.metadata.global_subrs.len());
@@ -624,12 +624,12 @@ fn _parse_char_string(
                     .metadata
                     .global_subrs
                     .get(index)
-                    .ok_or(CFFError::InvalidSubroutineIndex)?;
+                    .ok_or(OutlineError::InvalidSubroutineIndex)?;
                 _parse_char_string(ctx, char_string, depth + 1, p)?;
 
                 if ctx.has_endchar && !ctx.has_seac {
                     if !s.at_end() {
-                        return Err(CFFError::DataAfterEndChar);
+                        return Err(OutlineError::DataAfterEndChar);
                     }
 
                     break;
@@ -928,11 +928,11 @@ impl<'a> Table<'a> {
         &self,
         glyph_id: GlyphId,
         builder: &mut dyn OutlineBuilder,
-    ) -> Result<Rect, CFFError> {
+    ) -> Result<Rect, OutlineError> {
         let data = self
             .char_strings
             .get(u32::from(glyph_id.0))
-            .ok_or(CFFError::NoGlyph)?;
+            .ok_or(OutlineError::NoGlyph)?;
         parse_char_string(data, self, glyph_id, false, builder).map(|v| v.0)
     }
 

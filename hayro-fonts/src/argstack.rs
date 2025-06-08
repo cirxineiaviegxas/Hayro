@@ -1,4 +1,4 @@
-use crate::cff::CFFError;
+use crate::OutlineError;
 
 pub struct ArgumentsStack<'a> {
     pub data: &'a mut [f32],
@@ -18,9 +18,9 @@ impl<'a> ArgumentsStack<'a> {
     }
 
     #[inline]
-    pub fn push(&mut self, n: f32) -> Result<(), CFFError> {
+    pub fn push(&mut self, n: f32) -> Result<(), OutlineError> {
         if self.len == self.max_len {
-            Err(CFFError::ArgumentsStackLimitReached)
+            Err(OutlineError::ArgumentsStackLimitReached)
         } else {
             self.data[self.len] = n;
             self.len += 1;

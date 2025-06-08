@@ -1,5 +1,5 @@
 use crate::argstack::ArgumentsStack;
-use crate::cff::CFFError;
+use crate::OutlineError;
 use crate::type1::charstring_parser::CharStringParser;
 use crate::type1::operator::{sb_operator, tb_operator};
 use crate::type1::stream::Stream;
@@ -21,7 +21,7 @@ pub(crate) fn parse_char_string(
     data: &[u8],
     params: &Parameters,
     builder: &mut dyn OutlineBuilder,
-) -> Result<(), CFFError> {
+) -> Result<(), OutlineError> {
     let mut ctx = CharStringParserContext {
         params,
         stems_len: 0,
@@ -50,7 +50,7 @@ pub(crate) fn parse_char_string(
     _parse_char_string(&mut ctx, data, 0, &mut parser)?;
 
     if !ctx.has_endchar {
-        return Err(CFFError::MissingEndChar);
+        return Err(OutlineError::MissingEndChar);
     }
 
     Ok(())
@@ -61,7 +61,7 @@ fn _parse_char_string(
     char_string: &[u8],
     depth: u8,
     p: &mut CharStringParser,
-) -> Result<(), CFFError> {
+) -> Result<(), OutlineError> {
     macro_rules! trace_op {
         ($name:literal) => {
             debug!("{} ({})", $name, &p.stack.dump());
@@ -70,7 +70,7 @@ fn _parse_char_string(
 
     let mut s = Stream::new(char_string);
     while !s.at_end() {
-        let op = s.read_byte().ok_or(CFFError::ReadOutOfBounds)?;
+        let op = s.read_byte().ok_or(OutlineError::ReadOutOfBounds)?;
         match op {
             sb_operator::HORIZONTAL_STEM | sb_operator::VERTICAL_STEM => {
                 trace_op!("HORIZONTAL_STEM | VERTICAL_STEM");
@@ -114,11 +114,11 @@ fn _parse_char_string(
                 trace_op!("CALL_SUBR");
 
                 if p.stack.is_empty() {
-                    return Err(CFFError::InvalidArgumentsStackLength);
+                    return Err(OutlineError::InvalidArgumentsStackLength);
                 }
 
                 if depth == STACK_LIMIT {
-                    return Err(CFFError::NestingLimitReached);
+                    return Err(OutlineError::NestingLimitReached);
                 }
 
                 let index = p.stack.pop() as u32;
@@ -126,7 +126,7 @@ fn _parse_char_string(
                 if let Some(subr) = ctx.params.subroutines.get(&index) {
                     _parse_char_string(ctx, subr, depth + 1, p)?;
                 } else {
-                    return Err(CFFError::NoLocalSubroutines);
+                    return Err(OutlineError::NoLocalSubroutines);
                 }
             }
             sb_operator::RETURN => {
@@ -135,7 +135,7 @@ fn _parse_char_string(
                 break;
             }
             sb_operator::ESCAPE => {
-                let op = s.read_byte().ok_or(CFFError::ReadOutOfBounds)?;
+                let op = s.read_byte().ok_or(OutlineError::ReadOutOfBounds)?;
 
                 match op {
                     tb_operator::DOTSECTION => {
@@ -157,7 +157,7 @@ fn _parse_char_string(
                         trace_op!("SEAC");
 
                         if p.stack.len != 5 {
-                            return Err(CFFError::InvalidArgumentsStackLength);
+                            return Err(OutlineError::InvalidArgumentsStackLength);
                         }
 
                         let accent_char = ctx.params.encoding_type.encode(p.stack.pop() as u8);
@@ -169,14 +169,14 @@ fn _parse_char_string(
                         ctx.has_seac = true;
 
                         if depth == STACK_LIMIT {
-                            return Err(CFFError::NestingLimitReached);
+                            return Err(OutlineError::NestingLimitReached);
                         }
 
                         let base_char_string = ctx
                             .params
                             .charstrings
-                            .get(&base_char.ok_or(CFFError::InvalidSeacCode)?.to_string())
-                            .ok_or(CFFError::InvalidSeacCode)?;
+                            .get(&base_char.ok_or(OutlineError::InvalidSeacCode)?.to_string())
+                            .ok_or(OutlineError::InvalidSeacCode)?;
                         _parse_char_string(ctx, base_char_string, depth + 1, p)?;
                         p.x = dx + sbx;
                         p.y = dy;
@@ -184,8 +184,8 @@ fn _parse_char_string(
                         let accent_char_string = ctx
                             .params
                             .charstrings
-                            .get(&accent_char.ok_or(CFFError::InvalidSeacCode)?.to_string())
-                            .ok_or(CFFError::InvalidSeacCode)?;
+                            .get(&accent_char.ok_or(OutlineError::InvalidSeacCode)?.to_string())
+                            .ok_or(OutlineError::InvalidSeacCode)?;
                         _parse_char_string(ctx, accent_char_string, depth + 1, p)?;
                         break;
                     }

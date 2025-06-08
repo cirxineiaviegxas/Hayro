@@ -187,3 +187,24 @@ impl Default for Matrix {
         }
     }
 }
+
+/// A list of errors that can occur during a CFF/Type1 glyph outlining.
+#[allow(missing_docs)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OutlineError {
+    NoGlyph,
+    ReadOutOfBounds,
+    ZeroBBox,
+    InvalidOperator,
+    UnsupportedOperator,
+    MissingEndChar,
+    DataAfterEndChar,
+    NestingLimitReached,
+    ArgumentsStackLimitReached,
+    InvalidArgumentsStackLength,
+    BboxOverflow,
+    MissingMoveTo,
+    InvalidSubroutineIndex,
+    NoLocalSubroutines,
+    InvalidSeacCode,
+}

@@ -9,31 +9,11 @@ mod std_names;
 
 use core::convert::TryFrom;
 
-use parser::{FromData};
+use parser::FromData;
 
 pub use cff::Table;
+use crate::OutlineError;
 use crate::util::TryNumFrom;
-
-/// A list of errors that can occur during a CFF glyph outlining.
-#[allow(missing_docs)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CFFError {
-    NoGlyph,
-    ReadOutOfBounds,
-    ZeroBBox,
-    InvalidOperator,
-    UnsupportedOperator,
-    MissingEndChar,
-    DataAfterEndChar,
-    NestingLimitReached,
-    ArgumentsStackLimitReached,
-    InvalidArgumentsStackLength,
-    BboxOverflow,
-    MissingMoveTo,
-    InvalidSubroutineIndex,
-    NoLocalSubroutines,
-    InvalidSeacCode,
-}
 
 /// A type-safe wrapper for string ID.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug)]
@@ -48,7 +28,7 @@ impl FromData for StringId {
     }
 }
 
-pub trait IsEven {
+trait IsEven {
     fn is_even(&self) -> bool;
     fn is_odd(&self) -> bool;
 }
@@ -65,13 +45,13 @@ impl IsEven for usize {
     }
 }
 
-pub fn f32_abs(n: f32) -> f32 {
+fn f32_abs(n: f32) -> f32 {
     n.abs()
 }
 
 #[inline]
-pub fn conv_subroutine_index(index: f32, bias: u16) -> Result<u32, CFFError> {
-    conv_subroutine_index_impl(index, bias).ok_or(CFFError::InvalidSubroutineIndex)
+fn conv_subroutine_index(index: f32, bias: u16) -> Result<u32, OutlineError> {
+    conv_subroutine_index_impl(index, bias).ok_or(OutlineError::InvalidSubroutineIndex)
 }
 
 #[inline]
@@ -85,7 +65,7 @@ fn conv_subroutine_index_impl(index: f32, bias: u16) -> Option<u32> {
 
 // Adobe Technical Note #5176, Chapter 16 "Local / Global Subrs INDEXes"
 #[inline]
-pub fn calc_subroutine_bias(len: u32) -> u16 {
+fn calc_subroutine_bias(len: u32) -> u16 {
     if len < 1240 {
         107
     } else if len < 33900 {
