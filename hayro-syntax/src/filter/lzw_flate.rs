@@ -203,17 +203,21 @@ impl PredictorParams {
         (self.bits_per_pixel() + 7) / 8
     }
 
-    fn row_length_in_bytes(&self) -> usize {
+    fn row_length_in_bytes(&self) -> Option<usize> {
         let raw = self.columns * self.bytes_per_pixel() as usize;
 
         match self.bits_per_component {
             // TODO: Find tests for 2,4,16 bits.
-            1 => raw.div_ceil(8),
-            2 => raw.div_ceil(4),
-            4 => raw.div_ceil(2),
-            8 => raw,
-            16 => 2 * raw,
-            _ => unreachable!(),
+            1 => Some(raw.div_ceil(8)),
+            2 => Some(raw.div_ceil(4)),
+            4 => Some(raw.div_ceil(2)),
+            8 => Some(raw),
+            16 => Some(2 * raw),
+            _ => {
+                warn!("invalid bits per component {}", self.bits_per_component);
+                
+                None
+            },
         }
     }
 }
@@ -251,7 +255,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
         i => {
             let is_png_predictor = i >= 10;
 
-            let row_len = params.row_length_in_bytes();
+            let row_len = params.row_length_in_bytes()?;
 
             let total_row_len = if is_png_predictor {
                 // + 1 Because each row must start with the predictor that is used for PNG predictors.
@@ -333,7 +337,11 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             colors,
                             bit_size,
                         )?,
-                        _ => unreachable!(),
+                        n => {
+                            warn!("invalid PNG predictor {}", n);
+                            
+                            return None;
+                        },
                     }
                 } else if i == 2 {
                     apply::<Sub>(
