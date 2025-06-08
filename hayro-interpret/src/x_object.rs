@@ -5,7 +5,7 @@ use crate::device::Device;
 use crate::image::{RgbaImage, StencilImage};
 use crate::interpret;
 use crate::interpret::path::get_paint;
-use hayro_syntax::bit::{BitReader, BitSize};
+use hayro_syntax::bit_reader::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::function::interpolate;

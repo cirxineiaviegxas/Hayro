@@ -1,6 +1,6 @@
 //! A decoder for LZW and flate-encoded streams.
 
-use crate::bit::{BitChunk, BitChunks, BitReader, BitSize, BitWriter};
+use crate::bit_reader::{BitChunk, BitChunks, BitReader, BitSize, BitWriter};
 use crate::object::dict::Dict;
 use crate::object::dict::keys::{BITS_PER_COMPONENT, COLORS, COLUMNS, EARLY_CHANGE, PREDICTOR};
 use itertools::izip;
@@ -41,7 +41,7 @@ pub mod flate {
 }
 
 pub mod lzw {
-    use crate::bit::{BitReader, BitSize};
+    use crate::bit_reader::{BitReader, BitSize};
     use crate::filter::lzw_flate::{PredictorParams, apply_predictor};
     use crate::object::dict::Dict;
     use log::warn;

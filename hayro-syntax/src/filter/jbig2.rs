@@ -1,4 +1,4 @@
-//! A decoder for JBIG2 data streams, ported from pdf.js (https://github.com/mozilla/pdf.js/blob/master/src/core/jbig2.js).
+//! A decoder for JBIG2 data streams, ported from pdf.js (<https://github.com/mozilla/pdf.js/blob/master/src/core/jbig2.js>).
 
 /* Copyright 2012 Mozilla Foundation
  *

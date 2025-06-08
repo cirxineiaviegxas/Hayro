@@ -1,7 +1,7 @@
 //! The starting point for reading PDF files.
 
 use crate::PdfData;
-use crate::document::page::Pages;
+use crate::document::page::{Page, Pages};
 use crate::object::Object;
 use crate::xref::{XRef, fallback, root_xref};
 
@@ -31,9 +31,9 @@ impl Pdf {
     }
 
     /// Return the pages of the PDF file.
-    pub fn pages(&self) -> Option<Pages> {
+    pub fn pages(&self) -> Option<Vec<Page>> {
         self.xref
             .get(self.xref.trailer_data().pages_ref)
-            .and_then(|p| Pages::new(p, &self.xref))
+            .and_then(|p| Pages::new(p, &self.xref).map(|p| p.pages))
     }
 }

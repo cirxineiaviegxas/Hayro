@@ -26,7 +26,7 @@ impl PdfViewer {
     pub fn load_pdf(&mut self, data: &[u8]) -> Result<(), JsValue> {
         // Store the data
         let pdf = Pdf::new(Arc::new(data.to_vec())).unwrap();
-        self.total_pages = pdf.pages().unwrap().pages.len();
+        self.total_pages = pdf.pages().unwrap().len();
         self.pdf = Some(pdf);
 
         self.current_page = 0;
@@ -41,7 +41,7 @@ impl PdfViewer {
         if let Some(pdf) = &self.pdf {
             let pages = pdf.pages().unwrap();
 
-            if self.current_page < pages.pages.len() {
+            if self.current_page < pages.len() {
                 let pixmaps = hayro_render::render_png(
                     &pdf,
                     scale,

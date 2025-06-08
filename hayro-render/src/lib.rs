@@ -382,7 +382,6 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
 pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -> Vec<Vec<u8>> {
     pdf.pages()
         .unwrap()
-        .pages
         .iter()
         .enumerate()
         .flat_map(|(idx, page)| {

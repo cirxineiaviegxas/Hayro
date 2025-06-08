@@ -1,4 +1,4 @@
-use crate::bit::{BitReader, BitSize};
+use crate::bit_reader::{BitReader, BitSize};
 use crate::function::{Clamper, TupleVec, Values, interpolate};
 use crate::object::array::Array;
 use crate::object::dict::keys::{BITS_PER_SAMPLE, DECODE, ENCODE, SIZE};
