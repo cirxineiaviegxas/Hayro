@@ -8,12 +8,13 @@ use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader};
-use crate::{Data, PdfData};
+use crate::PdfData;
 use log::{error, warn};
 use rustc_hash::FxHashMap;
 use std::cmp::max;
 use std::iter;
 use std::sync::{Arc, RwLock};
+use crate::data::Data;
 
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
