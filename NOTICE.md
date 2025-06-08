@@ -13,7 +13,8 @@ The following parts of code have been adapted from [pdf-rs](https://github.com/p
 Apache 2.0 license:
 - The ASCII85 decoder.
 
-The following parts of code have been adapted/translated from the 
+The following parts of code have been adapted/translated from the [CFFDump](https://github.com/janpe2/CFFDump/) utility tool, available under the Apache 2.0 license:
+- The Type1 font parser.
 
                                  Apache License
                            Version 2.0, January 2004
