@@ -124,7 +124,7 @@ impl<'a> Iterator for UntypedIter<'a> {
                     let dict = inline_dict.get_dict().clone();
 
                     // One whitespace after "ID".
-                    self.reader.read_byte()?;
+                    self.reader.read_white_space()?;
 
                     let stream_data = self.reader.tail()?;
                     let start_offset = self.reader.offset();

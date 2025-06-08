@@ -233,6 +233,7 @@ use crate::run_test;
 #[test] fn pdfjs_bug1046314() { run_test("pdfjs_bug1046314", "pdfs/pdfjs/bug1046314.pdf", None); }
 #[test] fn pdfjs_bug1057544() { run_test("pdfjs_bug1057544", "pdfs/pdfjs/bug1057544.pdf", None); }
 #[test] fn pdfjs_bug1064894() { run_test("pdfjs_bug1064894", "downloads/pdfjs/bug1064894.pdf", Some("0..=0")); }
+#[test] fn pdfjs_bug1065245() { run_test("pdfjs_bug1065245", "pdfs/pdfjs/bug1065245.pdf", None); }
 #[test] fn pdfjs_bug1068432() { run_test("pdfjs_bug1068432", "pdfs/pdfjs/bug1068432.pdf", None); }
 #[test] fn pdfjs_bug1072164() { run_test("pdfjs_bug1072164", "downloads/pdfjs/bug1072164.pdf", None); }
 #[test] fn pdfjs_bug1077808() { run_test("pdfjs_bug1077808", "downloads/pdfjs/bug1077808.pdf", Some("..=0")); }
