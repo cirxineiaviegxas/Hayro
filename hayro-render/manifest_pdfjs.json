@@ -121,6 +121,10 @@
     "last_page": 0
   },
   {
+    "id": "bug1132849",
+    "file": "pdfs/bug1132849.pdf"
+  },
+  {
     "id": "bug1140761",
     "file": "pdfs/bug1140761.link",
     "md5": "b74eced7634d4f248dc6265f8225d432",

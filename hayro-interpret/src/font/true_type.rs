@@ -25,6 +25,7 @@ pub(crate) struct TrueTypeFont {
     font_flags: Option<FontFlags>,
     glyph_names: HashMap<String, GlyphId>,
     encoding: Encoding,
+    differences: HashMap<u8, String>,
     cached_mappings: RefCell<HashMap<u8, GlyphId>>,
 }
 
@@ -35,7 +36,7 @@ impl TrueTypeFont {
         let font_flags = descriptor.get::<u32>(FLAGS).and_then(FontFlags::from_bits);
 
         let widths = read_widths(dict, &descriptor);
-        let (encoding, _) = read_encoding(dict);
+        let (encoding, differences) = read_encoding(dict);
         let base_font = descriptor
             .get::<Stream>(FONT_FILE2)
             .and_then(|s| s.decoded())
@@ -54,6 +55,7 @@ impl TrueTypeFont {
 
         Some(Self {
             base_font,
+            differences: differences,
             widths,
             glyph_names,
             font_flags,
@@ -81,9 +83,9 @@ impl TrueTypeFont {
 
         let mut glyph = None;
 
-        if self.is_non_symbolic() && matches!(self.encoding, Encoding::MacRoman | Encoding::WinAnsi)
+        if self.is_non_symbolic() 
         {
-            let Some(lookup) = self.encoding.lookup(code) else {
+            let Some(lookup) = self.differences.get(&code).map(|s| s.as_str()).or_else(|| self.encoding.lookup(code)) else {
                 return GlyphId::NOTDEF;
             };
 
@@ -91,9 +93,22 @@ impl TrueTypeFont {
                 for record in cmap.encoding_records() {
                     if record.platform_id() == PlatformId::Windows && record.encoding_id() == 1 {
                         if let Ok(subtable) = record.subtable(cmap.offset_data()) {
+                            let convert = |input: &str| {
+                                u32::from_str_radix(input, 16).ok()
+                                    .and_then(|n| char::from_u32(n))
+                                    .map(|s| s.to_string())
+                            };
+                            
                             glyph = glyph.or_else(|| {
                                 GLYPH_NAMES
                                     .get(lookup)
+                                    .map(|n| n.to_string())
+                                    .or_else(|| {
+                                        lookup.starts_with("uni")
+                                            .then(|| lookup.get(3..).and_then(convert))
+                                            .or_else(|| lookup.starts_with("u").then(|| lookup.get(1..).and_then(convert)))
+                                            .flatten()
+                                    })
                                     .and_then(|n| n.chars().next())
                                     .and_then(|c| subtable.map_codepoint(c))
                                     .filter(|g| *g != GlyphId::NOTDEF)

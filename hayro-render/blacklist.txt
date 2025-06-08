@@ -22,7 +22,6 @@ artofwar
 bug1050040
 
 #investigate
-bug1132849
 bug1130815
 bug1130815-eq
 
