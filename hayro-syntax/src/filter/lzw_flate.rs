@@ -23,9 +23,12 @@ pub mod flate {
         let mut decoder = ZlibDecoder::new(data);
         let mut result = Vec::new();
 
-        match decoder.read_to_end(&mut result) {
-            Ok(_) => Some(result),
-            Err(_) => None,
+        decoder.read_to_end(&mut result).ok();
+
+        if !result.is_empty() {
+            Some(result)
+        }   else {
+            None
         }
     }
 
@@ -33,9 +36,12 @@ pub mod flate {
         let mut decoder = DeflateDecoder::new(data);
         let mut result = Vec::new();
 
-        match decoder.read_to_end(&mut result) {
-            Ok(_) => Some(result),
-            Err(_) => None,
+        decoder.read_to_end(&mut result).ok();
+
+        if !result.is_empty() {
+            Some(result)
+        }   else {
+            None
         }
     }
 }
