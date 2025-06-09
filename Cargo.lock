@@ -496,6 +496,7 @@ dependencies = [
  "hayro-render",
  "hayro-syntax",
  "js-sys",
+ "log",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

@@ -1,19 +1,25 @@
-body {
+* {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    height: 100vh;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
     overflow: hidden;
 }
 
 #app {
+    width: 100vw;
     height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+/* File Selector */
 #file-selector {
     width: 100%;
     height: 100%;
@@ -25,249 +31,285 @@ body {
 #drop-zone {
     width: 400px;
     height: 300px;
-    border: 3px dashed rgba(255, 255, 255, 0.6);
+    border: 3px dashed #ccc;
     border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
+    background-color: white;
 }
 
 #drop-zone:hover {
-    border-color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
+    border-color: #007AFF;
+    background-color: #f8f9ff;
 }
 
 #drop-zone.dragover {
-    border-color: #4CAF50;
-    background: rgba(76, 175, 80, 0.2);
-    transform: scale(1.1);
+    border-color: #007AFF;
+    background-color: #e6f2ff;
+    transform: scale(1.02);
 }
 
 .drop-content {
     text-align: center;
-    color: white;
 }
 
 .drop-icon {
     font-size: 4rem;
     margin-bottom: 1rem;
-    opacity: 0.8;
+    color: #666;
 }
 
 .drop-content p {
-    font-size: 1.5rem;
-    margin: 0;
-    font-weight: 300;
-    opacity: 0.9;
+    font-size: 1.2rem;
+    color: #666;
 }
 
+/* Viewer */
 #viewer {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #2c2c2c;
+    width: 100%;
+    height: 100%;
     position: relative;
+    background-color: #e0e0e0;
     overflow: auto;
-    transition: all 0.3s ease;
-}
-
-#viewer.dragover {
-    background: rgba(76, 175, 80, 0.1);
-    box-shadow: inset 0 0 0 3px #4CAF50;
-}
-
-#viewer.dragover::before {
-    content: "📄 Drop PDF to open";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #4CAF50;
-    font-size: 2rem;
-    font-weight: 500;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 20px 40px;
-    border-radius: 15px;
-    border: 2px solid #4CAF50;
-    z-index: 2000;
-    pointer-events: none;
-    backdrop-filter: blur(10px);
 }
 
 #pdf-canvas {
-    max-width: 90vw;
-    max-height: 90vh;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
+    display: block;
+    margin: 20px auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background-color: white;
 }
 
-#floating-controls {
+/* Controls */
+#controls {
     position: fixed;
-    bottom: 30px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    border-radius: 50px;
-    padding: 12px 20px;
+    border-radius: 25px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     gap: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
 }
 
-#floating-controls button {
-    background: transparent;
-    border: none;
+#controls button {
+    background: #007AFF;
     color: white;
-    font-size: 18px;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 14px;
+    transition: background-color 0.2s;
 }
 
-#floating-controls button:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
+#controls button:hover:not(:disabled) {
+    background: #0056CC;
 }
 
-#floating-controls button:disabled {
-    opacity: 0.4;
+#controls button:disabled {
+    background: #ccc;
     cursor: not-allowed;
 }
 
-#floating-controls button:disabled:hover {
-    background: transparent;
-    transform: none;
-}
-
 #page-input {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    color: white;
-    width: 50px;
-    height: 30px;
+    width: 60px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
     text-align: center;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 0 8px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-#page-input:focus {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
-    transform: scale(1.05);
-}
-
-#page-input::-webkit-outer-spin-button,
-#page-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-#page-input[type=number] {
-    -moz-appearance: textfield;
-}
-
-#page-info, #zoom-info {
-    color: white;
     font-size: 14px;
-    font-weight: 500;
-    min-width: 50px;
+}
+
+#page-info {
+    font-size: 14px;
+    color: #666;
+    white-space: nowrap;
+}
+
+/* Drop Overlay */
+#drop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 122, 255, 0.1);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.drop-overlay-content {
+    background: white;
+    border: 3px dashed #007AFF;
+    border-radius: 20px;
+    padding: 40px;
     text-align: center;
 }
 
-.separator {
-    width: 1px;
-    height: 24px;
-    background: rgba(255, 255, 255, 0.3);
+.drop-overlay-content .drop-icon {
+    font-size: 3rem;
+    color: #007AFF;
+    margin-bottom: 1rem;
 }
 
-#zoom-out, #zoom-in {
-    font-weight: bold;
-    font-size: 20px;
+.drop-overlay-content p {
+    font-size: 1.1rem;
+    color: #007AFF;
+    font-weight: 500;
 }
 
-/* Scrollbar styling for viewer */
-#viewer::-webkit-scrollbar {
-    width: 8px;
-}
-
-#viewer::-webkit-scrollbar-track {
-    background: #2c2c2c;
-}
-
-#viewer::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-#viewer::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
-}
-
-/* Loading spinner */
-#loading-indicator {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    width: 40px;
-    height: 40px;
-    z-index: 3000;
-    display: none;
-}
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid #4CAF50;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    background: rgba(0, 0, 0, 0.8);
-}
-
-/* Render time indicator */
-#render-time-indicator {
+/* Log Window */
+#log-window {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 20px;
+    width: 300px;
+    height: calc(100vh - 40px);
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1001;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 12px;
-    font-weight: 500;
-    z-index: 3000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#log-header span {
+    color: white;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+#clear-logs {
+    background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    display: none;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    transition: all 0.2s;
 }
 
-#render-time-indicator.visible {
-    display: block;
+#clear-logs:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+#log-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 4px;
+    padding: 2px 0;
+    word-wrap: break-word;
+}
+
+.log-entry.error {
+    color: #ff6b6b;
+}
+
+.log-entry.warn {
+    color: #ffd93d;
+}
+
+.log-entry.info {
+    color: #74c0fc;
+}
+
+.log-entry.debug {
+    color: #b197fc;
+}
+
+.log-entry.trace {
+    color: #a9a9a9;
+}
+
+.log-timestamp {
+    color: #666;
+    margin-right: 8px;
+}
+
+/* Scrollbar styling for log content */
+#log-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#log-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+#log-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+#log-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #drop-zone {
+        width: 90%;
+        height: 250px;
+    }
+    
+    #controls {
+        bottom: 10px;
+        padding: 8px 15px;
+        gap: 10px;
+    }
+    
+    #controls button {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    #page-input {
+        width: 50px;
+        padding: 6px;
+        font-size: 12px;
+    }
+    
+    #page-info {
+        font-size: 12px;
+    }
+    
+    #log-window {
+        width: 250px;
+        height: calc(100vh - 20px);
+        top: 10px;
+        right: 10px;
+    }
 } 

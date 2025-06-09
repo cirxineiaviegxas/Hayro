@@ -1,28 +1,7 @@
 import init, { PdfViewer } from './hayro_demo.js';
 
 let pdfViewer = null;
-let currentPage = 1;
-let totalPages = 0;
-let currentScale = 2.0;
-let imageX = 0; // Image position relative to canvas center
-let imageY = 0;
-let isPanning = false;
-let lastMouseX = 0;
-let lastMouseY = 0;
-
-// High-resolution rendering variables
-let currentRenderScale = 2.0; // The scale at which the current image was rendered
-let highResTimeout = null; // Timer for debounced high-res rendering
-
-// Get the loading indicator from HTML
-const loadingIndicator = document.getElementById('loading-indicator');
-
-// Get the render time indicator from HTML
-const renderTimeIndicator = document.getElementById('render-time-indicator');
-const renderTimeText = document.getElementById('render-time-text');
-
-// Render timing variables
-let renderStartTime = 0;
+let currentImage = null;
 
 async function run() {
     await init();
@@ -36,64 +15,30 @@ async function run() {
     const nextButton = document.getElementById('next-page');
     const pageInfo = document.getElementById('page-info');
     const pageInput = document.getElementById('page-input');
-    const zoomOutButton = document.getElementById('zoom-out');
-    const zoomInButton = document.getElementById('zoom-in');
-    const zoomInfo = document.getElementById('zoom-info');
-
-    // Functions to show/hide loading indicator
-    function showLoading() {
-        console.log('Showing loading spinner');
-        loadingIndicator.style.display = 'block';
-    }
-
-    function hideLoading() {
-        console.log('Hiding loading spinner');
-        loadingIndicator.style.display = 'none';
-    }
-
-    // Functions to update render time
-    function startRenderTimer() {
-        renderStartTime = performance.now();
-    }
-
-    function updateRenderTime() {
-        const renderTime = performance.now() - renderStartTime;
-        renderTimeText.textContent = `${Math.round(renderTime)}ms`;
-        renderTimeIndicator.classList.add('visible');
-        
-        // Hide the indicator after 3 seconds
-        setTimeout(() => {
-            renderTimeIndicator.classList.remove('visible');
-        }, 3000);
-    }
-
-    // Try to load cached PDF on startup
-    loadCachedPDF();
+    const dropOverlay = document.getElementById('drop-overlay');
 
     // Make drop zone clickable to open file dialog
     dropZone.addEventListener('click', () => {
         fileInput.click();
     });
 
-    // Comprehensive drag and drop prevention
+    // Prevent default drag behaviors
     const preventDefaults = (e) => {
         e.preventDefault();
         e.stopPropagation();
     };
 
-    // Prevent default drag behaviors on the entire document
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         document.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
     });
 
     // Function to handle PDF files from drag and drop or file input
     function handlePDFDrop(e, files) {
         preventDefaults(e);
         
-        // Remove dragover styling from both drop zone and viewer
+        // Hide drop overlays
         dropZone.classList.remove('dragover');
-        viewer.classList.remove('dragover');
+        dropOverlay.style.display = 'none';
         
         if (files.length > 0) {
             handleFile(files[0]);
@@ -107,14 +52,17 @@ async function run() {
             dropZone.classList.add('dragover');
         }, false);
         
-        // Also allow dropping on the viewer when a PDF is open
+        // Show drop overlay when dragging over viewer
         viewer.addEventListener(eventName, (e) => {
             preventDefaults(e);
-            viewer.classList.add('dragover');
+            if (pdfViewer) {
+                dropOverlay.style.display = 'flex';
+            }
         }, false);
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
+    // Remove drag styling when leaving
+    ['dragleave'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
             preventDefaults(e);
             dropZone.classList.remove('dragover');
@@ -122,11 +70,14 @@ async function run() {
         
         viewer.addEventListener(eventName, (e) => {
             preventDefaults(e);
-            viewer.classList.remove('dragover');
+            // Only hide if we're leaving the viewer completely
+            if (!viewer.contains(e.relatedTarget)) {
+                dropOverlay.style.display = 'none';
+            }
         }, false);
     });
 
-    // Handle dropped files on both drop zone and viewer
+    // Handle dropped files
     dropZone.addEventListener('drop', (e) => {
         handlePDFDrop(e, e.dataTransfer.files);
     }, false);
@@ -144,425 +95,222 @@ async function run() {
 
     // Navigation handlers
     prevButton.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
+        if (pdfViewer && pdfViewer.previous_page()) {
             renderCurrentPage();
         }
     });
 
     nextButton.addEventListener('click', () => {
-        if (currentPage < totalPages) {
-            currentPage++;
+        if (pdfViewer && pdfViewer.next_page()) {
             renderCurrentPage();
         }
     });
 
-    // Helper function for zooming
-    function applyZoom(newScale) {
-        if (!currentImage) return false;
-
-        if (newScale < 0.5 || newScale > 40.0) return false;
-
-        currentScale = newScale;
-
-        updateZoomInfo();
-        updateCursorStyle();
-        renderCurrentPage(false);
-        
-        // Schedule high-resolution re-render after 1.5 seconds of no zooming
-        scheduleHighResRender();
-        
-        return true;
-    }
-
-    // Function to schedule high-resolution rendering
-    function scheduleHighResRender() {
-        // Clear any existing timeout
-        if (highResTimeout) {
-            clearTimeout(highResTimeout);
-        }
-        
-        // Set new timeout for 100ms
-        highResTimeout = setTimeout(() => {
-            // Calculate optimal render scale based on current zoom
-            const optimalRenderScale = Math.min(Math.max(currentScale, 2.0), 8.0);
-            
-            // Debug logging
-            console.log(`Zoom check - Current zoom: ${currentScale.toFixed(1)}x, Current render: ${currentRenderScale.toFixed(1)}x, Optimal render: ${optimalRenderScale.toFixed(1)}x`);
-            
-            // Re-render if there's a significant difference in either direction
-            const scaleDifference = Math.abs(optimalRenderScale - currentRenderScale) / currentRenderScale;
-            console.log(`Scale difference: ${(scaleDifference * 100).toFixed(1)}%`);
-            
-            if (scaleDifference > 0.25) { // Lowered threshold to 25%
-                if (optimalRenderScale > currentRenderScale) {
-                    console.log(`✅ Re-rendering at HIGHER quality: ${optimalRenderScale}x (was ${currentRenderScale}x)`);
-                } else {
-                    console.log(`✅ Re-rendering at LOWER quality: ${optimalRenderScale}x (was ${currentRenderScale}x)`);
-                }
-                renderCurrentPage(true, optimalRenderScale);
-            } else {
-                console.log(`❌ No re-render needed (difference ${(scaleDifference * 100).toFixed(1)}% < 25%)`);
-            }
-        }, 100);
-    }
-
-    // Zoom handlers
-    zoomOutButton.addEventListener('click', () => {
-        if (currentScale > 0.5) {
-            applyZoom(Math.max(0.5, currentScale * 0.8));
-        }
-    });
-
-    zoomInButton.addEventListener('click', () => {
-        if (currentScale < 40.0) {
-            applyZoom(Math.min(40.0, currentScale * 1.25));
-        }
-    });
-
-    // Panning functionality
-    function updateCursorStyle() {
-        if (currentScale > 1.0) {
-            canvas.style.cursor = isPanning ? 'grabbing' : 'grab';
-        } else {
-            canvas.style.cursor = 'default';
-        }
-    }
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (currentScale > 1.0) {
-            isPanning = true;
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-            updateCursorStyle();
-        }
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-        if (isPanning) {
-            const deltaX = e.clientX - lastMouseX;
-            const deltaY = e.clientY - lastMouseY;
-
-            imageX += deltaX;
-            imageY += deltaY;
-
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-
-            renderCurrentPage(false); // Don't reload the image, just reapply pan
-        } else {
-            // Update cursor style based on zoom level
-            updateCursorStyle();
-        }
-    });
-
-    canvas.addEventListener('mouseup', () => {
-        isPanning = false;
-        updateCursorStyle();
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-        isPanning = false;
-        updateCursorStyle();
-    });
-
-    // Mouse wheel for zooming
-    canvas.addEventListener('wheel', (e) => {
-        e.preventDefault();
-
-        if (e.deltaY < 0 && currentScale < 40.0) {
-            // Zoom in
-            applyZoom(Math.min(40.0, currentScale * 1.25));
-        } else if (e.deltaY > 0 && currentScale > 0.5) {
-            // Zoom out
-            applyZoom(Math.max(0.5, currentScale * 0.8));
-        }
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        if (!pdfViewer) return;
-
-        switch(e.key) {
-            case 'ArrowLeft':
-                if (currentPage > 1) {
-                    currentPage--;
-                    renderCurrentPage();
-                }
-                break;
-            case 'ArrowRight':
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    renderCurrentPage();
-                }
-                break;
-            case '+':
-            case '=':
-                if (currentScale < 40.0) {
-                    applyZoom(Math.min(40.0, currentScale * 1.25));
-                }
-                break;
-            case '-':
-                if (currentScale > 0.5) {
-                    applyZoom(Math.max(0.5, currentScale * 0.8));
-                }
-                break;
-            case 'Escape':
-                // Go back to file selection
-                resetToFileSelection();
-                break;
-        }
-    });
-
     // Page input handler
-    pageInput.addEventListener('keydown', (e) => {
+    pageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            const targetPage = parseInt(pageInput.value);
-            if (targetPage >= 1 && targetPage <= totalPages) {
-                currentPage = targetPage;
+            const pageNum = parseInt(pageInput.value);
+            if (pdfViewer && pdfViewer.set_page(pageNum)) {
                 renderCurrentPage();
-                pageInput.blur(); // Remove focus from input
             } else {
-                // Reset to current page if invalid
-                pageInput.value = currentPage;
+                pageInput.value = pdfViewer ? pdfViewer.get_current_page() : 1;
             }
-        } else if (e.key === 'Escape') {
-            // Reset and blur on escape
-            pageInput.value = currentPage;
-            pageInput.blur();
         }
     });
 
-    pageInput.addEventListener('blur', () => {
-        // Reset to current page when losing focus
-        pageInput.value = currentPage;
-    });
-
+    // Handle file loading
     async function handleFile(file) {
         if (file.type !== 'application/pdf') {
-            alert('Please select a PDF file');
+            alert('Please select a PDF file.');
             return;
         }
-
+        
         try {
             const arrayBuffer = await file.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
-
-            // Cache the PDF data in localStorage
-            try {
-                const base64Data = btoa(String.fromCharCode(...uint8Array));
-                localStorage.setItem('cachedPDF', base64Data);
-                localStorage.setItem('cachedPDFName', file.name);
-            } catch (e) {
-                console.warn('Failed to cache PDF (too large for localStorage):', e);
-                // Clear any partial data
-                localStorage.removeItem('cachedPDF');
-                localStorage.removeItem('cachedPDFName');
-            }
-
             await loadPDFData(uint8Array);
+        } catch (error) {
+            console.error('Error reading file:', error);
+            alert('Error reading file: ' + error.message);
+        }
+    }
 
+    // Load PDF data
+    async function loadPDFData(uint8Array) {
+        try {
+            pdfViewer = new PdfViewer();
+            await pdfViewer.load_pdf(uint8Array);
+            
+            // Switch to viewer
+            fileSelector.style.display = 'none';
+            viewer.style.display = 'block';
+            
+            renderCurrentPage();
         } catch (error) {
             console.error('Error loading PDF:', error);
             alert('Error loading PDF: ' + error.message);
         }
     }
 
-    // Function to load PDF data (used by both file loading and cache loading)
-    async function loadPDFData(uint8Array) {
-        pdfViewer = new PdfViewer();
-        await pdfViewer.load_pdf(uint8Array);
-
-        totalPages = pdfViewer.get_page_count();
-        currentPage = 1;
-        currentScale = 2.0;
-        imageX = 0;
-        imageY = 0;
-        currentRenderScale = 2.0; // Reset render scale
-
-        fileSelector.style.display = 'none';
-        viewer.style.display = 'flex';
-
-        // Set max attribute for page input
-        pageInput.setAttribute('max', totalPages);
-        pageInput.value = currentPage;
-
-        updateZoomInfo();
-        renderCurrentPage();
-    }
-
-    // Function to load cached PDF on startup
-    async function loadCachedPDF() {
-        try {
-            const cachedData = localStorage.getItem('cachedPDF');
-            const cachedName = localStorage.getItem('cachedPDFName');
-            
-            if (cachedData) {
-                console.log('Loading cached PDF:', cachedName || 'Unknown');
-                
-                // Convert base64 back to Uint8Array
-                const binaryString = atob(cachedData);
-                const uint8Array = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    uint8Array[i] = binaryString.charCodeAt(i);
-                }
-                
-                await loadPDFData(uint8Array);
-            }
-        } catch (error) {
-            console.warn('Failed to load cached PDF:', error);
-            // Clear corrupted cache data
-            localStorage.removeItem('cachedPDF');
-            localStorage.removeItem('cachedPDFName');
-        }
-    }
-
-    // Store the current image for panning without reloading
-    let currentImage = null;
-
-    async function renderCurrentPage(reloadImage = true, renderScale = null) {
+    // Render current page
+    async function renderCurrentPage() {
         if (!pdfViewer) return;
-
+        
         try {
-            if (reloadImage) {
-                // Show loading indicator and start timer
-                showLoading();
-                startRenderTimer();
+            const pngData = pdfViewer.render_current_page();
+            
+            // Create blob and load image
+            const blob = new Blob([pngData], { type: 'image/png' });
+            const imageUrl = URL.createObjectURL(blob);
+            
+            const img = new Image();
+            img.onload = () => {
+                currentImage = img;
+                drawImage();
+                updatePageInfo();
                 
-                // Reset image position when changing pages
-                imageX = 0;
-                imageY = 0;
-
-                // Use provided render scale or calculate optimal one
-                if (renderScale === null) {
-                    // For page changes, use a reasonable default based on current zoom
-                    renderScale = Math.min(Math.max(currentScale, 2.0), 4.0);
-                }
-                
-                currentRenderScale = renderScale;
-
-                // Set the current page in the Rust viewer
-                if (currentPage > 1) {
-                    // Reset to page 1 first, then navigate to desired page
-                    while (pdfViewer.get_current_page() > 1) {
-                        pdfViewer.previous_page();
-                    }
-                    // Navigate to the desired page
-                    for (let i = 1; i < currentPage; i++) {
-                        pdfViewer.next_page();
-                    }
-                } else {
-                    // Reset to page 1
-                    while (pdfViewer.get_current_page() > 1) {
-                        pdfViewer.previous_page();
-                    }
-                }
-
-                console.log(`Rendering page at ${renderScale}x quality`);
-                const imageData = await pdfViewer.render_current_page(renderScale);
-
-                const blob = new Blob([imageData], { type: 'image/png' });
-                const url = URL.createObjectURL(blob);
-
-                // Load the image and store it for later use
-                currentImage = new Image();
-                currentImage.onload = () => {
-                    URL.revokeObjectURL(url);
-                    drawCurrentImage();
-                    updateCursorStyle();
-                    hideLoading(); // Hide loading when image is ready
-                    updateRenderTime(); // Show render time
-                };
-                currentImage.onerror = () => {
-                    hideLoading(); // Hide loading on error too
-                };
-                currentImage.src = url;
-            } else {
-                // Just redraw the current image with the updated position
-                if (currentImage) {
-                    drawCurrentImage();
-                }
-            }
-
-            function drawCurrentImage() {
-                const ctx = canvas.getContext('2d');
-
-                // Calculate the scaled dimensions
-                const scaleFactor = currentScale / currentRenderScale;
-                const scaledWidth = currentImage.width * scaleFactor;
-                const scaledHeight = currentImage.height * scaleFactor;
-
-                // Use viewport dimensions for canvas
-                const canvasWidth = window.innerWidth;
-                const canvasHeight = window.innerHeight;
-
-                // Set canvas size
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-
-                // Clear the canvas
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // Calculate image position (center + user pan offset)
-                const imageCenterX = canvasWidth / 2 + imageX;
-                const imageCenterY = canvasHeight / 2 + imageY;
-                const imageLeft = imageCenterX - scaledWidth / 2;
-                const imageTop = imageCenterY - scaledHeight / 2;
-
-                // Draw the image
-                ctx.drawImage(currentImage, imageLeft, imageTop, scaledWidth, scaledHeight);
-            }
-
-            updatePageInfo();
-            updateNavigationButtons();
-
+                // Clean up the URL
+                URL.revokeObjectURL(imageUrl);
+            };
+            img.onerror = () => {
+                console.error('Error loading rendered image');
+            };
+            img.src = imageUrl;
+            
         } catch (error) {
-            hideLoading(); // Hide loading on error
             console.error('Error rendering page:', error);
             alert('Error rendering page: ' + error.message);
         }
     }
 
+    // Draw image on canvas
+    function drawImage() {
+        if (!currentImage) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Get viewport dimensions (minus some padding for controls)
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight - 120; // Reserve space for controls
+        
+        // Calculate scale to fit image within viewport while maintaining aspect ratio
+        const scaleX = viewportWidth / currentImage.width;
+        const scaleY = viewportHeight / currentImage.height;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond original size
+        
+        // Calculate scaled dimensions
+        const scaledWidth = currentImage.width * scale;
+        const scaledHeight = currentImage.height * scale;
+        
+        // Set canvas size to scaled dimensions
+        canvas.width = scaledWidth;
+        canvas.height = scaledHeight;
+        
+        // Clear and draw scaled image
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(currentImage, 0, 0, scaledWidth, scaledHeight);
+    }
+
+    // Update page information
     function updatePageInfo() {
+        if (!pdfViewer) return;
+        
+        const currentPage = pdfViewer.get_current_page();
+        const totalPages = pdfViewer.get_total_pages();
+        
         pageInfo.textContent = `${currentPage} / ${totalPages}`;
         pageInput.value = currentPage;
-    }
-
-    function updateZoomInfo() {
-        zoomInfo.textContent = `${Math.round(currentScale * 100)}%`;
-    }
-
-    function updateNavigationButtons() {
-        prevButton.disabled = currentPage <= 1;
-        nextButton.disabled = currentPage >= totalPages;
-        zoomOutButton.disabled = currentScale <= 0.5;
-        zoomInButton.disabled = currentScale >= 40.0;
-    }
-
-    function resetToFileSelection() {
-        viewer.style.display = 'none';
-        fileSelector.style.display = 'flex';
-        pdfViewer = null;
-        currentPage = 1;
-        totalPages = 0;
-        currentScale = 2.0;
-        imageX = 0;
-        imageY = 0;
-        isPanning = false;
-        currentImage = null;
-        fileInput.value = '';
-        currentRenderScale = 2.0;
+        pageInput.max = totalPages;
         
-        // Clear any pending high-res render
-        if (highResTimeout) {
-            clearTimeout(highResTimeout);
-            highResTimeout = null;
+        // Update button states
+        prevButton.disabled = currentPage === 1;
+        nextButton.disabled = currentPage === totalPages;
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (!pdfViewer) return;
+        
+        switch (e.key) {
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                e.preventDefault();
+                if (pdfViewer.previous_page()) {
+                    renderCurrentPage();
+                }
+                break;
+            case 'ArrowRight':
+            case 'ArrowDown':
+                e.preventDefault();
+                if (pdfViewer.next_page()) {
+                    renderCurrentPage();
+                }
+                break;
         }
-        
-        // Clear cached PDF when explicitly going back to file selection
-        localStorage.removeItem('cachedPDF');
-        localStorage.removeItem('cachedPDFName');
-    }
+    });
+
+    // Handle window resize to refit PDF
+    window.addEventListener('resize', () => {
+        if (currentImage) {
+            drawImage();
+        }
+    });
+
+    // Setup log window
+    setupLogWindow();
 }
 
+// Setup log window functionality
+function setupLogWindow() {
+    const logContent = document.getElementById('log-content');
+    const clearLogsButton = document.getElementById('clear-logs');
+
+    // Clear logs on page load
+    logContent.innerHTML = '';
+
+    // Clear logs button
+    clearLogsButton.addEventListener('click', () => {
+        logContent.innerHTML = '';
+    });
+
+    // Function to add log entry
+    window.addLogEntry = function(level, message) {
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${level}`;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span>${message}`;
+        
+        logContent.appendChild(logEntry);
+        logContent.scrollTop = logContent.scrollHeight; // Auto-scroll to bottom
+    };
+
+    // Override console methods to also log to our window
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    const originalConsoleLog = console.log;
+    const originalConsoleInfo = console.info;
+
+    console.warn = function(...args) {
+        originalConsoleWarn.apply(console, args);
+        window.addLogEntry('warn', args.join(' '));
+    };
+
+    console.error = function(...args) {
+        originalConsoleError.apply(console, args);
+        window.addLogEntry('error', args.join(' '));
+    };
+
+    console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+        window.addLogEntry('info', args.join(' '));
+    };
+
+    console.info = function(...args) {
+        originalConsoleInfo.apply(console, args);
+        window.addLogEntry('info', args.join(' '));
+    };
+}
+
+// Start the application
 run().catch(console.error); 
