@@ -114,7 +114,7 @@ type Type1FontYoke = Yoke<Type1Yoke<'static>, FontData>;
 
 /// A font blob for type 1 fonts.
 #[derive(Clone)]
-pub struct Type1FontBlob(Arc<Type1FontYoke>);
+pub(crate) struct Type1FontBlob(Arc<Type1FontYoke>);
 
 impl Debug for Type1FontBlob {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -147,7 +147,7 @@ impl Type1FontBlob {
 
 /// A font blob for CFF-based fonts.
 #[derive(Clone)]
-pub struct CffFontBlob(Arc<CffFontYoke>);
+pub(crate) struct CffFontBlob(Arc<CffFontYoke>);
 
 impl Debug for CffFontBlob {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
