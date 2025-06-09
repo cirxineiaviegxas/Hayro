@@ -1,7 +1,7 @@
 use crate::context::Context;
 use crate::device::Device;
 use crate::font::Glyph;
-use crate::interpret::path::{clip_impl, get_paint};
+use crate::interpret::path::get_paint;
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::string;
 use kurbo::Affine;
@@ -64,26 +64,42 @@ pub(crate) fn show_glyph<'a>(ctx: &mut Context<'a>, device: &mut impl Device, gl
         }
         TextRenderingMode::Invisible => {}
         TextRenderingMode::Clip => {
-            clip_impl(ctx, glyph, glyph.glyph_transform());
+            clip_glyph(ctx, glyph, glyph.glyph_transform());
         }
         TextRenderingMode::FillAndClip => {
-            clip_impl(ctx, glyph, glyph.glyph_transform());
+            clip_glyph(ctx, glyph, glyph.glyph_transform());
             device.fill_glyph(glyph, &get_paint(ctx, false));
         }
         TextRenderingMode::StrokeAndClip => {
-            clip_impl(ctx, glyph, glyph.glyph_transform());
+            clip_glyph(ctx, glyph, glyph.glyph_transform());
             device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
         TextRenderingMode::FillAndStrokeAndClip => {
-            clip_impl(ctx, glyph, glyph.glyph_transform());
+            clip_glyph(ctx, glyph, glyph.glyph_transform());
             device.fill_glyph(glyph, &get_paint(ctx, false));
             device.stroke_glyph(glyph, &get_paint(ctx, true));
         }
     }
 }
 
+pub(crate) fn clip_glyph(context: &mut Context, glyph: &Glyph, transform: Affine) {
+    match glyph {
+        Glyph::Outline(o) => {
+            let outline = transform * o.outline();
+            let has_outline = outline.segments().next().is_some();
+
+            if has_outline {
+                context.get_mut().text_state.clip_paths.extend(outline);
+            }
+        }
+        Glyph::Type3(_) => {
+            warn!("text rendering mode clip not implemented for shape glyphs");
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
-pub enum TextRenderingMode {
+pub(crate) enum TextRenderingMode {
     #[default]
     Fill,
     Stroke,

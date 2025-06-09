@@ -38,14 +38,14 @@ pub enum Glyph<'a> {
     /// A glyph defined by an outline.
     Outline(OutlineGlyph),
     /// A glyph defined by PDF drawing instructions.
-    Shape(Type3Glyph<'a>),
+    Type3(Type3Glyph<'a>),
 }
 
 impl Glyph<'_> {
     pub(crate) fn glyph_transform(&self) -> Affine {
         match self {
             Glyph::Outline(o) => o.glyph_transform,
-            Glyph::Shape(s) => s.glyph_transform,
+            Glyph::Type3(s) => s.glyph_transform,
         }
     }
 }
@@ -178,7 +178,7 @@ impl<'a> Font<'a> {
                     glyph_transform,
                 };
 
-                Glyph::Shape(shape_glyph)
+                Glyph::Type3(shape_glyph)
             }
         }
     }

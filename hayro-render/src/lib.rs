@@ -265,7 +265,7 @@ impl Device for Renderer {
                 let outline = o.glyph_transform * o.outline();
                 self.fill_path(&outline, paint);
             }
-            Glyph::Shape(s) => {
+            Glyph::Type3(s) => {
                 s.interpret(self, paint);
             }
         }
@@ -277,7 +277,7 @@ impl Device for Renderer {
                 let outline = o.glyph_transform * o.outline();
                 self.stroke_path(&outline, paint);
             }
-            Glyph::Shape(s) => {
+            Glyph::Type3(s) => {
                 s.interpret(self, paint);
             }
         }

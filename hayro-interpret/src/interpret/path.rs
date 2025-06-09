@@ -45,22 +45,6 @@ pub(crate) fn fill_path_impl(
     };
 }
 
-pub(crate) fn clip_impl(context: &mut Context, glyph: &Glyph, transform: Affine) {
-    match glyph {
-        Glyph::Outline(o) => {
-            let outline = transform * o.outline();
-            let has_outline = outline.segments().next().is_some();
-
-            if has_outline {
-                context.get_mut().text_state.clip_paths.extend(outline);
-            }
-        }
-        Glyph::Shape(_) => {
-            warn!("text rendering mode clip not implemented for shape glyphs");
-        }
-    }
-}
-
 pub(crate) fn stroke_path_impl(
     context: &mut Context,
     device: &mut impl Device,
