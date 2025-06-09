@@ -456,7 +456,7 @@ pub fn interpret<'a, 'b>(
 
                     let bbox = context.bbox().to_path(0.1);
                     let inverted_bbox = context.get().ctm.inverse() * bbox;
-                    fill_path_impl(context, device, Some(&inverted_bbox), None);
+                    fill_path_impl(context, device, Some(&inverted_bbox));
 
                     device.pop_transparency_group();
 

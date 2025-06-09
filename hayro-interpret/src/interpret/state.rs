@@ -7,6 +7,61 @@ use peniko::Fill;
 use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
+pub(crate) struct State<'a> {
+    // Stroke parameters.
+    pub(crate) line_width: f32,
+    pub(crate) line_cap: Cap,
+    pub(crate) line_join: Join,
+    pub(crate) miter_limit: f32,
+    pub(crate) dash_array: SmallVec<[f32; 4]>,
+    pub(crate) dash_offset: f32,
+
+    // Stroke paint parameters.
+    pub(crate) stroke_color: ColorComponents,
+    pub(crate) stroke_pattern: Option<Pattern<'a>>,
+    pub(crate) stroke_cs: ColorSpace,
+    pub(crate) stroke_alpha: f32,
+
+    // Non-stroke paint parameters.
+    pub(crate) non_stroke_color: ColorComponents,
+    pub(crate) non_stroke_pattern: Option<Pattern<'a>>,
+    pub(crate) none_stroke_cs: ColorSpace,
+    pub(crate) non_stroke_alpha: f32,
+
+    // Text state.
+    pub(crate) text_state: TextState<'a>,
+
+    // CTM.
+    pub(crate) ctm: Affine,
+
+    // Miscellaneous.
+    // Strictly speaking not part of the graphics state, but we keep it there for
+    // consistency.
+    pub(crate) fill_rule: Fill,
+    pub(crate) n_clips: u32,
+}
+
+impl<'a> State<'a> {
+    pub(crate) fn stroke_data(&self) -> PaintData<'a> {
+        PaintData {
+            alpha: self.stroke_alpha,
+            color: self.stroke_color.clone(),
+            color_space: self.stroke_cs.clone(),
+            pattern: self.stroke_pattern.clone(),
+        }
+    }
+
+    pub(crate) fn non_stroke_data(&self) -> PaintData<'a> {
+        PaintData {
+            alpha: self.non_stroke_alpha,
+            color: self.non_stroke_color.clone(),
+            color_space: self.none_stroke_cs.clone(),
+            pattern: self.non_stroke_pattern.clone(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct TextState<'a> {
     pub(crate) char_space: f32,
     pub(crate) word_space: f32,
@@ -121,61 +176,6 @@ impl Default for TextState<'_> {
             text_line_matrix: Affine::IDENTITY,
             rise: 0.0,
             clip_paths: BezPath::default(),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct State<'a> {
-    // Stroke parameters.
-    pub(crate) line_width: f32,
-    pub(crate) line_cap: Cap,
-    pub(crate) line_join: Join,
-    pub(crate) miter_limit: f32,
-    pub(crate) dash_array: SmallVec<[f32; 4]>,
-    pub(crate) dash_offset: f32,
-
-    // Stroke paint parameters.
-    pub(crate) stroke_color: ColorComponents,
-    pub(crate) stroke_pattern: Option<Pattern<'a>>,
-    pub(crate) stroke_cs: ColorSpace,
-    pub(crate) stroke_alpha: f32,
-
-    // Non-stroke paint parameters.
-    pub(crate) non_stroke_color: ColorComponents,
-    pub(crate) non_stroke_pattern: Option<Pattern<'a>>,
-    pub(crate) none_stroke_cs: ColorSpace,
-    pub(crate) non_stroke_alpha: f32,
-
-    // Text state.
-    pub(crate) text_state: TextState<'a>,
-
-    // CTM.
-    pub(crate) ctm: Affine,
-
-    // Miscellaneous.
-    // Strictly speaking not part of the graphics state, but we keep it there for
-    // consistency.
-    pub(crate) fill_rule: Fill,
-    pub(crate) n_clips: u32,
-}
-
-impl<'a> State<'a> {
-    pub(crate) fn stroke_data(&self) -> PaintData<'a> {
-        PaintData {
-            alpha: self.stroke_alpha,
-            color: self.stroke_color.clone(),
-            color_space: self.stroke_cs.clone(),
-            pattern: self.stroke_pattern.clone(),
-        }
-    }
-
-    pub(crate) fn non_stroke_data(&self) -> PaintData<'a> {
-        PaintData {
-            alpha: self.non_stroke_alpha,
-            color: self.non_stroke_color.clone(),
-            color_space: self.none_stroke_cs.clone(),
-            pattern: self.non_stroke_pattern.clone(),
         }
     }
 }

@@ -8,20 +8,20 @@ use kurbo::{Affine, BezPath};
 use log::warn;
 
 pub(crate) fn fill_path(context: &mut Context, device: &mut impl Device) {
-    fill_path_impl(context, device, None, None);
+    fill_path_impl(context, device, None);
 
     context.path_mut().truncate(0);
 }
 
 pub(crate) fn stroke_path(context: &mut Context, device: &mut impl Device) {
-    stroke_path_impl(context, device, None, None);
+    stroke_path_impl(context, device, None);
 
     context.path_mut().truncate(0);
 }
 
 pub(crate) fn fill_stroke_path(context: &mut Context, device: &mut impl Device) {
-    fill_path_impl(context, device, None, None);
-    stroke_path_impl(context, device, None, None);
+    fill_path_impl(context, device, None);
+    stroke_path_impl(context, device, None);
 
     context.path_mut().truncate(0);
 }
@@ -29,11 +29,9 @@ pub(crate) fn fill_stroke_path(context: &mut Context, device: &mut impl Device) 
 pub(crate) fn fill_path_impl(
     context: &mut Context,
     device: &mut impl Device,
-    // TODO: DOn't take option here?
     path: Option<&BezPath>,
-    transform: Option<Affine>,
 ) {
-    let base_transform = transform.unwrap_or(context.get().ctm);
+    let base_transform = context.get().ctm;
     device.set_transform(base_transform);
 
     let paint = get_paint(context, false);
@@ -49,9 +47,8 @@ pub(crate) fn stroke_path_impl(
     context: &mut Context,
     device: &mut impl Device,
     path: Option<&BezPath>,
-    transform: Option<Affine>,
 ) {
-    let base_transform = transform.unwrap_or(context.get().ctm);
+    let base_transform = context.get().ctm;
     device.set_transform(base_transform);
 
     device.set_stroke_properties(&context.stroke_props());
