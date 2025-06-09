@@ -9,7 +9,7 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, Skippable};
 use crate::util::OptionLog;
 use crate::xref::XRef;
-use log::warn;
+use log::{info, warn};
 use std::fmt::{Debug, Formatter};
 
 /// A stream of arbitrary data.
@@ -186,7 +186,7 @@ fn parse_fallback<'a>(r: &mut Reader<'a>, dict: &Dict<'a>) -> Option<Stream<'a>>
 
             // Try decoding the stream to see if it is valid.
             if stream.decoded().is_some() {
-                warn!("managed to reconstruct the stream");
+                info!("managed to reconstruct the stream");
 
                 // Seems like we found the end!
                 return Some(stream);
