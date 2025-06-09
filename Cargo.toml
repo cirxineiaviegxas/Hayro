@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "hayro-compare", "hayro-interpret", "hayro-render","hayro-syntax", "hayro-demo"]
+members = ["hayro-interpret", "hayro-render","hayro-syntax", "hayro-demo"]
 
 [workspace.package]
 authors = ["Laurenz Stampfl <laurenz.stampfl@gmail.com>"]
