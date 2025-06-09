@@ -23,26 +23,14 @@ pub mod flate {
         let mut decoder = ZlibDecoder::new(data);
         let mut result = Vec::new();
 
-        decoder.read_to_end(&mut result).ok();
-
-        if !result.is_empty() {
-            Some(result)
-        } else {
-            None
-        }
+        decoder.read_to_end(&mut result).ok().map(|_| result)
     }
 
     fn deflate_stream(data: &[u8]) -> Option<Vec<u8>> {
         let mut decoder = DeflateDecoder::new(data);
         let mut result = Vec::new();
 
-        decoder.read_to_end(&mut result).ok();
-
-        if !result.is_empty() {
-            Some(result)
-        } else {
-            None
-        }
+        decoder.read_to_end(&mut result).ok().map(|_| result)
     }
 }
 
