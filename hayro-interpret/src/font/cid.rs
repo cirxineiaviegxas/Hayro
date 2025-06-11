@@ -10,6 +10,7 @@ use log::warn;
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -29,7 +30,7 @@ impl Type0Font {
             .get::<Name>(ENCODING)
             .warn_none("CID fonts with custom encoding are currently unsupported")?;
 
-        let horizontal = encoding == IDENTITY_H;
+        let horizontal = encoding.deref() == IDENTITY_H;
 
         let descendant_font = dict.get::<Array>(DESCENDANT_FONTS)?.iter::<Dict>().next()?;
         let font_descriptor = descendant_font.get::<Dict>(FONT_DESC)?;
@@ -145,7 +146,7 @@ impl FontType {
         } else if let Some(stream) = descriptor.get::<Stream>(FONT_FILE3) {
             let decoded = stream.decoded()?;
 
-            return match stream.dict().get::<Name>(SUBTYPE)? {
+            return match stream.dict().get::<Name>(SUBTYPE)?.deref() {
                 CID_FONT_TYPE0C => {
                     let data = Arc::new(decoded.to_vec());
 
@@ -181,7 +182,7 @@ enum CidToGIdMap {
 impl CidToGIdMap {
     fn new(dict: &Dict) -> Option<Self> {
         if let Some(name) = dict.get::<Name>(CID_TO_GID_MAP) {
-            if name == IDENTITY {
+            if name.deref() == IDENTITY {
                 Some(CidToGIdMap::Identity)
             } else {
                 None

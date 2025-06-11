@@ -18,6 +18,7 @@ use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use peniko::Fill;
 use smallvec::SmallVec;
+use std::ops::Deref;
 
 pub enum XObject<'a> {
     FormXObject(FormXObject<'a>),
@@ -27,7 +28,7 @@ pub enum XObject<'a> {
 impl<'a> XObject<'a> {
     pub fn new(stream: &Stream<'a>) -> Option<Self> {
         let dict = stream.dict();
-        match dict.get::<Name>(SUBTYPE).unwrap() {
+        match dict.get::<Name>(SUBTYPE)?.deref() {
             IMAGE => Some(Self::ImageXObject(ImageXObject::new(stream, |_| None)?)),
             FORM => Some(Self::FormXObject(FormXObject::new(stream)?)),
             _ => unimplemented!(),

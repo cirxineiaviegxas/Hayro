@@ -908,5 +908,9 @@
     "id": "pdf_render_issue14",
     "file": "pdfs/pdf_render_issue14.link",
     "link": true
+  },
+  {
+    "id": "issue11",
+    "file": "pdfs/issue11.pdf"
   }
 ]

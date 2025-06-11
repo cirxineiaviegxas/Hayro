@@ -9,6 +9,7 @@ use crate::reader::{Readable, Reader, Skippable};
 use crate::xref::XRef;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
+use std::ops::Deref;
 use std::sync::Arc;
 
 /// A dictionary, which is a key-value map, keys being names and values being any direct PDF
@@ -52,8 +53,10 @@ impl<'a> Dict<'a> {
     }
 
     /// Checks whether the dictionary contains an entry with a specific key.
-    pub fn contains_key<'b>(&self, key: impl AsRef<Name<'b>>) -> bool {
-        self.0.offsets.contains_key(key.as_ref())
+    pub fn contains_key<'b>(&self, key: impl Deref<Target = [u8]>) -> bool {
+        self.0
+            .offsets
+            .contains_key(&Name::from_unescaped(key.deref()))
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
@@ -61,7 +64,7 @@ impl<'a> Dict<'a> {
         private_bounds,
         reason = "users shouldn't be able to implement `ObjectLike` for custom objects."
     )]
-    pub fn get<'b, T>(&self, key: impl AsRef<Name<'b>>) -> Option<T>
+    pub fn get<'b, T>(&self, key: impl Deref<Target = [u8]>) -> Option<T>
     where
         T: ObjectLike<'a>,
     {
@@ -69,8 +72,8 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
-    pub fn get_ref<'b>(&self, key: impl AsRef<Name<'b>>) -> Option<ObjRef> {
-        let offset = *self.0.offsets.get(key.as_ref())?;
+    pub fn get_ref<'b>(&self, key: impl Deref<Target = [u8]>) -> Option<ObjRef> {
+        let offset = *self.0.offsets.get(&Name::from_unescaped(key.as_ref()))?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<ObjRef>(&self.0.xref)
     }
@@ -82,11 +85,11 @@ impl<'a> Dict<'a> {
 
     /// Return the raw entry for a specific key.
     #[allow(private_bounds)]
-    pub fn get_raw<T>(&self, key: &Name) -> Option<MaybeRef<T>>
+    pub fn get_raw<T>(&self, key: impl Deref<Target = [u8]>) -> Option<MaybeRef<T>>
     where
         T: Readable<'a>,
     {
-        let offset = *self.0.offsets.get(key)?;
+        let offset = *self.0.offsets.get(&Name::from_unescaped(key.as_ref()))?;
 
         Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
     }
@@ -227,11 +230,9 @@ impl<'a> Readable<'a> for InlineImageDict<'a> {
 /// A collection of possible keys in a PDF dictionary. Copied and adapted from PDFBox.
 #[allow(missing_docs)]
 pub mod keys {
-    use crate::object::Name;
-
     macro_rules! key {
         ($i:ident, $e:expr) => {
-            pub const $i: Name<'static> = Name::from_unescaped($e);
+            pub const $i: &'static [u8] = $e;
         };
     }
 
@@ -909,7 +910,7 @@ mod tests {
         let dict = dict_impl(dict_data).unwrap();
 
         assert_eq!(dict.len(), 1);
-        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
+        assert!(dict.get::<Number>(Name::new(b"Hi")).is_some());
     }
 
     #[test]
@@ -918,8 +919,8 @@ mod tests {
         let dict = dict_impl(dict_data).unwrap();
 
         assert_eq!(dict.len(), 2);
-        assert!(dict.get::<Number>(&Name::new(b"Hi")).is_some());
-        assert!(dict.get::<bool>(&Name::new(b"Second")).is_some());
+        assert!(dict.get::<Number>(Name::new(b"Hi")).is_some());
+        assert!(dict.get::<bool>(Name::new(b"Second")).is_some());
     }
 
     #[test]
@@ -948,15 +949,15 @@ mod tests {
             .read_with_xref::<Dict>(&XRef::dummy())
             .unwrap();
         assert_eq!(dict.len(), 6);
-        assert!(dict.get::<Name>(&Name::new(b"Type")).is_some());
-        assert!(dict.get::<Name>(&Name::new(b"Subtype")).is_some());
-        assert!(dict.get::<Number>(&Name::new(b"Version")).is_some());
-        assert!(dict.get::<i32>(&Name::new(b"IntegerItem")).is_some());
+        assert!(dict.get::<Name>(Name::new(b"Type")).is_some());
+        assert!(dict.get::<Name>(Name::new(b"Subtype")).is_some());
+        assert!(dict.get::<Number>(Name::new(b"Version")).is_some());
+        assert!(dict.get::<i32>(Name::new(b"IntegerItem")).is_some());
         assert!(
-            dict.get::<string::String>(&Name::new(b"StringItem"))
+            dict.get::<string::String>(Name::new(b"StringItem"))
                 .is_some()
         );
-        assert!(dict.get::<Dict>(&Name::new(b"Subdictionary")).is_some());
+        assert!(dict.get::<Dict>(Name::new(b"Subdictionary")).is_some());
     }
 
     #[test]

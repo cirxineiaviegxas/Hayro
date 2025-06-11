@@ -14,6 +14,7 @@ use crate::object::dict::keys::*;
 use crate::object::name::Name;
 use crate::util::OptionLog;
 use log::warn;
+use std::ops::Deref;
 
 /// A filter.
 #[derive(Debug, Copy, Clone)]
@@ -86,8 +87,8 @@ impl Filter {
         }
     }
 
-    pub(crate) fn from_name(name: &Name) -> Option<Self> {
-        match *name {
+    pub(crate) fn from_name(name: Name) -> Option<Self> {
+        match name.deref() {
             ASCII_HEX_DECODE | ASCII_HEX_DECODE_ABBREVIATION => Some(Filter::AsciiHexDecode),
             ASCII85_DECODE | ASCII85_DECODE_ABBREVIATION => Some(Filter::Ascii85Decode),
             LZW_DECODE | LZW_DECODE_ABBREVIATION => Some(Filter::LzwDecode),

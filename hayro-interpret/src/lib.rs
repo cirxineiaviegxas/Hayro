@@ -207,7 +207,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::SetGraphicsState(gs) => {
                 let gs = resources
-                    .get_ext_g_state::<Dict>(&gs.0, Box::new(|_| None), Box::new(Some))
+                    .get_ext_g_state::<Dict>(gs.0.clone(), Box::new(|_| None), Box::new(Some))
                     .warn_none(&format!("failed to get extgstate {}", gs.0.as_str()))
                     .unwrap();
 
@@ -295,7 +295,7 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().non_stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 context.get_mut().non_stroke_pattern = n.1.and_then(|name| {
                     resources.get_pattern(
-                        &name,
+                        name,
                         Box::new(|_| None),
                         Box::new(|d| Pattern::new(d, context, resources)),
                     )
@@ -305,7 +305,7 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().stroke_color = n.0.into_iter().map(|n| n.as_f32()).collect();
                 context.get_mut().stroke_pattern = n.1.and_then(|name| {
                     resources.get_pattern(
-                        &name,
+                        name,
                         Box::new(|_| None),
                         Box::new(|d| Pattern::new(d, context, resources)),
                     )
@@ -419,7 +419,7 @@ pub fn interpret<'a, 'b>(
             TypedOperation::ShapeGlyph(_) => {}
             TypedOperation::XObject(x) => {
                 if let Some(x_object) =
-                    resources.get_x_object(&x.0, Box::new(|_| None), Box::new(|s| XObject::new(&s)))
+                    resources.get_x_object(x.0, Box::new(|_| None), Box::new(|s| XObject::new(&s)))
                 {
                     draw_xobject(&x_object, resources, context, device);
                 }
@@ -436,7 +436,7 @@ pub fn interpret<'a, 'b>(
             }
             TypedOperation::Shading(s) => {
                 if let Some(sp) = resources
-                    .get_shading(&s.0, Box::new(|_| None), Box::new(Some))
+                    .get_shading(s.0, Box::new(|_| None), Box::new(Some))
                     .and_then(|o| dict_or_stream(&o))
                     .and_then(|s| Shading::new(&s.0, s.1.as_ref()))
                     .map(|s| {
@@ -496,14 +496,14 @@ fn restore_state(ctx: &mut Context, device: &mut impl Device) {
 
 fn handle_gs(dict: &Dict, context: &mut Context) {
     for key in dict.keys() {
-        handle_gs_single(dict, &key, context).warn_none(&format!(
+        handle_gs_single(dict, key.clone(), context).warn_none(&format!(
             "invalid value in graphics state for {}",
             key.as_str()
         ));
     }
 }
 
-fn handle_gs_single(dict: &Dict, key: &Name, context: &mut Context) -> Option<()> {
+fn handle_gs_single(dict: &Dict, key: Name, context: &mut Context) -> Option<()> {
     // TODO Can we use constants here somehow?
     match key.as_str() {
         "LW" => context.get_mut().line_width = dict.get::<f32>(key)?,

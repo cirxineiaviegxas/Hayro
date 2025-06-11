@@ -161,7 +161,7 @@ impl<'a> Context<'a> {
 
     pub(crate) fn get_font(&mut self, resources: &Resources<'a>, name: Name) -> Option<Font<'a>> {
         resources.get_font(
-            &name,
+            name,
             Box::new(|ref_| {
                 self.font_cache
                     .entry(ref_)
@@ -183,7 +183,7 @@ impl<'a> Context<'a> {
     ) -> Option<ColorSpace> {
         resources
             .get_color_space(
-                &name,
+                name,
                 Box::new(|ref_| {
                     self.object_cache.get_or_insert_with(ref_.into(), || {
                         resources

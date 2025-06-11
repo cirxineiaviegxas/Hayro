@@ -14,6 +14,7 @@ use peniko::color::{AlphaColor, Srgb};
 use qcms::Transform;
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
+use std::ops::Deref;
 use std::sync::Arc;
 
 /// A storage for the components of colors.
@@ -46,7 +47,7 @@ impl ColorSpaceType {
             let mut iter = color_array.clone().flex_iter();
             let name = iter.next::<Name>()?;
 
-            match name {
+            match name.deref() {
                 ICC_BASED => {
                     let icc_stream = iter.next::<Stream>()?;
                     let dict = icc_stream.dict();
@@ -102,7 +103,7 @@ impl ColorSpaceType {
     }
 
     fn new_from_name(name: Name) -> Option<Self> {
-        match name {
+        match name.deref() {
             DEVICE_RGB | RGB => Some(ColorSpaceType::DeviceRgb),
             DEVICE_GRAY | G => Some(ColorSpaceType::DeviceGray),
             DEVICE_CMYK | CMYK => Some(ColorSpaceType::DeviceCmyk),

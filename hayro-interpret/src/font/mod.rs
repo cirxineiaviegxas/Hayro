@@ -89,7 +89,7 @@ pub(crate) struct Font<'a>(FontType<'a>);
 
 impl<'a> Font<'a> {
     pub(crate) fn new(dict: &Dict<'a>) -> Option<Self> {
-        let f_type = match dict.get::<Name>(SUBTYPE)? {
+        let f_type = match dict.get::<Name>(SUBTYPE)?.deref() {
             TYPE1 | MM_TYPE1 => FontType::Type1(Arc::new(Type1Font::new(dict)?)),
             TRUE_TYPE => TrueTypeFont::new(dict)
                 .map(Arc::new)

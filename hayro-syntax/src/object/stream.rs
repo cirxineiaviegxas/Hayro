@@ -45,7 +45,7 @@ impl<'a> Stream<'a> {
             .dict
             .get::<Name>(F)
             .or_else(|| self.dict.get::<Name>(FILTER))
-            .and_then(|n| Filter::from_name(&n))
+            .and_then(|n| Filter::from_name(n))
         {
             let params = self
                 .dict
@@ -60,7 +60,7 @@ impl<'a> Stream<'a> {
         {
             let filters = filters
                 .iter::<Name>()
-                .map(|n| Filter::from_name(&n))
+                .map(|n| Filter::from_name(n))
                 .collect::<Option<Vec<_>>>()?;
             let params = self
                 .dict

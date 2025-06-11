@@ -12,6 +12,7 @@ use crate::object::{Object, ObjectLike};
 use crate::xref::XRef;
 use log::warn;
 use std::cell::OnceCell;
+use std::ops::Deref;
 
 /// A structure holding the pages of a PDF document.
 pub struct Pages<'a> {
@@ -84,7 +85,7 @@ fn resolve_pages<'a>(
     let kids = pages_dict.get::<Array<'a>>(KIDS)?;
 
     for dict in kids.iter::<Dict>() {
-        match dict.get::<Name>(TYPE)? {
+        match dict.get::<Name>(TYPE)?.deref() {
             PAGES => resolve_pages(dict, entries, ctx.clone(), resources.clone())?,
             PAGE => entries.push(Page::new(dict, &ctx, resources.clone())),
             _ => return None,
@@ -282,14 +283,14 @@ impl<'a> Resources<'a> {
 
     fn get_resource<T: ObjectLike<'a>, U>(
         &self,
-        name: &Name,
+        name: Name,
         dict: &Dict<'a>,
         mut cache: impl FnMut(ObjRef) -> Option<U>,
         mut resolve: impl FnMut(T) -> Option<U>,
     ) -> Option<U> {
         // TODO: Cache non-ref resources as well
 
-        match dict.get_raw::<T>(name)? {
+        match dict.get_raw::<T>(name.deref())? {
             MaybeRef::Ref(ref_) => {
                 cache(ref_).or_else(|| self.xref.get::<T>(ref_.into()).and_then(|t| resolve(t)))
             }
@@ -302,11 +303,11 @@ impl<'a> Resources<'a> {
     /// Get an external graphics state by name.
     pub fn get_ext_g_state<U>(
         &self,
-        name: &Name,
+        name: Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
         mut resolve: Box<dyn FnMut(Dict<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Dict, U>(name, &self.ext_g_states, &mut cache, &mut resolve)
+        self.get_resource::<Dict, U>(name.clone(), &self.ext_g_states, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()
@@ -317,11 +318,11 @@ impl<'a> Resources<'a> {
     /// Get a color space by name.
     pub fn get_color_space<U>(
         &self,
-        name: &Name,
+        name: Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
         mut resolve: Box<dyn FnMut(Object<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Object, U>(name, &self.color_spaces, &mut cache, &mut resolve)
+        self.get_resource::<Object, U>(name.clone(), &self.color_spaces, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()
@@ -332,11 +333,11 @@ impl<'a> Resources<'a> {
     /// Get a font by name.
     pub fn get_font<U>(
         &self,
-        name: &Name,
+        name: Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
         mut resolve: Box<dyn FnMut(Dict<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Dict, U>(name, &self.fonts, &mut cache, &mut resolve)
+        self.get_resource::<Dict, U>(name.clone(), &self.fonts, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()
@@ -347,11 +348,11 @@ impl<'a> Resources<'a> {
     /// Get a pattern by name.
     pub fn get_pattern<U>(
         &self,
-        name: &Name,
+        name: Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
         mut resolve: Box<dyn FnMut(Object<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Object, U>(name, &self.patterns, &mut cache, &mut resolve)
+        self.get_resource::<Object, U>(name.clone(), &self.patterns, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()
@@ -362,11 +363,11 @@ impl<'a> Resources<'a> {
     /// Get an x object by name.
     pub fn get_x_object<U>(
         &self,
-        name: &Name,
+        name: Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
         mut resolve: Box<dyn FnMut(Stream<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Stream, U>(name, &self.x_objects, &mut cache, &mut resolve)
+        self.get_resource::<Stream, U>(name.clone(), &self.x_objects, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()
@@ -377,11 +378,11 @@ impl<'a> Resources<'a> {
     /// Get a shading by name.
     pub fn get_shading<U>(
         &self,
-        name: &Name,
+        name: Name,
         mut cache: Box<dyn FnMut(ObjRef) -> Option<U> + '_>,
         mut resolve: Box<dyn FnMut(Object<'a>) -> Option<U> + '_>,
     ) -> Option<U> {
-        self.get_resource::<Object, U>(name, &self.shadings, &mut cache, &mut resolve)
+        self.get_resource::<Object, U>(name.clone(), &self.shadings, &mut cache, &mut resolve)
             .or_else(|| {
                 self.parent
                     .as_ref()

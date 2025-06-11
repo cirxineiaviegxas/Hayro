@@ -217,6 +217,7 @@ use crate::run_test;
 #[test] fn pdftc_900k_0974_page_1() { run_test("pdftc_900k_0974_page_1", "pdfs/pdftc_900k_0974_page_1.pdf", None); }
 #[test] fn pdftc_900k_1016_page_3() { run_test("pdftc_900k_1016_page_3", "pdfs/pdftc_900k_1016_page_3.pdf", None); }
 #[test] fn pdf_render_issue14() { run_test("pdf_render_issue14", "downloads/pdf_render_issue14.pdf", None); }
+#[test] fn issue11() { run_test("issue11", "pdfs/issue11.pdf", None); }
 #[test] fn pdfjs_20130226130259() { run_test("pdfjs_20130226130259", "downloads/pdfjs/20130226130259.pdf", Some("0..=0")); }
 #[test] fn pdfjs_IdentityToUnicodeMap_charCodeOf() { run_test("pdfjs_IdentityToUnicodeMap_charCodeOf", "pdfs/pdfjs/IdentityToUnicodeMap_charCodeOf.pdf", None); }
 #[test] fn pdfjs_IndexedCS_negative_and_high() { run_test("pdfjs_IndexedCS_negative_and_high", "pdfs/pdfjs/IndexedCS_negative_and_high.pdf", None); }

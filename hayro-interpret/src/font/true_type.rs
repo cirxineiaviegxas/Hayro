@@ -16,6 +16,7 @@ use skrifa::raw::tables::cmap::PlatformId;
 use skrifa::{GlyphId, GlyphId16};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -231,7 +232,7 @@ pub(crate) fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
 pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
     fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
         match dict.get::<Name>(name.clone()) {
-            Some(n) => match n {
+            Some(n) => match n.deref() {
                 WIN_ANSI_ENCODING => Encoding::WinAnsi,
                 MAC_ROMAN_ENCODING => Encoding::MacRoman,
                 MAC_EXPERT_ENCODING => Encoding::MacExpert,
@@ -263,8 +264,11 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
             }
         }
 
-        (get_encoding_base(&encoding_dict, BASE_ENCODING), map)
+        (
+            get_encoding_base(&encoding_dict, Name::new(BASE_ENCODING)),
+            map,
+        )
     } else {
-        (get_encoding_base(dict, ENCODING), HashMap::new())
+        (get_encoding_base(dict, Name::new(ENCODING)), HashMap::new())
     }
 }
