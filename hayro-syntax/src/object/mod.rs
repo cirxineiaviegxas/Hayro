@@ -6,7 +6,7 @@ use crate::object::name::{Name, skip_name_like};
 use crate::object::null::Null;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 use std::fmt::Debug;
 
@@ -134,19 +134,19 @@ impl<'a> Object<'a> {
 impl<'a> ObjectLike<'a> for Object<'a> {}
 
 impl Skippable for Object<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
         match r.peek_byte()? {
-            b'n' => Null::skip::<PLAIN>(r),
-            b't' | b'f' => bool::skip::<PLAIN>(r),
-            b'/' => Name::skip::<PLAIN>(r),
+            b'n' => Null::skip(r, is_content_stream),
+            b't' | b'f' => bool::skip(r, is_content_stream),
+            b'/' => Name::skip(r, is_content_stream),
             b'<' => match r.peek_bytes(2)? {
                 // A stream can never appear in a dict/array, so it should never be skipped.
-                b"<<" => Dict::skip::<PLAIN>(r),
-                _ => string::String::skip::<PLAIN>(r),
+                b"<<" => Dict::skip(r, is_content_stream),
+                _ => string::String::skip(r, is_content_stream),
             },
-            b'(' => string::String::skip::<PLAIN>(r),
-            b'.' | b'+' | b'-' | b'0'..=b'9' => Number::skip::<PLAIN>(r),
-            b'[' => Array::skip::<PLAIN>(r),
+            b'(' => string::String::skip(r, is_content_stream),
+            b'.' | b'+' | b'-' | b'0'..=b'9' => Number::skip(r, is_content_stream),
+            b'[' => Array::skip(r, is_content_stream),
             // See test case operator-in-TJ-array-0: Be lenient and skip content operators in
             // array
             _ => skip_name_like(r, false),
@@ -155,30 +155,30 @@ impl Skippable for Object<'_> {
 }
 
 impl<'a> Readable<'a> for Object<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
         let object = match r.peek_byte()? {
-            b'n' => Self::Null(Null::read::<PLAIN>(r, xref)?),
-            b't' | b'f' => Self::Boolean(bool::read::<PLAIN>(r, xref)?),
-            b'/' => Self::Name(Name::read::<PLAIN>(r, xref)?),
+            b'n' => Self::Null(Null::read(r, ctx)?),
+            b't' | b'f' => Self::Boolean(bool::read(r, ctx)?),
+            b'/' => Self::Name(Name::read(r, ctx)?),
             b'<' => match r.peek_bytes(2)? {
                 b"<<" => {
                     let mut cloned = r.clone();
-                    let dict = Dict::read::<PLAIN>(&mut cloned, xref)?;
+                    let dict = Dict::read(&mut cloned, ctx)?;
                     cloned.skip_white_spaces_and_comments();
 
                     if cloned.forward_tag(b"stream").is_some() {
-                        Object::Stream(Stream::read::<PLAIN>(r, xref)?)
+                        Object::Stream(Stream::read(r, ctx)?)
                     } else {
                         r.jump(cloned.offset());
 
                         Object::Dict(dict)
                     }
                 }
-                _ => Self::String(string::String::read::<PLAIN>(r, xref)?),
+                _ => Self::String(string::String::read(r, ctx)?),
             },
-            b'(' => Self::String(string::String::read::<PLAIN>(r, xref)?),
-            b'.' | b'+' | b'-' | b'0'..=b'9' => Self::Number(Number::read::<PLAIN>(r, xref)?),
-            b'[' => Self::Array(Array::read::<PLAIN>(r, xref)?),
+            b'(' => Self::String(string::String::read(r, ctx)?),
+            b'.' | b'+' | b'-' | b'0'..=b'9' => Self::Number(Number::read(r, ctx)?),
+            b'[' => Self::Array(Array::read(r, ctx)?),
             // See the comment in `skip`.
             _ => {
                 skip_name_like(r, false)?;
@@ -205,10 +205,10 @@ impl ObjectIdentifier {
 }
 
 impl Readable<'_> for ObjectIdentifier {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
-        let obj_num = r.read_without_xref::<i32>()?;
+    fn read(r: &mut Reader<'_>, _: ReaderContext) -> Option<Self> {
+        let obj_num = r.read_without_context::<i32>()?;
         r.skip_white_spaces_and_comments();
-        let gen_num = r.read_without_xref::<i32>()?;
+        let gen_num = r.read_without_context::<i32>()?;
         r.skip_white_spaces_and_comments();
         r.forward_tag(b"obj")?;
 
@@ -217,10 +217,10 @@ impl Readable<'_> for ObjectIdentifier {
 }
 
 impl Skippable for ObjectIdentifier {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
-        r.skip_plain::<i32>()?;
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
+        r.skip_in_content_stream::<i32>()?;
         r.skip_white_spaces_and_comments();
-        r.skip_plain::<i32>()?;
+        r.skip_in_content_stream::<i32>()?;
         r.skip_white_spaces_and_comments();
         r.forward_tag(b"obj")?;
 
@@ -266,12 +266,12 @@ mod macros {
 #[cfg(test)]
 mod tests {
     use crate::object::Object;
-    use crate::reader::Reader;
+    use crate::reader::{Reader, ReaderContext};
     use crate::xref::XRef;
 
     fn object_impl(data: &[u8]) -> Option<Object> {
         let mut r = Reader::new(data);
-        r.read_with_xref::<Object>(&XRef::dummy())
+        r.read_with_context::<Object>(ReaderContext::dummy())
     }
 
     #[test]

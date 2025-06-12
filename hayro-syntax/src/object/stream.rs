@@ -6,7 +6,7 @@ use crate::object::dict::Dict;
 use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
 use crate::object::name::Name;
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::util::OptionLog;
 use crate::xref::XRef;
 use log::{info, warn};
@@ -110,7 +110,7 @@ impl Debug for Stream<'_> {
 }
 
 impl Skippable for Stream<'_> {
-    fn skip<const PLAIN: bool>(_: &mut Reader<'_>) -> Option<()> {
+    fn skip(_: &mut Reader<'_>, _: bool) -> Option<()> {
         // A stream can never appear in a dict/array, so it should never be skipped.
         warn!("attempted to skip a stream object");
 
@@ -119,8 +119,8 @@ impl Skippable for Stream<'_> {
 }
 
 impl<'a> Readable<'a> for Stream<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
-        let dict = r.read_with_xref::<Dict>(xref)?;
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
+        let dict = r.read_with_context::<Dict>(ctx)?;
 
         if dict.contains_key(F) {
             warn!("encountered stream referencing external file, which is unsupported");
@@ -213,14 +213,16 @@ impl<'a> ObjectLike<'a> for Stream<'a> {}
 #[cfg(test)]
 mod tests {
     use crate::object::stream::Stream;
-    use crate::reader::Reader;
+    use crate::reader::{Reader, ReaderContext};
     use crate::xref::XRef;
 
     #[test]
     fn stream() {
         let data = b"<< /Length 10 >> stream\nabcdefghij\nendstream";
         let mut r = Reader::new(data);
-        let stream = r.read_with_xref::<Stream>(&XRef::dummy()).unwrap();
+        let stream = r
+            .read_with_context::<Stream>(ReaderContext::dummy())
+            .unwrap();
 
         assert_eq!(stream.data, b"abcdefghij");
     }

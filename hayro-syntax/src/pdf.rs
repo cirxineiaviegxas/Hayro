@@ -3,6 +3,7 @@
 use crate::PdfData;
 use crate::document::page::{Page, Pages};
 use crate::object::Object;
+use crate::reader::ReaderContext;
 use crate::xref::{XRef, fallback, root_xref};
 
 /// A PDF file.
@@ -32,8 +33,9 @@ impl Pdf {
 
     /// Return the pages of the PDF file.
     pub fn pages(&self) -> Option<Vec<Page>> {
+        let ctx = ReaderContext::new(&self.xref, false);
         self.xref
             .get(self.xref.trailer_data().pages_ref)
-            .and_then(|p| Pages::new(p, &self.xref).map(|p| p.pages))
+            .and_then(|p| Pages::new(p, ctx).map(|p| p.pages))
     }
 }

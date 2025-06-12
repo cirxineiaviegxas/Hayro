@@ -2,11 +2,11 @@
 
 use crate::object::Object;
 use crate::object::macros::object;
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 
 impl Skippable for bool {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
         match r.peek_byte()? {
             b't' => r.forward_tag(b"true"),
             b'f' => r.forward_tag(b"false"),
@@ -16,8 +16,8 @@ impl Skippable for bool {
 }
 
 impl Readable<'_> for bool {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
-        match r.skip_plain::<bool>()? {
+    fn read(r: &mut Reader<'_>, _: ReaderContext) -> Option<Self> {
+        match r.skip_in_content_stream::<bool>()? {
             b"true" => Some(true),
             b"false" => Some(false),
             _ => None,
@@ -35,7 +35,7 @@ mod tests {
     fn bool_true() {
         assert_eq!(
             Reader::new("true".as_bytes())
-                .read_without_xref::<bool>()
+                .read_without_context::<bool>()
                 .unwrap(),
             true
         );
@@ -45,7 +45,7 @@ mod tests {
     fn bool_false() {
         assert_eq!(
             Reader::new("false".as_bytes())
-                .read_without_xref::<bool>()
+                .read_without_context::<bool>()
                 .unwrap(),
             false
         );
@@ -55,7 +55,7 @@ mod tests {
     fn bool_trailing() {
         assert_eq!(
             Reader::new("trueabdf".as_bytes())
-                .read_without_xref::<bool>()
+                .read_without_context::<bool>()
                 .unwrap(),
             true
         );

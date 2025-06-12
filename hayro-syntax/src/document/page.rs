@@ -9,6 +9,7 @@ use crate::object::rect::Rect;
 use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
+use crate::reader::ReaderContext;
 use crate::xref::XRef;
 use log::warn;
 use std::cell::OnceCell;
@@ -40,14 +41,14 @@ impl PagesContext {
 
 impl<'a> Pages<'a> {
     /// Create a new `Pages` object.
-    pub(crate) fn new(pages_dict: Dict<'a>, xref: &'a XRef) -> Option<Pages<'a>> {
+    pub(crate) fn new(pages_dict: Dict<'a>, ctx: ReaderContext<'a>) -> Option<Pages<'a>> {
         let mut pages = vec![];
-        let ctx = PagesContext::new();
+        let pages_ctx = PagesContext::new();
         resolve_pages(
             pages_dict,
             &mut pages,
-            ctx,
-            Resources::new(Dict::empty(), None, xref),
+            pages_ctx,
+            Resources::new(Dict::empty(), None, ctx),
         )?;
 
         Some(Self { pages })
@@ -116,7 +117,7 @@ pub struct Page<'a> {
     rotation: Rotation,
     page_streams: OnceCell<Option<Vec<u8>>>,
     resources: Resources<'a>,
-    xref: &'a XRef,
+    ctx: ReaderContext<'a>,
 }
 
 impl<'a> Page<'a> {
@@ -139,7 +140,7 @@ impl<'a> Page<'a> {
             _ => Rotation::None,
         };
 
-        let xref = resources.xref;
+        let ctx = resources.ctx.clone();
         let resources =
             Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
 
@@ -150,7 +151,7 @@ impl<'a> Page<'a> {
             rotation,
             page_streams: OnceCell::new(),
             resources,
-            xref,
+            ctx,
         }
     }
 
@@ -218,7 +219,7 @@ impl<'a> Page<'a> {
     // TODO: Remove?
     /// Get the xref table (of the document the page belongs to).
     pub fn xref(&self) -> &'a XRef {
-        self.xref
+        self.ctx.xref
     }
 
     /// Return an iterator over the operators in the page's content stream.
@@ -231,7 +232,7 @@ impl<'a> Page<'a> {
 #[derive(Clone, Debug)]
 pub struct Resources<'a> {
     parent: Option<Box<Resources<'a>>>,
-    xref: &'a XRef,
+    ctx: ReaderContext<'a>,
     ext_g_states: Dict<'a>,
     fonts: Dict<'a>,
     color_spaces: Dict<'a>,
@@ -243,16 +244,16 @@ pub struct Resources<'a> {
 impl<'a> Resources<'a> {
     /// Create a new `Resources` object from a dictionary with a parent.
     pub fn from_parent(resources: Dict<'a>, parent: Resources<'a>) -> Resources<'a> {
-        let xref = parent.xref;
+        let ctx = parent.ctx;
 
-        Self::new(resources, Some(parent), xref)
+        Self::new(resources, Some(parent), ctx)
     }
 
     /// Create a new `Resources` object.
     pub fn new(
         resources: Dict<'a>,
         parent: Option<Resources<'a>>,
-        xref: &'a XRef,
+        ctx: ReaderContext<'a>,
     ) -> Resources<'a> {
         let ext_g_states = resources.get::<Dict>(EXT_G_STATE).unwrap_or_default();
         let fonts = resources.get::<Dict>(FONT).unwrap_or_default();
@@ -271,14 +272,14 @@ impl<'a> Resources<'a> {
             x_objects,
             patterns,
             shadings,
-            xref,
+            ctx,
         }
     }
 
     /// Resolve an object reference to an object.
     #[allow(private_bounds)]
     pub fn resolve_ref<T: ObjectLike<'a>>(&self, ref_: ObjRef) -> Option<T> {
-        self.xref.get(ref_.into())
+        self.ctx.xref.get(ref_.into())
     }
 
     fn get_resource<T: ObjectLike<'a>, U>(
@@ -292,7 +293,7 @@ impl<'a> Resources<'a> {
 
         match dict.get_raw::<T>(name.deref())? {
             MaybeRef::Ref(ref_) => {
-                cache(ref_).or_else(|| self.xref.get::<T>(ref_.into()).and_then(|t| resolve(t)))
+                cache(ref_).or_else(|| self.ctx.xref.get::<T>(ref_.into()).and_then(|t| resolve(t)))
             }
             MaybeRef::NotRef(i) => resolve(i),
         }

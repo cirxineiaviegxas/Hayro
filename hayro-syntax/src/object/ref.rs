@@ -2,7 +2,7 @@
 
 use crate::object::ObjectIdentifier;
 use crate::object::ObjectLike;
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 use std::fmt::{Debug, Formatter};
 
@@ -32,10 +32,10 @@ impl From<ObjRef> for ObjectIdentifier {
 }
 
 impl Skippable for ObjRef {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
-        r.skip_non_plain::<i32>()?;
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+        r.skip_not_in_content_stream::<i32>()?;
         r.skip_white_spaces();
-        r.skip_non_plain::<i32>()?;
+        r.skip_not_in_content_stream::<i32>()?;
         r.skip_white_spaces();
         r.forward_tag(b"R")?;
 
@@ -44,10 +44,10 @@ impl Skippable for ObjRef {
 }
 
 impl Readable<'_> for ObjRef {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
-        let obj_ref = r.read_without_xref::<i32>()?;
+    fn read(r: &mut Reader<'_>, _: ReaderContext) -> Option<Self> {
+        let obj_ref = r.read_without_context::<i32>()?;
         r.skip_white_spaces();
-        let gen_num = r.read_without_xref::<i32>()?;
+        let gen_num = r.read_without_context::<i32>()?;
         r.skip_white_spaces();
         r.forward_tag(b"R")?;
 
@@ -69,9 +69,9 @@ where
     T: ObjectLike<'a>,
 {
     /// Resolve the `MaybeRef` object with the given xref table.
-    pub fn resolve(self, xref: &'a XRef) -> Option<T> {
+    pub fn resolve(self, ctx: ReaderContext<'a>) -> Option<T> {
         match self {
-            MaybeRef::Ref(r) => xref.get::<T>(r.into()),
+            MaybeRef::Ref(r) => ctx.xref.get::<T>(r.into()),
             MaybeRef::NotRef(t) => Some(t),
         }
     }
@@ -104,9 +104,9 @@ impl<T> Skippable for MaybeRef<T>
 where
     T: Skippable,
 {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
-        r.skip::<PLAIN, ObjRef>()
-            .or_else(|| r.skip::<PLAIN, T>())
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+        r.skip::<ObjRef>(is_content_stream)
+            .or_else(|| r.skip::<T>(is_content_stream))
             .map(|_| {})
     }
 }
@@ -115,11 +115,11 @@ impl<'a, T> Readable<'a> for MaybeRef<T>
 where
     T: Readable<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
-        if let Some(obj) = r.read::<PLAIN, ObjRef>(xref) {
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
+        if let Some(obj) = r.read::<ObjRef>(ctx) {
             Some(Self::Ref(obj))
         } else {
-            Some(Self::NotRef(r.read::<PLAIN, T>(xref)?))
+            Some(Self::NotRef(r.read::<T>(ctx)?))
         }
     }
 }
@@ -133,7 +133,7 @@ mod tests {
     fn ref_1() {
         assert_eq!(
             Reader::new("34 1 R".as_bytes())
-                .read_without_xref::<ObjRef>()
+                .read_without_context::<ObjRef>()
                 .unwrap(),
             ObjRef::new(34, 1)
         );
@@ -143,7 +143,7 @@ mod tests {
     fn ref_trailing() {
         assert_eq!(
             Reader::new("256 0 R (hi)".as_bytes())
-                .read_without_xref::<ObjRef>()
+                .read_without_context::<ObjRef>()
                 .unwrap(),
             ObjRef::new(256, 0)
         );
@@ -153,7 +153,7 @@ mod tests {
     fn ref_invalid_1() {
         assert!(
             Reader::new("256 R".as_bytes())
-                .read_without_xref::<ObjRef>()
+                .read_without_context::<ObjRef>()
                 .is_none()
         );
     }
@@ -162,7 +162,7 @@ mod tests {
     fn ref_invalid_2() {
         assert!(
             Reader::new("256 257".as_bytes())
-                .read_without_xref::<ObjRef>()
+                .read_without_context::<ObjRef>()
                 .is_none()
         );
     }

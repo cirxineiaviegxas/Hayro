@@ -2,14 +2,14 @@
 
 use crate::object::array::Array;
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader};
+use crate::reader::{Readable, Reader, ReaderContext};
 use crate::xref::XRef;
 
 pub use kurbo::Rect;
 
 impl Readable<'_> for Rect {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
-        let arr = r.read_without_xref::<Array>()?;
+    fn read(r: &mut Reader<'_>, _: ReaderContext) -> Option<Self> {
+        let arr = r.read_without_context::<Array>()?;
         from_arr(&arr)
     }
 }

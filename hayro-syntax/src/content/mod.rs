@@ -11,7 +11,7 @@ use crate::object::dict::InlineImageDict;
 use crate::object::name::{Name, skip_name_like};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 use log::warn;
 use smallvec::SmallVec;
@@ -41,13 +41,13 @@ impl Deref for Operator<'_> {
 }
 
 impl Skippable for Operator<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
         skip_name_like(r, false).map(|_| ())
     }
 }
 
 impl<'a> Readable<'a> for Operator<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, _: ReaderContext) -> Option<Self> {
         let data = {
             let start = r.offset();
             skip_name_like(r, false)?;
@@ -105,9 +105,10 @@ impl<'a> Iterator for UntypedIter<'a> {
                 self.reader.peek_byte()?,
                 b'/' | b'.' | b'+' | b'-' | b'0'..=b'9' | b'[' | b'<' | b'('
             ) {
-                self.stack.push(self.reader.read_without_xref::<Object>()?);
+                self.stack
+                    .push(self.reader.read_without_context::<Object>()?);
             } else {
-                let operator = match self.reader.read_without_xref::<Operator>() {
+                let operator = match self.reader.read_without_context::<Operator>() {
                     Some(o) => o,
                     None => {
                         warn!("failed to read operator in content stream");
@@ -120,7 +121,7 @@ impl<'a> Iterator for UntypedIter<'a> {
                 // Inline images need special casing...
                 if operator.as_ref() == b"BI" {
                     // The ID operator will already be consumed by this.
-                    let inline_dict = self.reader.read_without_xref::<InlineImageDict>()?;
+                    let inline_dict = self.reader.read_without_context::<InlineImageDict>()?;
                     let dict = inline_dict.get_dict().clone();
 
                     // One whitespace after "ID".

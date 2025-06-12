@@ -1,6 +1,6 @@
 //! Comments and white spaces.
 
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 
 #[inline(always)]
@@ -35,7 +35,7 @@ pub(crate) fn is_eol_character(char: u8) -> bool {
 pub(crate) struct Comment<'a>(pub &'a [u8]);
 
 impl Skippable for Comment<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         r.forward_tag(b"%")?;
         r.forward_while(|b| !is_eol_character(b));
 
@@ -44,8 +44,8 @@ impl Skippable for Comment<'_> {
 }
 
 impl<'a> Readable<'a> for Comment<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
-        let bytes = r.skip_plain::<Comment>()?;
+    fn read(r: &mut Reader<'a>, _: ReaderContext) -> Option<Self> {
+        let bytes = r.skip_in_content_stream::<Comment>()?;
         let bytes = bytes.get(1..bytes.len()).unwrap();
 
         Some(Comment(bytes))

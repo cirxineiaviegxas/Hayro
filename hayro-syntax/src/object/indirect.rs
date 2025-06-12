@@ -1,5 +1,5 @@
 use crate::object::{ObjectIdentifier, ObjectLike};
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 
 pub(crate) struct IndirectObject<T> {
@@ -21,10 +21,10 @@ impl<'a, T> Readable<'a> for IndirectObject<T>
 where
     T: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
-        let id = r.read_without_xref::<ObjectIdentifier>()?;
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
+        let id = r.read_without_context::<ObjectIdentifier>()?;
         r.skip_white_spaces_and_comments();
-        let inner = r.read_with_xref::<T>(xref)?;
+        let inner = r.read_with_context::<T>(ctx)?;
         r.skip_white_spaces_and_comments();
         // We are lenient and don't require it.
         r.forward_tag(b"endobj");
@@ -37,10 +37,10 @@ impl<T> Skippable for IndirectObject<T>
 where
     T: Skippable,
 {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
-        r.skip_plain::<ObjectIdentifier>()?;
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+        r.skip_in_content_stream::<ObjectIdentifier>()?;
         r.skip_white_spaces_and_comments();
-        r.skip_non_plain::<T>()?;
+        r.skip_not_in_content_stream::<T>()?;
         r.skip_white_spaces_and_comments();
         // We are lenient and don't require it.
         r.forward_tag(b"endobj");

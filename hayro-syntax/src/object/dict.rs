@@ -5,7 +5,7 @@ use crate::object::name::Name;
 use crate::object::null::Null;
 use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
@@ -37,7 +37,7 @@ impl<'a> Dict<'a> {
         let repr = Repr {
             data: &[],
             offsets: Default::default(),
-            xref: &XRef::dummy(),
+            ctx: ReaderContext::new(&XRef::dummy(), false),
         };
 
         Self(Arc::new(repr))
@@ -68,14 +68,14 @@ impl<'a> Dict<'a> {
     where
         T: ObjectLike<'a>,
     {
-        self.get_raw::<T>(key.as_ref())?.resolve(&self.0.xref)
+        self.get_raw::<T>(key.as_ref())?.resolve(self.0.ctx)
     }
 
     /// Returns the entry of a key as a specific type, and resolve it in case it's an object reference.
     pub fn get_ref<'b>(&self, key: impl Deref<Target = [u8]>) -> Option<ObjRef> {
         let offset = *self.0.offsets.get(&Name::from_unescaped(key.as_ref()))?;
 
-        Reader::new(&self.0.data[offset..]).read_with_xref::<ObjRef>(&self.0.xref)
+        Reader::new(&self.0.data[offset..]).read_with_context::<ObjRef>(self.0.ctx)
     }
 
     /// Returns an iterator over all keys in the dictionary.
@@ -91,7 +91,7 @@ impl<'a> Dict<'a> {
     {
         let offset = *self.0.offsets.get(&Name::from_unescaped(key.as_ref()))?;
 
-        Reader::new(&self.0.data[offset..]).read_with_xref::<MaybeRef<T>>(&self.0.xref)
+        Reader::new(&self.0.data[offset..]).read_with_context::<MaybeRef<T>>(self.0.ctx)
     }
 }
 
@@ -104,7 +104,7 @@ impl Debug for Dict<'_> {
             r.jump(*val);
             debug_struct.field(
                 &format!("{:?}", key.as_str()),
-                &r.read_with_xref::<MaybeRef<Object>>(&XRef::dummy())
+                &r.read_with_context::<MaybeRef<Object>>(ReaderContext::dummy())
                     .unwrap(),
             );
         }
@@ -113,7 +113,7 @@ impl Debug for Dict<'_> {
 }
 
 impl Skippable for Dict<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
         r.forward_tag(b"<<")?;
 
         loop {
@@ -122,13 +122,13 @@ impl Skippable for Dict<'_> {
             if let Some(()) = r.forward_tag(b">>") {
                 break Some(());
             } else {
-                r.skip::<PLAIN, Name>()?;
+                r.skip::<Name>(is_content_stream)?;
                 r.skip_white_spaces_and_comments();
 
-                if PLAIN {
-                    r.skip::<PLAIN, Object>()?;
+                if is_content_stream {
+                    r.skip::<Object>(is_content_stream)?;
                 } else {
-                    r.skip::<PLAIN, MaybeRef<Object>>()?;
+                    r.skip::<MaybeRef<Object>>(is_content_stream)?;
                 }
             }
         }
@@ -136,14 +136,14 @@ impl Skippable for Dict<'_> {
 }
 
 impl<'a> Readable<'a> for Dict<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
-        read_inner::<PLAIN>(r, xref, Some(b"<<"), b">>")
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
+        read_inner(r, ctx, Some(b"<<"), b">>")
     }
 }
 
-fn read_inner<'a, const PLAIN: bool>(
+fn read_inner<'a>(
     r: &mut Reader<'a>,
-    xref: &'a XRef,
+    ctx: ReaderContext<'a>,
     start_tag: Option<&[u8]>,
     end_tag: &[u8],
 ) -> Option<Dict<'a>> {
@@ -168,18 +168,18 @@ fn read_inner<'a, const PLAIN: bool>(
 
                 break &dict_data[..end_offset];
             } else {
-                let name = r.read_without_xref::<Name>()?;
+                let name = r.read_without_context::<Name>()?;
                 r.skip_white_spaces_and_comments();
 
                 // Keys with null objects should be treated as non-existing.
                 let is_null = {
                     let mut nr = Reader::new(r.tail()?);
 
-                    if PLAIN {
-                        nr.read_with_xref::<Null>(xref)
+                    if ctx.in_content_stream {
+                        nr.read_with_context::<Null>(ctx)
                     } else {
-                        nr.read_with_xref::<MaybeRef<Null>>(xref)
-                            .and_then(|n| n.resolve(xref))
+                        nr.read_with_context::<MaybeRef<Null>>(ctx)
+                            .and_then(|n| n.resolve(ctx))
                     }
                     .is_some()
                 };
@@ -189,20 +189,16 @@ fn read_inner<'a, const PLAIN: bool>(
                     offsets.insert(name, offset);
                 }
 
-                if PLAIN {
-                    r.skip::<PLAIN, Object>()?;
+                if ctx.in_content_stream {
+                    r.skip::<Object>(ctx.in_content_stream)?;
                 } else {
-                    r.skip::<PLAIN, MaybeRef<Object>>()?;
+                    r.skip::<MaybeRef<Object>>(ctx.in_content_stream)?;
                 }
             }
         }
     };
 
-    Some(Dict(Arc::new(Repr {
-        data,
-        offsets,
-        xref,
-    })))
+    Some(Dict(Arc::new(Repr { data, offsets, ctx })))
 }
 
 object!(Dict<'a>, Dict);
@@ -210,7 +206,7 @@ object!(Dict<'a>, Dict);
 struct Repr<'a> {
     data: &'a [u8],
     offsets: HashMap<Name<'a>, usize>,
-    xref: &'a XRef,
+    ctx: ReaderContext<'a>,
 }
 
 pub(crate) struct InlineImageDict<'a>(Dict<'a>);
@@ -222,8 +218,8 @@ impl<'a> InlineImageDict<'a> {
 }
 
 impl<'a> Readable<'a> for InlineImageDict<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
-        Some(Self(read_inner::<true>(r, xref, None, b"ID")?))
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
+        Some(Self(read_inner(r, ctx, None, b"ID")?))
     }
 }
 
@@ -881,11 +877,11 @@ mod tests {
     use crate::object::name::Name;
     use crate::object::number::Number;
     use crate::object::string;
-    use crate::reader::Reader;
+    use crate::reader::{Reader, ReaderContext};
     use crate::xref::XRef;
 
     fn dict_impl(data: &[u8]) -> Option<Dict> {
-        Reader::new(data).read_with_xref::<Dict>(&XRef::dummy())
+        Reader::new(data).read_with_context::<Dict>(ReaderContext::dummy())
     }
 
     #[test]
@@ -946,7 +942,7 @@ mod tests {
 >>";
 
         let dict = Reader::new(data.as_bytes())
-            .read_with_xref::<Dict>(&XRef::dummy())
+            .read_with_context::<Dict>(ReaderContext::dummy())
             .unwrap();
         assert_eq!(dict.len(), 6);
         assert!(dict.get::<Name>(Name::new(b"Type")).is_some());
@@ -981,7 +977,7 @@ mod tests {
         let dict_data = b"/W 17 /H 17 /CS /RGB /BPC 8 /F [ /A85 /LZW ] ID ";
 
         let dict = Reader::new(&dict_data[..])
-            .read_with_xref::<InlineImageDict>(&XRef::dummy())
+            .read_with_context::<InlineImageDict>(ReaderContext::dummy())
             .unwrap();
 
         assert_eq!(dict.get_dict().len(), 5);

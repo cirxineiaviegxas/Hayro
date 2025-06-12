@@ -1,6 +1,6 @@
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader};
+use crate::reader::{Readable, Reader, ReaderContext};
 use crate::xref::XRef;
 use std::fmt::Debug;
 // Note that tuples don't correspond to any specific PDF object. Instead, they simply
@@ -13,11 +13,11 @@ where
     T: ObjectLike<'a>,
     U: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
         r.skip_white_spaces_and_comments();
-        let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
+        let t = r.read::<MaybeRef<T>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let u = r.read::<PLAIN, MaybeRef<U>>(xref)?.resolve(xref)?;
+        let u = r.read::<MaybeRef<U>>(ctx)?.resolve(ctx)?;
         Some((t, u))
     }
 }
@@ -47,13 +47,13 @@ where
     U: ObjectLike<'a>,
     V: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
         r.skip_white_spaces_and_comments();
-        let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
+        let t = r.read::<MaybeRef<T>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let u = r.read::<PLAIN, MaybeRef<U>>(xref)?.resolve(xref)?;
+        let u = r.read::<MaybeRef<U>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let v = r.read::<PLAIN, MaybeRef<V>>(xref)?.resolve(xref)?;
+        let v = r.read::<MaybeRef<V>>(ctx)?.resolve(ctx)?;
 
         Some((t, u, v))
     }
@@ -87,15 +87,15 @@ where
     V: ObjectLike<'a>,
     W: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
         r.skip_white_spaces_and_comments();
-        let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
+        let t = r.read::<MaybeRef<T>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let u = r.read::<PLAIN, MaybeRef<U>>(xref)?.resolve(xref)?;
+        let u = r.read::<MaybeRef<U>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let v = r.read::<PLAIN, MaybeRef<V>>(xref)?.resolve(xref)?;
+        let v = r.read::<MaybeRef<V>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let w = r.read::<PLAIN, MaybeRef<W>>(xref)?.resolve(xref)?;
+        let w = r.read::<MaybeRef<W>>(ctx)?.resolve(ctx)?;
 
         Some((t, u, v, w))
     }
@@ -132,17 +132,17 @@ where
     W: ObjectLike<'a>,
     X: ObjectLike<'a>,
 {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
         r.skip_white_spaces_and_comments();
-        let t = r.read::<PLAIN, MaybeRef<T>>(xref)?.resolve(xref)?;
+        let t = r.read::<MaybeRef<T>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let u = r.read::<PLAIN, MaybeRef<U>>(xref)?.resolve(xref)?;
+        let u = r.read::<MaybeRef<U>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let v = r.read::<PLAIN, MaybeRef<V>>(xref)?.resolve(xref)?;
+        let v = r.read::<MaybeRef<V>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let w = r.read::<PLAIN, MaybeRef<W>>(xref)?.resolve(xref)?;
+        let w = r.read::<MaybeRef<W>>(ctx)?.resolve(ctx)?;
         r.skip_white_spaces_and_comments();
-        let x = r.read::<PLAIN, MaybeRef<X>>(xref)?.resolve(xref)?;
+        let x = r.read::<MaybeRef<X>>(ctx)?.resolve(ctx)?;
 
         Some((t, u, v, w, x))
     }

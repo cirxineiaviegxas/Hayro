@@ -2,7 +2,7 @@
 
 use crate::object::Object;
 use crate::object::macros::object;
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::trivia::is_regular_character;
 use crate::xref::XRef;
 use std::fmt::Debug;
@@ -85,13 +85,13 @@ impl<'a> Name<'a> {
 object!(Name<'a>, Name);
 
 impl Skippable for Name<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
         skip_name_like(r, true).map(|_| ())
     }
 }
 
 impl<'a> Readable<'a> for Name<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, _: ReaderContext) -> Option<Self> {
         let data = {
             let start = r.offset();
             skip_name_like(r, true)?;
@@ -134,7 +134,7 @@ mod tests {
     fn name_1() {
         assert_eq!(
             Reader::new("/".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b""
@@ -145,7 +145,7 @@ mod tests {
     fn name_2() {
         assert!(
             Reader::new("dfg".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .is_none()
         );
     }
@@ -154,7 +154,7 @@ mod tests {
     fn name_3() {
         assert!(
             Reader::new("/AB#FG".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .is_none()
         );
     }
@@ -163,7 +163,7 @@ mod tests {
     fn name_4() {
         assert_eq!(
             Reader::new("/Name1".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"Name1"
@@ -174,7 +174,7 @@ mod tests {
     fn name_5() {
         assert_eq!(
             Reader::new("/ASomewhatLongerName".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"ASomewhatLongerName"
@@ -185,7 +185,7 @@ mod tests {
     fn name_6() {
         assert_eq!(
             Reader::new("/A;Name_With-Various***Characters?".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"A;Name_With-Various***Characters?"
@@ -196,7 +196,7 @@ mod tests {
     fn name_7() {
         assert_eq!(
             Reader::new("/1.2".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"1.2"
@@ -207,7 +207,7 @@ mod tests {
     fn name_8() {
         assert_eq!(
             Reader::new("/$$".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"$$"
@@ -218,7 +218,7 @@ mod tests {
     fn name_9() {
         assert_eq!(
             Reader::new("/@pattern".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"@pattern"
@@ -229,7 +229,7 @@ mod tests {
     fn name_10() {
         assert_eq!(
             Reader::new("/.notdef".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b".notdef"
@@ -240,7 +240,7 @@ mod tests {
     fn name_11() {
         assert_eq!(
             Reader::new("/lime#20Green".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"lime Green"
@@ -251,7 +251,7 @@ mod tests {
     fn name_12() {
         assert_eq!(
             Reader::new("/paired#28#29parentheses".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"paired()parentheses"
@@ -262,7 +262,7 @@ mod tests {
     fn name_13() {
         assert_eq!(
             Reader::new("/The_Key_of_F#23_Minor".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"The_Key_of_F#_Minor"
@@ -273,7 +273,7 @@ mod tests {
     fn name_14() {
         assert_eq!(
             Reader::new("/A#42".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"AB"
@@ -284,7 +284,7 @@ mod tests {
     fn name_15() {
         assert_eq!(
             Reader::new("/A#3b".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"A;"
@@ -295,7 +295,7 @@ mod tests {
     fn name_16() {
         assert_eq!(
             Reader::new("/A#3B".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"A;"
@@ -306,7 +306,7 @@ mod tests {
     fn name_17() {
         assert_eq!(
             Reader::new("/k1  ".as_bytes())
-                .read_without_xref::<Name>()
+                .read_without_context::<Name>()
                 .unwrap()
                 .deref(),
             b"k1"

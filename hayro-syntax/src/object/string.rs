@@ -2,7 +2,7 @@
 
 use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::trivia::is_white_space_character;
 use crate::xref::XRef;
 use std::borrow::Cow;
@@ -37,13 +37,13 @@ impl HexString<'_> {
 }
 
 impl Skippable for HexString<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         parse_hex(r).map(|_| {})
     }
 }
 
 impl<'a> Readable<'a> for HexString<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, _: ReaderContext) -> Option<Self> {
         let start = r.offset();
         let mut dirty = parse_hex(r)?;
         let end = r.offset();
@@ -154,13 +154,13 @@ impl<'a> LiteralString<'a> {
 }
 
 impl Skippable for LiteralString<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         parse_literal(r).map(|_| ())
     }
 }
 
 impl<'a> Readable<'a> for LiteralString<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, _: ReaderContext) -> Option<Self> {
         let start = r.offset();
         let dirty = parse_literal(r)?;
         let end = r.offset();
@@ -253,20 +253,20 @@ impl<'a> From<LiteralString<'a>> for String<'a> {
 object!(String<'a>, String);
 
 impl Skippable for String<'_> {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
         match r.peek_byte()? {
-            b'<' => HexString::skip::<true>(r),
-            b'(' => LiteralString::skip::<true>(r),
+            b'<' => HexString::skip(r, is_content_stream),
+            b'(' => LiteralString::skip(r, is_content_stream),
             _ => None,
         }
     }
 }
 
 impl<'a> Readable<'a> for String<'a> {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, _: &'a XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, _: ReaderContext) -> Option<Self> {
         let inner = match r.peek_byte()? {
-            b'<' => InnerString::Hex(r.read_without_xref::<HexString>()?),
-            b'(' => InnerString::Literal(r.read_without_xref::<LiteralString>()?),
+            b'<' => InnerString::Hex(r.read_without_context::<HexString>()?),
+            b'(' => InnerString::Literal(r.read_without_context::<LiteralString>()?),
             _ => return None,
         };
 
@@ -287,7 +287,7 @@ mod tests {
     fn hex_string_empty() {
         assert_eq!(
             Reader::new("<>".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .unwrap()
                 .get(),
             vec![]
@@ -298,7 +298,7 @@ mod tests {
     fn hex_string_1() {
         assert_eq!(
             Reader::new("<00010203>".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03]
@@ -309,7 +309,7 @@ mod tests {
     fn hex_string_2() {
         assert_eq!(
             Reader::new("<000102034>".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03, 0x40]
@@ -320,7 +320,7 @@ mod tests {
     fn hex_string_trailing_1() {
         assert_eq!(
             Reader::new("<000102034>dfgfg4".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03, 0x40]
@@ -331,7 +331,7 @@ mod tests {
     fn hex_string_trailing_2() {
         assert_eq!(
             Reader::new("<1  3 4>dfgfg4".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x13, 0x40]
@@ -342,7 +342,7 @@ mod tests {
     fn hex_string_trailing_3() {
         assert_eq!(
             Reader::new("<1>dfgfg4".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .unwrap()
                 .get(),
             vec![0x10]
@@ -353,7 +353,7 @@ mod tests {
     fn hex_string_invalid_1() {
         assert_eq!(
             Reader::new("<".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .is_none(),
             true
         );
@@ -363,7 +363,7 @@ mod tests {
     fn hex_string_invalid_2() {
         assert_eq!(
             Reader::new("34AD".as_bytes())
-                .read_without_xref::<HexString>()
+                .read_without_context::<HexString>()
                 .is_none(),
             true
         );
@@ -373,7 +373,7 @@ mod tests {
     fn literal_string_empty() {
         assert_eq!(
             Reader::new("()".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -385,7 +385,7 @@ mod tests {
     fn literal_string_1() {
         assert_eq!(
             Reader::new("(Hi there.)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -397,7 +397,7 @@ mod tests {
     fn literal_string_2() {
         assert!(
             Reader::new("(Hi \\777)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .is_some()
         );
     }
@@ -406,7 +406,7 @@ mod tests {
     fn literal_string_3() {
         assert_eq!(
             Reader::new("(Hi ) there.)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -418,7 +418,7 @@ mod tests {
     fn literal_string_4() {
         assert_eq!(
             Reader::new("(Hi (()) there)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -430,7 +430,7 @@ mod tests {
     fn literal_string_5() {
         assert_eq!(
             Reader::new("(Hi \\()".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -442,7 +442,7 @@ mod tests {
     fn literal_string_6() {
         assert_eq!(
             Reader::new("(Hi \\\nthere)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -454,7 +454,7 @@ mod tests {
     fn literal_string_7() {
         assert_eq!(
             Reader::new("(Hi \\05354)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -466,7 +466,7 @@ mod tests {
     fn literal_string_trailing() {
         assert_eq!(
             Reader::new("(Hi there.)abcde".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -478,7 +478,7 @@ mod tests {
     fn literal_string_invalid() {
         assert!(
             Reader::new("(Hi \\778)".as_bytes())
-                .read_without_xref::<LiteralString>()
+                .read_without_context::<LiteralString>()
                 .is_none()
         );
     }
@@ -487,7 +487,7 @@ mod tests {
     fn string_1() {
         assert_eq!(
             Reader::new("(Hi there.)".as_bytes())
-                .read_without_xref::<String>()
+                .read_without_context::<String>()
                 .unwrap()
                 .get()
                 .to_vec(),
@@ -499,7 +499,7 @@ mod tests {
     fn string_2() {
         assert_eq!(
             Reader::new("<00010203>".as_bytes())
-                .read_without_xref::<String>()
+                .read_without_context::<String>()
                 .unwrap()
                 .get(),
             vec![0x00, 0x01, 0x02, 0x03]

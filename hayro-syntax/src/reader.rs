@@ -1,5 +1,6 @@
 //! Reading bytes and PDF objects from data.
 
+use crate::object::ObjectIdentifier;
 use crate::trivia::{Comment, is_eol_character, is_white_space_character};
 use crate::xref::XRef;
 use std::ops::Range;
@@ -81,10 +82,10 @@ impl<'a> Reader<'a> {
     // encounter a number we know it's a number, and don't need to do a look-ahead to ensure
     // that it's not an object reference.
     #[inline]
-    pub(crate) fn read<const PLAIN: bool, T: Readable<'a>>(&mut self, xref: &'a XRef) -> Option<T> {
+    pub(crate) fn read<T: Readable<'a>>(&mut self, ctx: ReaderContext<'a>) -> Option<T> {
         let old_offset = self.offset;
 
-        T::read::<PLAIN>(self, &xref).or_else(|| {
+        T::read(self, ctx).or_else(|| {
             self.offset = old_offset;
 
             None
@@ -92,20 +93,23 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
-    pub(crate) fn read_with_xref<T: Readable<'a>>(&mut self, xref: &'a XRef) -> Option<T> {
-        self.read::<false, T>(xref)
+    pub(crate) fn read_with_context<T: Readable<'a>>(
+        &mut self,
+        ctx: ReaderContext<'a>,
+    ) -> Option<T> {
+        self.read::<T>(ctx)
     }
 
     #[inline]
-    pub(crate) fn read_without_xref<T: Readable<'a>>(&mut self) -> Option<T> {
-        self.read::<true, T>(&XRef::dummy())
+    pub(crate) fn read_without_context<T: Readable<'a>>(&mut self) -> Option<T> {
+        self.read::<T>(ReaderContext::new(&XRef::dummy(), true))
     }
 
     #[inline]
-    pub(crate) fn skip<const PLAIN: bool, T: Skippable>(&mut self) -> Option<&'a [u8]> {
+    pub(crate) fn skip<T: Skippable>(&mut self, is_content_stream: bool) -> Option<&'a [u8]> {
         let old_offset = self.offset;
 
-        T::skip::<PLAIN>(self).or_else(|| {
+        T::skip(self, is_content_stream).or_else(|| {
             self.offset = old_offset;
             None
         })?;
@@ -114,13 +118,13 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
-    pub(crate) fn skip_non_plain<T: Skippable>(&mut self) -> Option<&'a [u8]> {
-        self.skip::<false, T>()
+    pub(crate) fn skip_not_in_content_stream<T: Skippable>(&mut self) -> Option<&'a [u8]> {
+        self.skip::<T>(false)
     }
 
     #[inline]
-    pub(crate) fn skip_plain<T: Skippable>(&mut self) -> Option<&'a [u8]> {
-        self.skip::<true, T>()
+    pub(crate) fn skip_in_content_stream<T: Skippable>(&mut self) -> Option<&'a [u8]> {
+        self.skip::<T>(false)
     }
 
     #[inline]
@@ -249,7 +253,7 @@ impl<'a> Reader<'a> {
             if is_white_space_character(b) {
                 self.skip_white_spaces()
             } else if b == b'%' {
-                Comment::skip::<true>(self);
+                Comment::skip(self, true);
             } else {
                 return;
             }
@@ -257,16 +261,37 @@ impl<'a> Reader<'a> {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct ReaderContext<'a> {
+    pub(crate) xref: &'a XRef,
+    pub(crate) in_content_stream: bool,
+    pub(crate) obj_number: Option<ObjectIdentifier>,
+}
+
+impl<'a> ReaderContext<'a> {
+    pub(crate) fn new(xref: &'a XRef, in_content_stream: bool) -> Self {
+        Self {
+            xref,
+            in_content_stream,
+            obj_number: None,
+        }
+    }
+
+    pub(crate) fn dummy() -> Self {
+        Self::new(XRef::dummy(), false)
+    }
+}
+
 pub(crate) trait Readable<'a>: Sized {
-    fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<Self>;
+    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self>;
     fn from_bytes(b: &'a [u8]) -> Option<Self> {
         let mut r = Reader::new(b);
         let xref = XRef::dummy();
 
-        Self::read::<false>(&mut r, &xref)
+        Self::read(&mut r, ReaderContext::new(xref, false))
     }
 }
 
 pub(crate) trait Skippable {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()>;
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()>;
 }

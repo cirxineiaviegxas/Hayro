@@ -2,7 +2,7 @@
 
 use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
-use crate::reader::{Readable, Reader, Skippable};
+use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::xref::XRef;
 use log::debug;
 use std::fmt::Debug;
@@ -66,7 +66,7 @@ impl Number {
 }
 
 impl Skippable for Number {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         r.forward_if(|b| b == b'+' || b == b'-');
 
         match r.peek_byte()? {
@@ -88,12 +88,12 @@ impl Skippable for Number {
 }
 
 impl Readable<'_> for Number {
-    fn read<const PLAIN: bool>(r: &mut Reader<'_>, _: &XRef) -> Option<Self> {
+    fn read(r: &mut Reader<'_>, ctx: ReaderContext) -> Option<Self> {
         // TODO: This function is probably the biggest bottleneck in content parsing, so
         // worth optimizing (i.e. reading the number directly from the bytes instead
         // of first parsing it to a number).
 
-        let data = r.skip::<PLAIN, Number>()?;
+        let data = r.skip::<Number>(ctx.in_content_stream)?;
         let num = f32::from_str(std::str::from_utf8(data).ok()?).ok()?;
 
         if num.fract() == 0.0 {
@@ -115,7 +115,7 @@ pub(crate) enum InternalNumber {
 macro_rules! int_num {
     ($i:ident) => {
         impl Skippable for $i {
-            fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
+            fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
                 r.forward_if(|b| b == b'+' || b == b'-');
                 r.forward_while_1(is_digit)?;
 
@@ -129,8 +129,8 @@ macro_rules! int_num {
         }
 
         impl<'a> Readable<'a> for $i {
-            fn read<const PLAIN: bool>(r: &mut Reader<'a>, xref: &'a XRef) -> Option<$i> {
-                r.read::<PLAIN, Number>(xref)
+            fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<$i> {
+                r.read::<Number>(ctx)
                     .map(|n| n.as_i32())
                     .and_then(|n| n.try_into().ok())
             }
@@ -158,14 +158,14 @@ int_num!(usize);
 int_num!(u8);
 
 impl Skippable for f32 {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
-        r.skip::<PLAIN, Number>().map(|_| {})
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+        r.skip::<Number>(is_content_stream).map(|_| {})
     }
 }
 
 impl Readable<'_> for f32 {
-    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef) -> Option<Self> {
-        r.read_without_xref::<Number>().map(|n| n.as_f32())
+    fn read(r: &mut Reader, _: ReaderContext) -> Option<Self> {
+        r.read_without_context::<Number>().map(|n| n.as_f32())
     }
 }
 
@@ -183,14 +183,14 @@ impl TryFrom<Object<'_>> for f32 {
 impl ObjectLike<'_> for f32 {}
 
 impl Skippable for f64 {
-    fn skip<const PLAIN: bool>(r: &mut Reader<'_>) -> Option<()> {
-        r.skip::<PLAIN, Number>().map(|_| {})
+    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+        r.skip::<Number>(is_content_stream).map(|_| {})
     }
 }
 
 impl Readable<'_> for f64 {
-    fn read<const PLAIN: bool>(r: &mut Reader, _: &XRef) -> Option<Self> {
-        r.read_without_xref::<Number>().map(|n| n.as_f64())
+    fn read(r: &mut Reader, _: ReaderContext) -> Option<Self> {
+        r.read_without_context::<Number>().map(|n| n.as_f64())
     }
 }
 
@@ -220,7 +220,7 @@ mod tests {
     fn int_1() {
         assert_eq!(
             Reader::new("0".as_bytes())
-                .read_without_xref::<i32>()
+                .read_without_context::<i32>()
                 .unwrap(),
             0
         );
@@ -230,7 +230,7 @@ mod tests {
     fn int_3() {
         assert_eq!(
             Reader::new("+32".as_bytes())
-                .read_without_xref::<i32>()
+                .read_without_context::<i32>()
                 .unwrap(),
             32
         );
@@ -240,7 +240,7 @@ mod tests {
     fn int_4() {
         assert_eq!(
             Reader::new("-32".as_bytes())
-                .read_without_xref::<i32>()
+                .read_without_context::<i32>()
                 .unwrap(),
             -32
         );
@@ -250,7 +250,7 @@ mod tests {
     fn int_6() {
         assert_eq!(
             Reader::new("98349".as_bytes())
-                .read_without_xref::<i32>()
+                .read_without_context::<i32>()
                 .unwrap(),
             98349
         );
@@ -260,7 +260,7 @@ mod tests {
     fn int_7() {
         assert_eq!(
             Reader::new("003245".as_bytes())
-                .read_without_xref::<i32>()
+                .read_without_context::<i32>()
                 .unwrap(),
             3245
         );
@@ -270,7 +270,7 @@ mod tests {
     fn int_trailing() {
         assert_eq!(
             Reader::new("0abc".as_bytes())
-                .read_without_xref::<i32>()
+                .read_without_context::<i32>()
                 .unwrap(),
             0
         );
@@ -280,7 +280,7 @@ mod tests {
     fn real_1() {
         assert_eq!(
             Reader::new("3".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             3.0
         );
@@ -290,7 +290,7 @@ mod tests {
     fn real_3() {
         assert_eq!(
             Reader::new("+32".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             32.0
         );
@@ -300,7 +300,7 @@ mod tests {
     fn real_4() {
         assert_eq!(
             Reader::new("-32".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             -32.0
         );
@@ -310,7 +310,7 @@ mod tests {
     fn real_5() {
         assert_eq!(
             Reader::new("-32.01".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             -32.01
         );
@@ -320,7 +320,7 @@ mod tests {
     fn real_6() {
         assert_eq!(
             Reader::new("-.345".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             -0.345
         );
@@ -330,7 +330,7 @@ mod tests {
     fn real_7() {
         assert_eq!(
             Reader::new("-.00143".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             -0.00143
         );
@@ -340,7 +340,7 @@ mod tests {
     fn real_8() {
         assert_eq!(
             Reader::new("-12.0013".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             -12.0013
         );
@@ -350,7 +350,7 @@ mod tests {
     fn real_9() {
         assert_eq!(
             Reader::new("98349.432534".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             98349.432534
         );
@@ -360,7 +360,7 @@ mod tests {
     fn real_10() {
         assert_eq!(
             Reader::new("-34534656.34".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             -34534656.34
         );
@@ -370,7 +370,7 @@ mod tests {
     fn real_trailing() {
         assert_eq!(
             Reader::new("0abc".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .unwrap(),
             0.0
         );
@@ -380,7 +380,7 @@ mod tests {
     fn real_failing() {
         assert_eq!(
             Reader::new("+abc".as_bytes())
-                .read_without_xref::<f32>()
+                .read_without_context::<f32>()
                 .is_none(),
             true
         );
@@ -390,7 +390,7 @@ mod tests {
     fn number_1() {
         assert_eq!(
             Reader::new("+32".as_bytes())
-                .read_without_xref::<Number>()
+                .read_without_context::<Number>()
                 .unwrap()
                 .as_f64() as f32,
             32.0
@@ -401,7 +401,7 @@ mod tests {
     fn number_2() {
         assert_eq!(
             Reader::new("-32.01".as_bytes())
-                .read_without_xref::<Number>()
+                .read_without_context::<Number>()
                 .unwrap()
                 .as_f64() as f32,
             -32.01
@@ -412,7 +412,7 @@ mod tests {
     fn number_3() {
         assert_eq!(
             Reader::new("-.345".as_bytes())
-                .read_without_xref::<Number>()
+                .read_without_context::<Number>()
                 .unwrap()
                 .as_f64() as f32,
             -0.345
