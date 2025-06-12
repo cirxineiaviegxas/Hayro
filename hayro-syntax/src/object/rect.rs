@@ -3,7 +3,6 @@
 use crate::object::array::Array;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext};
-use crate::xref::XRef;
 
 pub use kurbo::Rect;
 

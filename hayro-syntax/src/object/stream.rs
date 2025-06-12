@@ -8,7 +8,6 @@ use crate::object::name::Name;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::util::OptionLog;
-use crate::xref::XRef;
 use log::{info, warn};
 use std::fmt::{Debug, Formatter};
 
@@ -214,7 +213,6 @@ impl<'a> ObjectLike<'a> for Stream<'a> {}
 mod tests {
     use crate::object::stream::Stream;
     use crate::reader::{Reader, ReaderContext};
-    use crate::xref::XRef;
 
     #[test]
     fn stream() {

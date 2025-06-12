@@ -12,7 +12,6 @@ use crate::object::name::{Name, skip_name_like};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 use log::warn;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};
@@ -41,7 +40,7 @@ impl Deref for Operator<'_> {
 }
 
 impl Skippable for Operator<'_> {
-    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         skip_name_like(r, false).map(|_| ())
     }
 }

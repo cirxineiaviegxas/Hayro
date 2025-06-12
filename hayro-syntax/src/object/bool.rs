@@ -3,10 +3,9 @@
 use crate::object::Object;
 use crate::object::macros::object;
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 
 impl Skippable for bool {
-    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         match r.peek_byte()? {
             b't' => r.forward_tag(b"true"),
             b'f' => r.forward_tag(b"false"),

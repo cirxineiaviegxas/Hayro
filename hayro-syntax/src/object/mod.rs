@@ -7,7 +7,6 @@ use crate::object::null::Null;
 use crate::object::number::Number;
 use crate::object::stream::Stream;
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 use std::fmt::Debug;
 
 pub mod array;
@@ -267,7 +266,6 @@ mod macros {
 mod tests {
     use crate::object::Object;
     use crate::reader::{Reader, ReaderContext};
-    use crate::xref::XRef;
 
     fn object_impl(data: &[u8]) -> Option<Object> {
         let mut r = Reader::new(data);

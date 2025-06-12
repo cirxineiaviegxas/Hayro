@@ -4,7 +4,6 @@ use crate::object::macros::object;
 use crate::object::r#ref::MaybeRef;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 use log::warn;
 use smallvec::SmallVec;
 use std::fmt::{Debug, Formatter};

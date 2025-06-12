@@ -3,7 +3,6 @@
 use crate::object::ObjectIdentifier;
 use crate::object::ObjectLike;
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 use std::fmt::{Debug, Formatter};
 
 /// A reference to an object.
@@ -32,7 +31,7 @@ impl From<ObjRef> for ObjectIdentifier {
 }
 
 impl Skippable for ObjRef {
-    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         r.skip_not_in_content_stream::<i32>()?;
         r.skip_white_spaces();
         r.skip_not_in_content_stream::<i32>()?;

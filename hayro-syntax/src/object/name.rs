@@ -4,7 +4,6 @@ use crate::object::Object;
 use crate::object::macros::object;
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::trivia::is_regular_character;
-use crate::xref::XRef;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::Deref;
@@ -85,7 +84,7 @@ impl<'a> Name<'a> {
 object!(Name<'a>, Name);
 
 impl Skippable for Name<'_> {
-    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         skip_name_like(r, true).map(|_| ())
     }
 }

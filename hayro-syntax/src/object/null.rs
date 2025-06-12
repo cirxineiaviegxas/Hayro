@@ -3,7 +3,6 @@
 use crate::object::Object;
 use crate::object::macros::object;
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 
 /// The null object.
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]

@@ -3,7 +3,6 @@
 use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 use log::debug;
 use std::fmt::Debug;
 use std::str::FromStr;

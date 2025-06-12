@@ -2,10 +2,8 @@ use crate::Paint;
 use crate::color::Color;
 use crate::context::Context;
 use crate::device::Device;
-use crate::font::Glyph;
 use crate::paint::PaintType;
 use kurbo::{Affine, BezPath};
-use log::warn;
 
 pub(crate) fn fill_path(context: &mut Context, device: &mut impl Device) {
     fill_path_impl(context, device, None);

@@ -1,6 +1,5 @@
 use crate::object::{ObjectIdentifier, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
-use crate::xref::XRef;
 
 pub(crate) struct IndirectObject<T> {
     id: ObjectIdentifier,
@@ -37,7 +36,7 @@ impl<T> Skippable for IndirectObject<T>
 where
     T: Skippable,
 {
-    fn skip(r: &mut Reader<'_>, is_content_stream: bool) -> Option<()> {
+    fn skip(r: &mut Reader<'_>, _: bool) -> Option<()> {
         r.skip_in_content_stream::<ObjectIdentifier>()?;
         r.skip_white_spaces_and_comments();
         r.skip_not_in_content_stream::<T>()?;

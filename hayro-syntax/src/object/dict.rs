@@ -878,7 +878,6 @@ mod tests {
     use crate::object::number::Number;
     use crate::object::string;
     use crate::reader::{Reader, ReaderContext};
-    use crate::xref::XRef;
 
     fn dict_impl(data: &[u8]) -> Option<Dict> {
         Reader::new(data).read_with_context::<Dict>(ReaderContext::dummy())
