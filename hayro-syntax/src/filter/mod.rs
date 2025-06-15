@@ -51,6 +51,16 @@ pub enum ImageColorSpace {
     Cmyk,
 }
 
+impl ImageColorSpace {
+    fn num_components(&self) -> u8 {
+        match self {
+            ImageColorSpace::Gray => 1,
+            ImageColorSpace::Rgb => 3,
+            ImageColorSpace::Cmyk => 4,
+        }
+    }
+}
+
 /// The result of the filter.
 pub struct FilterResult {
     /// The decoded data.
