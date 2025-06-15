@@ -366,11 +366,13 @@ fn decode(data: &[u8], width: u32, height: u32, color_space: &ColorSpace, bits_p
 
             for _ in 0..height {
                 for _ in 0..width {
-                    // See `stream_ccit_not_enough_data`, some images seemingly don't have
-                    // enough data, so we just pad with zeroes in this case.
-                    let next = reader.read(bpc).unwrap_or(0) as u16;
+                    for _ in 0..color_space.num_components() {
+                        // See `stream_ccit_not_enough_data`, some images seemingly don't have
+                        // enough data, so we just pad with zeroes in this case.
+                        let next = reader.read(bpc).unwrap_or(0) as u16;
 
-                    buf.push(next);
+                        buf.push(next);
+                    }
                 }
 
                 reader.align();

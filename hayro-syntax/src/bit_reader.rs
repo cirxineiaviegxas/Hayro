@@ -131,6 +131,15 @@ impl<'a> BitWriter<'a> {
         )
     }
 
+    /// Align the writer to the next byte boundary.
+    pub fn align(&mut self) {
+        let bit_pos = self.bit_pos();
+
+        if bit_pos % 8 != 0 {
+            self.cur_pos += 8 - bit_pos;
+        }
+    }
+
     pub(crate) fn cur_pos(&self) -> usize {
         self.cur_pos
     }
