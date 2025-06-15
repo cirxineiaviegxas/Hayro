@@ -184,6 +184,7 @@ pub struct ImageXObject<'a> {
     interpolate: bool,
     decode: SmallVec<[(f32, f32); 4]>,
     is_image_mask: bool,
+    data_smask: Option<Vec<u8>>,
     pub dict: Dict<'a>,
     bits_per_component: u8,
 }
@@ -254,6 +255,7 @@ impl<'a> ImageXObject<'a> {
         Some(Self {
             decoded: decoded.data,
             width,
+            data_smask: decoded.alpha,
             height,
             color_space,
             interpolate,
@@ -290,7 +292,9 @@ impl<'a> ImageXObject<'a> {
                 255,
             )
         } else {
-            let s_mask = if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
+            let s_mask = if let Some(1) = self.dict.get::<u8>(SMASK_IN_DATA) {
+                Some(decode(self.data_smask.as_ref().unwrap(), self.width, self.height, &ColorSpace::device_gray(), 8, &[(0.0, 1.0)]))
+            } else if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
                 ImageXObject::new(&s_mask, |_| None).map(|s| s.decode_raw())
             } else if let Some(mask) = self.dict.get::<Stream>(MASK) {
                 if let Some(obj) = ImageXObject::new(&mask, |_| None) {
@@ -339,53 +343,56 @@ impl<'a> ImageXObject<'a> {
     }
 
     pub fn decode_raw(&self) -> Vec<f32> {
-        let interpolate = |n: f32, d_min: f32, d_max: f32| {
-            interpolate(
-                n,
-                0.0,
-                2.0f32.powi(self.bits_per_component as i32) - 1.0,
-                d_min,
-                d_max,
-            )
-        };
+        decode(&self.decoded, self.width, self.height, &self.color_space, self.bits_per_component, &self.decode)
+    }
+}
 
-        let adjusted_components = match self.bits_per_component {
-            1 | 2 | 4 => {
-                let mut buf = vec![];
-                let bpc = BitSize::from_u8(self.bits_per_component).unwrap();
-                let mut reader = BitReader::new(self.decoded.as_ref());
+fn decode(data: &[u8], width: u32, height: u32, color_space: &ColorSpace, bits_per_component: u8, decode: &[(f32, f32)]) -> Vec<f32> {
+    let interpolate = |n: f32, d_min: f32, d_max: f32| {
+        interpolate(
+            n,
+            0.0,
+            2.0f32.powi(bits_per_component as i32) - 1.0,
+            d_min,
+            d_max,
+        )
+    };
 
-                for _ in 0..self.height {
-                    for _ in 0..self.width {
-                        // See `stream_ccit_not_enough_data`, some images seemingly don't have
-                        // enough data, so we just pad with zeroes in this case.
-                        let next = reader.read(bpc).unwrap_or(0) as u16;
+    let adjusted_components = match bits_per_component {
+        1 | 2 | 4 => {
+            let mut buf = vec![];
+            let bpc = BitSize::from_u8(bits_per_component).unwrap();
+            let mut reader = BitReader::new(data.as_ref());
 
-                        buf.push(next);
-                    }
+            for _ in 0..height {
+                for _ in 0..width {
+                    // See `stream_ccit_not_enough_data`, some images seemingly don't have
+                    // enough data, so we just pad with zeroes in this case.
+                    let next = reader.read(bpc).unwrap_or(0) as u16;
 
-                    reader.align();
+                    buf.push(next);
                 }
 
-                buf
+                reader.align();
             }
-            8 => self.decoded.iter().map(|v| *v as u16).collect(),
-            16 => self
-                .decoded
-                .chunks(2)
-                .map(|v| (u16::from_be_bytes([v[0], v[1]])))
-                .collect(),
-            _ => unimplemented!(),
-        };
 
-        let mut decoded_arr = vec![];
-
-        for components in adjusted_components.chunks(self.color_space.num_components() as usize) {
-            for (component, (d_min, d_max)) in components.iter().zip(&self.decode) {
-                decoded_arr.push(interpolate(*component as f32, *d_min, *d_max));
-            }
+            buf
         }
+        8 => data.iter().map(|v| *v as u16).collect(),
+        16 => data
+            .chunks(2)
+            .map(|v| (u16::from_be_bytes([v[0], v[1]])))
+            .collect(),
+        _ => unimplemented!(),
+    };
 
-        decoded_arr
+    let mut decoded_arr = vec![];
+
+    for components in adjusted_components.chunks(color_space.num_components() as usize) {
+        for (component, (d_min, d_max)) in components.iter().zip(decode) {
+            decoded_arr.push(interpolate(*component as f32, *d_min, *d_max));
+        }
     }
+
+    decoded_arr
 }

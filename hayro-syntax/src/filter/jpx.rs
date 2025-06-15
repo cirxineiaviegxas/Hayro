@@ -9,19 +9,21 @@ pub fn decode(data: &[u8]) -> Option<FilterResult> {
 
     let image = jpeg2k::Image::from_bytes(data).unwrap();
     let components = image.components();
-    let cs = match components.len() {
+    let cs = match components.iter().filter(|c| !c.is_alpha()).count() {
         1 => Some(ImageColorSpace::Gray),
         3 => Some(ImageColorSpace::Rgb),
         4 => Some(ImageColorSpace::Cmyk),
         _ => None,
     };
+    let alpha = components.iter().flat_map(|c| if c.is_alpha() { Some(c) } else { None })
+        .next().map(|c| c.data_u8().collect::<Vec<_>>());
     let bpc = components
         .iter()
         .fold(std::u32::MIN, |max, c| max.max(c.precision())) as u8;
     let mut components_iters = image
         .components()
         .iter()
-        .map(|c| c.data_u8())
+        .flat_map(|c| if c.is_alpha() { None } else { Some(c.data_u8()) })
         .collect::<Vec<_>>();
     let mut buf = vec![];
 
@@ -37,6 +39,7 @@ pub fn decode(data: &[u8]) -> Option<FilterResult> {
 
     Some(FilterResult {
         data: buf,
+        alpha,
         color_space: cs,
         bits_per_component: Some(bpc),
     })

@@ -55,6 +55,8 @@ pub enum ImageColorSpace {
 pub struct FilterResult {
     /// The decoded data.
     pub data: Vec<u8>,
+    /// An optional alpha channel of the image (will only be set for JPX streams).
+    pub alpha: Option<Vec<u8>>,
     /// The color space of the image (will only be set for JPX streams).
     pub color_space: Option<ImageColorSpace>,
     /// The bits per component of the image (will only be set for JPX streams).
@@ -65,6 +67,7 @@ impl FilterResult {
     fn from_data(data: Vec<u8>) -> Self {
         Self {
             data,
+            alpha: None,
             color_space: None,
             bits_per_component: None,
         }
