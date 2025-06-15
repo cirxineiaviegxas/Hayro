@@ -9,6 +9,10 @@
   "1067": [
     "https://issues.apache.org/jira/secure/attachment/12486902/ItDoesntWorkScan.pdf"
   ],
+  "1752": [
+    "https://issues.apache.org/jira/secure/attachment/12622885/doc2.pdf",
+    "https://issues.apache.org/jira/secure/attachment/12609523/Document_20130625-190105_0001.pdf"
+  ],
   "1915": [
     "https://issues.apache.org/jira/secure/attachment/12648478/tensor4-nofunction.pdf",
     "https://issues.apache.org/jira/secure/attachment/12652089/CIB-coonsmesh.pdf"
@@ -68,8 +72,14 @@
   "2726": [
     "https://issues.apache.org/jira/secure/attachment/12706706/PDFBOX-2726.pdf"
   ],
+  "2737":[
+    "https://issues.apache.org/jira/secure/attachment/12708373/test.pdf"
+  ],
   "3185": [
     "https://issues.apache.org/jira/secure/attachment/12780980/a.pdf"
+  ],
+  "3423": [
+    "https://issues.apache.org/jira/secure/attachment/12818567/testPDF.pdf"
   ],
   "3562": [
     "https://issues.apache.org/jira/secure/attachment/12838397/PDFBOX-3562-BitsPerFlag2.pdf"
@@ -89,12 +99,24 @@
   "4110": [
     "https://issues.apache.org/jira/secure/attachment/12910605/flight_receipt.pdf"
   ],
+  "4320": [
+    "https://issues.apache.org/jira/secure/attachment/12940751/scanned.pdf"
+  ],
+  "4561": [
+    "https://issues.apache.org/jira/secure/attachment/12971051/PdfBox_Test.pdf"
+  ],
   "5097": [
     "https://issues.apache.org/jira/secure/attachment/13019989/document%283%29.pdf"
+  ],
+  "5337": [
+    "https://issues.apache.org/jira/secure/attachment/13036969/Stein%2021622%20Edelstahl-Abdeckung.pdf"
   ],
   "5597": [
     "https://issues.apache.org/jira/secure/attachment/13062795/test6.pdf",
     "https://issues.apache.org/jira/secure/attachment/13063199/image17.pdf",
     "https://issues.apache.org/jira/secure/attachment/13057930/test.pdf"
+  ],
+  "5635": [
+    "https://issues.apache.org/jira/secure/attachment/13061240/anonymous.pdf"
   ]
 } 

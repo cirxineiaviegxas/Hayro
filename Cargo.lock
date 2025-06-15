@@ -422,7 +422,7 @@ dependencies = [
 
 [[package]]
 name = "font-types"
-version = "0.9.0"
+version = "0.8.4"
 dependencies = [
  "bytemuck",
 ]
@@ -1183,7 +1183,7 @@ dependencies = [
 
 [[package]]
 name = "read-fonts"
-version = "0.29.3"
+version = "0.28.0"
 dependencies = [
  "bytemuck",
  "font-types",
@@ -1299,7 +1299,7 @@ checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
 name = "skrifa"
-version = "0.31.3"
+version = "0.30.0"
 dependencies = [
  "bytemuck",
  "read-fonts",
