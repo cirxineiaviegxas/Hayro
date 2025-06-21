@@ -208,7 +208,8 @@ impl<'a> ImageXObject<'a> {
         let bits_per_component = if image_mask {
             1
         } else {
-            decoded.bits_per_component
+            decoded
+                .bits_per_component
                 .or_else(|| dict.get::<u8>(BPC))
                 .or_else(|| dict.get::<u8>(BITS_PER_COMPONENT))
                 .unwrap_or(8)
@@ -293,7 +294,14 @@ impl<'a> ImageXObject<'a> {
             )
         } else {
             let s_mask = if let Some(1) = self.dict.get::<u8>(SMASK_IN_DATA) {
-                Some(decode(self.data_smask.as_ref().unwrap(), self.width, self.height, &ColorSpace::device_gray(), 8, &[(0.0, 1.0)]))
+                Some(decode(
+                    self.data_smask.as_ref().unwrap(),
+                    self.width,
+                    self.height,
+                    &ColorSpace::device_gray(),
+                    8,
+                    &[(0.0, 1.0)],
+                ))
             } else if let Some(s_mask) = self.dict.get::<Stream>(SMASK) {
                 ImageXObject::new(&s_mask, |_| None).map(|s| s.decode_raw())
             } else if let Some(mask) = self.dict.get::<Stream>(MASK) {
@@ -343,11 +351,25 @@ impl<'a> ImageXObject<'a> {
     }
 
     pub fn decode_raw(&self) -> Vec<f32> {
-        decode(&self.decoded, self.width, self.height, &self.color_space, self.bits_per_component, &self.decode)
+        decode(
+            &self.decoded,
+            self.width,
+            self.height,
+            &self.color_space,
+            self.bits_per_component,
+            &self.decode,
+        )
     }
 }
 
-fn decode(data: &[u8], width: u32, height: u32, color_space: &ColorSpace, bits_per_component: u8, decode: &[(f32, f32)]) -> Vec<f32> {
+fn decode(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    color_space: &ColorSpace,
+    bits_per_component: u8,
+    decode: &[(f32, f32)],
+) -> Vec<f32> {
     let interpolate = |n: f32, d_min: f32, d_max: f32| {
         interpolate(
             n,

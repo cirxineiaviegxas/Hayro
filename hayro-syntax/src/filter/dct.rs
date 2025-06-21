@@ -1,16 +1,18 @@
 //! A decoder for JPEG data streams.
 
 use crate::object::dict::Dict;
+use std::io::{BufReader, Cursor};
 use zune_jpeg::zune_core::colorspace::ColorSpace;
 use zune_jpeg::zune_core::options::DecoderOptions;
 
 /// Decode a JPEG data stream.
 pub fn decode(data: &[u8], _: Dict) -> Option<Vec<u8>> {
     // TODO: Handle the color transform attribute
-    let mut decoder = zune_jpeg::JpegDecoder::new(data);
+    let reader = Cursor::new(data);
+    let mut decoder = zune_jpeg::JpegDecoder::new(reader);
     decoder.decode_headers().ok()?;
 
-    let mut out_colorspace = match decoder.get_input_colorspace().unwrap() {
+    let mut out_colorspace = match decoder.input_colorspace().unwrap() {
         ColorSpace::RGB | ColorSpace::RGBA | ColorSpace::YCbCr => ColorSpace::RGB,
         ColorSpace::Luma | ColorSpace::LumaA => ColorSpace::Luma,
         ColorSpace::CMYK => ColorSpace::CMYK,
@@ -20,7 +22,8 @@ pub fn decode(data: &[u8], _: Dict) -> Option<Vec<u8>> {
 
     decoder.set_options(DecoderOptions::default().jpeg_set_out_colorspace(out_colorspace));
     let mut decoded = decoder.decode().ok().or_else(|| {
-        let mut decoder = zune_jpeg::JpegDecoder::new(data);
+        let reader = Cursor::new(data);
+        let mut decoder = zune_jpeg::JpegDecoder::new(reader);
         decoder.decode_headers().ok()?;
         // It's possible that the APP14 marker is set, so that zune_jpeg will set the input colorspace
         // to a different one. So try decoding again with the different color space. This is probably

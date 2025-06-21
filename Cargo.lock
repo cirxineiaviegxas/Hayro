@@ -422,7 +422,8 @@ dependencies = [
 
 [[package]]
 name = "font-types"
-version = "0.8.4"
+version = "0.9.0"
+source = "git+https://github.com/googlefonts/fontations?rev=b5c3030#b5c3030a19f2b7e7fe3fb7a0f38b01e63352aea9"
 dependencies = [
  "bytemuck",
 ]
@@ -559,7 +560,7 @@ dependencies = [
  "once_cell",
  "rustc-hash",
  "smallvec",
- "zune-jpeg",
+ "zune-jpeg 0.5.0-rc5",
 ]
 
 [[package]]
@@ -593,8 +594,8 @@ dependencies = [
  "rayon",
  "rgb",
  "tiff",
- "zune-core",
- "zune-jpeg",
+ "zune-core 0.4.12",
+ "zune-jpeg 0.4.14",
 ]
 
 [[package]]
@@ -1183,7 +1184,8 @@ dependencies = [
 
 [[package]]
 name = "read-fonts"
-version = "0.28.0"
+version = "0.30.1"
+source = "git+https://github.com/googlefonts/fontations?rev=b5c3030#b5c3030a19f2b7e7fe3fb7a0f38b01e63352aea9"
 dependencies = [
  "bytemuck",
  "font-types",
@@ -1299,7 +1301,8 @@ checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
 name = "skrifa"
-version = "0.30.0"
+version = "0.32.0"
+source = "git+https://github.com/googlefonts/fontations?rev=b5c3030#b5c3030a19f2b7e7fe3fb7a0f38b01e63352aea9"
 dependencies = [
  "bytemuck",
  "read-fonts",
@@ -1785,6 +1788,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f423a2c17029964870cfaabb1f13dfab7d092a62a29a89264f4d36990ca414a"
 
 [[package]]
+name = "zune-core"
+version = "0.5.0-rc2"
+source = "git+https://github.com/etemesi254/zune-image?rev=ac43af3#ac43af36e7125c120d64392c3eee52528c24b5c4"
+
+[[package]]
 name = "zune-inflate"
 version = "0.2.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1799,5 +1807,13 @@ version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
- "zune-core",
+ "zune-core 0.4.12",
+]
+
+[[package]]
+name = "zune-jpeg"
+version = "0.5.0-rc5"
+source = "git+https://github.com/etemesi254/zune-image?rev=ac43af3#ac43af36e7125c120d64392c3eee52528c24b5c4"
+dependencies = [
+ "zune-core 0.5.0-rc2",
 ]

@@ -20,13 +20,13 @@ log = { version = "0.4.22" }
 once_cell = { version = "1.20.3" }
 rustc-hash = { version = "2.1.0" }
 smallvec = { version = "1.13.2" }
-zune-jpeg = { version = "0.4.14" }
+zune-jpeg = { git = "https://github.com/etemesi254/zune-image", rev = "ac43af3", version = "0.5.0-rc5" }
 flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
 itertools = "0.14.0"
 peniko = { version = "0.4.0", features = ["bytemuck"] }
 qcms = "0.3.0"
 phf = { version = "0.11.3" }
-skrifa = { path = "../fontations/skrifa" }
+skrifa = { git = "https://github.com/googlefonts/fontations", rev = "b5c3030" }
 yoke = { version = "0.8.0" }
 hayro-font = { path = "./hayro-font" }
 walkdir = "2.5.0"

@@ -912,5 +912,9 @@
   {
     "id": "issue11",
     "file": "pdfs/issue11.pdf"
+  },
+  {
+    "id": "issue_missing_jpeg_image",
+    "file": "pdfs/issue_missing_jpeg_image.pdf"
   }
 ]
