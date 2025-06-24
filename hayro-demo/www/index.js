@@ -191,6 +191,7 @@ async function run() {
         if (!currentImage) return;
 
         const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
         
         // Get viewport dimensions (minus some padding for controls)
         const viewportWidth = window.innerWidth;
@@ -205,12 +206,19 @@ async function run() {
         const scaledWidth = currentImage.width * scale;
         const scaledHeight = currentImage.height * scale;
         
-        // Set canvas size to scaled dimensions
-        canvas.width = scaledWidth;
-        canvas.height = scaledHeight;
+        // Set canvas actual size accounting for device pixel ratio
+        canvas.width = scaledWidth * dpr;
+        canvas.height = scaledHeight * dpr;
+        
+        // Set canvas display size (CSS pixels)
+        canvas.style.width = scaledWidth + 'px';
+        canvas.style.height = scaledHeight + 'px';
+        
+        // Scale the drawing context to match device pixel ratio
+        ctx.scale(dpr, dpr);
         
         // Clear and draw scaled image
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, scaledWidth, scaledHeight);
         ctx.drawImage(currentImage, 0, 0, scaledWidth, scaledHeight);
     }
 

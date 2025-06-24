@@ -81,6 +81,8 @@ body {
     margin: 20px auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     background-color: white;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 /* Controls */
