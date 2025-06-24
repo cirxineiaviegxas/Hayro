@@ -379,12 +379,9 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
     pixmap
 }
 
-pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -> Vec<Vec<u8>> {
-    pdf.pages()
-        .unwrap()
-        .iter()
-        .enumerate()
-        .flat_map(|(idx, page)| {
+pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -> Option<Vec<Vec<u8>>> {
+    if let Some(pages) = pdf.pages() {
+        let rendered = pages.iter().enumerate().flat_map(|(idx, page)| {
             if range.clone().is_some_and(|range| !range.contains(&idx)) {
                 return None;
             }
@@ -404,8 +401,12 @@ pub fn render_png(pdf: &Pdf, scale: f32, range: Option<RangeInclusive<usize>>) -
                 .expect("Failed to encode image");
 
             Some(png_data)
-        })
-        .collect()
+        }).collect();
+        
+        return Some(rendered);
+    }
+    
+    None
 }
 
 pub(crate) fn min_factor(transform: &Affine) -> f32 {

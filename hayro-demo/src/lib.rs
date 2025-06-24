@@ -105,7 +105,7 @@ impl PdfViewer {
                     Some(self.current_page..=self.current_page),
                 );
 
-                if let Some(png_data) = pixmaps.first() {
+                if let Some(png_data) = pixmaps.as_ref().and_then(|p| p.first()) {
                     return Ok(png_data.clone());
                 }
             }
