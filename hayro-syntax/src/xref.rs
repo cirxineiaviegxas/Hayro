@@ -18,11 +18,17 @@ use std::sync::{Arc, RwLock};
 
 pub(crate) const XREF_ENTRY_LEN: usize = 20;
 
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum XRefError {
+    Unknown,
+    Encrypted
+}
+
 /// Parse the "root" xref from the PDF.
-pub(crate) fn root_xref(data: PdfData) -> Option<XRef> {
+pub(crate) fn root_xref(data: PdfData) -> Result<XRef, XRefError> {
     let mut xref_map = FxHashMap::default();
-    let xref_pos = find_last_xref_pos(data.as_ref().as_ref())?;
-    let trailer = populate_xref_impl(data.as_ref().as_ref(), xref_pos, &mut xref_map)?;
+    let xref_pos = find_last_xref_pos(data.as_ref().as_ref()).ok_or(XRefError::Unknown)?;
+    let trailer = populate_xref_impl(data.as_ref().as_ref(), xref_pos, &mut xref_map).ok_or(XRefError::Unknown)?;
 
     XRef::new(data.clone(), xref_map, &trailer, false)
 }
@@ -35,7 +41,7 @@ pub(crate) fn fallback(data: PdfData) -> Option<XRef> {
     if let Some(trailer_dict_data) = trailer_dict {
         warn!("rebuild xref table with {} entries", xref_map.len());
 
-        XRef::new(data.clone(), xref_map, trailer_dict_data, true)
+        XRef::new(data.clone(), xref_map, trailer_dict_data, true).ok()
     } else {
         warn!("couldn't find trailer dictionary, failed to rebuild xref table");
 
@@ -82,7 +88,7 @@ impl XRef {
         xref_map: XrefMap,
         trailer_dict_data: &[u8],
         repaired: bool,
-    ) -> Option<Self> {
+    ) -> Result<Self, XRefError> {
         // This is a bit hacky, but the problem is we can't read the resolved trailer dictionary
         // before we actually created the xref struct. So we first create it using dummy data
         // and then populate the data.
@@ -95,16 +101,17 @@ impl XRef {
         });
 
         let mut r = Reader::new(&trailer_dict_data);
-        let trailer_dict = r.read_with_context::<Dict>(ReaderContext::new(&xref, false))?;
+        let trailer_dict = r.read_with_context::<Dict>(ReaderContext::new(&xref, false))
+            .ok_or(XRefError::Unknown)?;
         
         if trailer_dict.get::<Dict>(ENCRYPT).is_some() {
             warn!("encrypted PDF files are not yet supported");
             
-            return None;
+            return Err(XRefError::Encrypted);
         }
         
-        let root = trailer_dict.get::<Dict>(ROOT)?;
-        let pages_ref = root.get_ref(PAGES)?;
+        let root = trailer_dict.get::<Dict>(ROOT).ok_or(XRefError::Unknown)?;
+        let pages_ref = root.get_ref(PAGES).ok_or(XRefError::Unknown)?;
 
         let td = TrailerData {
             pages_ref: pages_ref.into(),
@@ -117,7 +124,7 @@ impl XRef {
             }
         }
 
-        Some(xref)
+        Ok(xref)
     }
 
     pub(crate) fn dummy() -> &'static XRef {
