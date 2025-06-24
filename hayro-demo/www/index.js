@@ -147,8 +147,7 @@ async function run() {
             
             renderCurrentPage();
         } catch (error) {
-            console.error('Error loading PDF:', error);
-            alert('Error loading PDF: ' + error.message);
+            console.error('Error loading PDFs:', error);
         }
     }
 
@@ -179,7 +178,6 @@ async function run() {
             
         } catch (error) {
             console.error('Error rendering page:', error);
-            alert('Error rendering page: ' + error.message);
         }
     }
 
