@@ -5,7 +5,7 @@ use crate::data::Data;
 use crate::object::ObjectIdentifier;
 use crate::object::array::Array;
 use crate::object::dict::Dict;
-use crate::object::dict::keys::{FIRST, INDEX, N, PAGES, PREV, ROOT, SIZE, W, XREF_STM};
+use crate::object::dict::keys::{ENCRYPT, FIRST, INDEX, N, PAGES, PREV, ROOT, SIZE, W, XREF_STM};
 use crate::object::indirect::IndirectObject;
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
@@ -96,6 +96,13 @@ impl XRef {
 
         let mut r = Reader::new(&trailer_dict_data);
         let trailer_dict = r.read_with_context::<Dict>(ReaderContext::new(&xref, false))?;
+        
+        if trailer_dict.get::<Dict>(ENCRYPT).is_some() {
+            warn!("encrypted PDF files are not yet supported");
+            
+            return None;
+        }
+        
         let root = trailer_dict.get::<Dict>(ROOT)?;
         let pages_ref = root.get_ref(PAGES)?;
 
