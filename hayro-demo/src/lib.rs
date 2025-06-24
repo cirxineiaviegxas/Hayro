@@ -38,7 +38,7 @@ impl log::Log for ConsoleLogger {
             }
 
             // Also log to our custom log window if the function exists
-            if let Ok(window) = web_sys::window().ok_or("no window") {
+            if let Some(window) = web_sys::window() {
                 if let Ok(add_log_entry) = js_sys::Reflect::get(&window, &"addLogEntry".into()) {
                     if add_log_entry.is_function() {
                         let function = js_sys::Function::from(add_log_entry);

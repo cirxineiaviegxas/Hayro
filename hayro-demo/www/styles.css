@@ -169,7 +169,7 @@ body {
     font-weight: 500;
 }
 
-/* Log Window */
+/* Log Window - Always visible */
 #log-window {
     position: fixed;
     top: 20px;

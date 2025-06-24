@@ -121,7 +121,7 @@ async function run() {
     // Handle file loading
     async function handleFile(file) {
         if (file.type !== 'application/pdf') {
-            alert('Please select a PDF file.');
+            console.error('Please select a PDF file.');
             return;
         }
         
@@ -131,7 +131,6 @@ async function run() {
             await loadPDFData(uint8Array);
         } catch (error) {
             console.error('Error reading file:', error);
-            alert('Error reading file: ' + error.message);
         }
     }
 
@@ -147,7 +146,13 @@ async function run() {
             
             renderCurrentPage();
         } catch (error) {
-            console.error('Error loading PDFs:', error);
+            console.error('Error loading PDF:', error);
+            // Check if it's an encrypted PDF error
+            if (error && error.toString().includes('encrypted')) {
+                console.warn('PDF appears to be encrypted and cannot be opened');
+            }
+            // Reset state
+            pdfViewer = null;
         }
     }
 
@@ -266,11 +271,6 @@ function setupLogWindow() {
     // Clear logs on page load
     logContent.innerHTML = '';
 
-    // Clear logs button
-    clearLogsButton.addEventListener('click', () => {
-        logContent.innerHTML = '';
-    });
-
     // Function to add log entry
     window.addLogEntry = function(level, message) {
         const logEntry = document.createElement('div');
@@ -282,6 +282,14 @@ function setupLogWindow() {
         logContent.appendChild(logEntry);
         logContent.scrollTop = logContent.scrollHeight; // Auto-scroll to bottom
     };
+
+    // Clear logs button
+    clearLogsButton.addEventListener('click', () => {
+        logContent.innerHTML = '';
+    });
+    
+    // Add welcome message
+    window.addLogEntry('info', 'Hayro PDF Demo initialized');
 
     // Override console methods to also log to our window
     const originalConsoleWarn = console.warn;
