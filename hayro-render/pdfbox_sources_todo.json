@@ -25,25 +25,9 @@
   "1968": [
     "https://issues.apache.org/jira/secure/attachment/12633464/texample-rgb-triangle.pdf"
   ],
-  "2241": [
-    // Type1 font that fails to parse
-    "https://issues.apache.org/jira/secure/attachment/12657611/2.pdf"
-  ],
   "3045": [
     // Flate filter fails to apply
     "https://issues.apache.org/jira/secure/attachment/12767969/PDFbox2.pdf"
-  ],
-  "3754": [
-    // Type 1 font that fails to process
-    "https://issues.apache.org/jira/secure/attachment/12863088/PDFJS-7769.pdf"
-  ],
-  "3874": [
-    // Type 1 font that fails to process
-    "https://issues.apache.org/jira/secure/attachment/12878016/PDFJS-8644-p2.pdf"
-  ],
-  "3979": [
-    // Type 1 font that fails to process
-    "https://issues.apache.org/jira/secure/attachment/12894023/NullReadCharStrings.pdf"
   ],
   "4228": [
     // Type3 text fails to render
