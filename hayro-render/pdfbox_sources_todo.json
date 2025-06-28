@@ -12,10 +12,6 @@
   "1451": [
     "https://issues.apache.org/jira/secure/attachment/12554671/Alfresco_Enterprise4_Mobile.pdf"
   ],
-  "1794": [
-    // Text shows very bold and blurry?
-    "https://issues.apache.org/jira/secure/attachment/12616872/PDFBOX-1794-vattenfall.pdf"
-  ],
   "1915": [
     "https://issues.apache.org/jira/secure/attachment/12649689/mcafeeU5.pdf"
   ],
@@ -29,19 +25,11 @@
     // Flate filter fails to apply
     "https://issues.apache.org/jira/secure/attachment/12767969/PDFbox2.pdf"
   ],
-  "4228": [
-    // Type3 text fails to render
-    "https://issues.apache.org/jira/secure/attachment/12924707/example.pdf"
-  ],
   "4914": [
     "https://issues.apache.org/jira/secure/attachment/13007430/POPPLER-938.pdf"
   ],
   "5134": [
     "https://issues.apache.org/jira/secure/attachment/13022705/gs-bugzilla687307-2.pdf"
-  ],
-  "5963": [
-    // Type3 text with weird spacing
-    "https://issues.apache.org/jira/secure/attachment/13074981/PDFJS-19532-Type3.pdf"
   ],
   "4326": [
     // JPEG2000 image that doesn't render
