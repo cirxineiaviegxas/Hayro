@@ -8,6 +8,7 @@ use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
 use crate::interpret::state::State;
+use bitflags::bitflags;
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::SUBTYPE;
@@ -260,6 +261,133 @@ impl Encoding {
             Encoding::WinAnsi => win_ansi::get(code),
             Encoding::MacExpert => mac_expert::get(code),
             Encoding::BuiltIn => None,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum FontStretch {
+    Normal,
+    UltraCondensed,
+    ExtraCondensed,
+    Condensed,
+    SemiCondensed,
+    SemiExpanded,
+    Expanded,
+    ExtraExpanded,
+    UltraExpanded,
+}
+
+impl FontStretch {
+    pub fn from_string(s: &str) -> Self {
+        match s {
+            "UltraCondensed" => FontStretch::UltraCondensed,
+            "ExtraCondensed" => FontStretch::ExtraCondensed,
+            "Condensed" => FontStretch::Condensed,
+            "SemiCondensed" => FontStretch::SemiCondensed,
+            "SemiExpanded" => FontStretch::SemiExpanded,
+            "Expanded" => FontStretch::Expanded,
+            "ExtraExpanded" => FontStretch::ExtraExpanded,
+            "UltraExpanded" => FontStretch::UltraExpanded,
+            _ => FontStretch::Normal,
+        }
+    }
+}
+
+bitflags! {
+    /// Bitflags describing various characteristics of fonts.
+    #[derive(Debug)]
+    pub struct FontFlags: u32 {
+        const FIXED_PITCH = 1 << 0;
+        const SERIF = 1 << 1;
+        const SYMBOLIC = 1 << 2;
+        const SCRIPT = 1 << 3;
+        const NON_SYMBOLIC = 1 << 5;
+        const ITALIC = 1 << 6;
+        const ALL_CAP = 1 << 16;
+        const SMALL_CAP = 1 << 17;
+        const FORCE_BOLD = 1 << 18;
+    }
+}
+
+#[derive(Debug, Clone)]
+struct FontData {
+    post_script_name: Option<String>,
+    font_name: Option<String>,
+    font_family: Option<String>,
+    font_stretch: FontStretch,
+    font_weight: u32,
+    is_fixed_pitch: bool,
+    is_serif: bool,
+    is_italic: bool,
+    is_bold: bool,
+    is_small_cap: bool,
+}
+
+impl FontData {
+    pub fn new(dict: &Dict) -> Self {
+        let mut data = Self::default();
+
+        let remove_subset_prefix = |s: String| {
+            if s.contains("+") {
+                s.chars().skip(7).collect()
+            } else {
+                s
+            }
+        };
+
+        data.post_script_name = dict
+            .get::<Name>(BASE_FONT)
+            .map(|n| remove_subset_prefix(n.as_str().to_string()));
+
+        if let Some(descriptor) = dict.get::<Dict>(FONT_DESC) {
+            data.font_name = dict
+                .get::<Name>(FONT_NAME)
+                .map(|n| remove_subset_prefix(n.as_str().to_string()));
+            data.font_family = descriptor
+                .get::<Name>(FONT_FAMILY)
+                .map(|n| n.as_str().to_string());
+            data.font_stretch = descriptor
+                .get::<Name>(FONT_STRETCH)
+                .map(|n| FontStretch::from_string(n.as_str()))
+                .unwrap_or(FontStretch::Normal);
+            data.font_weight = descriptor.get::<u32>(FONT_WEIGHT).unwrap_or(400);
+
+            if let Some(flags) = descriptor
+                .get::<u32>(FLAGS)
+                .map(|n| FontFlags::from_bits_truncate(n))
+            {
+                data.is_serif = flags.contains(FontFlags::SERIF);
+                data.is_italic = flags.contains(FontFlags::ITALIC)
+                    || data
+                        .post_script_name
+                        .as_ref()
+                        .is_some_and(|s| s.contains("Italic"));
+                data.is_small_cap = flags.contains(FontFlags::SMALL_CAP);
+                data.is_bold = data
+                    .post_script_name
+                    .as_ref()
+                    .is_some_and(|s| s.contains("Bold"));
+            }
+        }
+
+        data
+    }
+}
+
+impl Default for FontData {
+    fn default() -> Self {
+        Self {
+            post_script_name: None,
+            font_name: None,
+            font_family: None,
+            font_stretch: FontStretch::Normal,
+            font_weight: 400,
+            is_fixed_pitch: false,
+            is_serif: false,
+            is_italic: false,
+            is_bold: false,
+            is_small_cap: false,
         }
     }
 }
