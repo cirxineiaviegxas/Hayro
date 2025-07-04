@@ -329,6 +329,7 @@ use crate::run_test;
 #[test] fn pdfjs_pattern_text_embedded_font() { run_test("pdfjs_pattern_text_embedded_font", "pdfs/pdfjs/pattern_text_embedded_font.pdf", None); }
 #[test] fn pdfjs_personwithdog() { run_test("pdfjs_personwithdog", "pdfs/pdfjs/personwithdog.pdf", None); }
 #[test] fn pdfjs_simpletype3font() { run_test("pdfjs_simpletype3font", "pdfs/pdfjs/simpletype3font.pdf", None); }
+#[test] fn pdfjs_standard_fonts_no_system_fonts() { run_test("pdfjs_standard_fonts_no_system_fonts", "pdfs/pdfjs/standard_fonts.pdf", None); }
 #[test] fn pdfjs_type4psfunc() { run_test("pdfjs_type4psfunc", "pdfs/pdfjs/type4psfunc.pdf", None); }
 #[test] fn pdfjs_zerowidthline() { run_test("pdfjs_zerowidthline", "pdfs/pdfjs/zerowidthline.pdf", None); }
 #[test] fn pdfbox_31() { run_test("pdfbox_31", "downloads/pdfbox/31.pdf", Some("..=0")); }
@@ -429,6 +430,7 @@ use crate::run_test;
 #[test] fn pdfbox_1970() { run_test("pdfbox_1970", "downloads/pdfbox/1970.pdf", None); }
 #[test] fn pdfbox_1997() { run_test("pdfbox_1997", "downloads/pdfbox/1997.pdf", None); }
 #[test] fn pdfbox_2046() { run_test("pdfbox_2046", "downloads/pdfbox/2046.pdf", None); }
+#[test] fn pdfbox_2059() { run_test("pdfbox_2059", "downloads/pdfbox/2059.pdf", None); }
 #[test] fn pdfbox_2090() { run_test("pdfbox_2090", "downloads/pdfbox/2090.pdf", None); }
 #[test] fn pdfbox_2091() { run_test("pdfbox_2091", "downloads/pdfbox/2091.pdf", None); }
 #[test] fn pdfbox_2112() { run_test("pdfbox_2112", "downloads/pdfbox/2112.pdf", None); }
