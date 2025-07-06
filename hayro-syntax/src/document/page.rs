@@ -10,7 +10,9 @@ use crate::object::r#ref::{MaybeRef, ObjRef};
 use crate::object::stream::Stream;
 use crate::object::{Object, ObjectLike};
 use crate::reader::ReaderContext;
+use crate::util::FloatExt;
 use crate::xref::XRef;
+use kurbo::Affine;
 use log::warn;
 use std::cell::OnceCell;
 use std::ops::Deref;
@@ -18,7 +20,8 @@ use std::ops::Deref;
 /// A structure holding the pages of a PDF document.
 pub struct Pages<'a> {
     /// The pages of the document.
-    pub pages: Vec<Page<'a>>,
+    pages: Vec<Page<'a>>,
+    xref: &'a XRef,
 }
 
 /// Attributes that can be inherited.
@@ -41,7 +44,11 @@ impl PagesContext {
 
 impl<'a> Pages<'a> {
     /// Create a new `Pages` object.
-    pub(crate) fn new(pages_dict: Dict<'a>, ctx: ReaderContext<'a>) -> Option<Pages<'a>> {
+    pub(crate) fn new(
+        pages_dict: Dict<'a>,
+        ctx: ReaderContext<'a>,
+        xref: &'a XRef,
+    ) -> Option<Pages<'a>> {
         let mut pages = vec![];
         let pages_ctx = PagesContext::new();
         resolve_pages(
@@ -51,12 +58,22 @@ impl<'a> Pages<'a> {
             Resources::new(Dict::empty(), None, ctx),
         )?;
 
-        Some(Self { pages })
+        Some(Self { pages, xref })
     }
 
     /// The number of available pages.
     pub fn len(&self) -> usize {
         self.pages.len()
+    }
+
+    /// Return the pages of the document.
+    pub fn get(&self) -> &[Page<'a>] {
+        &self.pages
+    }
+
+    /// Return the xref table (of the document the pages belong to).   
+    pub fn xref(&self) -> &'a XRef {
+        self.xref
     }
 }
 
@@ -211,12 +228,83 @@ impl<'a> Page<'a> {
         self.crop_box
     }
 
+    fn intersected_crop_box(&self) -> Rect {
+        self.crop_box().intersect(self.media_box())
+    }
+
+    fn base_dimensions(&self) -> (f32, f32) {
+        let crop_box = self.intersected_crop_box();
+
+        if (crop_box.width() as f32).is_nearly_zero() || (crop_box.height() as f32).is_nearly_zero()
+        {
+            (A4.width() as f32, A4.height() as f32)
+        } else {
+            (
+                crop_box.width().max(1.0) as f32,
+                crop_box.height().max(1.0) as f32,
+            )
+        }
+    }
+
+    /// A clip path that should be applied initially, representing the visible area.
+    pub fn view_box(&self) -> Rect {
+        self.intersected_crop_box()
+    }
+
+    /// Return the initial transform that should be applied when rendering. This accounts for a
+    /// number of factors, such as the mismatch between PDF's y-up and most renderers' y-down
+    /// coordinate system, the rotation of the page and the offset of the crop box.
+    pub fn initial_transform(&self) -> kurbo::Affine {
+        let crop_box = self.intersected_crop_box();
+        let (_, base_height) = self.base_dimensions();
+        let (width, height) = self.render_dimensions();
+
+        let rotation_transform = match self.rotation() {
+            Rotation::None => Affine::IDENTITY,
+            Rotation::Horizontal => {
+                let t =
+                    Affine::rotate(90.0f64.to_radians()) * Affine::translate((0.0, -width as f64));
+
+                t
+            }
+            Rotation::Flipped => {
+                Affine::scale(-1.0) * Affine::translate((-width as f64, -height as f64))
+            }
+            Rotation::FlippedHorizontal => {
+                let t =
+                    Affine::translate((0.0, height as f64)) * Affine::rotate(-90.0f64.to_radians());
+
+                t
+            }
+        };
+
+        rotation_transform
+            * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, base_height as f64])
+            * Affine::translate((-crop_box.x0, -crop_box.y0))
+    }
+
+    /// Return the with and height of the page that should be assumed when rendering the page.
+    ///
+    /// Depending on the document, it is either based on the media box or the crop box
+    /// of the page. In addition to that, it also takes the rotation of the page into account.
+    pub fn render_dimensions(&self) -> (f32, f32) {
+        let (mut base_width, mut base_height) = self.base_dimensions();
+
+        if matches!(
+            self.rotation(),
+            Rotation::Horizontal | Rotation::FlippedHorizontal
+        ) {
+            std::mem::swap(&mut base_width, &mut base_height);
+        }
+
+        (base_width, base_height)
+    }
+
     /// Get the operations of the content stream of the page.
     pub fn operations(&self) -> UntypedIter {
         self.operations_impl().unwrap_or(UntypedIter::empty())
     }
 
-    // TODO: Remove?
     /// Get the xref table (of the document the page belongs to).
     pub fn xref(&self) -> &'a XRef {
         self.ctx.xref

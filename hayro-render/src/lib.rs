@@ -344,52 +344,14 @@ impl Device for Renderer {
 }
 
 pub fn render(page: &Page, scale: f32) -> Pixmap {
-    let crop_box = page.crop_box().intersect(page.media_box());
+    let (width, height) = page.render_dimensions();
+    let (scaled_width, scaled_height) = ((width * scale) as f64, (height * scale) as f64);
+    let initial_transform = Affine::scale(scale as f64) * page.initial_transform();
 
-    let (unscaled_width, unscaled_height) = if (crop_box.width() as f32).is_nearly_zero()
-        || (crop_box.height() as f32).is_nearly_zero()
-    {
-        (A4.width(), A4.height())
-    } else {
-        (crop_box.width().max(1.0), crop_box.height().max(1.0))
-    };
-
-    let (mut pix_width, mut pix_height) = (unscaled_width, unscaled_height);
-
-    let rotation_transform = Affine::scale(scale as f64)
-        * match page.rotation() {
-            Rotation::None => Affine::IDENTITY,
-            Rotation::Horizontal => {
-                let t = Affine::rotate(90.0f64.to_radians())
-                    * Affine::translate((0.0, -unscaled_height));
-                std::mem::swap(&mut pix_width, &mut pix_height);
-
-                t
-            }
-            Rotation::Flipped => {
-                Affine::scale(-1.0) * Affine::translate((-unscaled_width, -unscaled_height))
-            }
-            Rotation::FlippedHorizontal => {
-                let t = Affine::translate((0.0, unscaled_width))
-                    * Affine::rotate(-90.0f64.to_radians());
-                std::mem::swap(&mut pix_width, &mut pix_height);
-
-                t
-            }
-        };
-
-    let initial_transform = rotation_transform
-        * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, unscaled_height])
-        * Affine::translate((-crop_box.x0, -crop_box.y0));
-
-    let (scaled_width, scaled_height) = (
-        (pix_width as f32 * scale) as f64,
-        (pix_height as f32 * scale) as f64,
-    );
     let (pix_width, pix_height) = (scaled_width.floor() as u16, scaled_height.floor() as u16);
     let mut state = Context::new(
         initial_transform,
-        kurbo::Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
+        Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64),
         Cache::new(),
         page.xref(),
     );
@@ -407,7 +369,7 @@ pub fn render(page: &Page, scale: f32) -> Pixmap {
         None,
     );
     device.push_clip_path(&ClipPath {
-        path: initial_transform * crop_box.to_path(0.1),
+        path: initial_transform * page.view_box().to_path(0.1),
         fill: Fill::NonZero,
     });
 
@@ -451,6 +413,7 @@ pub fn render_png(
 ) -> Option<Vec<Vec<u8>>> {
     if let Some(pages) = pdf.pages() {
         let rendered = pages
+            .get()
             .iter()
             .enumerate()
             .flat_map(|(idx, page)| {
