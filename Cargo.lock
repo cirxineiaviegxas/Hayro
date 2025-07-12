@@ -538,13 +538,9 @@ dependencies = [
  "hayro-syntax",
  "image",
  "kurbo",
- "log",
- "once_cell",
- "oxipng",
  "peniko",
  "rustc-hash",
  "smallvec",
- "walkdir",
 ]
 
 [[package]]
@@ -561,6 +557,18 @@ dependencies = [
  "rustc-hash",
  "smallvec",
  "zune-jpeg 0.5.0-rc5",
+]
+
+[[package]]
+name = "hayro-tests"
+version = "0.1.0"
+dependencies = [
+ "hayro-render",
+ "image",
+ "log",
+ "once_cell",
+ "oxipng",
+ "walkdir",
 ]
 
 [[package]]
