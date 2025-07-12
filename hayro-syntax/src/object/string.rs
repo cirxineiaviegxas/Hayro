@@ -1,5 +1,6 @@
 //! String objects.
 
+use crate::filter::ascii_hex::decode_hex_string;
 use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
@@ -27,10 +28,10 @@ impl HexString<'_> {
             }
 
             // We made sure while parsing that it is a valid hex string.
-            hex::decode(cleaned).unwrap()
+            decode_hex_string(&cleaned).unwrap()
         } else {
             // We made sure while parsing that it is a valid hex string.
-            hex::decode(self.0).unwrap()
+            decode_hex_string(self.0).unwrap()
         }
     }
 }
