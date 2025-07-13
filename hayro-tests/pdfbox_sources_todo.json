@@ -1,7 +1,4 @@
 {
-  "1442": [
-    "https://issues.apache.org/jira/secure/attachment/12552794/clientfocus.pdf"
-  ],
   "2909": [
     "https://issues.apache.org/jira/secure/attachment/12747810/PDFJS-5509.pdf"
   ],
@@ -59,7 +56,6 @@
   "994": "transparency group",
   "1174": "non-embedded CID font",
   "1416": "transparency group with image",
-  "1442": "black bar in plots",
   "1446": "page completely red",
   "1570": "transparency groups",
   "1593": "encryption",
