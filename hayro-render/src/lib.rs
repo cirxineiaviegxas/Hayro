@@ -10,12 +10,14 @@ use hayro_interpret::device::Device;
 use hayro_interpret::font::Glyph;
 use hayro_interpret::pattern::Pattern;
 use hayro_interpret::util::FloatExt;
-use hayro_interpret::{FillProps, MaskType, Paint, SoftMask, StencilImage, StrokeProps, interpret};
+use hayro_interpret::{
+    AlphaData, FillProps, MaskType, Paint, RgbData, SoftMask, StrokeProps, interpret,
+};
 use hayro_syntax::document::page::{A4, Page, Rotation};
 use hayro_syntax::object::ObjectIdentifier;
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
-use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder};
+use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder, RgbImage};
 use kurbo::{Affine, BezPath, Point, Rect, Shape};
 use peniko::Fill;
 use peniko::color::palette::css::WHITE;
@@ -28,6 +30,7 @@ pub use hayro_interpret::FontData;
 pub use hayro_interpret::InterpreterSettings;
 pub use hayro_interpret::font::FontQuery;
 pub use hayro_interpret::font::standard_font::StandardFont;
+use hayro_syntax::object::dict::keys::P;
 pub use hayro_syntax::pdf::Pdf;
 
 mod coarse;
@@ -49,48 +52,70 @@ struct Renderer {
 }
 
 impl Renderer {
-    fn draw_image(
-        &mut self,
-        image_data: Vec<u8>,
-        mut width: u32,
-        mut height: u32,
-        is_stencil: bool,
-        interpolate: bool,
-    ) {
+    fn draw_image(&mut self, rgb_data: RgbData, alpha_data: Option<AlphaData>, is_stencil: bool) {
         let mut cur_transform = self.ctx.transform;
 
         let (x_scale, y_scale) = {
             let (x, y) = x_y_advances(&cur_transform);
             (x.length() as f32, y.length() as f32)
         };
+        let mut rgb_width = rgb_data.width;
+        let mut rgb_height = rgb_data.height;
 
-        let image_data = if x_scale >= 1.0 && y_scale >= 1.0 {
-            image_data
+        let interpolate = rgb_data.interpolate;
+
+        let rgb_data = if x_scale >= 1.0 && y_scale >= 1.0 {
+            rgb_data.image_data
         } else {
-            // Do subsampling to prevent aliasing artifacts.
-            let new_width = (width as f32 * x_scale).ceil().max(1.0) as u32;
-            let new_height = (height as f32 * y_scale).ceil().max(1.0) as u32;
+            // Resize the image, either doing down- or upsampling.
+            let new_width = (rgb_width as f32 * x_scale).ceil().max(1.0) as u32;
+            let new_height = (rgb_height as f32 * y_scale).ceil().max(1.0) as u32;
 
-            let image = DynamicImage::ImageRgba8(
-                ImageBuffer::from_raw(width, height, image_data.clone()).unwrap(),
+            let image = DynamicImage::ImageRgb8(
+                ImageBuffer::from_raw(rgb_width, rgb_height, rgb_data.image_data.clone()).unwrap(),
             );
             let resized = image.resize_exact(new_width, new_height, FilterType::CatmullRom);
 
             let new_width = resized.width();
             let new_height = resized.height();
-            let t_scale_x = width as f32 / new_width as f32;
-            let t_scale_y = height as f32 / new_height as f32;
+            let t_scale_x = rgb_width as f32 / new_width as f32;
+            let t_scale_y = rgb_height as f32 / new_height as f32;
 
             cur_transform *= Affine::scale_non_uniform(t_scale_x as f64, t_scale_y as f64);
             self.ctx.set_transform(cur_transform);
 
-            width = new_width;
-            height = new_height;
+            rgb_width = new_width;
+            rgb_height = new_height;
 
-            resized.to_rgba8().into_raw()
+            resized.to_rgb8().into_raw()
         };
 
-        let mut buffer = Buffer::<4>::new_u8(image_data, width, height);
+        let alpha_data = if let Some(alpha_data) = alpha_data {
+            if alpha_data.width != rgb_width || alpha_data.height != rgb_height {
+                let image = DynamicImage::ImageLuma8(
+                    ImageBuffer::from_raw(
+                        alpha_data.width,
+                        alpha_data.height,
+                        alpha_data.stencil_data.clone(),
+                    )
+                    .unwrap(),
+                );
+                let resized = image.resize_exact(rgb_width, rgb_height, FilterType::CatmullRom);
+                resized.to_luma8().into_raw()
+            } else {
+                alpha_data.stencil_data
+            }
+        } else {
+            vec![255; rgb_width as usize * rgb_height as usize]
+        };
+
+        let rgba_data = rgb_data
+            .chunks_exact(3)
+            .zip(alpha_data)
+            .flat_map(|(rgb, a)| [rgb[0], rgb[1], rgb[2], a])
+            .collect::<Vec<_>>();
+
+        let mut buffer = Buffer::<4>::new_u8(rgba_data, rgb_width, rgb_height);
         buffer.premultiply();
 
         let image = Image {
@@ -101,7 +126,7 @@ impl Renderer {
         };
 
         self.ctx.fill_rect(
-            &Rect::new(0.0, 0.0, width as f64, height as f64),
+            &Rect::new(0.0, 0.0, rgb_width as f64, rgb_height as f64),
             image.into(),
             self.ctx.transform,
             None,
@@ -243,19 +268,17 @@ impl Device for Renderer {
             .fill_path(path, paint_type, paint_transform, self.cur_mask.clone());
     }
 
-    fn draw_rgba_image(&mut self, image: hayro_interpret::RgbaImage) {
+    fn draw_rgba_image(
+        &mut self,
+        image: hayro_interpret::RgbData,
+        alpha: Option<hayro_interpret::AlphaData>,
+    ) {
         if let Some(ref mask) = self.cur_mask {
             self.ctx.push_layer(None, None, None, Some(mask.clone()));
         }
 
         self.ctx.set_anti_aliasing(false);
-        self.draw_image(
-            image.image_data,
-            image.width,
-            image.height,
-            false,
-            image.interpolate,
-        );
+        self.draw_image(image, alpha, false);
         self.ctx.set_anti_aliasing(true);
 
         if self.cur_mask.is_some() {
@@ -263,7 +286,7 @@ impl Device for Renderer {
         }
     }
 
-    fn draw_stencil_image(&mut self, stencil: StencilImage, paint: &Paint) {
+    fn draw_stencil_image(&mut self, stencil: AlphaData, paint: &Paint) {
         self.ctx.set_anti_aliasing(false);
         self.ctx
             .push_layer(None, None, Some(1.0), self.cur_mask.clone());
@@ -278,13 +301,13 @@ impl Device for Renderer {
             paint_transform,
             None,
         );
-        self.draw_image(
-            stencil.stencil_data,
-            stencil.width,
-            stencil.height,
-            true,
-            stencil.interpolate,
-        );
+        let rgb_data = RgbData {
+            image_data: vec![0; stencil.width as usize * stencil.height as usize * 3],
+            width: stencil.width,
+            height: stencil.height,
+            interpolate: stencil.interpolate,
+        };
+        self.draw_image(rgb_data, Some(stencil), true);
         self.ctx.pop_layer();
 
         self.set_fill_properties(&FillProps {
