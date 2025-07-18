@@ -79,8 +79,18 @@ impl<'a> Dict<'a> {
     }
 
     /// Returns an iterator over all keys in the dictionary.
-    pub fn keys(&self) -> impl Iterator<Item = Name> {
+    pub fn keys(&self) -> impl Iterator<Item = Name<'a>> {
         self.0.offsets.keys().cloned()
+    }
+
+    /// An iterator over all entries in the dictionary, sorted by key.
+    pub fn entries(&self) -> impl Iterator<Item = (Name<'a>, MaybeRef<Object<'a>>)> {
+        let mut sorted_keys = self.keys().collect::<Vec<_>>();
+        sorted_keys.sort_by(|n1, n2| n1.as_ref().cmp(n2.as_ref()));
+        sorted_keys.into_iter().map(|k| {
+            let obj = self.get_raw(k.deref()).unwrap();
+            (k, obj)
+        })
     }
 
     /// Return the raw entry for a specific key.
@@ -639,6 +649,7 @@ pub mod keys {
     key!(OP_NS, b"op");
     key!(OPEN_ACTION, b"OpenAction");
     key!(OPEN_TYPE, b"OpenType");
+    key!(OPI, b"OPI");
     key!(OPM, b"OPM");
     key!(OPT, b"Opt");
     key!(ORDER, b"Order");
@@ -693,6 +704,7 @@ pub mod keys {
     key!(PROP_BUILD, b"Prop_Build");
     key!(PROPERTIES, b"Properties");
     key!(PS, b"PS");
+    key!(PT_DATA, b"PtData");
     key!(PUB_SEC, b"PubSec");
     key!(PV, b"PV");
 
@@ -709,6 +721,7 @@ pub mod keys {
     key!(REASONS, b"Reasons");
     key!(RECIPIENTS, b"Recipients");
     key!(RECT, b"Rect");
+    key!(REF, b"Ref");
     key!(REFERENCE, b"Reference");
     key!(REGISTRY, b"Registry");
     key!(REGISTRY_NAME, b"RegistryName");

@@ -15,6 +15,7 @@ use crate::xref::XRef;
 use kurbo::Affine;
 use log::warn;
 use std::cell::OnceCell;
+use std::collections::HashSet;
 use std::ops::Deref;
 
 /// A structure holding the pages of a PDF document.
@@ -173,13 +174,20 @@ impl<'a> Page<'a> {
     }
 
     fn operations_impl(&self) -> Option<UntypedIter> {
+        let stream = self.page_stream()?;
+        let iter = UntypedIter::new(stream);
+
+        Some(iter)
+    }
+
+    /// Return the decoded content stream of the page.
+    pub fn page_stream(&self) -> Option<&[u8]> {
         let convert_single = |s: Stream| {
             let data = s.decoded()?;
             Some(data.to_vec())
         };
 
-        let stream = self
-            .page_streams
+        self.page_streams
             .get_or_init(|| {
                 if let Some(stream) = self.inner.get::<Stream>(CONTENTS) {
                     convert_single(stream)
@@ -201,11 +209,8 @@ impl<'a> Page<'a> {
                     return None;
                 }
             })
-            .as_ref()?;
-
-        let iter = UntypedIter::new(&stream);
-
-        Some(iter)
+            .as_ref()
+            .map(|d| d.as_slice())
     }
 
     /// Get the resources of the page.
@@ -228,7 +233,8 @@ impl<'a> Page<'a> {
         self.crop_box
     }
 
-    fn intersected_crop_box(&self) -> Rect {
+    /// Get the crop box of the page.
+    pub fn intersected_crop_box(&self) -> Rect {
         self.crop_box().intersect(self.media_box())
     }
 
@@ -254,33 +260,44 @@ impl<'a> Page<'a> {
     /// Return the initial transform that should be applied when rendering. This accounts for a
     /// number of factors, such as the mismatch between PDF's y-up and most renderers' y-down
     /// coordinate system, the rotation of the page and the offset of the crop box.
-    pub fn initial_transform(&self) -> kurbo::Affine {
+    pub fn initial_transform(&self, invert_y: bool) -> kurbo::Affine {
         let crop_box = self.intersected_crop_box();
         let (_, base_height) = self.base_dimensions();
         let (width, height) = self.render_dimensions();
 
+        let horizontal_t =
+            Affine::rotate(90.0f64.to_radians()) * Affine::translate((0.0, -width as f64));
+        let flipped_horizontal_t =
+            Affine::translate((0.0, height as f64)) * Affine::rotate(-90.0f64.to_radians());
+
         let rotation_transform = match self.rotation() {
             Rotation::None => Affine::IDENTITY,
             Rotation::Horizontal => {
-                let t =
-                    Affine::rotate(90.0f64.to_radians()) * Affine::translate((0.0, -width as f64));
-
-                t
+                if invert_y {
+                    horizontal_t
+                } else {
+                    flipped_horizontal_t
+                }
             }
             Rotation::Flipped => {
                 Affine::scale(-1.0) * Affine::translate((-width as f64, -height as f64))
             }
             Rotation::FlippedHorizontal => {
-                let t =
-                    Affine::translate((0.0, height as f64)) * Affine::rotate(-90.0f64.to_radians());
-
-                t
+                if invert_y {
+                    flipped_horizontal_t
+                } else {
+                    horizontal_t
+                }
             }
         };
 
-        rotation_transform
-            * Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, base_height as f64])
-            * Affine::translate((-crop_box.x0, -crop_box.y0))
+        let inversion_transform = if invert_y {
+            Affine::new([1.0, 0.0, 0.0, -1.0, 0.0, base_height as f64])
+        } else {
+            Affine::IDENTITY
+        };
+
+        rotation_transform * inversion_transform * Affine::translate((-crop_box.x0, -crop_box.y0))
     }
 
     /// Return the with and height of the page that should be assumed when rendering the page.
@@ -305,6 +322,12 @@ impl<'a> Page<'a> {
         self.operations_impl().unwrap_or(UntypedIter::empty())
     }
 
+    /// Get the raw dictionary of the page.
+    pub fn raw(&self) -> &Dict<'a> {
+        &self.inner
+    }
+
+    // TODO: Remove?
     /// Get the xref table (of the document the page belongs to).
     pub fn xref(&self) -> &'a XRef {
         self.ctx.xref
@@ -321,12 +344,20 @@ impl<'a> Page<'a> {
 pub struct Resources<'a> {
     parent: Option<Box<Resources<'a>>>,
     ctx: ReaderContext<'a>,
-    ext_g_states: Dict<'a>,
-    fonts: Dict<'a>,
-    color_spaces: Dict<'a>,
-    x_objects: Dict<'a>,
-    patterns: Dict<'a>,
-    shadings: Dict<'a>,
+    /// The raw dictionary of external graphics states.
+    pub ext_g_states: Dict<'a>,
+    /// The raw dictionary of fonts.
+    pub fonts: Dict<'a>,
+    /// The raw dictionary of properties.
+    pub properties: Dict<'a>,
+    /// The raw dictionary of color spaces.
+    pub color_spaces: Dict<'a>,
+    /// The raw dictionary of x objects.
+    pub x_objects: Dict<'a>,
+    /// The raw dictionary of patterns.
+    pub patterns: Dict<'a>,
+    /// The raw dictionary of shadings.
+    pub shadings: Dict<'a>,
 }
 
 impl<'a> Resources<'a> {
@@ -349,6 +380,7 @@ impl<'a> Resources<'a> {
         let x_objects = resources.get::<Dict>(XOBJECT).unwrap_or_default();
         let patterns = resources.get::<Dict>(PATTERN).unwrap_or_default();
         let shadings = resources.get::<Dict>(SHADING).unwrap_or_default();
+        let properties = resources.get::<Dict>(PROPERTIES).unwrap_or_default();
 
         let parent = parent.map(|r| Box::new(r));
 
@@ -357,6 +389,7 @@ impl<'a> Resources<'a> {
             ext_g_states,
             fonts,
             color_spaces,
+            properties,
             x_objects,
             patterns,
             shadings,
@@ -385,6 +418,11 @@ impl<'a> Resources<'a> {
             }
             MaybeRef::NotRef(i) => resolve(i),
         }
+    }
+
+    /// Get the parent in the resource, chain, if available.
+    pub fn parent(&self) -> Option<&Resources<'a>> {
+        self.parent.as_deref()
     }
 
     // TODO: Refactor caching mechanism
