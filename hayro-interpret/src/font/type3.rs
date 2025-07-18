@@ -8,7 +8,7 @@ use crate::image::{AlphaData, RgbData};
 use crate::paint::Paint;
 use crate::soft_mask::SoftMask;
 use crate::{FillProps, StrokeProps, interpret};
-use hayro_syntax::content::ops::TypedOperation;
+use hayro_syntax::content::ops::TypedInstruction;
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
 use hayro_syntax::object::dict::Dict;
@@ -101,7 +101,7 @@ impl<'a> Type3<'a> {
         let name = self.glyph_simulator.glyph_to_string(glyph.glyph_id)?;
         let program = self.char_procs.get(&name)?;
         let decoded = program.decoded().ok()?;
-        let iter = TypedIter::new(UntypedIter::new(decoded.as_ref()));
+        let iter = TypedIter::new(decoded.as_ref());
 
         let is_shape_glyph = {
             let iter = iter.clone();
@@ -109,10 +109,10 @@ impl<'a> Type3<'a> {
 
             for op in iter {
                 match op {
-                    TypedOperation::ShapeGlyph(_) => {
+                    TypedInstruction::ShapeGlyph(_) => {
                         break;
                     }
-                    TypedOperation::ColorGlyph(_) => {
+                    TypedInstruction::ColorGlyph(_) => {
                         is_shape_glyph = false;
                         break;
                     }
