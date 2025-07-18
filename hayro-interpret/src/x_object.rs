@@ -8,13 +8,13 @@ use crate::{FillRule, InterpreterWarning, WarningSinkFn, interpret};
 use hayro_syntax::bit_reader::{BitReader, BitSize};
 use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::document::page::Resources;
-use hayro_syntax::filter::DecodeFailure;
 use hayro_syntax::function::interpolate;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::array::Array;
 use hayro_syntax::object::dict::Dict;
 use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::name::Name;
+use hayro_syntax::object::stream::DecodeFailure;
 use hayro_syntax::object::stream::Stream;
 use kurbo::{Affine, Rect, Shape};
 use log::warn;
@@ -221,7 +221,9 @@ impl<'a> ImageXObject<'a> {
             1
         } else {
             decoded
-                .bits_per_component
+                .image_data
+                .as_ref()
+                .map(|i| i.bits_per_component)
                 .or_else(|| dict.get::<u8>(BPC))
                 .or_else(|| dict.get::<u8>(BITS_PER_COMPONENT))
                 .unwrap_or(8)
@@ -243,11 +245,21 @@ impl<'a> ImageXObject<'a> {
                         .and_then(|n| resolve_cs(&n))
                 })
                 .or_else(|| {
-                    decoded.color_space.map(|c| match c {
-                        hayro_syntax::filter::ImageColorSpace::Gray => ColorSpace::device_gray(),
-                        hayro_syntax::filter::ImageColorSpace::Rgb => ColorSpace::device_rgb(),
-                        hayro_syntax::filter::ImageColorSpace::Cmyk => ColorSpace::device_cmyk(),
-                    })
+                    decoded
+                        .image_data
+                        .as_ref()
+                        .map(|i| i.color_space)
+                        .map(|c| match c {
+                            hayro_syntax::object::stream::ImageColorSpace::Gray => {
+                                ColorSpace::device_gray()
+                            }
+                            hayro_syntax::object::stream::ImageColorSpace::Rgb => {
+                                ColorSpace::device_rgb()
+                            }
+                            hayro_syntax::object::stream::ImageColorSpace::Cmyk => {
+                                ColorSpace::device_cmyk()
+                            }
+                        })
                 })
                 .unwrap_or(ColorSpace::device_gray())
         };
@@ -262,7 +274,7 @@ impl<'a> ImageXObject<'a> {
         Some(Self {
             decoded: decoded.data,
             width,
-            data_smask: decoded.alpha,
+            data_smask: decoded.image_data.and_then(|i| i.alpha),
             height,
             color_space,
             warning_sink: warning_sink.clone(),

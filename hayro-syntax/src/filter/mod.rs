@@ -1,4 +1,4 @@
-//! Decoding data streams.
+//! Results from decoding filtered data streams.
 
 mod ascii_85;
 pub(crate) mod ascii_hex;
@@ -12,89 +12,22 @@ mod run_length;
 use crate::object::dict::Dict;
 use crate::object::dict::keys::*;
 use crate::object::name::Name;
-use crate::util::OptionLog;
+use crate::object::stream::{DecodeFailure, FilterResult};
 use log::warn;
 use std::ops::Deref;
 
 #[derive(Debug, Copy, Clone)]
-/// A failure that can occur during decoding.
-pub enum DecodeFailure {
-    /// An image stream failed to decode.
-    ImageDecode,
-    /// A stream failed to decode.
-    StreamDecode,
-    /// A JPEG2000 image was encountered while the `jpeg2000` feature was disabled.
-    JpxImage,
-    /// An unknown failure occurred.
-    Unknown,
-}
-
-/// A filter.
-#[derive(Debug, Copy, Clone)]
-pub enum Filter {
-    /// The ASCII-hex filter.
+pub(crate) enum Filter {
     AsciiHexDecode,
-    /// The ASCII85 filter.
     Ascii85Decode,
-    /// The LZW filter.
     LzwDecode,
-    /// The flate (zlib/deflate) filter.
     FlateDecode,
-    /// The run-length filter.
     RunLengthDecode,
-    /// The CCITT Fax filter.
     CcittFaxDecode,
-    /// The JBIG2 filter.
     Jbig2Decode,
-    /// The DCT (JPEG) filter.
     DctDecode,
-    /// The JPX (JPEG 2000) filter.
     JpxDecode,
-    /// The crypt filter.
     Crypt,
-}
-
-/// An image color space.
-pub enum ImageColorSpace {
-    /// Grayscale color space.
-    Gray,
-    /// RGB color space.
-    Rgb,
-    /// CMYK color space.
-    Cmyk,
-}
-
-impl ImageColorSpace {
-    fn num_components(&self) -> u8 {
-        match self {
-            ImageColorSpace::Gray => 1,
-            ImageColorSpace::Rgb => 3,
-            ImageColorSpace::Cmyk => 4,
-        }
-    }
-}
-
-/// The result of the filter.
-pub struct FilterResult {
-    /// The decoded data.
-    pub data: Vec<u8>,
-    /// An optional alpha channel of the image (will only be set for JPX streams).
-    pub alpha: Option<Vec<u8>>,
-    /// The color space of the image (will only be set for JPX streams).
-    pub color_space: Option<ImageColorSpace>,
-    /// The bits per component of the image (will only be set for JPX streams).
-    pub bits_per_component: Option<u8>,
-}
-
-impl FilterResult {
-    fn from_data(data: Vec<u8>) -> Self {
-        Self {
-            data,
-            alpha: None,
-            color_space: None,
-            bits_per_component: None,
-        }
-    }
 }
 
 impl Filter {
@@ -133,8 +66,7 @@ impl Filter {
         }
     }
 
-    /// Apply the filter to some data.
-    pub fn apply(&self, data: &[u8], params: Dict) -> Result<FilterResult, DecodeFailure> {
+    pub(crate) fn apply(&self, data: &[u8], params: Dict) -> Result<FilterResult, DecodeFailure> {
         let res = match self {
             Filter::AsciiHexDecode => ascii_hex::decode(data)
                 .map(FilterResult::from_data)
