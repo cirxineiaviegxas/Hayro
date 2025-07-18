@@ -10,7 +10,7 @@ use std::fmt::{Debug, Formatter};
 pub struct ObjRef {
     /// The object number.
     pub obj_number: i32,
-    /// The generation nunber.
+    /// The generation number.
     pub gen_number: i32,
 }
 
@@ -125,7 +125,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::object::r#ref::ObjRef;
+    use crate::object::ObjRef;
     use crate::reader::Reader;
 
     #[test]

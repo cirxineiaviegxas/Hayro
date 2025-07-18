@@ -1,4 +1,4 @@
-//! Number objects.
+//! Numbers.
 
 use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
@@ -7,7 +7,7 @@ use log::debug;
 use std::fmt::Debug;
 use std::str::FromStr;
 
-/// A PDF number.
+/// A number.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Number(pub(crate) InternalNumber);
 
@@ -58,12 +58,12 @@ impl Number {
         }
     }
 
-    /// Create a new `Number` from a f32 number.
+    /// Create a new `Number` from an f32 number.
     pub const fn from_f32(num: f32) -> Self {
         Self(InternalNumber::Real(num))
     }
 
-    /// Create a new `Number` from a i32 number.
+    /// Create a new `Number` from an i32 number.
     pub const fn from_i32(num: i32) -> Self {
         Self(InternalNumber::Integer(num))
     }
@@ -219,7 +219,7 @@ pub(crate) fn is_digit(byte: u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::object::number::Number;
+    use crate::object::Number;
     use crate::reader::Reader;
 
     #[test]

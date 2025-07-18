@@ -1,4 +1,4 @@
-//! Array objects.
+//! Arrays.
 
 use crate::object::macros::object;
 use crate::object::r#ref::MaybeRef;
@@ -133,7 +133,7 @@ impl<'a> Iterator for ArrayIter<'a> {
     }
 }
 
-/// An iterator over the array that resolves object of a specific type.
+/// An iterator over the array that resolves objects of a specific type.
 pub struct ResolvedArrayIter<'a, T> {
     flex_iter: FlexArrayIter<'a>,
     phantom_data: PhantomData<T>,
@@ -159,7 +159,7 @@ where
     }
 }
 
-/// An iterator over the array that allows reading a different object in each turn.
+/// An iterator over the array that allows reading a different object each time.
 pub struct FlexArrayIter<'a> {
     reader: Reader<'a>,
     ctx: ReaderContext<'a>,
@@ -307,8 +307,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::object::Array;
     use crate::object::Object;
-    use crate::object::array::Array;
     use crate::object::r#ref::{MaybeRef, ObjRef};
     use crate::reader::{Reader, ReaderContext};
     use crate::xref::XRef;

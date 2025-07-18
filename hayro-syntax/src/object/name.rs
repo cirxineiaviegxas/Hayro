@@ -1,4 +1,4 @@
-//! Name objects.
+//! Names.
 
 use crate::object::Object;
 use crate::object::macros::object;
@@ -14,7 +14,7 @@ enum Cow<'a> {
     Owned(Vec<u8>),
 }
 
-/// A PDF name.
+/// A name.
 #[derive(Debug, Clone)]
 pub struct Name<'a>(Cow<'a>);
 
@@ -99,7 +99,7 @@ impl<'a> Name<'a> {
         Self(data)
     }
 
-    /// Create a new name from an unescape bytes string.
+    /// Create a new name from an unescaped bytes string.
     pub(crate) const fn from_unescaped(data: &'a [u8]) -> Name<'a> {
         Self(Cow::Borrowed(data))
     }
@@ -160,7 +160,7 @@ pub(crate) fn skip_name_like(r: &mut Reader, solidus: bool) -> Option<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::object::name::Name;
+    use crate::object::Name;
     use crate::reader::Reader;
     use std::ops::Deref;
 

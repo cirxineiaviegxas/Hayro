@@ -1,10 +1,10 @@
-//! Stream objects.
+//! Streams.
 
 use crate::filter::Filter;
-use crate::object::array::Array;
-use crate::object::dict::Dict;
+use crate::object::Array;
+use crate::object::Dict;
+use crate::object::Name;
 use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
-use crate::object::name::Name;
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::util::OptionLog;
@@ -19,12 +19,12 @@ pub struct Stream<'a> {
 }
 
 impl<'a> Stream<'a> {
-    /// Return the raw (potentially with some applied filters) data of the stream.
+    /// Return the raw (potentially filtered) data of the stream.
     pub fn raw_data(&self) -> &'a [u8] {
         self.data
     }
 
-    /// Return the raw (potentially with some applied filters) data of the stream.
+    /// Return the raw, underlying dictionary of the stream.
     pub fn dict(&self) -> &Dict<'a> {
         &self.dict
     }
@@ -37,8 +37,8 @@ impl<'a> Stream<'a> {
         self.decoded_image().map(|r| r.data)
     }
 
-    /// Return the decoded data of the stream, and return image metadata in case
-    /// the data stream is a JPX stream.
+    /// Return the decoded data of the stream, and return image metadata
+    /// if available.
     pub fn decoded_image(&self) -> Result<FilterResult, DecodeFailure> {
         if let Some(filter) = self
             .dict
@@ -139,7 +139,7 @@ impl<'a> Readable<'a> for Stream<'a> {
 }
 
 #[derive(Debug, Copy, Clone)]
-/// A failure that can occur during decoding.
+/// A failure that can occur during decoding a data stream.
 pub enum DecodeFailure {
     /// An image stream failed to decode.
     ImageDecode,
@@ -273,7 +273,7 @@ impl<'a> ObjectLike<'a> for Stream<'a> {}
 
 #[cfg(test)]
 mod tests {
-    use crate::object::stream::Stream;
+    use crate::object::Stream;
     use crate::reader::{Reader, ReaderContext};
 
     #[test]
