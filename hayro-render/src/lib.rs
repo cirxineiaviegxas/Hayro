@@ -18,10 +18,10 @@ use hayro_interpret::util::FloatExt;
 use hayro_interpret::{
     AlphaData, FillProps, FillRule, MaskType, Paint, RgbData, SoftMask, StrokeProps, interpret,
 };
-use hayro_syntax::document::page::{A4, Page, Rotation};
+pub use hayro_syntax::Pdf;
 use hayro_syntax::object::ObjectIdentifier;
 use hayro_syntax::object::dict::keys::P;
-pub use hayro_syntax::pdf::Pdf;
+use hayro_syntax::page::{A4, Page, Rotation};
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
 use image::{DynamicImage, ExtendedColorType, ImageBuffer, ImageEncoder, RgbImage};
@@ -432,7 +432,7 @@ pub fn render(
         None,
     );
     device.push_clip_path(&ClipPath {
-        path: initial_transform * page.view_box().to_path(0.1),
+        path: initial_transform * page.intersected_crop_box().to_path(0.1),
         fill: FillRule::NonZero,
     });
 

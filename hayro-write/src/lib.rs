@@ -3,7 +3,6 @@ mod primitive;
 use crate::primitive::{WriteDirect, WriteIndirect};
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
-use hayro_syntax::document::page::{Resources, Rotation};
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Object;
 use hayro_syntax::object::Stream;
@@ -12,6 +11,7 @@ use hayro_syntax::object::dict::keys::{
     SHADING, XOBJECT,
 };
 use hayro_syntax::object::{MaybeRef, ObjRef};
+use hayro_syntax::page::{Resources, Rotation};
 use log::warn;
 use pdf_writer::{Chunk, Content, Filter, Finish, Name, Obj, Rect, Ref};
 use std::collections::hash_map::Entry;
@@ -19,8 +19,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-pub use hayro_syntax::PdfData;
-pub use hayro_syntax::pdf::{Pdf, PdfVersion};
+pub use hayro_syntax::{Pdf, PdfData, PdfVersion};
 
 #[derive(Copy, Clone, Debug)]
 pub enum ExtractionQueryType {
@@ -254,7 +253,7 @@ pub fn extract_pages_as_xobject_to_pdf(hayro_pdf: &Pdf, page_indices: &[usize]) 
 }
 
 fn write_page(
-    page: &hayro_syntax::document::page::Page,
+    page: &hayro_syntax::page::Page,
     page_ref: Ref,
     page_idx: usize,
     ctx: &mut ExtractionContext,
@@ -306,7 +305,7 @@ fn write_page(
 }
 
 fn write_xobject(
-    page: &hayro_syntax::document::page::Page,
+    page: &hayro_syntax::page::Page,
     xobj_ref: Ref,
     ctx: &mut ExtractionContext,
 ) -> Result<(), ExtractionError> {
