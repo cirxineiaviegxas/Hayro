@@ -20,7 +20,7 @@ use hayro_syntax::pdf::Pdf;
 
 let data = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../hayro-tests/pdfs/text_with_rise.pdf")).unwrap();
 let pdf = Pdf::new(Arc::new(data)).unwrap();
-let pages = pdf.pages().unwrap();
+let pages = pdf.pages();
 
 for page in pages.get() {
     for op in page.typed_operations() {
@@ -60,7 +60,6 @@ might be restricted in the targets you can build to. Because of this, I recommen
 feature, unless you absolutely need to be able to support such images.
 */
 
-#![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
 use std::sync::Arc;

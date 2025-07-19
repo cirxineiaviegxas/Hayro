@@ -1,15 +1,18 @@
 //! The starting point for reading PDF files.
 
 use crate::PdfData;
+use crate::document::page::cached::CachedPages;
 use crate::document::page::{Page, Pages};
 use crate::object::Object;
 use crate::reader::{Reader, ReaderContext};
 use crate::xref::{XRef, XRefError, fallback, root_xref};
+use std::ops::Deref;
 
 /// A PDF file.
 pub struct Pdf {
     xref: XRef,
     header_version: PdfVersion,
+    pages: CachedPages,
 }
 
 impl Pdf {
@@ -26,9 +29,13 @@ impl Pdf {
             },
         };
 
+        let boxed_xref = Box::new(xref.clone());
+        let pages = CachedPages::new(boxed_xref)?;
+
         Some(Self {
             xref,
             header_version: version,
+            pages,
         })
     }
 
@@ -51,11 +58,8 @@ impl Pdf {
     }
 
     /// Return the pages of the PDF file.
-    pub fn pages(&self) -> Option<Pages> {
-        let ctx = ReaderContext::new(&self.xref, false);
-        self.xref
-            .get(self.xref.trailer_data().pages_ref)
-            .and_then(|p| Pages::new(p, ctx, &self.xref))
+    pub fn pages(&self) -> &Pages {
+        self.pages.get()
     }
 
     /// Return the xref of the PDF file.
@@ -112,6 +116,19 @@ impl PdfVersion {
             b"2.0" => Some(PdfVersion::Pdf20),
             _ => None,
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct XRefWrapper {
+    xref: XRef,
+}
+
+impl Deref for XRefWrapper {
+    type Target = XRef;
+
+    fn deref(&self) -> &Self::Target {
+        &self.xref
     }
 }
 
