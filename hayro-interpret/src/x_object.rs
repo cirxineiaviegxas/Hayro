@@ -1,12 +1,12 @@
-use crate::clip_path::ClipPath;
+use crate::ClipPath;
 use crate::color::ColorSpace;
 use crate::context::Context;
 use crate::device::Device;
-use crate::image::{AlphaData, RgbData};
 use crate::interpret::path::get_paint;
 use crate::{FillRule, InterpreterWarning, WarningSinkFn, interpret};
+use crate::{LumaData, RgbData};
 use hayro_syntax::bit_reader::{BitReader, BitSize};
-use hayro_syntax::content::{TypedIter, UntypedIter};
+use hayro_syntax::content::TypedIter;
 use hayro_syntax::function::interpolate;
 use hayro_syntax::object::Array;
 use hayro_syntax::object::Dict;
@@ -21,13 +21,13 @@ use log::warn;
 use smallvec::SmallVec;
 use std::ops::Deref;
 
-pub enum XObject<'a> {
+pub(crate) enum XObject<'a> {
     FormXObject(FormXObject<'a>),
     ImageXObject(ImageXObject<'a>),
 }
 
 impl<'a> XObject<'a> {
-    pub fn new(stream: &Stream<'a>, warning_sink: &WarningSinkFn) -> Option<Self> {
+    pub(crate) fn new(stream: &Stream<'a>, warning_sink: &WarningSinkFn) -> Option<Self> {
         let dict = stream.dict();
         match dict.get::<Name>(SUBTYPE)?.deref() {
             IMAGE => Some(Self::ImageXObject(ImageXObject::new(
@@ -41,8 +41,8 @@ impl<'a> XObject<'a> {
     }
 }
 
-pub struct FormXObject<'a> {
-    pub decoded: Vec<u8>,
+pub(crate) struct FormXObject<'a> {
+    pub(crate) decoded: Vec<u8>,
     matrix: Affine,
     bbox: [f32; 4],
     is_transparency_group: bool,
@@ -169,10 +169,8 @@ pub(crate) fn draw_image_xobject(
         if let Some(stencil) = x_object.alpha8() {
             device.draw_stencil_image(stencil, &get_paint(context, false));
         }
-    } else {
-        if let Some(rgb_image) = x_object.rgb8() {
-            device.draw_rgba_image(rgb_image, x_object.alpha8());
-        }
+    } else if let Some(rgb_image) = x_object.rgb8() {
+        device.draw_rgba_image(rgb_image, x_object.alpha8());
     }
 
     device.pop_transparency_group();
@@ -180,7 +178,7 @@ pub(crate) fn draw_image_xobject(
     context.restore_state();
 }
 
-pub struct ImageXObject<'a> {
+pub(crate) struct ImageXObject<'a> {
     pub decoded: Vec<u8>,
     pub width: u32,
     pub height: u32,
@@ -286,14 +284,14 @@ impl<'a> ImageXObject<'a> {
         })
     }
 
-    pub fn alpha8(&self) -> Option<AlphaData> {
+    pub(crate) fn alpha8(&self) -> Option<LumaData> {
         let data_len = self.width as usize * self.height as usize;
 
         if self.is_image_mask {
             let decoded = self.decode_raw()?;
 
-            return Some(AlphaData {
-                stencil_data: fix_image_length(
+            Some(LumaData {
+                data: fix_image_length(
                     decoded
                         .iter()
                         .map(|alpha| ((1.0 - *alpha) * 255.0 + 0.5) as u8)
@@ -304,7 +302,7 @@ impl<'a> ImageXObject<'a> {
                 width: self.width,
                 height: self.height,
                 interpolate: self.interpolate,
-            });
+            })
         } else {
             let (f32_data, width, height, interpolate) =
                 if let Some(1) = self.dict.get::<u8>(SMASK_IN_DATA) {
@@ -352,8 +350,8 @@ impl<'a> ImageXObject<'a> {
                 255,
             );
 
-            Some(AlphaData {
-                stencil_data: u8_data,
+            Some(LumaData {
+                data: u8_data,
                 width,
                 height,
                 interpolate,
@@ -361,7 +359,7 @@ impl<'a> ImageXObject<'a> {
         }
     }
 
-    pub fn rgb8(&self) -> Option<RgbData> {
+    pub(crate) fn rgb8(&self) -> Option<RgbData> {
         let data = if self.is_image_mask {
             return None;
         } else {
@@ -380,7 +378,7 @@ impl<'a> ImageXObject<'a> {
         };
 
         Some(RgbData {
-            image_data: data,
+            data,
             width: self.width,
             height: self.height,
             interpolate: self.interpolate,
@@ -437,7 +435,7 @@ fn decode(
         1..8 | 9..16 => {
             let mut buf = vec![];
             let bpc = BitSize::from_u8(bits_per_component)?;
-            let mut reader = BitReader::new(data.as_ref());
+            let mut reader = BitReader::new(data);
 
             for _ in 0..height {
                 for _ in 0..width {
@@ -461,7 +459,7 @@ fn decode(
             .map(|v| (u16::from_be_bytes([v[0], v[1]])))
             .collect(),
         _ => {
-            warn!("unsupported bits per component: {}", bits_per_component);
+            warn!("unsupported bits per component: {bits_per_component}");
             return None;
         }
     };

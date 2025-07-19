@@ -2,7 +2,6 @@ use crate::font::blob::OpenTypeFontBlob;
 use crate::font::generated::{glyph_names, mac_os_roman, mac_roman};
 use crate::font::{Encoding, FontFlags};
 use crate::util::{CodeMapExt, OptionLog};
-use bitflags::bitflags;
 use hayro_syntax::object::Array;
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
@@ -100,7 +99,7 @@ impl TrueTypeFont {
                             let convert = |input: &str| {
                                 u32::from_str_radix(input, 16)
                                     .ok()
-                                    .and_then(|n| char::from_u32(n))
+                                    .and_then(char::from_u32)
                                     .map(|s| s.to_string())
                             };
 
@@ -141,7 +140,7 @@ impl TrueTypeFont {
             }
 
             if glyph.is_none() {
-                if let Some(gid) = self.glyph_names.get(&lookup.to_string()) {
+                if let Some(gid) = self.glyph_names.get(lookup) {
                     glyph = Some(*gid);
                 }
             }

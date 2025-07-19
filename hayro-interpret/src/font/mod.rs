@@ -1,9 +1,10 @@
+//! Interacting with the different kinds of PDF fonts.
+
 use crate::cache::Cache;
 use crate::context::Context;
 use crate::device::Device;
 use crate::font::cid::Type0Font;
 use crate::font::generated::{mac_expert, mac_os_roman, mac_roman, standard, win_ansi};
-use crate::font::standard_font::StandardFont;
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
@@ -17,10 +18,12 @@ use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::page::Resources;
 use hayro_syntax::xref::XRef;
 use kurbo::{Affine, BezPath, Vec2};
+use log::warn;
 use outline::OutlineFont;
 use skrifa::GlyphId;
 use std::fmt::Debug;
 use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::Arc;
 
 mod blob;
@@ -28,19 +31,24 @@ mod cid;
 mod generated;
 mod glyph_simulator;
 pub(crate) mod outline;
-pub mod standard_font;
+mod standard_font;
 mod true_type;
 mod type1;
 pub(crate) mod type3;
 
 pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 
+/// A container for the bytes of a PDF file.
+pub type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
+
+pub use standard_font::StandardFont;
+
 /// A glyph that can be drawn.
 pub enum Glyph<'a> {
     /// A glyph defined by an outline.
     Outline(OutlineGlyph),
-    /// A glyph defined by PDF drawing instructions.
-    Type3(Type3Glyph<'a>),
+    /// A type3 glyph, defined by PDF drawing instructions.
+    Type3(Box<Type3Glyph<'a>>),
 }
 
 impl Glyph<'_> {
@@ -68,8 +76,9 @@ impl OutlineGlyph {
     }
 }
 
+/// A type3 glyph.
 pub struct Type3Glyph<'a> {
-    pub(crate) font: Arc<Type3<'a>>,
+    pub(crate) font: Rc<Type3<'a>>,
     pub(crate) glyph_id: GlyphId,
     pub(crate) state: State<'a>,
     pub(crate) parent_resources: Resources<'a>,
@@ -97,19 +106,19 @@ impl<'a> Font<'a> {
         warning_sink: &WarningSinkFn,
     ) -> Option<Self> {
         let f_type = match dict.get::<Name>(SUBTYPE)?.deref() {
-            TYPE1 | MM_TYPE1 => FontType::Type1(Arc::new(Type1Font::new(dict, resolver)?)),
+            TYPE1 | MM_TYPE1 => FontType::Type1(Rc::new(Type1Font::new(dict, resolver)?)),
             TRUE_TYPE => TrueTypeFont::new(dict)
-                .map(Arc::new)
+                .map(Rc::new)
                 .map(FontType::TrueType)
                 .or_else(|| {
                     Type1Font::new(dict, resolver)
-                        .map(Arc::new)
+                        .map(Rc::new)
                         .map(FontType::Type1)
                 })?,
-            TYPE0 => FontType::Type0(Arc::new(Type0Font::new(dict, warning_sink)?)),
-            TYPE3 => FontType::Type3(Arc::new(Type3::new(dict))),
+            TYPE0 => FontType::Type0(Rc::new(Type0Font::new(dict, warning_sink)?)),
+            TYPE3 => FontType::Type3(Rc::new(Type3::new(dict))),
             f => {
-                println!(
+                warn!(
                     "unimplemented font type {:?}",
                     std::str::from_utf8(f).unwrap_or("unknown type")
                 );
@@ -190,7 +199,7 @@ impl<'a> Font<'a> {
                     glyph_transform,
                 };
 
-                Glyph::Type3(shape_glyph)
+                Glyph::Type3(Box::new(shape_glyph))
             }
         }
     }
@@ -246,10 +255,10 @@ impl<'a> Font<'a> {
 
 #[derive(Clone, Debug)]
 enum FontType<'a> {
-    Type1(Arc<Type1Font>),
-    TrueType(Arc<TrueTypeFont>),
-    Type0(Arc<Type0Font>),
-    Type3(Arc<Type3<'a>>),
+    Type1(Rc<Type1Font>),
+    TrueType(Rc<TrueTypeFont>),
+    Type0(Rc<Type0Font>),
+    Type3(Rc<Type3<'a>>),
 }
 
 #[derive(Debug)]
@@ -276,21 +285,31 @@ impl Encoding {
     }
 }
 
+/// The font stretch.
 #[derive(Debug, Copy, Clone)]
 pub enum FontStretch {
+    /// Normal.
     Normal,
+    /// Ultra condensed.
     UltraCondensed,
+    /// Extra condensed.
     ExtraCondensed,
+    /// Condensed.
     Condensed,
+    /// Semi condensed.
     SemiCondensed,
+    /// Semi expanded.
     SemiExpanded,
+    /// Expanded.
     Expanded,
+    /// Extra expanded.
     ExtraExpanded,
+    /// Ultra expanded.
     UltraExpanded,
 }
 
 impl FontStretch {
-    pub fn from_string(s: &str) -> Self {
+    fn from_string(s: &str) -> Self {
         match s {
             "UltraCondensed" => FontStretch::UltraCondensed,
             "ExtraCondensed" => FontStretch::ExtraCondensed,
@@ -308,7 +327,7 @@ impl FontStretch {
 bitflags! {
     /// Bitflags describing various characteristics of fonts.
     #[derive(Debug)]
-    pub struct FontFlags: u32 {
+    pub(crate) struct FontFlags: u32 {
         const FIXED_PITCH = 1 << 0;
         const SERIF = 1 << 1;
         const SYMBOLIC = 1 << 2;
@@ -326,6 +345,9 @@ pub enum FontQuery {
     /// A query for one of the 14 PDF standard fonts.
     Standard(StandardFont),
     /// A query for a font that is not embedded in the PDF file.
+    ///
+    /// Note that this type of query is currently not supported,
+    /// but will be implemented in the future.
     Fallback(FallbackFontQuery),
 }
 
@@ -385,7 +407,7 @@ impl FallbackFontQuery {
 
             if let Some(flags) = descriptor
                 .get::<u32>(FLAGS)
-                .map(|n| FontFlags::from_bits_truncate(n))
+                .map(FontFlags::from_bits_truncate)
             {
                 data.is_serif = flags.contains(FontFlags::SERIF);
                 data.is_italic = flags.contains(FontFlags::ITALIC)

@@ -1,15 +1,15 @@
-use crate::clip_path::ClipPath;
+use crate::ClipPath;
+use crate::Paint;
 use crate::context::Context;
 use crate::device::Device;
 use crate::font::glyph_simulator::GlyphSimulator;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::font::{Encoding, Glyph, Type3Glyph, UNITS_PER_EM};
-use crate::image::{AlphaData, RgbData};
-use crate::paint::Paint;
 use crate::soft_mask::SoftMask;
 use crate::{FillProps, StrokeProps, interpret};
+use crate::{LumaData, RgbData};
+use hayro_syntax::content::TypedIter;
 use hayro_syntax::content::ops::TypedInstruction;
-use hayro_syntax::content::{TypedIter, UntypedIter};
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Stream;
 use hayro_syntax::object::dict::keys::{CHAR_PROCS, FONT_MATRIX, RESOURCES};
@@ -90,7 +90,7 @@ impl<'a> Type3<'a> {
 
         let mut context = Context::new_with(
             state.ctm,
-            // TODO: bbox?
+            // TODO: Get a proper bbox.
             Rect::new(0.0, 0.0, 1.0, 1.0),
             glyph.cache.clone(),
             glyph.xref,
@@ -195,9 +195,9 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
         self.inner.stroke_glyph(g, p);
     }
 
-    fn draw_rgba_image(&mut self, _: RgbData, _: Option<AlphaData>) {}
+    fn draw_rgba_image(&mut self, _: RgbData, _: Option<LumaData>) {}
 
-    fn draw_stencil_image(&mut self, stencil: AlphaData, _: &Paint) {
+    fn draw_stencil_image(&mut self, stencil: LumaData, _: &Paint) {
         self.inner.draw_stencil_image(stencil, self.paint);
     }
 

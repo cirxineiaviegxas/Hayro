@@ -1,9 +1,9 @@
-use crate::FontData;
+use crate::font::FontData;
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::font::generated::{metrics, standard, symbol, zapf_dings};
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
-use hayro_syntax::object::dict::keys::{BASE_FONT, P};
+use hayro_syntax::object::dict::keys::BASE_FONT;
 use kurbo::BezPath;
 use skrifa::GlyphId16;
 use skrifa::raw::TableProvider;
@@ -13,19 +13,33 @@ use std::ops::Deref;
 /// The 14 standard fonts of PDF.
 #[derive(Copy, Clone, Debug)]
 pub enum StandardFont {
+    /// Helvetica.
     Helvetica,
+    /// Helvetica Bold.
     HelveticaBold,
+    /// Helvetica Oblique.
     HelveticaOblique,
+    /// Helvetica Bold Oblique.
     HelveticaBoldOblique,
+    /// Courier.
     Courier,
+    /// Courier Bold.
     CourierBold,
+    /// Courier Oblique.
     CourierOblique,
+    /// Courier Bold Oblique.
     CourierBoldOblique,
+    /// Times Roman.
     TimesRoman,
+    /// Times Bold.
     TimesBold,
+    /// Times Italic.
     TimesItalic,
+    /// Times Bold Italic.
     TimesBoldItalic,
+    /// Zapf Dingbats - a decorative symbol font.
     ZapfDingBats,
+    /// Symbol - a mathematical symbol font.
     Symbol,
 }
 
@@ -93,6 +107,7 @@ impl StandardFont {
         }
     }
 
+    /// Return the postscrit name of the font.
     pub fn postscript_name(&self) -> &'static str {
         match self {
             StandardFont::Helvetica => "Helvetica",
@@ -199,10 +214,8 @@ impl StandardFontBlob {
     pub(crate) fn from_data(data: FontData) -> Option<Self> {
         if let Some(blob) = CffFontBlob::new(data.clone()) {
             Some(Self::new_cff(blob))
-        } else if let Some(blob) = OpenTypeFontBlob::new(data, 0) {
-            Some(Self::new_otf(blob))
         } else {
-            None
+            OpenTypeFontBlob::new(data, 0).map(Self::new_otf)
         }
     }
 

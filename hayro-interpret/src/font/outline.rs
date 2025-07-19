@@ -5,7 +5,7 @@ use hayro_font::OutlineBuilder;
 use kurbo::BezPath;
 use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub(crate) struct OutlinePath(pub(crate) BezPath);
 
@@ -60,9 +60,9 @@ impl OutlineBuilder for OutlinePath {
 
 #[derive(Debug, Clone)]
 pub(crate) enum OutlineFont {
-    Type1(Arc<Type1Font>),
-    TrueType(Arc<TrueTypeFont>),
-    Type0(Arc<Type0Font>),
+    Type1(Rc<Type1Font>),
+    TrueType(Rc<TrueTypeFont>),
+    Type0(Rc<Type0Font>),
 }
 
 impl OutlineFont {

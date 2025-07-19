@@ -1,4 +1,7 @@
-/// PDF shadings.
+//! PDF shadings.
+
+#![allow(clippy::needless_range_loop)]
+
 use crate::color::{ColorComponents, ColorSpace};
 use crate::util::{FloatExt, PointExt};
 use hayro_syntax::bit_reader::{BitReader, BitSize};
@@ -16,6 +19,8 @@ use kurbo::{Affine, CubicBez, ParamCurve, Point, Shape};
 use log::warn;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
+
+// TODO: Deduplicate the parsing code!
 
 /// The function supplied to a shading.
 #[derive(Debug, Clone)]
@@ -98,6 +103,7 @@ pub enum ShadingType {
         /// An optional function used for calculating the sampled color values.
         function: Option<ShadingFunction>,
     },
+    /// A dummy shading that should just be drawn transparent.
     Dummy,
 }
 
@@ -115,7 +121,7 @@ pub struct Shading {
 }
 
 impl Shading {
-    pub fn new(dict: &Dict, stream: Option<&Stream>) -> Option<Self> {
+    pub(crate) fn new(dict: &Dict, stream: Option<&Stream>) -> Option<Self> {
         let shading_num = dict.get::<u8>(SHADING_TYPE)?;
 
         let color_space = ColorSpace::new(dict.get(COLORSPACE)?)?;
@@ -285,6 +291,7 @@ pub struct Triangle {
 }
 
 impl Triangle {
+    /// Create a new triangle.
     pub fn new(p0: TriangleVertex, p1: TriangleVertex, p2: TriangleVertex) -> Self {
         let v0 = p1.point - p0.point;
         let v1 = p2.point - p0.point;
@@ -305,6 +312,7 @@ impl Triangle {
             d11,
         }
     }
+
     /// Get the interpolated colors of the point from the triangle.
     ///
     /// Returns `None` if the point is not inside of the triangle.
@@ -323,17 +331,16 @@ impl Triangle {
         result
     }
 
+    /// Return whether the point is contained within the triangle.
     pub fn contains_point(&self, pos: Point) -> bool {
         self.kurbo_tri.winding(pos) != 0
     }
 
+    /// Return the bounding box of the triangle.
     pub fn bounding_box(&self) -> kurbo::Rect {
         self.kurbo_tri.bounding_box()
     }
 
-    /// Return the barycentric coordinates of the point in the triangle.
-    ///
-    /// Returns `None` if the point is not inside of the triangle.
     fn barycentric_coords(&self, p: Point) -> (f32, f32, f32) {
         let (a, b, c) = (self.p0.point, self.p1.point, self.p2.point);
         let v0 = b - a;
@@ -384,7 +391,7 @@ pub struct TensorProductPatch {
 }
 
 impl CoonsPatch {
-    /// Map a coordinate from the unit square of the patch to it's actual coordinate.
+    /// Map the point to the coordinates of the coons patch.
     pub fn map_coordinate(&self, p: Point) -> Point {
         let (u, v) = (p.x, p.y);
 
@@ -403,6 +410,7 @@ impl CoonsPatch {
         (sc + sd - sb).to_point()
     }
 
+    /// Approximate the patch by triangles.
     pub fn to_triangles(&self) -> Vec<Triangle> {
         const GRID_SIZE: usize = 20;
         let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
@@ -502,7 +510,7 @@ impl TensorProductPatch {
         }
     }
 
-    /// Map a coordinate from the unit square of the patch to its actual coordinate using tensor-product formula.
+    /// Map the point to the coordinates of the tensor product patch.
     pub fn map_coordinate(&self, p: Point) -> Point {
         let (u, v) = (p.x, p.y);
 
@@ -544,6 +552,7 @@ impl TensorProductPatch {
         Point::new(x, y)
     }
 
+    /// Approximate the tensor product patch mesh by triangles.
     pub fn to_triangles(&self) -> Vec<Triangle> {
         const GRID_SIZE: usize = 20;
         let mut grid = vec![vec![Point::ZERO; GRID_SIZE]; GRID_SIZE];
@@ -889,7 +898,6 @@ fn read_coons_patch_mesh(
         )
     };
 
-    // Helper to read a single color (or t value)
     let read_colors = |reader: &mut BitReader| -> Option<ColorComponents> {
         let mut colors = smallvec![];
         if has_function {
@@ -910,7 +918,6 @@ fn read_coons_patch_mesh(
         Some(colors)
     };
 
-    // State for implicit control points/colors
     let mut prev_patch: Option<CoonsPatch> = None;
     let mut patches = vec![];
 
@@ -950,9 +957,8 @@ fn read_coons_patch_mesh(
                     control_points[i] = Point::new(x as f64, y as f64);
                 }
 
-                for i in 2..4 {
-                    colors[i] = read_colors(&mut reader)?;
-                }
+                colors[2] = read_colors(&mut reader)?;
+                colors[3] = read_colors(&mut reader)?;
 
                 prev_patch = Some(CoonsPatch {
                     control_points,
@@ -974,9 +980,8 @@ fn read_coons_patch_mesh(
                     control_points[i] = Point::new(x as f64, y as f64);
                 }
 
-                for i in 2..4 {
-                    colors[i] = read_colors(&mut reader)?;
-                }
+                colors[2] = read_colors(&mut reader)?;
+                colors[3] = read_colors(&mut reader)?;
 
                 prev_patch = Some(CoonsPatch {
                     control_points,
@@ -998,9 +1003,8 @@ fn read_coons_patch_mesh(
                     control_points[i] = Point::new(x as f64, y as f64);
                 }
 
-                for i in 2..4 {
-                    colors[i] = read_colors(&mut reader)?;
-                }
+                colors[2] = read_colors(&mut reader)?;
+                colors[3] = read_colors(&mut reader)?;
 
                 prev_patch = Some(CoonsPatch {
                     control_points,
@@ -1056,7 +1060,6 @@ fn read_tensor_product_patch_mesh(
         )
     };
 
-    // Helper to read a single color (or t value)
     let read_colors = |reader: &mut BitReader| -> Option<ColorComponents> {
         let mut colors = smallvec![];
         if has_function {
@@ -1077,7 +1080,6 @@ fn read_tensor_product_patch_mesh(
         Some(colors)
     };
 
-    // State for implicit control points/colors
     let mut prev_patch: Option<TensorProductPatch> = None;
     let mut patches = vec![];
 
@@ -1118,9 +1120,8 @@ fn read_tensor_product_patch_mesh(
                     control_points[i] = Point::new(x as f64, y as f64);
                 }
 
-                // Read colors for new top-right and bottom-right corners
-                colors[2] = read_colors(&mut reader)?; // top-right  
-                colors[3] = read_colors(&mut reader)?; // bottom-right
+                colors[2] = read_colors(&mut reader)?;
+                colors[3] = read_colors(&mut reader)?;
 
                 prev_patch = Some(TensorProductPatch {
                     control_points,
@@ -1128,16 +1129,14 @@ fn read_tensor_product_patch_mesh(
                 });
             }
             2 => {
-                // Bottom edge sharing - previous patch's bottom edge becomes new patch's top edge
                 let prev = prev_patch.as_ref()?;
 
-                // For 4x4 grid: bottom edge is [12, 13, 14, 15], top edge is [0, 1, 2, 3]
-                control_points[0] = prev.control_points[6]; // bottom-left -> top-left
-                control_points[1] = prev.control_points[7]; // -> top edge
-                control_points[2] = prev.control_points[8]; // -> top edge
-                control_points[3] = prev.control_points[9]; // bottom-right -> top-right
-                colors[0] = prev.colors[2].clone(); // prev bottom-left -> new top-left
-                colors[1] = prev.colors[3].clone(); // prev bottom-right -> new top-right
+                control_points[0] = prev.control_points[6];
+                control_points[1] = prev.control_points[7];
+                control_points[2] = prev.control_points[8];
+                control_points[3] = prev.control_points[9];
+                colors[0] = prev.colors[2].clone();
+                colors[1] = prev.colors[3].clone();
 
                 for i in 4..16 {
                     let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
@@ -1145,9 +1144,8 @@ fn read_tensor_product_patch_mesh(
                     control_points[i] = Point::new(x as f64, y as f64);
                 }
 
-                // Read colors for new bottom corners
-                colors[2] = read_colors(&mut reader)?; // bottom-left
-                colors[3] = read_colors(&mut reader)?; // bottom-right
+                colors[2] = read_colors(&mut reader)?;
+                colors[3] = read_colors(&mut reader)?;
 
                 prev_patch = Some(TensorProductPatch {
                     control_points,
@@ -1155,16 +1153,14 @@ fn read_tensor_product_patch_mesh(
                 });
             }
             3 => {
-                // Left edge sharing - previous patch's left edge becomes new patch's right edge
                 let prev = prev_patch.as_ref()?;
 
-                // For 4x4 grid: left edge is [0, 4, 8, 12], right edge is [3, 7, 11, 15]
-                control_points[0] = prev.control_points[9]; // bottom-left -> top-left
-                control_points[1] = prev.control_points[10]; // -> top edge
-                control_points[2] = prev.control_points[11]; // -> top edge
-                control_points[3] = prev.control_points[0]; // bottom-right -> top-right
-                colors[0] = prev.colors[3].clone(); // prev bottom-left -> new top-left
-                colors[1] = prev.colors[0].clone(); // prev bottom-right -> new top-right
+                control_points[0] = prev.control_points[9];
+                control_points[1] = prev.control_points[10];
+                control_points[2] = prev.control_points[11];
+                control_points[3] = prev.control_points[0];
+                colors[0] = prev.colors[3].clone();
+                colors[1] = prev.colors[0].clone();
 
                 for i in 4..16 {
                     let x = interpolate_coord(reader.read(bp_coord)?, x_min, x_max);
@@ -1172,9 +1168,8 @@ fn read_tensor_product_patch_mesh(
                     control_points[i] = Point::new(x as f64, y as f64);
                 }
 
-                // Read colors for new left corners
-                colors[2] = read_colors(&mut reader)?; // top-left
-                colors[3] = read_colors(&mut reader)?; // bottom-left
+                colors[2] = read_colors(&mut reader)?;
+                colors[3] = read_colors(&mut reader)?;
 
                 prev_patch = Some(TensorProductPatch {
                     control_points,

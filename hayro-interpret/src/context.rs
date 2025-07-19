@@ -2,7 +2,7 @@ use crate::cache::Cache;
 use crate::color::ColorSpace;
 use crate::convert::convert_transform;
 use crate::font::Font;
-use crate::interpret::state::{State, TextState};
+use crate::interpret::state::State;
 use crate::{FillProps, FillRule, InterpreterSettings, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use hayro_syntax::object::Dict;
@@ -11,11 +11,11 @@ use hayro_syntax::object::ObjRef;
 use hayro_syntax::object::Object;
 use hayro_syntax::page::Resources;
 use hayro_syntax::xref::XRef;
-use kurbo::{Affine, BezPath, Cap, Join, Point};
+use kurbo::{Affine, BezPath, Point};
 use log::warn;
-use smallvec::smallvec;
 use std::collections::HashMap;
 
+/// A context for interpreting PDF files.
 pub struct Context<'a> {
     states: Vec<State<'a>>,
     path: BezPath,
@@ -31,39 +31,15 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
+    /// Create a new context.
     pub fn new(
         initial_transform: Affine,
         bbox: kurbo::Rect,
-        cache: Cache,
         xref: &'a XRef,
         settings: InterpreterSettings,
     ) -> Self {
-        let line_width = 1.0;
-        let line_cap = Cap::Butt;
-        let line_join = Join::Miter;
-        let miter_limit = 10.0;
-
-        let state = State {
-            line_width,
-            line_cap,
-            line_join,
-            miter_limit,
-            dash_array: smallvec![],
-            dash_offset: 0.0,
-            ctm: initial_transform,
-            non_stroke_alpha: 1.0,
-            stroke_cs: ColorSpace::device_gray(),
-            stroke_color: smallvec![0.0,],
-            none_stroke_cs: ColorSpace::device_gray(),
-            non_stroke_color: smallvec![0.0],
-            stroke_alpha: 1.0,
-            fill_rule: FillRule::NonZero,
-            n_clips: 0,
-            soft_mask: None,
-            text_state: TextState::default(),
-            stroke_pattern: None,
-            non_stroke_pattern: None,
-        };
+        let cache = Cache::new();
+        let state = State::new(initial_transform);
 
         Self::new_with(initial_transform, bbox, cache, xref, settings, state)
     }
@@ -247,9 +223,5 @@ impl<'a> Context<'a> {
         FillProps {
             fill_rule: state.fill_rule,
         }
-    }
-
-    pub fn xref(&self) -> &'a XRef {
-        self.xref
     }
 }

@@ -12,7 +12,6 @@ use log::warn;
 use qcms::Transform;
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::{Arc, LazyLock};
 
@@ -40,11 +39,13 @@ impl AlphaColor {
         Self { components }
     }
 
+    /// Create a new color from RGB8 values.
     pub const fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
         let components = [u8_to_f32(r), u8_to_f32(g), u8_to_f32(b), 1.];
         Self::new(components)
     }
 
+    /// Return the color as premulitplied RGBF32.
     pub fn premultiplied(&self) -> [f32; 4] {
         [
             self.components[0] * self.components[3],
@@ -54,11 +55,13 @@ impl AlphaColor {
         ]
     }
 
+    /// Create a new color from RGBA8 values.
     pub const fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
         let components = [u8_to_f32(r), u8_to_f32(g), u8_to_f32(b), u8_to_f32(a)];
         Self::new(components)
     }
 
+    /// Return the color as RGBA8.
     pub fn to_rgba8(&self) -> [u8; 4] {
         [
             (self.components[0] * 255.0 + 0.5) as u8,
@@ -68,6 +71,7 @@ impl AlphaColor {
         ]
     }
 
+    /// Return the components of the color as RGBF32.
     pub fn components(&self) -> [f32; 4] {
         self.components
     }
@@ -180,36 +184,36 @@ pub struct ColorSpace(Arc<ColorSpaceType>);
 
 impl ColorSpace {
     /// Create a new color space from the given object.
-    pub fn new(object: Object) -> Option<ColorSpace> {
+    pub(crate) fn new(object: Object) -> Option<ColorSpace> {
         Some(Self(Arc::new(ColorSpaceType::new(object)?)))
     }
 
     /// Create a new color space from the name.
-    pub fn new_from_name(name: Name) -> Option<ColorSpace> {
+    pub(crate) fn new_from_name(name: Name) -> Option<ColorSpace> {
         ColorSpaceType::new_from_name(name).map(|c| Self(Arc::new(c)))
     }
 
     /// Return the device gray color space.
-    pub fn device_gray() -> ColorSpace {
+    pub(crate) fn device_gray() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceGray))
     }
 
     /// Return the device RGB color space.
-    pub fn device_rgb() -> ColorSpace {
+    pub(crate) fn device_rgb() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceRgb))
     }
 
     /// Return the device CMYK color space.
-    pub fn device_cmyk() -> ColorSpace {
+    pub(crate) fn device_cmyk() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::DeviceCmyk))
     }
 
     /// Return the pattern color space.
-    pub fn pattern() -> ColorSpace {
+    pub(crate) fn pattern() -> ColorSpace {
         Self(Arc::new(ColorSpaceType::Pattern(ColorSpace::device_gray())))
     }
 
-    pub fn pattern_cs(&self) -> Option<ColorSpace> {
+    pub(crate) fn pattern_cs(&self) -> Option<ColorSpace> {
         match self.0.as_ref() {
             ColorSpaceType::Pattern(cs) => Some(cs.clone()),
             _ => None,
@@ -217,12 +221,12 @@ impl ColorSpace {
     }
 
     /// Return `true` if the current color space is the pattern color space.
-    pub fn is_pattern(&self) -> bool {
+    pub(crate) fn is_pattern(&self) -> bool {
         matches!(self.0.as_ref(), ColorSpaceType::Pattern(_))
     }
 
     /// Get the default decode array for the color space.
-    pub fn default_decode_arr(&self, n: f32) -> SmallVec<[(f32, f32); 4]> {
+    pub(crate) fn default_decode_arr(&self, n: f32) -> SmallVec<[(f32, f32); 4]> {
         match self.0.as_ref() {
             ColorSpaceType::DeviceCmyk => smallvec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
             ColorSpaceType::DeviceGray => smallvec![(0.0, 1.0)],
@@ -244,7 +248,7 @@ impl ColorSpace {
     }
 
     /// Get the initial color of the color space.
-    pub fn initial_color(&self) -> ColorComponents {
+    pub(crate) fn initial_color(&self) -> ColorComponents {
         match self.0.as_ref() {
             ColorSpaceType::DeviceCmyk => smallvec![0.0, 0.0, 0.0, 1.0],
             ColorSpaceType::DeviceGray => smallvec![0.0],
@@ -266,7 +270,7 @@ impl ColorSpace {
     }
 
     /// Get the number of components of the color space.
-    pub fn num_components(&self) -> u8 {
+    pub(crate) fn num_components(&self) -> u8 {
         match self.0.as_ref() {
             ColorSpaceType::DeviceCmyk => 4,
             ColorSpaceType::DeviceGray => 1,
@@ -749,10 +753,7 @@ impl ICCProfile {
             3 => qcms::DataType::RGB8,
             4 => qcms::DataType::CMYK,
             _ => {
-                warn!(
-                    "unsupported number of components {} for ICC profile",
-                    number_components
-                );
+                warn!("unsupported number of components {number_components} for ICC profile");
 
                 return None;
             }
