@@ -1,4 +1,4 @@
-//! Reading Type1 tables.
+//! Reading Type1 fonts.
 
 mod charstring;
 mod charstring_parser;
@@ -41,6 +41,7 @@ impl Default for Parameters {
     }
 }
 
+/// A Type1 font table.
 #[derive(Debug, Clone)]
 pub struct Table {
     params: Arc<Parameters>,
@@ -142,6 +143,7 @@ impl Table {
         Some(())
     }
 
+    /// Return the glyph name of the code point.
     pub fn code_to_string(&self, code_point: u8) -> Option<&str> {
         self.params.encoding_type.encode(code_point)
     }
@@ -334,7 +336,7 @@ impl<'a> Stream<'a> {
             let tok = self.next_token().unwrap();
             if tok == ND || tok == ND_ALT {
             } else {
-                error!("invalid charstring in end, expected ND, found {:?}", tok);
+                error!("invalid charstring in end, expected ND, found {tok:?}");
 
                 return None;
             }
@@ -387,7 +389,7 @@ impl<'a> Stream<'a> {
             let tok = self.next_token()?;
 
             if tok != RD && tok != RD_ALT {
-                error!("invalid subroutine start token {:?}", tok);
+                error!("invalid subroutine start token {tok:?}");
 
                 return None;
             } else {
@@ -411,12 +413,12 @@ impl<'a> Stream<'a> {
 
                 if tok == b"put" {
                 } else {
-                    error!("invalid subroutine end {:?}", tok);
+                    error!("invalid subroutine end {tok:?}");
 
                     return None;
                 }
             } else {
-                error!("invalid subroutine end token {:?}", tok);
+                error!("invalid subroutine end token {tok:?}");
 
                 return None;
             }
@@ -557,7 +559,7 @@ impl<'a> Stream<'a> {
             }
 
             if token != b"dup" {
-                error!("Unexpected token {:?}", token);
+                error!("Unexpected token {token:?}");
 
                 return None;
             }
@@ -570,7 +572,7 @@ impl<'a> Stream<'a> {
                 .to_string();
 
             if self.next_token()? != b"put" {
-                error!("Unexpected token {:?}", token);
+                error!("Unexpected token {token:?}");
 
                 return None;
             }
