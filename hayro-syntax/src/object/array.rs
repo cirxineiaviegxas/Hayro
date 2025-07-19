@@ -71,12 +71,10 @@ impl Skippable for Array<'_> {
 
             if let Some(()) = r.forward_tag(b"]") {
                 return Some(());
+            } else if is_content_stream {
+                r.skip_not_in_content_stream::<Object>()?;
             } else {
-                if is_content_stream {
-                    r.skip_not_in_content_stream::<Object>()?;
-                } else {
-                    r.skip_not_in_content_stream::<MaybeRef<Object>>()?;
-                }
+                r.skip_not_in_content_stream::<MaybeRef<Object>>()?;
             }
         }
     }
@@ -143,7 +141,7 @@ impl<'a, T> ResolvedArrayIter<'a, T> {
     fn new(data: &'a [u8], ctx: ReaderContext<'a>) -> Self {
         Self {
             flex_iter: FlexArrayIter::new(data, ctx),
-            phantom_data: PhantomData::default(),
+            phantom_data: PhantomData,
         }
     }
 }
@@ -177,6 +175,7 @@ impl<'a> FlexArrayIter<'a> {
         private_bounds,
         reason = "users shouldn't be able to implement `ObjectLike` for custom objects."
     )]
+    #[allow(clippy::should_implement_trait)]
     /// Try reading the next item as a specific object from the array.
     pub fn next<T: ObjectLike<'a>>(&mut self) -> Option<T> {
         self.reader.skip_white_spaces_and_comments();
@@ -315,13 +314,13 @@ mod tests {
 
     fn array_impl(data: &[u8]) -> Option<Vec<Object>> {
         Reader::new(data)
-            .read_with_context::<Array>(ReaderContext::new(&XRef::dummy(), false))
+            .read_with_context::<Array>(ReaderContext::new(XRef::dummy(), false))
             .map(|a| a.iter::<Object>().collect::<Vec<_>>())
     }
 
     fn array_ref_impl(data: &[u8]) -> Option<Vec<MaybeRef<Object>>> {
         Reader::new(data)
-            .read_with_context::<Array>(ReaderContext::new(&XRef::dummy(), false))
+            .read_with_context::<Array>(ReaderContext::new(XRef::dummy(), false))
             .map(|a| a.raw_iter().collect::<Vec<_>>())
     }
 

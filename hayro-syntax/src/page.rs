@@ -15,7 +15,6 @@ use crate::xref::XRef;
 use kurbo::Affine;
 use log::warn;
 use std::cell::OnceCell;
-use std::collections::HashSet;
 use std::ops::Deref;
 
 /// Attributes that can be inherited.
@@ -137,17 +136,14 @@ pub struct Page<'a> {
 
 impl<'a> Page<'a> {
     fn new(dict: Dict<'a>, ctx: &PagesContext, resources: Resources<'a>) -> Page<'a> {
-        let media_box = dict
-            .get::<Rect>(MEDIA_BOX)
-            .or_else(|| ctx.media_box)
-            .unwrap_or(A4);
+        let media_box = dict.get::<Rect>(MEDIA_BOX).or(ctx.media_box).unwrap_or(A4);
 
         let crop_box = dict
             .get::<Rect>(CROP_BOX)
-            .or_else(|| ctx.crop_box)
+            .or(ctx.crop_box)
             .unwrap_or(media_box);
 
-        let rotation = match dict.get::<u32>(ROTATE).or_else(|| ctx.rotate).unwrap_or(0) % 360 {
+        let rotation = match dict.get::<u32>(ROTATE).or(ctx.rotate).unwrap_or(0) % 360 {
             0 => Rotation::None,
             90 => Rotation::Horizontal,
             180 => Rotation::Flipped,
@@ -155,7 +151,7 @@ impl<'a> Page<'a> {
             _ => Rotation::None,
         };
 
-        let ctx = resources.ctx.clone();
+        let ctx = resources.ctx;
         let resources =
             Resources::from_parent(dict.get::<Dict>(RESOURCES).unwrap_or_default(), resources);
 
@@ -326,7 +322,7 @@ impl<'a> Page<'a> {
 
     /// Return a typed iterator over the operators of the page's content stream.
     pub fn typed_operations(&self) -> TypedIter {
-        TypedIter::from_untyped(self.operations().into_iter())
+        TypedIter::from_untyped(self.operations())
     }
 }
 
@@ -360,7 +356,7 @@ impl<'a> Resources<'a> {
     }
 
     /// Create a new `Resources` object.
-    pub fn new(
+    pub(crate) fn new(
         resources: Dict<'a>,
         parent: Option<Resources<'a>>,
         ctx: ReaderContext<'a>,
@@ -373,7 +369,7 @@ impl<'a> Resources<'a> {
         let shadings = resources.get::<Dict>(SHADING).unwrap_or_default();
         let properties = resources.get::<Dict>(PROPERTIES).unwrap_or_default();
 
-        let parent = parent.map(|r| Box::new(r));
+        let parent = parent.map(Box::new);
 
         Self {
             parent,
@@ -405,7 +401,7 @@ impl<'a> Resources<'a> {
 
         match dict.get_raw::<T>(name.deref())? {
             MaybeRef::Ref(ref_) => {
-                cache(ref_).or_else(|| self.ctx.xref.get::<T>(ref_.into()).and_then(|t| resolve(t)))
+                cache(ref_).or_else(|| self.ctx.xref.get::<T>(ref_.into()).and_then(&mut resolve))
             }
             MaybeRef::NotRef(i) => resolve(i),
         }
@@ -531,7 +527,7 @@ pub(crate) mod cached {
         pages: Pages<'static>,
         // NOTE: `pages` references the data in `xref`, so it's important that `xref`
         // appears after `pages` in the struct definition to ensure correct drop order.
-        xref: Box<XRef>,
+        _xref: Box<XRef>,
     }
 
     impl CachedPages {
@@ -550,7 +546,7 @@ pub(crate) mod cached {
                 .get(xref.trailer_data().pages_ref)
                 .and_then(|p| Pages::new(p, ctx, xref_reference))?;
 
-            Some(Self { pages, xref })
+            Some(Self { pages, _xref: xref })
         }
 
         pub(crate) fn get(&self) -> &Pages {

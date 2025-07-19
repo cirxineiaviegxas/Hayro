@@ -62,19 +62,19 @@ impl<'a> Stream<'a> {
                 .map(|n| Filter::from_name(n))
                 .collect::<Option<Vec<_>>>()
                 .ok_or(DecodeFailure::Unknown)?;
-            let params = self
+            let params: Vec<_> = self
                 .dict
                 .get::<Array>(DP)
                 .or_else(|| self.dict.get::<Array>(DECODE_PARMS))
                 .map(|a| a.iter::<Object>().collect())
-                .unwrap_or(vec![]);
+                .unwrap_or_default();
 
             let mut current: Option<FilterResult> = None;
 
-            for i in 0..filters.len() {
+            for (i, filter) in filters.iter().enumerate() {
                 let params = params.get(i).and_then(|p| p.clone().cast::<Dict>());
 
-                let new = filters[i].apply(
+                let new = filter.apply(
                     current
                         .as_ref()
                         .map(|c| c.data.as_ref())
@@ -160,16 +160,6 @@ pub enum ImageColorSpace {
     Rgb,
     /// CMYK color space.
     Cmyk,
-}
-
-impl ImageColorSpace {
-    pub(crate) fn num_components(&self) -> u8 {
-        match self {
-            ImageColorSpace::Gray => 1,
-            ImageColorSpace::Rgb => 3,
-            ImageColorSpace::Cmyk => 4,
-        }
-    }
 }
 
 /// Additional data that is extracted from some image streams.

@@ -72,8 +72,8 @@ impl<'a> BitReader<'a> {
                 let end_byte_pos = (bit_pos + bit_size.0 as usize - 1) / 8;
                 let mut read = [0u8; 8];
 
-                for i in 0..=end_byte_pos {
-                    read[i] = *self.data.get(byte_pos + i)?;
+                for (i, r) in read.iter_mut().enumerate().take(end_byte_pos + 1) {
+                    *r = *self.data.get(byte_pos + i)?;
                 }
 
                 let item = (u64::from_be_bytes(read) >> (64 - bit_pos - bit_size.0 as usize))
@@ -132,7 +132,8 @@ impl<'a> BitWriter<'a> {
     }
 
     /// Align the writer to the next byte boundary.
-    pub fn align(&mut self) {
+    #[cfg(feature = "jpeg2000")]
+    pub(crate) fn align(&mut self) {
         let bit_pos = self.bit_pos();
 
         if bit_pos % 8 != 0 {
@@ -212,7 +213,7 @@ impl<'a> BitChunks<'a> {
     }
 }
 
-impl<'a> Iterator for BitChunks<'_> {
+impl Iterator for BitChunks<'_> {
     type Item = BitChunk;
 
     fn next(&mut self) -> Option<Self::Item> {

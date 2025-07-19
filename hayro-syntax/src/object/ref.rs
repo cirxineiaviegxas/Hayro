@@ -68,7 +68,7 @@ where
     T: ObjectLike<'a>,
 {
     /// Resolve the `MaybeRef` object with the given xref table.
-    pub fn resolve(self, ctx: ReaderContext<'a>) -> Option<T> {
+    pub(crate) fn resolve(self, ctx: ReaderContext<'a>) -> Option<T> {
         match self {
             MaybeRef::Ref(r) => ctx.xref.get::<T>(r.into()),
             MaybeRef::NotRef(t) => Some(t),
@@ -93,8 +93,8 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            MaybeRef::Ref(r) => write!(f, "{:?}", r),
-            MaybeRef::NotRef(nr) => write!(f, "{:?}", nr),
+            MaybeRef::Ref(r) => write!(f, "{r:?}"),
+            MaybeRef::NotRef(nr) => write!(f, "{nr:?}"),
         }
     }
 }

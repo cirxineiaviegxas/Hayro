@@ -13,7 +13,6 @@ pub use crate::object::rect::Rect;
 pub use crate::object::r#ref::{MaybeRef, ObjRef};
 pub use crate::object::stream::Stream;
 pub use crate::object::string::String;
-use crate::xref::XRef;
 
 mod bool;
 mod null;
@@ -242,26 +241,8 @@ impl Skippable for ObjectIdentifier {
 pub fn dict_or_stream<'a>(obj: &Object<'a>) -> Option<(Dict<'a>, Option<Stream<'a>>)> {
     if let Some(stream) = obj.clone().cast::<Stream>() {
         Some((stream.dict().clone(), Some(stream)))
-    } else if let Some(dict) = obj.clone().cast::<Dict>() {
-        Some((dict, None))
     } else {
-        None
-    }
-}
-
-pub(crate) struct ObjectData {
-    start_offset: usize,
-    end_offset: usize,
-    xref: XRef,
-}
-
-impl ObjectData {
-    pub(crate) fn new(start_offset: usize, end_offset: usize, xref: XRef) -> Self {
-        Self {
-            start_offset,
-            end_offset,
-            xref,
-        }
+        obj.clone().cast::<Dict>().map(|dict| (dict, None))
     }
 }
 

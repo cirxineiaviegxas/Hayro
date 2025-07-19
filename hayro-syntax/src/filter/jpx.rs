@@ -1,8 +1,17 @@
 use crate::bit_reader::{BitSize, BitWriter};
 use crate::filter::FilterResult;
-use crate::object::stream::ImageData;
+use crate::object::stream::{ImageColorSpace, ImageData};
 
-#[cfg(feature = "jpeg2000")]
+impl ImageColorSpace {
+    fn num_components(&self) -> u8 {
+        match self {
+            ImageColorSpace::Gray => 1,
+            ImageColorSpace::Rgb => 3,
+            ImageColorSpace::Cmyk => 4,
+        }
+    }
+}
+
 pub(crate) fn decode(data: &[u8]) -> Option<FilterResult> {
     use crate::object::stream::ImageColorSpace;
 

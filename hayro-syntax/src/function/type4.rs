@@ -222,7 +222,7 @@ fn eval_inner(procedure: &[PostScriptOp], arg_stack: &mut InterpreterStack) -> O
                 two_f!(|n1: f32, n2: f32| {
                     let mut res = n1.atan2(n2).to_degrees() % 360.0;
                     if res < 0.0 {
-                        res = res + 360.0;
+                        res += 360.0;
                     }
 
                     res
@@ -538,7 +538,7 @@ impl PostScriptOp {
                 b"pop" => Self::Pop,
                 b"roll" => Self::Roll,
                 _ => {
-                    error!("encountered unknown postscript operator {:?}", op);
+                    error!("encountered unknown postscript operator {op:?}");
 
                     return None;
                 }
@@ -554,6 +554,7 @@ mod tests {
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
     use crate::function::{Clamper, Function, FunctionType, Values};
     use crate::object::Number;
+    use std::f32::consts::LN_10;
     use std::sync::Arc;
 
     use smallvec::smallvec;
@@ -678,7 +679,7 @@ mod tests {
 
     #[test]
     fn op_ln() {
-        op_impl("10 ln", &[2.3025851]);
+        op_impl("10 ln", &[LN_10]);
         op_impl("100 ln", &[4.6051702]);
     }
 
