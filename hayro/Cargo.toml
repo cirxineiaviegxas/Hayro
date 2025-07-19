@@ -5,8 +5,7 @@ edition = "2024"
 autotests = false
 
 [dependencies]
-hayro-syntax = { path = "../hayro-syntax", default-features = false }
-hayro-interpret = { path = "../hayro-interpret", default-features = false }
+hayro-interpret = { workspace = true }
 kurbo = { workspace = true }
 image = { workspace = true, features = ["png"] }
 bytemuck = { workspace = true, features = ["bytemuck_derive"] }

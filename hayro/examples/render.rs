@@ -1,9 +1,8 @@
 //! This example shows you how you can render a PDF file to PNG.
 
-use hayro::render_png;
+use hayro::{Pdf, RenderSettings, render};
 use hayro_interpret::InterpreterSettings;
 use hayro_interpret::font::{FontData, FontQuery, StandardFont};
-use hayro_syntax::Pdf;
 use std::sync::Arc;
 
 fn main() {
@@ -15,18 +14,19 @@ fn main() {
     let data = Arc::new(file);
     let pdf = Pdf::new(data).unwrap();
 
-    let settings = InterpreterSettings {
+    let interpreter_settings = InterpreterSettings {
         font_resolver: Arc::new(|query| match query {
-            FontQuery::Standard(s) => Some(get_standard(&s)),
+            FontQuery::Standard(s) => Some(get_standard(s)),
             FontQuery::Fallback(f) => Some(get_standard(&f.pick_standard_font())),
         }),
         ..Default::default()
     };
 
-    let pixmaps = render_png(&pdf, 1.0, settings, None).unwrap();
+    let render_settings = RenderSettings::default();
 
-    for (idx, pixmap) in pixmaps.iter().enumerate() {
-        std::fs::write(format!("rendered_{}.png", idx), &pixmap).unwrap();
+    for (idx, page) in pdf.pages().iter().enumerate() {
+        let pixmap = render(page, &interpreter_settings, &render_settings);
+        std::fs::write(format!("rendered_{idx}.png"), pixmap.take_png()).unwrap();
     }
 }
 
@@ -97,11 +97,11 @@ impl log::Log for SimpleLogger {
             let args = record.args();
 
             match record.level() {
-                log::Level::Error => eprintln!("Error (in {}:{}): {}", target, line, args),
-                log::Level::Warn => eprintln!("Warning (in {}:{}): {}", target, line, args),
-                log::Level::Info => eprintln!("Info (in {}:{}): {}", target, line, args),
-                log::Level::Debug => eprintln!("Debug (in {}:{}): {}", target, line, args),
-                log::Level::Trace => eprintln!("Trace (in {}:{}): {}", target, line, args),
+                log::Level::Error => eprintln!("Error (in {target}:{line}): {args}"),
+                log::Level::Warn => eprintln!("Warning (in {target}:{line}): {args}"),
+                log::Level::Info => eprintln!("Info (in {target}:{line}): {args}"),
+                log::Level::Debug => eprintln!("Debug (in {target}:{line}): {args}"),
+                log::Level::Trace => eprintln!("Trace (in {target}:{line}): {args}"),
             }
         }
     }

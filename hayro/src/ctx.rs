@@ -1,8 +1,6 @@
 // Copyright 2025 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Basic render operations.
-
 use crate::coarse::Wide;
 use crate::encode::{EncodeExt, EncodedPaint};
 use crate::fine::Fine;
@@ -21,7 +19,7 @@ use std::vec::Vec;
 pub(crate) const DEFAULT_TOLERANCE: f64 = 0.1;
 /// A render context.
 #[derive(Debug)]
-pub struct RenderContext {
+pub(crate) struct RenderContext {
     pub(crate) width: u16,
     pub(crate) height: u16,
     pub(crate) wide: Wide,
@@ -39,7 +37,7 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Create a new render context with the given width and height in pixels.
-    pub fn new(width: u16, height: u16) -> Self {
+    pub(crate) fn new(width: u16, height: u16) -> Self {
         let wide = Wide::new(width, height);
 
         let alphas = vec![];
@@ -94,7 +92,7 @@ impl RenderContext {
     }
 
     /// Fill a path.
-    pub fn fill_path(
+    pub(crate) fn fill_path(
         &mut self,
         path: &BezPath,
         paint_type: PaintType,
@@ -124,7 +122,7 @@ impl RenderContext {
     }
 
     /// Stroke a path.
-    pub fn stroke_path(
+    pub(crate) fn stroke_path(
         &mut self,
         path: &BezPath,
         paint_type: PaintType,
@@ -139,7 +137,7 @@ impl RenderContext {
     }
 
     /// Fill a rectangle.
-    pub fn fill_rect(
+    pub(crate) fn fill_rect(
         &mut self,
         rect: &Rect,
         paint_type: PaintType,
@@ -159,7 +157,7 @@ impl RenderContext {
     /// Note that the mask, if provided, needs to have the same size as the render context. Otherwise,
     /// it will be ignored. In addition to that, the mask will not be affected by the current
     /// transformation matrix in place.
-    pub fn push_layer(
+    pub(crate) fn push_layer(
         &mut self,
         clip_path: Option<&BezPath>,
         opacity: Option<f32>,
@@ -185,37 +183,28 @@ impl RenderContext {
     }
 
     /// Pop the last-pushed layer.
-    pub fn pop_layer(&mut self) {
+    pub(crate) fn pop_layer(&mut self) {
         self.wide.pop_layer();
     }
 
     /// Set the current stroke.
-    pub fn set_stroke(&mut self, stroke: Stroke) {
+    pub(crate) fn set_stroke(&mut self, stroke: Stroke) {
         self.stroke = stroke;
     }
 
     /// Set the current fill rule.
-    pub fn set_fill_rule(&mut self, fill_rule: FillRule) {
+    pub(crate) fn set_fill_rule(&mut self, fill_rule: FillRule) {
         self.fill_rule = fill_rule;
     }
 
     /// Set the current transform.
-    pub fn set_transform(&mut self, transform: Affine) {
+    pub(crate) fn set_transform(&mut self, transform: Affine) {
         self.transform = transform;
-    }
-
-    /// Reset the render context.
-    pub fn reset(&mut self) {
-        self.line_buf.clear();
-        self.tiles.reset();
-        self.alphas.clear();
-        self.strip_buf.clear();
-        self.wide.reset();
     }
 
     /// Render the current context into a buffer.
     /// The buffer is expected to be in premultiplied RGBA8 format with length `width * height * 4`
-    pub fn render_to_buffer(&self, buffer: &mut [u8], width: u16, height: u16) {
+    pub(crate) fn render_to_buffer(&self, buffer: &mut [u8], width: u16, height: u16) {
         assert!(
             !self.wide.has_layers(),
             "some layers haven't been popped yet"
@@ -247,24 +236,14 @@ impl RenderContext {
     }
 
     /// Render the current context into a pixmap.
-    pub fn render_to_pixmap(&self, pixmap: &mut Pixmap) {
+    pub(crate) fn render_to_pixmap(&self, pixmap: &mut Pixmap) {
         let width = pixmap.width();
         let height = pixmap.height();
         self.render_to_buffer(pixmap.data_as_u8_slice_mut(), width, height);
     }
 
-    pub fn set_anti_aliasing(&mut self, val: bool) {
+    pub(crate) fn set_anti_aliasing(&mut self, val: bool) {
         self.anti_aliasing = val;
-    }
-
-    /// Return the width of the pixmap.
-    pub fn width(&self) -> u16 {
-        self.width
-    }
-
-    /// Return the height of the pixmap.
-    pub fn height(&self) -> u16 {
-        self.height
     }
 
     // Assumes that `line_buf` contains the flattened path.
