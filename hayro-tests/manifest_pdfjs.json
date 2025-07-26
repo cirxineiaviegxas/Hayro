@@ -258,6 +258,10 @@
     "file": "pdfs/bug911034.pdf"
   },
   {
+    "id": "bug920426",
+    "file": "pdfs/bug920426.pdf"
+  },
+  {
     "id": "calgray",
     "file": "pdfs/calgray.pdf"
   },
@@ -315,10 +319,18 @@
     "file": "pdfs/images_1bit_grayscale.pdf"
   },
   {
+    "id": "issue10519",
+    "file": "pdfs/issue10519_reduced.pdf"
+  },
+  {
     "id": "issue1309",
     "file": "pdfs/issue1309.link",
     "md5": "e835fb7f3dab3073ad37d0bd3c6399fa",
     "link": true
+  },
+  {
+    "id": "issue13242",
+    "file": "pdfs/issue13242.pdf"
   },
   {
     "id": "issue13372",
@@ -333,12 +345,22 @@
     "file": "pdfs/issue15716.pdf"
   },
   {
+    "id": "issue1597",
+    "file": "pdfs/issue1597.link",
+    "md5": "a5ebef467fd6e2fc0aeb56c9eb725ae3",
+    "link": true
+  },
+  {
     "id": "issue17065",
     "file": "pdfs/issue17065.pdf"
   },
   {
     "id": "issue17848",
     "file": "pdfs/issue17848.pdf"
+  },
+  {
+    "id": "issue18117",
+    "file": "pdfs/issue18117.pdf"
   },
   {
     "id": "issue18816",
@@ -375,8 +397,16 @@
     "last_page": 0
   },
   {
+    "id": "issue2931",
+    "file": "pdfs/issue2931.pdf"
+  },
+  {
     "id": "issue2948",
     "file": "pdfs/issue2948.pdf"
+  },
+  {
+    "id": "issue3323",
+    "file": "pdfs/issue3323.pdf"
   },
   {
     "id": "issue3384",
@@ -406,6 +436,10 @@
   {
     "id": "issue4379",
     "file": "pdfs/issue4379.pdf"
+  },
+  {
+    "id": "issue4402_reduced",
+    "file": "pdfs/issue4402_reduced.pdf"
   },
   {
     "id": "issue4573",
@@ -462,6 +496,10 @@
     "file": "pdfs/issue6769_no_matrix.pdf"
   },
   {
+    "id": "issue7901",
+    "file": "pdfs/issue7901.pdf"
+  },
+  {
     "id": "issue840",
     "file": "pdfs/issue840.pdf"
   },
@@ -471,6 +509,14 @@
     "md5": "098658008fc2bf7d433fd0d6d468a9e1",
     "link": true,
     "last_page": 0
+  },
+  {
+    "id": "issue9534_reduced",
+    "file": "pdfs/issue9534_reduced.pdf"
+  },
+  {
+    "id": "issue9915",
+    "file": "pdfs/issue9915_reduced.pdf"
   },
   {
     "id": "jbig2_symbol_offset",

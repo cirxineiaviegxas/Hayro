@@ -162,23 +162,13 @@ impl<'a> Context<'a> {
                 self.font_cache
                     .entry(ref_)
                     .or_insert_with(|| {
-                        resources.resolve_ref::<Dict>(ref_).and_then(|o| {
-                            Font::new(
-                                &o,
-                                &self.settings.font_resolver,
-                                &self.settings.warning_sink,
-                            )
-                        })
+                        resources
+                            .resolve_ref::<Dict>(ref_)
+                            .and_then(|o| Font::new(&o, &self.settings.font_resolver))
                     })
                     .clone()
             }),
-            Box::new(|c| {
-                Font::new(
-                    &c,
-                    &self.settings.font_resolver,
-                    &self.settings.warning_sink,
-                )
-            }),
+            Box::new(|c| Font::new(&c, &self.settings.font_resolver)),
         )
     }
 

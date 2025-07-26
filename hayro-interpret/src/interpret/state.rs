@@ -158,8 +158,7 @@ impl<'a> TextState<'a> {
         self.text_matrix *= Affine::new([1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64]);
     }
 
-    pub(crate) fn apply_code_advance(&mut self, char_code: u16) {
-        let code_len = self.font.as_ref().map(|f| f.code_len()).unwrap_or(1);
+    pub(crate) fn apply_code_advance(&mut self, char_code: u32, code_len: usize) {
         let glyph_advance = self
             .font
             .as_ref()
