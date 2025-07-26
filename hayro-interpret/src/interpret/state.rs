@@ -13,6 +13,7 @@ use hayro_syntax::object::dict::keys::SMASK;
 use hayro_syntax::object::{Dict, Name, Number};
 use hayro_syntax::page::Resources;
 use kurbo::{Affine, BezPath, Vec2};
+use log::warn;
 use smallvec::smallvec;
 use std::ops::Deref;
 
@@ -278,6 +279,13 @@ pub(crate) fn handle_gs_single<'a>(
                 context.get_mut().soft_mask = dict
                     .get::<Dict>(SMASK)
                     .and_then(|d| SoftMask::new(&d, context, parent_resources.clone()));
+            }
+        }
+        "BM" => {
+            let name = dict.get::<Name>(key)?;
+            let mode = name.as_str();
+            if mode != "Normal" {
+                warn!("blend mode {mode} is not supported");
             }
         }
         "Type" => {}
