@@ -5,9 +5,9 @@ pub(crate) mod image;
 pub(crate) mod shading;
 
 use crate::encode::image::EncodedImage;
-use crate::encode::shading::EncodedShading;
 use crate::fine::Sampler;
 use crate::paint::Paint;
+use hayro_interpret::encode::EncodedShadingPattern;
 use kurbo::{Affine, Point, Vec2};
 
 #[derive(Debug)]
@@ -18,9 +18,21 @@ pub(crate) struct Shader<T: Sampler> {
     pub(crate) sampler: T,
 }
 
+impl Shader<EncodedImage> {
+    pub(crate) fn new(base_transform: Affine, image: EncodedImage) -> Shader<EncodedImage> {
+        Self::new_inner(base_transform, image)
+    }
+}
+
+impl Shader<EncodedShadingPattern> {
+    pub(crate) fn new(shading: EncodedShadingPattern) -> Shader<EncodedShadingPattern> {
+        Self::new_inner(shading.base_transform, shading)
+    }
+}
+
 impl<T: Sampler> Shader<T> {
-    pub(crate) fn new(transform: Affine, sampler: T) -> Shader<T> {
-        let transform = transform * Affine::translate((0.5, 0.5));
+    fn new_inner(base_transform: Affine, sampler: T) -> Shader<T> {
+        let transform = base_transform * Affine::translate((0.5, 0.5));
         let (x_advance, y_advance) = x_y_advances(&transform);
 
         Shader {
@@ -44,7 +56,7 @@ pub(crate) trait EncodeExt {
 pub(crate) enum EncodedPaint {
     Image(Shader<EncodedImage>),
     Mask(Shader<EncodedImage>),
-    Shading(Shader<EncodedShading>),
+    Shading(Shader<EncodedShadingPattern>),
 }
 
 pub(crate) fn x_y_advances(transform: &Affine) -> (Vec2, Vec2) {
