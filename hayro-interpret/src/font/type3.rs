@@ -1,4 +1,3 @@
-use crate::Paint;
 use crate::context::Context;
 use crate::device::Device;
 use crate::font::glyph_simulator::GlyphSimulator;
@@ -6,8 +5,9 @@ use crate::font::true_type::{read_encoding, read_widths};
 use crate::font::{Encoding, Glyph, Type3Glyph, UNITS_PER_EM};
 use crate::soft_mask::SoftMask;
 use crate::{CacheKey, ClipPath};
-use crate::{FillProps, StrokeProps, interpret};
+use crate::{FillRule, Paint};
 use crate::{LumaData, RgbData};
+use crate::{StrokeProps, interpret};
 use hayro_syntax::content::TypedIter;
 use hayro_syntax::content::ops::TypedInstruction;
 use hayro_syntax::object::Dict;
@@ -161,26 +161,21 @@ impl<'a, T: Device> Type3ShapeGlyphDevice<'a, T> {
 
 // Only filling, stroking of paths and stencil masks are allowed.
 impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
-    fn set_transform(&mut self, affine: Affine) {
-        self.inner.set_transform(affine);
-    }
-
-    fn stroke_path(&mut self, path: &BezPath, _: &Paint) {
-        self.inner.stroke_path(path, self.paint)
-    }
-
-    fn set_stroke_properties(&mut self, stroke_props: &StrokeProps) {
-        self.inner.set_stroke_properties(stroke_props)
+    fn stroke_path(
+        &mut self,
+        path: &BezPath,
+        transform: Affine,
+        _: &Paint,
+        stroke_props: &StrokeProps,
+    ) {
+        self.inner
+            .stroke_path(path, transform, self.paint, stroke_props)
     }
 
     fn set_soft_mask(&mut self, _: Option<SoftMask>) {}
 
-    fn fill_path(&mut self, path: &BezPath, _: &Paint) {
-        self.inner.fill_path(path, self.paint)
-    }
-
-    fn set_fill_properties(&mut self, fill_props: &FillProps) {
-        self.inner.set_fill_properties(fill_props)
+    fn fill_path(&mut self, path: &BezPath, transform: Affine, _: &Paint, fill_rule: FillRule) {
+        self.inner.fill_path(path, transform, self.paint, fill_rule)
     }
 
     fn push_clip_path(&mut self, clip_path: &ClipPath) {
@@ -191,20 +186,27 @@ impl<T: Device> Device for Type3ShapeGlyphDevice<'_, T> {
 
     // Technically not valid, I think, but there is a PDFBox test case that contains such a font
     // and everyone seems to render it.
-    fn fill_glyph(&mut self, g: &Glyph<'_>, p: &Paint) {
-        self.inner.fill_glyph(g, p);
+    fn fill_glyph(&mut self, g: &Glyph<'_>, transform: Affine, p: &Paint) {
+        self.inner.fill_glyph(g, transform, p);
     }
 
     // Technically not valid, I think, but there is a PDFBox test case that contains such a font
     // and everyone seems to render it.
-    fn stroke_glyph(&mut self, g: &Glyph<'_>, p: &Paint) {
-        self.inner.stroke_glyph(g, p);
+    fn stroke_glyph(
+        &mut self,
+        g: &Glyph<'_>,
+        transform: Affine,
+        p: &Paint,
+        stroke_props: &StrokeProps,
+    ) {
+        self.inner.stroke_glyph(g, transform, p, stroke_props);
     }
 
-    fn draw_rgba_image(&mut self, _: RgbData, _: Option<LumaData>) {}
+    fn draw_rgba_image(&mut self, _: RgbData, _: Affine, _: Option<LumaData>) {}
 
-    fn draw_stencil_image(&mut self, stencil: LumaData, _: &Paint) {
-        self.inner.draw_stencil_image(stencil, self.paint);
+    fn draw_stencil_image(&mut self, stencil: LumaData, transform: Affine, _: &Paint) {
+        self.inner
+            .draw_stencil_image(stencil, transform, self.paint);
     }
 
     fn pop_clip_path(&mut self) {

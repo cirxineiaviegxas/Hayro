@@ -156,23 +156,23 @@ pub fn interpret<'a, 'b>(
                 context.path_mut().move_to(p);
             }
             TypedInstruction::FillPathEvenOdd(_) => {
-                context.get_mut().fill_props.fill_rule = FillRule::EvenOdd;
+                context.get_mut().fill_rule = FillRule::EvenOdd;
                 fill_path(context, device);
             }
             TypedInstruction::FillPathNonZero(_) => {
-                context.get_mut().fill_props.fill_rule = FillRule::NonZero;
+                context.get_mut().fill_rule = FillRule::NonZero;
                 fill_path(context, device);
             }
             TypedInstruction::FillPathNonZeroCompatibility(_) => {
-                context.get_mut().fill_props.fill_rule = FillRule::NonZero;
+                context.get_mut().fill_rule = FillRule::NonZero;
                 fill_path(context, device);
             }
             TypedInstruction::FillAndStrokeEvenOdd(_) => {
-                context.get_mut().fill_props.fill_rule = FillRule::EvenOdd;
+                context.get_mut().fill_rule = FillRule::EvenOdd;
                 fill_stroke_path(context, device);
             }
             TypedInstruction::FillAndStrokeNonZero(_) => {
-                context.get_mut().fill_props.fill_rule = FillRule::NonZero;
+                context.get_mut().fill_rule = FillRule::NonZero;
                 fill_stroke_path(context, device);
             }
             TypedInstruction::CloseAndStrokePath(_) => {
@@ -181,12 +181,12 @@ pub fn interpret<'a, 'b>(
             }
             TypedInstruction::CloseFillAndStrokeEvenOdd(_) => {
                 context.path_mut().close_path();
-                context.get_mut().fill_props.fill_rule = FillRule::EvenOdd;
+                context.get_mut().fill_rule = FillRule::EvenOdd;
                 fill_stroke_path(context, device);
             }
             TypedInstruction::CloseFillAndStrokeNonZero(_) => {
                 context.path_mut().close_path();
-                context.get_mut().fill_props.fill_rule = FillRule::NonZero;
+                context.get_mut().fill_rule = FillRule::NonZero;
                 fill_stroke_path(context, device);
             }
             TypedInstruction::NonStrokeColorDeviceGray(s) => {
@@ -260,9 +260,8 @@ pub fn interpret<'a, 'b>(
                 if let Some(clip) = *context.clip()
                     && !context.path().elements().is_empty()
                 {
-                    device.set_transform(context.get().ctm);
                     device.push_clip_path(&ClipPath {
-                        path: context.path().clone(),
+                        path: context.get().ctm * context.path().clone(),
                         fill: clip,
                     });
 
@@ -385,9 +384,8 @@ pub fn interpret<'a, 'b>(
                     .is_some();
 
                 if has_outline {
-                    device.set_transform(context.get().ctm);
                     device.push_clip_path(&ClipPath {
-                        path: context.get().text_state.clip_paths.clone(),
+                        path: context.get().ctm * context.get().text_state.clip_paths.clone(),
                         fill: FillRule::NonZero,
                     });
                     context.get_mut().n_clips += 1;
