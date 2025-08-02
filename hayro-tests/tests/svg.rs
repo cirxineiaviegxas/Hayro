@@ -59,3 +59,44 @@ fn text_rendering_stroking_clipping() {
 fn image_ccit_4() {
     run_svg_test("image_ccit_4", "pdfs/image_ccit_4.pdf", None);
 }
+
+#[test]
+fn gradient_on_rect() {
+    run_svg_test("gradient_on_rect", "pdfs/gradient_on_rect.pdf", None);
+}
+
+#[test]
+fn gradient_on_rotated_rect() {
+    run_svg_test(
+        "gradient_on_rotated_rect",
+        "pdfs/gradient_on_rotated_rect.pdf",
+        None,
+    );
+}
+
+#[test]
+fn pattern_tiling_simple() {
+    run_svg_test(
+        "pattern_tiling_simple",
+        "pdfs/pattern_tiling_simple.pdf",
+        None,
+    );
+}
+
+#[test]
+fn pattern_tiling_nested() {
+    run_svg_test(
+        "pattern_tiling_nested",
+        "pdfs/pattern_tiling_nested.pdf",
+        None,
+    );
+}
+
+#[test]
+fn pattern_tiling_rotated() {
+    run_svg_test(
+        "pattern_tiling_rotated",
+        "pdfs/pattern_tiling_rotated.pdf",
+        None,
+    );
+}
