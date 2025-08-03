@@ -20,8 +20,9 @@ import hashlib
 import requests
 import fnmatch
 import shutil
+import re
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 def load_list_from_file(file_path: Path) -> List[str]:
     """Load a list of patterns from a text file, one per line."""
@@ -85,6 +86,27 @@ class PDFJSSync:
             if entry.get(flag, False):
                 return True
         return False
+        
+    def is_eq_type(self, entry: Dict[str, Any]) -> bool:
+        """Check if entry is of type 'eq' (equality test)."""
+        return entry.get("type", "eq") == "eq"
+        
+    def extract_sort_key(self, test_id: str) -> Tuple[str, int]:
+        """Extract a sort key from test ID, treating trailing numbers specially.
+        
+        For example:
+        - 'issue1010' -> ('issue', 1010)
+        - 'issue10326' -> ('issue', 10326)
+        - 'test_name' -> ('test_name', float('inf'))
+        """
+        match = re.match(r'^(.*?)(\d+)$', test_id)
+        if match:
+            prefix = match.group(1)
+            number = int(match.group(2))
+            return (prefix.lower(), number)
+        else:
+            # No trailing number, sort after numbered entries
+            return (test_id.lower(), float('inf'))
         
     def calculate_md5(self, file_path: Path) -> str:
         """Calculate MD5 hash of a file."""
@@ -311,6 +333,7 @@ class PDFJSSync:
         print(f"🚫 Blacklist patterns: {len(self.blacklist)} entries")
         print(f"🔤 Max alphabetical tests: {self.max_alphabetical_tests}")
         print(f"🚫 Excluded flags: annotations, enableXfa, forms, print, optionalContent")
+        print(f"✅ Only syncing tests of type: eq")
         
         # This will be loaded later in the filtering section
         
@@ -329,10 +352,13 @@ class PDFJSSync:
         # Filter entries using combined whitelist + alphabetical + blacklist + flags logic
         matching_entries = []
         
-        # Step 1: Add explicitly whitelisted entries (not blacklisted, not with excluded flags)
+        # Step 1: Add explicitly whitelisted entries (not blacklisted, not with excluded flags, and type eq)
         whitelisted_entries = []
         for entry in pdfjs_manifest:
-            if (self.matches_whitelist(entry["id"])):
+            if (self.matches_whitelist(entry["id"]) and 
+                not self.matches_blacklist(entry["id"]) and 
+                not self.has_excluded_flags(entry) and
+                self.is_eq_type(entry)):
                 whitelisted_entries.append(entry)
                 matching_entries.append(entry)
                 
@@ -356,14 +382,19 @@ class PDFJSSync:
         total_tests = len(pdfjs_manifest)
         excluded_by_flags = len([e for e in pdfjs_manifest if self.has_excluded_flags(e)])
         excluded_by_blacklist = len([e for e in pdfjs_manifest if self.matches_blacklist(e["id"])])
+        excluded_by_type = len([e for e in pdfjs_manifest if not self.is_eq_type(e)])
         already_ported = len(existing_ids)
-        available_for_porting = total_tests - excluded_by_flags - excluded_by_blacklist
+        available_for_porting = len([e for e in pdfjs_manifest 
+                                   if not self.has_excluded_flags(e) 
+                                   and not self.matches_blacklist(e["id"]) 
+                                   and self.is_eq_type(e)])
         not_yet_ported = available_for_porting - already_ported
         
         print(f"📊 Statistics:")
         print(f"  Total tests in PDF.js: {total_tests}")
         print(f"  Excluded by flags: {excluded_by_flags}")
         print(f"  Excluded by blacklist: {excluded_by_blacklist}")
+        print(f"  Excluded by type (non-eq): {excluded_by_type}")
         print(f"  Already ported: {already_ported}")
         print(f"  Available for porting: {available_for_porting}")
         print(f"  Not yet ported: {not_yet_ported}")
@@ -379,11 +410,11 @@ class PDFJSSync:
         
         for entry in pdfjs_manifest:
             test_id = entry["id"]
-            # Keep if explicitly whitelisted
-            if self.matches_whitelist(test_id):
+            # Keep if explicitly whitelisted AND is eq type
+            if self.matches_whitelist(test_id) and self.is_eq_type(entry):
                 keep_ids.add(test_id)
-            # Or keep if not blacklisted and doesn't have excluded flags
-            elif not self.matches_blacklist(test_id) and not self.has_excluded_flags(entry):
+            # Or keep if not blacklisted, doesn't have excluded flags, AND is eq type
+            elif not self.matches_blacklist(test_id) and not self.has_excluded_flags(entry) and self.is_eq_type(entry):
                 keep_ids.add(test_id)
         
         # Clean up entries that should no longer be kept (blacklisted or have excluded flags)
@@ -496,16 +527,17 @@ class PDFJSSync:
         if existing_ids is None:
             existing_ids = set()
             
-        # Filter out blacklisted tests, tests with excluded flags, and existing tests
+        # Filter out blacklisted tests, tests with excluded flags, non-eq tests, and existing tests
         filtered_entries = []
         for entry in all_entries:
             if (not self.matches_blacklist(entry["id"]) and 
                 not self.has_excluded_flags(entry) and 
+                self.is_eq_type(entry) and
                 entry["id"] not in existing_ids):
                 filtered_entries.append(entry)
         
-        # Sort alphabetically and return first N entries
-        sorted_entries = sorted(filtered_entries, key=lambda x: x["id"].lower())
+        # Sort using custom key that handles trailing numbers properly
+        sorted_entries = sorted(filtered_entries, key=lambda x: self.extract_sort_key(x["id"]))
         return sorted_entries[:n]
         
     def preview_selection(self):
@@ -525,10 +557,11 @@ class PDFJSSync:
         whitelisted_entries = [entry for entry in pdfjs_manifest 
                              if (self.matches_whitelist(entry["id"]) and 
                                  not self.matches_blacklist(entry["id"]) and 
-                                 not self.has_excluded_flags(entry))]
+                                 not self.has_excluded_flags(entry) and
+                                 self.is_eq_type(entry))]
         
         print(f"\n📋 Whitelisted entries ({len(whitelisted_entries)}):")
-        for entry in sorted(whitelisted_entries, key=lambda x: x["id"]):
+        for entry in sorted(whitelisted_entries, key=lambda x: self.extract_sort_key(x["id"])):
             print(f"  - {entry['id']}")
             
         # Get alphabetical entries
@@ -552,14 +585,19 @@ class PDFJSSync:
         total_tests = len(pdfjs_manifest)
         excluded_by_flags = len([e for e in pdfjs_manifest if self.has_excluded_flags(e)])
         excluded_by_blacklist = len([e for e in pdfjs_manifest if self.matches_blacklist(e["id"])])
+        excluded_by_type = len([e for e in pdfjs_manifest if not self.is_eq_type(e)])
         already_ported = len(existing_ids)
-        available_for_porting = total_tests - excluded_by_flags - excluded_by_blacklist
+        available_for_porting = len([e for e in pdfjs_manifest 
+                                   if not self.has_excluded_flags(e) 
+                                   and not self.matches_blacklist(e["id"]) 
+                                   and self.is_eq_type(e)])
         not_yet_ported = available_for_porting - already_ported
         
         print(f"\n📊 Statistics:")
         print(f"  Total tests in PDF.js: {total_tests}")
         print(f"  Excluded by flags: {excluded_by_flags}")
         print(f"  Excluded by blacklist: {excluded_by_blacklist}")
+        print(f"  Excluded by type (non-eq): {excluded_by_type}")
         print(f"  Already ported: {already_ported}")
         print(f"  Available for porting: {available_for_porting}")
         print(f"  Not yet ported: {not_yet_ported}")
