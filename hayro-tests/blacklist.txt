@@ -26,6 +26,13 @@ doc_actions
 cmykjpeg_nowasm
 fips197
 fit11-talk
+issue16021
+
+# tiling with negative step
+issue16038
+
+# transfer func
+issue16114
 
 # CMAP table is broken, therefore we can't map codepoint to a glyph
 bug1050040
@@ -148,6 +155,80 @@ issue6692
 issue6782
 issue7598
 issue7835
+issue8586
+issue8614
+issue9084
+issue9195
+issue9252
+issue9367
+issue9425
+issue9949
+issue11088
+issue11242
+issue11549
+issue11555
+issue11578
+issue11740
+issue11915
+issue12418
+issue13343
+issue13916
+issue14917
+issue15033
+issue15044
+issue15139
+issue15292
+issue15441
+issue15443
+issue15559
+issue15594
+issue15604
+issue15784
+issue15977
+
+# panic in jbig
+issue15942
+
+# doesnt finish
+issue16263
+
+# noto color emoji, some page doesnt finish
+issue16127
+
+# weird letter
+issue14462
+
+#black bars
+issue12295
+
+# missing pages maybe? compare with other viewers
+issue13783
+
+
+# weird pink blackground
+issue11931
+
+# wrong text
+issue11768
+
+# maybe blend mode
+issue11279
+
+# missing image
+issue10880
+issue10989
+
+#black rect
+issue10339
+
+# weird purple lines on page 0
+issue9462
+
+# issue with image
+issue9650
+
+# text should be bold but isnt
+issue9291
 
 # mediabox / cropbox issue
 issue7872
@@ -159,6 +240,7 @@ issue8117
 issue8169
 issue8330
 issue8480
+issue15492
 
 # logo rendered wrong
 issue8022
