@@ -1,12 +1,15 @@
-use crate::renderer::SvgRenderer;
+use crate::render::SvgRenderer;
 use hayro_interpret::hayro_syntax::page::Page;
 use hayro_interpret::{Context, InterpreterSettings, interpret_page};
 use kurbo::Rect;
+use siphasher::sip128::{Hasher128, SipHasher13};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::hash::Hash;
 
 pub(crate) mod image;
-mod renderer;
+pub(crate) mod paint;
+mod render;
 
 pub fn convert(page: &Page, interpreter_settings: &InterpreterSettings) -> String {
     let mut state = Context::new(
@@ -35,4 +38,10 @@ impl Display for Id {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.0, self.1)
     }
+}
+
+pub(crate) fn hash128<T: Hash + ?Sized>(value: &T) -> u128 {
+    let mut state = SipHasher13::new();
+    value.hash(&mut state);
+    state.finish128().as_u128()
 }
