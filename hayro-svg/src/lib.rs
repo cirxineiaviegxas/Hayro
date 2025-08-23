@@ -2,7 +2,10 @@ use crate::renderer::SvgRenderer;
 use hayro_interpret::hayro_syntax::page::Page;
 use hayro_interpret::{Context, InterpreterSettings, interpret_page};
 use kurbo::Rect;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
+pub(crate) mod image;
 mod renderer;
 
 pub fn convert(page: &Page, interpreter_settings: &InterpreterSettings) -> String {
@@ -23,4 +26,13 @@ pub fn convert(page: &Page, interpreter_settings: &InterpreterSettings) -> Strin
     interpret_page(page, &mut state, &mut device);
 
     device.finish()
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub(crate) struct Id(char, u64);
+
+impl Display for Id {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.0, self.1)
+    }
 }

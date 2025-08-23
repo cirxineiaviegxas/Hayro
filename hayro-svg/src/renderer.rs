@@ -1,4 +1,4 @@
-use base64::Engine;
+use crate::Id;
 use hayro_interpret::color::Color;
 use hayro_interpret::encode::EncodedShadingPattern;
 use hayro_interpret::font::Glyph;
@@ -7,13 +7,12 @@ use hayro_interpret::pattern::{Pattern, ShadingPattern, TilingPattern};
 use hayro_interpret::{
     CacheKey, ClipPath, Device, FillRule, LumaData, Paint, RgbData, SoftMask, StrokeProps,
 };
-use image::{DynamicImage, ImageBuffer, ImageFormat};
+use image::{DynamicImage, ImageBuffer};
 use kurbo::{Affine, BezPath, PathEl, Point, Rect, Shape, Vec2};
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
-use std::io::{Cursor, Write};
+use std::io;
+use std::io::Write;
 use std::marker::PhantomData;
-use std::{fmt, io};
 use xmlwriter::{Options, XmlWriter};
 
 struct CachedClipPath {
@@ -39,20 +38,17 @@ struct CachedShading {
 }
 
 pub(crate) struct SvgRenderer<'a> {
-    xml: XmlWriter,
-    transform: Affine,
-    fill_rule: FillRule,
-    stroke_props: StrokeProps,
+    pub(crate) xml: XmlWriter,
     glyphs: Deduplicator<BezPath>,
     clip_paths: Deduplicator<CachedClipPath>,
     shadings: Deduplicator<CachedShading>,
     shading_patterns: Deduplicator<CachedShadingPattern>,
     tiling_patterns: Deduplicator<CachedTilingPattern<'a>>,
-    phantom_data: PhantomData<&'a ()>,
+    pub(crate) phantom_data: PhantomData<&'a ()>,
 }
 
 impl<'a> SvgRenderer<'a> {
-    fn fill_path(&mut self, path: &BezPath, paint: &Paint<'a>) {
+    fn fill_path(&mut self, path: &BezPath, transform: Affine, _: FillRule, paint: &Paint<'a>) {
         let svg_path = path.to_svg_f32();
 
         match &paint {
@@ -60,18 +56,18 @@ impl<'a> SvgRenderer<'a> {
                 self.xml.start_element("path");
                 self.xml.write_attribute("d", &svg_path);
                 self.write_color(c, false);
-                self.write_transform(None);
+                self.write_transform(transform);
                 self.xml.end_element();
             }
             Paint::Pattern(p) => match p.as_ref() {
                 Pattern::Shading(s) => {
-                    let bbox = (self.transform * path).bounding_box();
+                    let bbox = (transform * path).bounding_box();
                     let shading_id = self.shadings.insert_with(s.cache_key(), || CachedShading {
                         pattern: s.clone(),
                         bbox,
                     });
 
-                    let inverse_transform = self.transform.inverse();
+                    let inverse_transform = transform.inverse();
                     let pattern_id = self.shading_patterns.insert_with(
                         (s.clone(), inverse_transform).cache_key(),
                         || CachedShadingPattern {
@@ -85,11 +81,11 @@ impl<'a> SvgRenderer<'a> {
                     self.xml.write_attribute("d", &svg_path);
                     self.xml
                         .write_attribute_fmt("fill", format_args!("url(#{pattern_id})"));
-                    self.write_transform(None);
+                    self.write_transform(transform);
                     self.xml.end_element();
                 }
                 Pattern::Tiling(t) => {
-                    let inverse_transform = self.transform.inverse();
+                    let inverse_transform = transform.inverse();
                     let pattern = *t.clone();
 
                     let pattern_id = self.tiling_patterns.insert_with(
@@ -104,7 +100,7 @@ impl<'a> SvgRenderer<'a> {
                     self.xml.write_attribute("d", &svg_path);
                     self.xml
                         .write_attribute_fmt("fill", format_args!("url(#{pattern_id})"));
-                    self.write_transform(None);
+                    self.write_transform(transform);
                     self.xml.end_element();
                 }
             },
@@ -128,7 +124,7 @@ impl<'a> SvgRenderer<'a> {
         }
     }
 
-    fn stroke_path(&mut self, path: &BezPath, paint: &Paint) {
+    fn stroke_path(&mut self, path: &BezPath, transform: Affine, _: &StrokeProps, paint: &Paint) {
         let svg_path = path.to_svg_f32();
 
         match &paint {
@@ -137,7 +133,7 @@ impl<'a> SvgRenderer<'a> {
                 self.xml.write_attribute("d", &svg_path);
                 self.write_color(c, true);
                 self.xml.write_attribute("fill", "none");
-                self.write_transform(None);
+                self.write_transform(transform);
                 self.xml.end_element();
             }
             Paint::Pattern(_) => {
@@ -146,8 +142,7 @@ impl<'a> SvgRenderer<'a> {
         }
     }
 
-    fn write_transform(&mut self, transform: Option<Affine>) {
-        let transform = transform.unwrap_or(self.transform);
+    pub(crate) fn write_transform(&mut self, transform: Affine) {
         let is_identity = {
             let c = transform.as_coeffs();
             c[0] == 1.0 && c[1] == 0.0 && c[2] == 0.0 && c[3] == 1.0 && c[4] == 0.0 && c[5] == 0.0
@@ -159,31 +154,6 @@ impl<'a> SvgRenderer<'a> {
                 &format!("matrix({})", &convert_transform(&transform)),
             );
         }
-    }
-
-    fn write_image(
-        &mut self,
-        image: &DynamicImage,
-        interpolate: bool,
-        id: Option<Id>,
-        transform: Option<Affine>,
-    ) {
-        let scaling = if interpolate { "smooth" } else { "pixelated" };
-
-        let base64 = convert_image_to_base64_url(image);
-
-        self.xml.start_element("image");
-        if let Some(id) = id {
-            self.xml.write_attribute("id", &id);
-        }
-        self.write_transform(transform);
-        self.xml.write_attribute("xlink:href", &base64);
-        self.xml.write_attribute("width", &image.width());
-        self.xml.write_attribute("height", &image.height());
-        self.xml.write_attribute("preserveAspectRatio", "none");
-        self.xml
-            .write_attribute("style", &format_args!("image-rendering: {scaling}"));
-        self.xml.end_element();
     }
 
     fn write_glyph_defs(&mut self) {
@@ -313,7 +283,7 @@ impl<'a> SvgRenderer<'a> {
         for (id, shading) in shadings.iter() {
             let encoded = shading.pattern.encode();
             let (image, transform) = render_texture(shading.bbox, &encoded);
-            self.write_image(&image, true, Some(id), Some(transform));
+            self.write_image(&image, true, Some(id), transform);
         }
 
         self.xml.end_element();
@@ -336,9 +306,7 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
         paint: &Paint<'a>,
         stroke_props: &StrokeProps,
     ) {
-        self.transform = transform;
-        self.stroke_props = stroke_props.clone();
-        Self::stroke_path(self, path, paint);
+        Self::stroke_path(self, path, transform, stroke_props, paint);
     }
 
     fn set_soft_mask(&mut self, _: Option<SoftMask<'a>>) {}
@@ -350,9 +318,7 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
         paint: &Paint<'a>,
         fill_rule: FillRule,
     ) {
-        self.transform = transform;
-        self.fill_rule = fill_rule;
-        Self::fill_path(self, path, paint);
+        Self::fill_path(self, path, transform, fill_rule, paint);
     }
 
     fn push_clip_path(&mut self, clip_path: &ClipPath) {
@@ -372,8 +338,6 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
         glyph_transform: Affine,
         paint: &Paint<'a>,
     ) {
-        self.transform = transform;
-
         match glyph {
             Glyph::Outline(o) => {
                 let id = self
@@ -385,7 +349,7 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
                         self.xml.start_element("use");
                         self.xml
                             .write_attribute_fmt("xlink:href", format_args!("#{id}"));
-                        self.write_transform(Some(self.transform * glyph_transform));
+                        self.write_transform(transform * glyph_transform);
 
                         self.write_color(c, false);
                         self.xml.end_element();
@@ -410,22 +374,17 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
         paint: &Paint,
         stroke_props: &StrokeProps,
     ) {
-        self.stroke_props = stroke_props.clone();
-        self.transform = transform;
-
         match glyph {
             Glyph::Outline(o) => {
                 let path = glyph_transform * o.outline();
                 let paint = paint.clone();
-                self.stroke_path(&path, &paint);
+                self.stroke_path(&path, transform, stroke_props, &paint);
             }
             Glyph::Type3(_) => {}
         }
     }
 
     fn draw_rgba_image(&mut self, image: RgbData, transform: Affine, alpha: Option<LumaData>) {
-        self.transform = transform;
-
         let interpolate = image.interpolate;
 
         let image = if let Some(alpha) = alpha {
@@ -452,12 +411,10 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
             )
         };
 
-        self.write_image(&image, interpolate, None, None);
+        self.write_image(&image, interpolate, None, transform);
     }
 
     fn draw_stencil_image(&mut self, stencil: LumaData, transform: Affine, paint: &Paint) {
-        self.transform = transform;
-
         let interpolate = stencil.interpolate;
 
         let image = match &paint {
@@ -478,7 +435,7 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
             }
         };
 
-        self.write_image(&image, interpolate, None, None);
+        self.write_image(&image, interpolate, None, transform);
     }
 
     fn pop_clip_path(&mut self) {
@@ -492,9 +449,6 @@ impl<'a> SvgRenderer<'a> {
     pub(crate) fn new(_: &'a Page<'a>) -> Self {
         Self {
             xml: XmlWriter::new(Options::default()),
-            transform: Affine::IDENTITY,
-            fill_rule: FillRule::NonZero,
-            stroke_props: StrokeProps::default(),
             glyphs: Deduplicator::new('g'),
             clip_paths: Deduplicator::new('c'),
             shadings: Deduplicator::new('s'),
@@ -557,18 +511,6 @@ fn convert_color(color: &Color) -> (String, f32) {
     (color, alpha)
 }
 
-pub fn convert_image_to_base64_url(image: &DynamicImage) -> String {
-    let mut png_buffer = Vec::new();
-    let mut cursor = Cursor::new(&mut png_buffer);
-    image.write_to(&mut cursor, ImageFormat::Png).unwrap();
-
-    let mut url = "data:image/png;base64,".to_string();
-    let data = base64::engine::general_purpose::STANDARD.encode(png_buffer);
-    url.push_str(&data);
-
-    url
-}
-
 #[derive(Debug, Clone)]
 struct Deduplicator<T> {
     kind: char,
@@ -611,15 +553,6 @@ impl<T> Deduplicator<T> {
 
     fn is_empty(&self) -> bool {
         self.vec.is_empty()
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-struct Id(char, u64);
-
-impl Display for Id {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.0, self.1)
     }
 }
 
