@@ -1,9 +1,10 @@
-use crate::InterpreterSettings;
 use crate::cache::Cache;
 use crate::context::Context;
 use crate::device::Device;
 use crate::interpret::state::State;
+use crate::util::hash128;
 use crate::x_object::{XObject, draw_xobject};
+use crate::{CacheKey, InterpreterSettings};
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
 use hayro_syntax::object::ObjectIdentifier;
@@ -62,6 +63,12 @@ impl PartialEq for SoftMask<'_> {
 }
 
 impl Eq for SoftMask<'_> {}
+
+impl CacheKey for SoftMask<'_> {
+    fn cache_key(&self) -> u128 {
+        hash128(self)
+    }
+}
 
 impl<'a> SoftMask<'a> {
     pub(crate) fn new(

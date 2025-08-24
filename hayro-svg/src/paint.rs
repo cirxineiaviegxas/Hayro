@@ -1,5 +1,5 @@
 use crate::Id;
-use crate::render::{SvgRenderer, convert_transform};
+use crate::{SvgRenderer, convert_transform};
 use hayro_interpret::encode::EncodedShadingPattern;
 use hayro_interpret::pattern::{Pattern, ShadingPattern, TilingPattern};
 use hayro_interpret::{CacheKey, Paint};
@@ -69,14 +69,19 @@ impl<'a> SvgRenderer<'a> {
                     Pattern::Tiling(t) => {
                         let inverse_transform = path_transform.inverse();
                         let pattern = *t.clone();
+                        let cache_key = (pattern.clone(), inverse_transform).cache_key();
 
-                        self.tiling_patterns.insert_with(
-                            (pattern.clone(), inverse_transform).cache_key(),
-                            || CachedTilingPattern {
+                        if !self.tiling_patterns.contains(cache_key) {
+                            self.with_dummy(|r| {
+                                t.interpret(r, Affine::IDENTITY, false);
+                            })
+                        }
+
+                        self.tiling_patterns
+                            .insert_with(cache_key, || CachedTilingPattern {
                                 transform: inverse_transform,
                                 tiling_pattern: pattern,
-                            },
-                        )
+                            })
                     }
                 };
 
