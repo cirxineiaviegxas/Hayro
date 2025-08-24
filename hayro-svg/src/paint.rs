@@ -222,11 +222,11 @@ fn render_shading_texture(
     bbox: Rect,
     shading_pattern: &EncodedShadingPattern,
 ) -> (DynamicImage, Affine) {
-    const SCALE: f32 = 2.0;
+    const SCALE: f32 = 1.0;
     const INV_SCALE: f32 = 1.0 / SCALE;
 
-    let base_width = bbox.width() as f32;
-    let base_height = bbox.height() as f32;
+    let base_width = (bbox.width() as f32).max(1.0);
+    let base_height = (bbox.height() as f32).max(1.0);
 
     let width = (base_width * SCALE).ceil() as u32;
     let height = (base_height * SCALE).ceil() as u32;
