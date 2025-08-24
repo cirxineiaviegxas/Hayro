@@ -1,4 +1,4 @@
-use crate::Id;
+use crate::{Id, hash128};
 use crate::{SvgRenderer, convert_transform};
 use hayro_interpret::encode::EncodedShadingPattern;
 use hayro_interpret::pattern::{Pattern, ShadingPattern, TilingPattern};
@@ -49,11 +49,20 @@ impl<'a> SvgRenderer<'a> {
                 let id = match p.as_ref() {
                     Pattern::Shading(s) => {
                         let bbox = (path_transform * path).bounding_box();
-                        let shading_id =
-                            self.shadings.insert_with(s.cache_key(), || CachedShading {
+                        let shading_id = {
+                            let cache_key = hash128(&(
+                                s.cache_key(),
+                                bbox.x0.to_bits(),
+                                bbox.x1.to_bits(),
+                                bbox.y0.to_bits(),
+                                bbox.y1.to_bits(),
+                            ));
+
+                            self.shadings.insert_with(cache_key, || CachedShading {
                                 pattern: s.clone(),
                                 bbox,
-                            });
+                            })
+                        };
 
                         let inverse_transform = path_transform.inverse();
 
@@ -208,13 +217,13 @@ fn render_shading_texture(
     let width = (base_width * SCALE).ceil() as u32;
     let height = (base_height * SCALE).ceil() as u32;
 
-    let initial_transform = Affine::scale(INV_SCALE as f64)
-        * shading_pattern.base_transform
-        * Affine::translate((0.5, 0.5));
-    let (x_advance, y_advance) = x_y_advances(&initial_transform);
+    let (x_advance, y_advance) =
+        x_y_advances(&(Affine::scale(INV_SCALE as f64) * shading_pattern.base_transform));
 
     let mut buf = vec![0u8; width as usize * height as usize * 4];
-    let mut start_point = initial_transform * Point::new(bbox.x0, bbox.y0);
+    let mut start_point = shading_pattern.base_transform
+        * Affine::translate((0.5, 0.5))
+        * Point::new(bbox.x0, bbox.y0);
 
     for row in buf.chunks_exact_mut(width as usize * 4) {
         let mut point = start_point;
