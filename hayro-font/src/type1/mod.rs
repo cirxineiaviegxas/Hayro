@@ -705,7 +705,11 @@ fn parse_int(str: &str) -> Option<i64> {
 
             let radix = radix_str.parse::<u32>().ok()?;
 
-            i64::from_str_radix(number_str, radix).ok()
+            if (2..=36).contains(&radix) {
+                i64::from_str_radix(number_str, radix).ok()
+            } else {
+                None
+            }
         } else {
             str.parse::<i64>().ok()
         }
