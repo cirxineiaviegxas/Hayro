@@ -1,14 +1,17 @@
 //! Streams.
 
+use crate::crypto::DecryptionTarget;
 use crate::filter::Filter;
+use crate::object;
 use crate::object::Dict;
 use crate::object::Name;
-use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH};
+use crate::object::dict::keys::{DECODE_PARMS, DP, F, FILTER, LENGTH, TYPE};
 use crate::object::{Array, ObjectIdentifier};
 use crate::object::{Object, ObjectLike};
 use crate::reader::{Readable, Reader, ReaderContext, Skippable};
 use crate::util::OptionLog;
 use log::{info, warn};
+use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 
 /// A stream of arbitrary data.
@@ -26,9 +29,32 @@ pub struct ImageDecodeParams {
 }
 
 impl<'a> Stream<'a> {
-    /// Return the raw (potentially filtered) data of the stream.
-    pub fn raw_data(&self) -> &'a [u8] {
-        self.data
+    /// Return the raw, decrypted data of the stream.
+    ///
+    /// Stream filters will not be applied.
+    pub fn raw_data(&self) -> Cow<'a, [u8]> {
+        let ctx = self.dict.ctx();
+
+        if ctx.xref.needs_decryption(&ctx)
+            && self
+                .dict
+                .get::<object::String>(TYPE)
+                .map(|t| t.get().as_ref() != b"XRef")
+                .unwrap_or(true)
+        {
+            Cow::Owned(
+                ctx.xref
+                    .decrypt(
+                        self.dict.obj_id().unwrap(),
+                        self.data,
+                        DecryptionTarget::Stream,
+                    )
+                    // TODO: MAybe an error would be better?
+                    .unwrap_or_default(),
+            )
+        } else {
+            Cow::Borrowed(self.data)
+        }
     }
 
     /// Return the raw, underlying dictionary of the stream.
@@ -56,6 +82,8 @@ impl<'a> Stream<'a> {
         &self,
         image_params: &ImageDecodeParams,
     ) -> Result<FilterResult, DecodeFailure> {
+        let data = self.raw_data();
+
         if let Some(filter) = self
             .dict
             .get::<Name>(F)
@@ -67,7 +95,7 @@ impl<'a> Stream<'a> {
                 .get::<Dict>(DP)
                 .or_else(|| self.dict.get::<Dict>(DECODE_PARMS));
 
-            filter.apply(self.data, params.clone().unwrap_or_default(), image_params)
+            filter.apply(&data, params.clone().unwrap_or_default(), image_params)
         } else if let Some(filters) = self
             .dict
             .get::<Array>(F)
@@ -91,10 +119,7 @@ impl<'a> Stream<'a> {
                 let params = params.get(i).and_then(|p| p.clone().cast::<Dict>());
 
                 let new = filter.apply(
-                    current
-                        .as_ref()
-                        .map(|c| c.data.as_ref())
-                        .unwrap_or(self.data),
+                    current.as_ref().map(|c| c.data.as_ref()).unwrap_or(&data),
                     params.clone().unwrap_or_default(),
                     image_params,
                 )?;
@@ -102,12 +127,12 @@ impl<'a> Stream<'a> {
             }
 
             Ok(current.unwrap_or(FilterResult {
-                data: self.data.to_vec(),
+                data: data.to_vec(),
                 image_data: None,
             }))
         } else {
             Ok(FilterResult {
-                data: self.data.to_vec(),
+                data: data.to_vec(),
                 image_data: None,
             })
         }
@@ -164,6 +189,8 @@ pub enum DecodeFailure {
     StreamDecode,
     /// A JPEG2000 image was encountered, while the `jpeg2000` feature was disabled.
     JpxImage,
+    /// A failure occurred while decrypting a file.
+    Decryption,
     /// An unknown failure occurred.
     Unknown,
 }

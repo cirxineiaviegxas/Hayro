@@ -1,6 +1,7 @@
 //! The starting point for reading PDF files.
 
 use crate::PdfData;
+use crate::crypto::DecryptionError;
 use crate::object::Object;
 use crate::page::Pages;
 use crate::page::cached::CachedPages;
@@ -19,8 +20,8 @@ pub struct Pdf {
 /// An error that occurred while loading a PDF file.
 #[derive(Debug, Copy, Clone)]
 pub enum LoadPdfError {
-    /// The PDF was encrypted. Encrypted PDF files are currently not supported.
-    Encryption,
+    /// An error occurred while processing an encrypted document.
+    Decryption(DecryptionError),
     /// The PDF was invalid or could not be parsed due to some other unknown reason.
     Invalid,
 }
@@ -29,14 +30,14 @@ pub enum LoadPdfError {
 impl Pdf {
     /// Try to read the given PDF file.
     ///
-    /// Returns `None` if it was unable to read it.
+    /// Returns `Err` if it was unable to read it.
     pub fn new(data: PdfData) -> Result<Self, LoadPdfError> {
         let version = find_version(data.as_ref().as_ref()).unwrap_or(PdfVersion::Pdf10);
         let xref = match root_xref(data.clone()) {
             Ok(x) => x,
             Err(e) => match e {
                 XRefError::Unknown => fallback(data.clone()).ok_or(LoadPdfError::Invalid)?,
-                XRefError::Encrypted => return Err(LoadPdfError::Encryption),
+                XRefError::Encryption(e) => return Err(LoadPdfError::Decryption(e)),
             },
         };
         let xref = Arc::new(xref);
