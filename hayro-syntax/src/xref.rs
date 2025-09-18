@@ -2,7 +2,6 @@
 
 use crate::crypto::{DecryptionError, DecryptionTarget, Decryptor, get};
 use crate::data::Data;
-use crate::object::Array;
 use crate::object::Dict;
 use crate::object::Name;
 use crate::object::ObjectIdentifier;
@@ -11,6 +10,7 @@ use crate::object::dict::keys::{
     ENCRYPT, FIRST, ID, INDEX, N, PAGES, PREV, ROOT, SIZE, TYPE, VERSION, W, XREF_STM,
 };
 use crate::object::indirect::IndirectObject;
+use crate::object::{Array, MaybeRef};
 use crate::object::{Object, ObjectLike};
 use crate::pdf::PdfVersion;
 use crate::reader::{Readable, Reader, ReaderContext};
@@ -58,7 +58,7 @@ pub(crate) fn fallback(data: PdfData) -> Option<XRef> {
 
 fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
     let mut xref_map = FxHashMap::default();
-    let mut trailer_dict = None;
+    let mut trailer_dicts = vec![];
 
     let mut r = Reader::new(data);
 
@@ -76,7 +76,7 @@ fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
             dummy_ctx.obj_number = Some(obj_id);
         } else if let Some(dict) = r.read::<Dict>(dummy_ctx) {
             if dict.contains_key(SIZE) && dict.contains_key(ROOT) {
-                trailer_dict = Some(dict.clone());
+                trailer_dicts.push(dict);
             }
 
             if let Some(stream) = old_r.read::<Stream>(dummy_ctx)
@@ -99,6 +99,35 @@ fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
 
         if r.at_end() {
             break;
+        }
+    }
+
+    // Try to choose the right trailer dict by doing basic validation.
+    let mut trailer_dict = None;
+
+    for dict in trailer_dicts {
+        if let Some(root_id) = dict.get_raw::<Dict>(ROOT) {
+            let check = |dict: &Dict| -> bool { dict.contains_key(PAGES) };
+
+            match root_id {
+                MaybeRef::Ref(r) => {
+                    if let Some(EntryType::Normal(offset)) = xref_map.get(&r.into()) {
+                        let mut reader = Reader::new(&data[*offset..]);
+
+                        if let Some(obj) =
+                            reader.read_with_context::<IndirectObject<Dict>>(dummy_ctx)
+                            && check(&obj.clone().get())
+                        {
+                            trailer_dict = Some(dict);
+                        }
+                    }
+                }
+                MaybeRef::NotRef(d) => {
+                    if check(&d) {
+                        trailer_dict = Some(dict);
+                    }
+                }
+            }
         }
     }
 
