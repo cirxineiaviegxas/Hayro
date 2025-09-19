@@ -14,6 +14,12 @@ fn render(file: &[u8]) {
 }
 
 #[test]
+fn issue50() {
+    let file = include_bytes!("../pdfs/crash/issue50.pdf");
+    render(file);
+}
+
+#[test]
 fn issue54() {
     let file = include_bytes!("../pdfs/crash/issue54.pdf");
     render(file);
@@ -52,6 +58,12 @@ fn issue67() {
 #[test]
 fn issue68() {
     let file = include_bytes!("../pdfs/crash/issue68.pdf");
+    render(file);
+}
+
+#[test]
+fn issue83() {
+    let file = include_bytes!("../pdfs/crash/issue83.pdf");
     render(file);
 }
 
@@ -154,5 +166,11 @@ fn issue235() {
 #[test]
 fn issue236() {
     let file = include_bytes!("../pdfs/crash/issue236.pdf");
+    render(file);
+}
+
+#[test]
+fn page_tree_cycle() {
+    let file = include_bytes!("../pdfs/crash/page_tree_cycle.pdf");
     render(file);
 }

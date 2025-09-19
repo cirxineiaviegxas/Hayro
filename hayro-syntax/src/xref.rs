@@ -70,7 +70,7 @@ fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
 
         let mut old_r = r.clone();
 
-        if let Some(obj_id) = r.read::<ObjectIdentifier>(dummy_ctx) {
+        if let Some(obj_id) = r.read::<ObjectIdentifier>(&dummy_ctx) {
             let mut cloned = r.clone();
             // Check that the object following it is actually valid before inserting it.
             cloned.skip_white_spaces_and_comments();
@@ -79,16 +79,16 @@ fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
                 last_obj_num = Some(obj_id);
                 dummy_ctx.obj_number = Some(obj_id);
             }
-        } else if let Some(dict) = r.read::<Dict>(dummy_ctx) {
+        } else if let Some(dict) = r.read::<Dict>(&dummy_ctx) {
             if dict.contains_key(SIZE) && dict.contains_key(ROOT) {
                 trailer_dicts.push(dict);
             }
 
-            if let Some(stream) = old_r.read::<Stream>(dummy_ctx)
+            if let Some(stream) = old_r.read::<Stream>(&dummy_ctx)
                 && stream.dict().get::<Name>(TYPE).as_deref() == Some(b"ObjStm")
                 && let Some(data) = stream.decoded().ok()
                 && let Some(last_obj_num) = last_obj_num
-                && let Some(obj_stream) = ObjectStream::new(stream, &data, dummy_ctx)
+                && let Some(obj_stream) = ObjectStream::new(stream, &data, &dummy_ctx)
             {
                 for (idx, (obj_num, _)) in obj_stream.offsets.iter().enumerate() {
                     let id = ObjectIdentifier::new(*obj_num as i32, 0);
@@ -120,7 +120,7 @@ fn fallback_xref_map(data: &[u8]) -> (XrefMap, Option<&[u8]>) {
                         let mut reader = Reader::new(&data[*offset..]);
 
                         if let Some(obj) =
-                            reader.read_with_context::<IndirectObject<Dict>>(dummy_ctx)
+                            reader.read_with_context::<IndirectObject<Dict>>(&dummy_ctx)
                             && check(&obj.clone().get())
                         {
                             trailer_dict = Some(dict);
@@ -166,7 +166,7 @@ impl XRef {
 
         let mut r = Reader::new(trailer_dict_data);
         let trailer_dict = r
-            .read_with_context::<Dict>(ReaderContext::new(&xref, false))
+            .read_with_context::<Dict>(&ReaderContext::new(&xref, false))
             .ok_or(XRefError::Unknown)?;
 
         let decryptor = if let Some(encryption_dict) = trailer_dict.get::<Dict>(ENCRYPT) {
@@ -239,7 +239,8 @@ impl XRef {
                 let locked = r.map.read().unwrap();
                 let mut iter = locked.xref_map.keys();
 
-                iter.next().and_then(|k| self.get(*k))
+                iter.next()
+                    .and_then(|k| self.get_with(*k, &ReaderContext::new(self, false)))
             }),
         }
     }
@@ -290,6 +291,20 @@ impl XRef {
     where
         T: ObjectLike<'a>,
     {
+        let ctx = ReaderContext::new(self, false);
+        self.get_with(id, &ctx)
+    }
+
+    /// Return the object with the given identifier.
+    #[allow(private_bounds)]
+    pub(crate) fn get_with<'a, T>(
+        &'a self,
+        id: ObjectIdentifier,
+        ctx: &ReaderContext<'a>,
+    ) -> Option<T>
+    where
+        T: ObjectLike<'a>,
+    {
         let Inner::Some(repr) = &self.0 else {
             return None;
         };
@@ -305,13 +320,14 @@ impl XRef {
         })?;
         drop(locked);
 
+        let mut ctx = ctx.clone();
+        ctx.in_content_stream = false;
+
         match entry {
             EntryType::Normal(offset) => {
                 r.jump(offset);
 
-                if let Some(object) =
-                    r.read_with_context::<IndirectObject<T>>(ReaderContext::new(self, false))
-                {
+                if let Some(object) = r.read_with_context::<IndirectObject<T>>(&ctx) {
                     if object.id() == &id {
                         return Some(object.get());
                     }
@@ -338,17 +354,16 @@ impl XRef {
                     self.repair();
 
                     // Now try reading again.
-                    self.get::<T>(id)
+                    self.get_with::<T>(id, &ctx)
                 }
             }
             EntryType::ObjStream(obj_stram_gen_num, index) => {
                 // Generation number is implicitly 0.
                 let obj_stream_id = ObjectIdentifier::new(obj_stram_gen_num as i32, 0);
 
-                let stream = self.get::<Stream>(obj_stream_id)?;
-                let data = repr.data.get_with(obj_stream_id, self)?;
-                let object_stream =
-                    ObjectStream::new(stream, data, ReaderContext::new(self, false))?;
+                let stream = self.get_with::<Stream>(obj_stream_id, &ctx)?;
+                let data = repr.data.get_with(obj_stream_id, &ctx)?;
+                let object_stream = ObjectStream::new(stream, data, &ctx)?;
                 object_stream.get(index)
             }
         }
@@ -487,7 +502,7 @@ pub(super) struct SubsectionHeader {
 }
 
 impl Readable<'_> for SubsectionHeader {
-    fn read(r: &mut Reader<'_>, _: ReaderContext) -> Option<Self> {
+    fn read(r: &mut Reader<'_>, _: &ReaderContext) -> Option<Self> {
         r.skip_white_spaces();
         let start = r.read_without_context::<u32>()?;
         r.skip_white_spaces();
@@ -506,7 +521,7 @@ fn populate_from_xref_table<'a>(
 ) -> Option<&'a [u8]> {
     let trailer = {
         let mut reader = reader.clone();
-        read_xref_table_trailer(&mut reader, ReaderContext::dummy())?
+        read_xref_table_trailer(&mut reader, &ReaderContext::dummy())?
     };
 
     reader.skip_white_spaces();
@@ -557,7 +572,7 @@ fn populate_from_xref_stream<'a>(
     insert_map: &mut XrefMap,
 ) -> Option<&'a [u8]> {
     let stream = reader
-        .read_with_context::<IndirectObject<Stream>>(ReaderContext::dummy())?
+        .read_with_context::<IndirectObject<Stream>>(&ReaderContext::dummy())?
         .get();
 
     if let Some(prev) = stream.dict().get::<i32>(PREV) {
@@ -711,7 +726,7 @@ fn xref_stream_subsection<'a>(
 
 fn read_xref_table_trailer<'a>(
     reader: &mut Reader<'a>,
-    ctx: ReaderContext<'a>,
+    ctx: &ReaderContext<'a>,
 ) -> Option<Dict<'a>> {
     reader.skip_white_spaces();
     reader.forward_tag(b"xref")?;
@@ -735,7 +750,7 @@ struct ObjectStream<'a> {
 }
 
 impl<'a> ObjectStream<'a> {
-    fn new(inner: Stream<'a>, data: &'a [u8], ctx: ReaderContext<'a>) -> Option<Self> {
+    fn new(inner: Stream<'a>, data: &'a [u8], ctx: &ReaderContext<'a>) -> Option<Self> {
         let num_objects = inner.dict().get::<usize>(N)?;
         let first_offset = inner.dict().get::<usize>(FIRST)?;
 
@@ -752,7 +767,11 @@ impl<'a> ObjectStream<'a> {
             offsets.push((obj_num, first_offset + relative_offset));
         }
 
-        Some(Self { data, ctx, offsets })
+        Some(Self {
+            data,
+            ctx: ctx.clone(),
+            offsets,
+        })
     }
 
     fn get<T>(&self, index: u32) -> Option<T>
@@ -764,6 +783,6 @@ impl<'a> ObjectStream<'a> {
         r.jump(offset);
         r.skip_white_spaces_and_comments();
 
-        r.read_with_context::<T>(self.ctx)
+        r.read_with_context::<T>(&self.ctx)
     }
 }

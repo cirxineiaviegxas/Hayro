@@ -35,7 +35,7 @@ impl<'a> Stream<'a> {
     pub fn raw_data(&self) -> Cow<'a, [u8]> {
         let ctx = self.dict.ctx();
 
-        if ctx.xref.needs_decryption(&ctx)
+        if ctx.xref.needs_decryption(ctx)
             && self
                 .dict
                 .get::<object::String>(TYPE)
@@ -159,7 +159,7 @@ impl Skippable for Stream<'_> {
 }
 
 impl<'a> Readable<'a> for Stream<'a> {
-    fn read(r: &mut Reader<'a>, ctx: ReaderContext<'a>) -> Option<Self> {
+    fn read(r: &mut Reader<'a>, ctx: &ReaderContext<'a>) -> Option<Self> {
         let dict = r.read_with_context::<Dict>(ctx)?;
 
         if dict.contains_key(F) {
