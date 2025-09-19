@@ -16,10 +16,6 @@
     // Broken in nearly all viewers, but it seem slike it sohuld be possible to extract linear gradient
     "https://issues.apache.org/jira/secure/attachment/13007430/POPPLER-938.pdf"
   ],
-  "2103": [
-    // Artifacts in the rendered JPEG image.
-    "https://issues.apache.org/jira/secure/attachment/12647559/000001_MTEXT_CS6.pdf"
-  ],
   "423": "password-protected",
   "457": "CCIT-encoded, failed to parse stream",
   "509": "japanese text withnon-embedded font",
@@ -57,12 +53,11 @@
   "3694": "image, takes very long",
   "3703": "text renders with wrong color",
   "3728": "no text shows up",
-  "3813": "for some reason image isnt rendered",
+  "3813": "blendmode multiply",
   "3923": "PDF without embedded CID font",
   "3937": "no text, gibberish in pdf.js",
   "3965": "truetype text doesnt render",
   "4001": "some edge case with line feeds not rendering",
-  "4006": "crashes when rendering",
   "4060": "image with deviceN, takes long, renders slow",
   "4064": "wrong ctm, doesnt render",
   "4077": "shading not rendering, maybe transparency",
