@@ -46,6 +46,7 @@ issue19326_main_thread_fetch
 *sOffscreenCanvasSupported*
 js-buttons
 protected-stamp-editor-save-print
+issue17215-annotations
 
 # tiling with negative step
 issue16038
@@ -60,7 +61,6 @@ issue16114
 bug1050040
 
 #investigate
-bug1250079
 bug1308536
 bug1365930
 bug1354114
@@ -84,22 +84,20 @@ bug1130815-eq
 # password-protected
 bug1782186
 issue15893_reduced
+issue3371
+issue6010_1
+issue6010_2
 
 # image missing
 issue6364
 
 # trailer dict is cut off
+bug1250079
+
+# root points to wrong object
 issue15577
 
 # doesnt parse / has encryption
-bug1250079
-
-issue17215-annotations
-
-issue3371
-issue5752
-issue6010_1
-issue6010_2
 issue9105_other
 issue12294-print
 
@@ -117,11 +115,13 @@ bug1905623
 bug1953099
 bug854315
 bug866395
+bug921760
 bug921409
 
 issue5751
 issue5801
 issue5946
+issue6127
 issue6286
 issue6410
 issue6692
@@ -168,6 +168,9 @@ issue2391-1
 issue3521.pdf
 issue14917
 issue12841
+issue16432
+issue16464
+issue18801
 
 #smask with transfer function
 issue5044
@@ -186,6 +189,9 @@ issue2829
 
 # user units
 issue19176
+
+# built-in encoding
+issue5752
 
 # issue with jpx image?
 issue19326
