@@ -88,7 +88,7 @@ issue3371
 issue6010_1
 issue6010_2
 
-# image missing
+# jpeg image with 2 deviceN components
 issue6364
 
 # trailer dict is cut off
@@ -193,9 +193,6 @@ issue19176
 # built-in encoding
 issue5752
 
-# issue with jpx image?
-issue19326
-
 #pdf layers
 issue12007_reduced
 
@@ -233,7 +230,7 @@ issue11768
 # maybe blend mode
 issue11279
 
-# missing image
+# corrupt jpeg image
 issue10880
 issue10989
 
