@@ -171,6 +171,12 @@
     "md5": "0f3870ac5ad8899aec34d734e045a514"
   },
   {
+    "id": "bug1130815-eq",
+    "file": "pdfs/bug1130815-eq.link",
+    "link": true,
+    "md5": "3ff3b550c3af766991b2a1b11d00de85"
+  },
+  {
     "id": "bug1132849",
     "file": "pdfs/bug1132849.link",
     "link": true,
@@ -3265,6 +3271,14 @@
     "file": "pdfs/issue9458.link",
     "link": true,
     "md5": "ee54358d8b2fdc75dc8da5220cf8e8da"
+  },
+  {
+    "id": "issue9462",
+    "file": "pdfs/issue9462.link",
+    "link": true,
+    "md5": "0a2895b0aa8a8ef730a20b4116cd996c",
+    "first_page": 2,
+    "last_page": 2
   },
   {
     "id": "issue9534_reduced",
