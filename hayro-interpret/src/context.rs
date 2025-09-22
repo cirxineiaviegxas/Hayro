@@ -200,14 +200,10 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn stroke_props(&self) -> StrokeProps {
-        self.get().stroke_props.clone()
+        self.get().graphics_state.stroke_props.clone()
     }
 
     pub(crate) fn num_states(&self) -> usize {
         self.states.len()
-    }
-
-    pub(crate) fn fill_rule(&self) -> FillRule {
-        self.get().fill_rule
     }
 }
