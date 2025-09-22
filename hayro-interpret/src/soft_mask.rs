@@ -6,6 +6,7 @@ use crate::interpret::state::State;
 use crate::util::hash128;
 use crate::x_object::{FormXObject, draw_form_xobject};
 use crate::{CacheKey, InterpreterSettings};
+use hayro_syntax::function::Function;
 use hayro_syntax::object::Name;
 use hayro_syntax::object::ObjectIdentifier;
 use hayro_syntax::object::Stream;
@@ -29,6 +30,24 @@ pub enum MaskType {
     Alpha,
 }
 
+/// A transfer function to apply to the opacity values of a mask.
+pub struct TransferFunction(Function);
+
+impl TransferFunction {
+    /// Apply the transfer function to the given value.
+    ///
+    /// The input value needs to be between 0 and 1 and the return value is
+    /// guaranteed to be between 0 and 1.
+    #[inline]
+    pub fn apply(&self, val: f32) -> f32 {
+        self.0
+            .eval(smallvec![val])
+            .and_then(|v| v.first().copied())
+            .unwrap_or(0.0)
+            .clamp(0.0, 1.0)
+    }
+}
+
 struct Repr<'a> {
     obj_id: ObjectIdentifier,
     group: FormXObject<'a>,
@@ -37,6 +56,7 @@ struct Repr<'a> {
     root_transform: Affine,
     bbox: kurbo::Rect,
     object_cache: Cache,
+    transfer_function: Option<TransferFunction>,
     settings: InterpreterSettings,
     background: Color,
     xref: &'a XRef,
@@ -88,6 +108,10 @@ impl<'a> SoftMask<'a> {
             group.dict.get::<Dict>(GROUP)?.get::<Object>(CS)?,
             &context.object_cache,
         )?;
+        let transfer_function = dict
+            .get::<Object>(TR)
+            .and_then(|o| Function::new(&o))
+            .map(TransferFunction);
         let (mask_type, background) = match dict.get::<Name>(S)?.deref() {
             LUMINOSITY => {
                 let color = dict
@@ -110,6 +134,7 @@ impl<'a> SoftMask<'a> {
             group,
             mask_type,
             root_transform: context.get().ctm,
+            transfer_function,
             bbox: context.bbox(),
             object_cache: context.object_cache.clone(),
             settings: context.settings.clone(),
@@ -148,5 +173,10 @@ impl<'a> SoftMask<'a> {
     /// The background color against which the mask should be composited.
     pub fn background_color(&self) -> Color {
         self.0.background.clone()
+    }
+
+    /// Return the transfer function that should be used for the mask.
+    pub fn transfer_function(&self) -> Option<&TransferFunction> {
+        self.0.transfer_function.as_ref()
     }
 }
