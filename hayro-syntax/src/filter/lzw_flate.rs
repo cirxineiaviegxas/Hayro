@@ -700,26 +700,8 @@ impl PredictorParams {
         self.bits_per_component * self.colors
     }
 
-    fn bytes_per_pixel(&self) -> u8 {
-        self.bits_per_pixel().div_ceil(8)
-    }
-
-    fn row_length_in_bytes(&self) -> Option<usize> {
-        let raw = self.columns * self.bytes_per_pixel() as usize;
-
-        match self.bits_per_component {
-            // TODO: Find tests for 2,4,16 bits.
-            1 => Some(raw.div_ceil(8)),
-            2 => Some(raw.div_ceil(4)),
-            4 => Some(raw.div_ceil(2)),
-            8 => Some(raw),
-            16 => Some(2 * raw),
-            _ => {
-                warn!("invalid bits per component {}", self.bits_per_component);
-
-                None
-            }
-        }
+    fn row_length_in_bytes(&self) -> usize {
+        (self.columns * self.bits_per_pixel() as usize).div_ceil(8)
     }
 }
 
@@ -753,7 +735,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
         i => {
             let is_png_predictor = i >= 10;
 
-            let row_len = params.row_length_in_bytes()?;
+            let row_len = params.row_length_in_bytes();
 
             let total_row_len = if is_png_predictor {
                 // + 1 Because each row must start with the predictor that is used for PNG predictors.
@@ -764,23 +746,26 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
             let num_rows = data.len() / total_row_len;
 
-            if num_rows * total_row_len != data.len() {
-                warn!("data length didn't match");
-
-                return None;
-            }
-
             if !matches!(params.bits_per_component, 1 | 2 | 4 | 8 | 16) {
                 warn!("invalid bits per component {}", params.bits_per_component);
 
                 return None;
             }
 
-            let colors = params.colors as usize;
-            let bit_size = BitSize::from_u8(params.bits_per_component)?;
+            let (bit_size, chunk_len) = if is_png_predictor {
+                (
+                    BitSize::from_u8(8).unwrap(),
+                    (params.colors * params.bits_per_component).div_ceil(8) as usize,
+                )
+            } else {
+                (
+                    BitSize::from_u8(params.bits_per_component)?,
+                    params.colors as usize,
+                )
+            };
             let zero_row = vec![0; row_len];
-            let mut prev_row = BitChunks::new(&zero_row, bit_size, colors)?;
-            let zero_col = BitChunk::new(0, colors);
+            let mut prev_row = BitChunks::new(&zero_row, bit_size, chunk_len)?;
+            let zero_col = BitChunk::new(0, chunk_len);
             let mut out = vec![0; num_rows * row_len];
             let mut writer = BitWriter::new(&mut out, bit_size)?;
 
@@ -788,24 +773,16 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                 if is_png_predictor {
                     let predictor = in_row[0];
                     let in_data = &in_row[1..];
-                    let in_data_chunks = BitChunks::new(in_data, bit_size, colors)?;
+                    let in_data_chunks = BitChunks::new(in_data, bit_size, chunk_len)?;
 
                     match predictor {
-                        0 => {
-                            // Just copy the data.
-                            let mut reader = BitReader::new(in_data);
-
-                            while let Some(data) = reader.read(bit_size) {
-                                writer.write(data as u16);
-                            }
-                        }
                         1 => apply::<Sub>(
                             prev_row,
                             zero_col.clone(),
                             zero_col.clone(),
                             in_data_chunks,
                             &mut writer,
-                            colors,
+                            chunk_len,
                             bit_size,
                         )?,
                         2 => apply::<Up>(
@@ -814,7 +791,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             zero_col.clone(),
                             in_data_chunks,
                             &mut writer,
-                            colors,
+                            chunk_len,
                             bit_size,
                         )?,
                         3 => apply::<Avg>(
@@ -823,7 +800,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             zero_col.clone(),
                             in_data_chunks,
                             &mut writer,
-                            colors,
+                            chunk_len,
                             bit_size,
                         )?,
                         4 => apply::<Paeth>(
@@ -832,13 +809,16 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                             zero_col.clone(),
                             in_data_chunks,
                             &mut writer,
-                            colors,
+                            chunk_len,
                             bit_size,
                         )?,
-                        n => {
-                            warn!("invalid PNG predictor {n}");
+                        _ => {
+                            // Just copy the data.
+                            let mut reader = BitReader::new(in_data);
 
-                            return None;
+                            while let Some(data) = reader.read(bit_size) {
+                                writer.write(data as u16);
+                            }
                         }
                     }
                 } else if i == 2 {
@@ -846,9 +826,9 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
                         prev_row,
                         zero_col.clone(),
                         zero_col.clone(),
-                        BitChunks::new(in_row, bit_size, colors)?,
+                        BitChunks::new(in_row, bit_size, chunk_len)?,
                         &mut writer,
-                        colors,
+                        chunk_len,
                         bit_size,
                     );
                 } else {
@@ -859,7 +839,7 @@ fn apply_predictor(data: Vec<u8>, params: &PredictorParams) -> Option<Vec<u8>> {
 
                 let (data, new_writer) = writer.split_off();
                 writer = new_writer;
-                prev_row = BitChunks::new(data, bit_size, colors)?;
+                prev_row = BitChunks::new(data, bit_size, chunk_len)?;
             }
 
             Some(out)

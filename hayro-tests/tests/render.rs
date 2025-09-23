@@ -259,6 +259,8 @@ use crate::run_render_test;
 #[test] fn type0_function_too_many_entries() { run_render_test("type0_function_too_many_entries", "pdfs/custom/type0_function_too_many_entries.pdf", None); }
 #[test] fn issue_isolate_shading_transform() { run_render_test("issue_isolate_shading_transform", "pdfs/custom/issue_isolate_shading_transform.pdf", None); }
 #[test] fn mask_bc() { run_render_test("mask_bc", "pdfs/custom/mask_bc.pdf", None); }
+#[test] fn flate_predictor_bpc_1() { run_render_test("flate_predictor_bpc_1", "pdfs/custom/flate_predictor_bpc_1.pdf", None); }
+#[test] fn flate_predictor_invalid() { run_render_test("flate_predictor_invalid", "pdfs/custom/flate_predictor_invalid.pdf", None); }
 #[test] fn pdfjs_20130226130259() { run_render_test("pdfjs_20130226130259", "downloads/pdfjs/20130226130259.pdf", Some("0..=0")); }
 #[test] fn pdfjs_ContentStreamNoCycleType3insideType3() { run_render_test("pdfjs_ContentStreamNoCycleType3insideType3", "downloads/pdfjs/ContentStreamNoCycleType3insideType3.pdf", None); }
 #[test] fn pdfjs_High_Pressure_Measurement_WP_001287() { run_render_test("pdfjs_High_Pressure_Measurement_WP_001287", "downloads/pdfjs/High-Pressure-Measurement-WP-001287.pdf", Some("2..=2")); }
@@ -1051,6 +1053,7 @@ use crate::run_render_test;
 #[test] fn pdfbox_4201() { run_render_test("pdfbox_4201", "downloads/pdfbox/4201.pdf", None); }
 #[test] fn pdfbox_4211() { run_render_test("pdfbox_4211", "downloads/pdfbox/4211.pdf", None); }
 #[test] fn pdfbox_4228() { run_render_test("pdfbox_4228", "downloads/pdfbox/4228.pdf", None); }
+#[test] fn pdfbox_4245() { run_render_test("pdfbox_4245", "downloads/pdfbox/4245.pdf", None); }
 #[test] fn pdfbox_4246() { run_render_test("pdfbox_4246", "downloads/pdfbox/4246.pdf", None); }
 #[test] fn pdfbox_4277() { run_render_test("pdfbox_4277", "downloads/pdfbox/4277.pdf", Some("..=2")); }
 #[test] fn pdfbox_4279() { run_render_test("pdfbox_4279", "downloads/pdfbox/4279.pdf", None); }
