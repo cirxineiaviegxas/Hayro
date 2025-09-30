@@ -305,7 +305,7 @@ impl DecodedImageXObject {
             bpc: dict_bpc,
         };
 
-        let decoded = obj
+        let mut decoded = obj
             .stream
             .decoded_image(&decode_params)
             .map_err(|e| match e {
@@ -353,147 +353,137 @@ impl DecodedImageXObject {
                 as u8;
         }
 
-        let components = get_components(
-            &decoded.data,
-            obj.width,
-            obj.height,
-            &color_space,
-            bits_per_component,
-        )?;
+        let is_luma = obj.is_image_mask || obj.force_luma;
 
-        let mut f32_data = {
-            let decode_arr = dict
-                .get::<Array>(D)
-                .or_else(|| dict.get::<Array>(DECODE))
-                .map(|a| a.iter::<(f32, f32)>().collect::<SmallVec<_>>())
-                .unwrap_or(color_space.default_decode_arr(bits_per_component as f32));
+        let decode_arr = dict
+            .get::<Array>(D)
+            .or_else(|| dict.get::<Array>(DECODE))
+            .map(|a| a.iter::<(f32, f32)>().collect::<SmallVec<_>>())
+            .unwrap_or(color_space.default_decode_arr(bits_per_component as f32));
 
-            decode(&components, &color_space, bits_per_component, &decode_arr)?
+        let width = obj.width;
+        let mut height = obj.height;
+
+        let mut luma_data = None;
+
+        let rgb_data = if is_luma {
+            let components = get_components(
+                &decoded.data,
+                obj.width,
+                obj.height,
+                &color_space,
+                bits_per_component,
+            )?;
+
+            let f32_data = { decode(&components, &color_space, bits_per_component, &decode_arr)? };
+
+            let mut data = if obj.is_image_mask {
+                f32_data
+                    .iter()
+                    .map(|alpha| ((1.0 - *alpha) * 255.0 + 0.5) as u8)
+                    .collect()
+            } else {
+                f32_data
+                    .iter()
+                    .map(|alpha| (*alpha * 255.0 + 0.5) as u8)
+                    .collect()
+            };
+
+            fix_image_length(&mut data, width, &mut height, 0, &color_space);
+
+            luma_data = Some(LumaData {
+                data,
+                width,
+                height,
+                interpolate: obj.interpolate,
+            });
+
+            return Some(Self {
+                rgb_data: None,
+                luma_data,
+            });
+        } else if bits_per_component == 8
+            && color_space.is_rgb()
+            && obj.transfer_function.is_none()
+            && decode_arr.as_ref() == [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)]
+            && !is_luma
+        {
+            // This is actually the most common case, where the PDF is embedded as a 8-bit RGB color
+            // and no special decode array. In this case, we can prevent the round-trip from
+            // f32 back to u8 and just return the raw decoded data, which will already be in
+            // RGB8 with values between 0 and 255.
+            fix_image_length(&mut decoded.data, width, &mut height, 0, &color_space);
+
+            Some(RgbData {
+                data: decoded.data.clone(),
+                width,
+                height,
+                interpolate: obj.interpolate,
+            })
+        } else {
+            let components = get_components(
+                &decoded.data,
+                obj.width,
+                obj.height,
+                &color_space,
+                bits_per_component,
+            )?;
+
+            let mut f32_data =
+                { decode(&components, &color_space, bits_per_component, &decode_arr)? };
+
+            let width = obj.width;
+            let mut height = obj.height;
+
+            fix_image_length(&mut f32_data, width, &mut height, 0.0, &color_space);
+
+            let mut rgb_data =
+                get_rgb_data(&f32_data, width, height, &color_space, obj.interpolate);
+
+            if let Some(transfer_function) = &obj.transfer_function
+                && let Some(rgb_data) = &mut rgb_data
+            {
+                let apply_single = |data: u8, function: &Function| {
+                    function
+                        .eval(smallvec![data as f32 / 255.0])
+                        .and_then(|v| v.first().copied())
+                        .map(|v| (v * 255.0 + 0.5) as u8)
+                        .unwrap_or(data)
+                };
+
+                match transfer_function {
+                    ActiveTransferFunction::Single(s) => {
+                        for data in &mut rgb_data.data {
+                            *data = apply_single(*data, s);
+                        }
+                    }
+                    ActiveTransferFunction::Four(f) => {
+                        for data in rgb_data.data.chunks_exact_mut(3) {
+                            data[0] = apply_single(data[0], &f[0]);
+                            data[1] = apply_single(data[1], &f[1]);
+                            data[2] = apply_single(data[2], &f[2]);
+                        }
+                    }
+                }
+            }
+
+            rgb_data
         };
 
         let width = obj.width;
         let mut height = obj.height;
-        let row_len = width as usize * color_space.num_components() as usize;
 
-        if (row_len * height as usize) < f32_data.len() {
-            // Too much data, truncate it.
-            f32_data.truncate(row_len * height as usize);
-        } else if (row_len * width as usize) > f32_data.len() {
-            // Too little data, adapt the height and pad.
-            height = f32_data.len().div_ceil(row_len) as u32;
+        if !is_luma {
+            let dict = obj.stream.dict();
 
-            if f32_data.len() % row_len > 0 {
-                f32_data.extend(iter::repeat_n(0.0, row_len - (f32_data.len() % row_len)));
-            }
-        }
+            luma_data = if let Some(1) = dict.get::<u8>(SMASK_IN_DATA) {
+                let smask_data = decoded.image_data.and_then(|i| i.alpha);
 
-        let mut rgb_data = if obj.is_image_mask || obj.force_luma {
-            None
-        } else {
-            get_rgb_data(&f32_data, width, height, &color_space, obj.interpolate)
-        };
-
-        if let Some(transfer_function) = &obj.transfer_function
-            && let Some(rgb_data) = &mut rgb_data
-        {
-            let apply_single = |data: u8, function: &Function| {
-                function
-                    .eval(smallvec![data as f32 / 255.0])
-                    .and_then(|v| v.first().copied())
-                    .map(|v| (v * 255.0 + 0.5) as u8)
-                    .unwrap_or(data)
-            };
-
-            match transfer_function {
-                ActiveTransferFunction::Single(s) => {
-                    for data in &mut rgb_data.data {
-                        *data = apply_single(*data, s);
-                    }
-                }
-                ActiveTransferFunction::Four(f) => {
-                    for data in rgb_data.data.chunks_exact_mut(3) {
-                        data[0] = apply_single(data[0], &f[0]);
-                        data[1] = apply_single(data[1], &f[1]);
-                        data[2] = apply_single(data[2], &f[2]);
-                    }
-                }
-            }
-        }
-
-        let luma_data = {
-            let data_len = width as usize * height as usize;
-
-            if obj.is_image_mask || obj.force_luma {
-                let data = if obj.is_image_mask {
-                    f32_data
-                        .iter()
-                        .map(|alpha| ((1.0 - *alpha) * 255.0 + 0.5) as u8)
-                        .collect()
-                } else {
-                    f32_data
-                        .iter()
-                        .map(|alpha| (*alpha * 255.0 + 0.5) as u8)
-                        .collect()
-                };
-
-                Some(LumaData {
-                    data: fix_image_length(data, data_len, 0),
-                    width,
-                    height,
-                    interpolate: obj.interpolate,
-                })
-            } else {
-                let dict = obj.stream.dict();
-
-                if let Some(1) = dict.get::<u8>(SMASK_IN_DATA) {
-                    let smask_data = decoded.image_data.and_then(|i| i.alpha);
-
-                    if let Some(data) = smask_data {
-                        let fixed = fix_image_length(data, data_len, 0);
-
-                        Some(LumaData {
-                            data: fixed,
-                            width,
-                            height,
-                            interpolate: obj.interpolate,
-                        })
-                    } else {
-                        None
-                    }
-                } else if let Some(s_mask) = dict.get::<Stream>(SMASK) {
-                    ImageXObject::new(&s_mask, |_| None, &obj.warning_sink, &obj.cache, true, None)
-                        .and_then(|s| s.decoded_object().and_then(|d| d.luma_data))
-                } else if let Some(mask) = dict.get::<Stream>(MASK) {
-                    if let Some(obj) = ImageXObject::new(
-                        &mask,
-                        |_| None,
-                        &obj.warning_sink,
-                        &obj.cache,
-                        true,
-                        None,
-                    ) {
-                        obj.decoded_object().and_then(|d| d.luma_data)
-                    } else {
-                        None
-                    }
-                } else if let Some(color_key_mask) = dict.get::<SmallVec<[u16; 4]>>(MASK) {
-                    let mut mask_data = vec![];
-
-                    for pixel in components.chunks_exact(color_space.num_components() as usize) {
-                        let mut mask_val = 0;
-
-                        for (component, min_max) in pixel.iter().zip(color_key_mask.chunks_exact(2))
-                        {
-                            if *component > min_max[1] || *component < min_max[0] {
-                                mask_val = 255;
-                            }
-                        }
-
-                        mask_data.push(mask_val);
-                    }
+                if let Some(mut data) = smask_data {
+                    fix_image_length(&mut data, width, &mut height, 0, &ColorSpace::device_gray());
 
                     Some(LumaData {
-                        data: fix_image_length(mask_data, data_len, 0),
+                        data,
                         width,
                         height,
                         interpolate: obj.interpolate,
@@ -501,8 +491,61 @@ impl DecodedImageXObject {
                 } else {
                     None
                 }
-            }
-        };
+            } else if let Some(s_mask) = dict.get::<Stream>(SMASK) {
+                ImageXObject::new(&s_mask, |_| None, &obj.warning_sink, &obj.cache, true, None)
+                    .and_then(|s| s.decoded_object().and_then(|d| d.luma_data))
+            } else if let Some(mask) = dict.get::<Stream>(MASK) {
+                if let Some(obj) =
+                    ImageXObject::new(&mask, |_| None, &obj.warning_sink, &obj.cache, true, None)
+                {
+                    obj.decoded_object().and_then(|d| d.luma_data)
+                } else {
+                    None
+                }
+            } else if let Some(color_key_mask) = dict.get::<SmallVec<[u16; 4]>>(MASK) {
+                let mut mask_data = vec![];
+
+                let width = obj.width;
+                let mut height = obj.height;
+
+                let components = get_components(
+                    &decoded.data,
+                    obj.width,
+                    obj.height,
+                    &color_space,
+                    bits_per_component,
+                )?;
+
+                for pixel in components.chunks_exact(color_space.num_components() as usize) {
+                    let mut mask_val = 0;
+
+                    for (component, min_max) in pixel.iter().zip(color_key_mask.chunks_exact(2)) {
+                        if *component > min_max[1] || *component < min_max[0] {
+                            mask_val = 255;
+                        }
+                    }
+
+                    mask_data.push(mask_val);
+                }
+
+                fix_image_length(
+                    &mut mask_data,
+                    width,
+                    &mut height,
+                    0,
+                    &ColorSpace::device_gray(),
+                );
+
+                Some(LumaData {
+                    data: mask_data,
+                    width,
+                    height,
+                    interpolate: obj.interpolate,
+                })
+            } else {
+                None
+            };
+        }
 
         Some(Self {
             rgb_data,
@@ -545,14 +588,26 @@ impl CacheKey for ImageXObject<'_> {
     }
 }
 
-fn fix_image_length(mut image: Vec<u8>, length: usize, filler: u8) -> Vec<u8> {
-    image.truncate(length);
+fn fix_image_length<T: Copy>(
+    image: &mut Vec<T>,
+    width: u32,
+    height: &mut u32,
+    filler: T,
+    cs: &ColorSpace,
+) {
+    let row_len = width as usize * cs.num_components() as usize;
 
-    while image.len() < length {
-        image.push(filler);
+    if (row_len * *height as usize) < image.len() {
+        // Too much data, truncate it.
+        image.truncate(row_len * *height as usize);
+    } else if (row_len * width as usize) > image.len() {
+        // Too little data, adapt the height and pad.
+        *height = image.len().div_ceil(row_len) as u32;
+
+        if !image.len().is_multiple_of(row_len) {
+            image.extend(iter::repeat_n(filler, row_len - (image.len() % row_len)));
+        }
     }
-
-    image
 }
 
 fn get_components(
