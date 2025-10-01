@@ -63,6 +63,16 @@ pub enum MaybeRef<T> {
     NotRef(T),
 }
 
+impl<T> MaybeRef<T> {
+    /// If the object is an object reference, return it.
+    pub fn as_obj_ref(&self) -> Option<ObjRef> {
+        match self {
+            MaybeRef::Ref(r) => Some(*r),
+            MaybeRef::NotRef(_) => None,
+        }
+    }
+}
+
 #[allow(private_bounds)]
 impl<'a, T> MaybeRef<T>
 where

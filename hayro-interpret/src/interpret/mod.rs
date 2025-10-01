@@ -15,6 +15,7 @@ use crate::shading::Shading;
 use crate::util::OptionLog;
 use crate::x_object::{ImageXObject, XObject, draw_image_xobject, draw_xobject};
 use hayro_syntax::content::ops::TypedInstruction;
+use hayro_syntax::object::dict::keys::OC;
 use hayro_syntax::object::{Dict, Object, dict_or_stream};
 use hayro_syntax::page::{Page, Resources};
 use kurbo::{Affine, Point, Shape};
@@ -379,11 +380,31 @@ pub fn interpret<'a, 'b>(
                     )
                 });
             }
-            TypedInstruction::BeginMarkedContentWithProperties(_) => {}
+            TypedInstruction::BeginMarkedContentWithProperties(bdc) => {
+                // Properties can be either:
+                // 1. A Name that references an entry in the Resources/Properties dictionary
+                // 2. An inline dictionary with an OC key
+
+                if let Some(name) = bdc.1.clone().into_name()
+                    && let Some(ocg_ref) = resources.properties.get_ref(name.clone())
+                {
+                    context.ocg_state.begin_ocg(ocg_ref.into());
+                } else if let Some((props, _)) = dict_or_stream(&bdc.1)
+                    && let Some(oc_ref) = props.get_ref(OC)
+                {
+                    context.ocg_state.begin_ocg(oc_ref.into());
+                } else {
+                    context.ocg_state.begin_marked_content();
+                }
+            }
             TypedInstruction::MarkedContentPointWithProperties(_) => {}
-            TypedInstruction::EndMarkedContent(_) => {}
+            TypedInstruction::EndMarkedContent(_) => {
+                context.ocg_state.end_marked_content();
+            }
             TypedInstruction::MarkedContentPoint(_) => {}
-            TypedInstruction::BeginMarkedContent(_) => {}
+            TypedInstruction::BeginMarkedContent(_) => {
+                context.ocg_state.begin_marked_content();
+            }
             TypedInstruction::BeginText(_) => {
                 context.get_mut().text_state.text_matrix = Affine::IDENTITY;
                 context.get_mut().text_state.text_line_matrix = Affine::IDENTITY;
@@ -525,6 +546,10 @@ pub fn interpret<'a, 'b>(
                 context.get_mut().text_state.rise = t.0.as_f32();
             }
             TypedInstruction::Shading(s) => {
+                if !context.ocg_state.is_visible() {
+                    continue;
+                }
+
                 if let Some(sp) = resources
                     .get_shading(s.0, Box::new(|_| None), Box::new(Some))
                     .and_then(|o| dict_or_stream(&o))

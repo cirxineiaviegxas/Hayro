@@ -52,6 +52,10 @@ pub(crate) fn show_glyph<'a>(
     glyph: &Glyph<'a>,
     glyph_transform: Affine,
 ) {
+    if !ctx.ocg_state.is_visible() {
+        return;
+    }
+
     device.set_soft_mask(ctx.get().graphics_state.soft_mask.clone());
     let stroke_props = ctx.stroke_props();
 
