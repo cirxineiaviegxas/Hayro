@@ -2,9 +2,10 @@ use crate::cache::Cache;
 use crate::color::ColorSpace;
 use crate::convert::convert_transform;
 use crate::font::Font;
-use crate::interpret::state::State;
+use crate::interpret::state::{ClipType, State};
 use crate::ocg::OcgState;
-use crate::{FillRule, InterpreterSettings, StrokeProps};
+use crate::util::Float64Ext;
+use crate::{ClipPath, Device, FillRule, InterpreterSettings, StrokeProps};
 use hayro_syntax::content::ops::Transform;
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
@@ -12,7 +13,7 @@ use hayro_syntax::object::ObjRef;
 use hayro_syntax::object::Object;
 use hayro_syntax::page::Resources;
 use hayro_syntax::xref::XRef;
-use kurbo::{Affine, BezPath, Point};
+use kurbo::{Affine, BezPath, PathEl, Point, Rect, Shape};
 use log::warn;
 use std::collections::HashMap;
 
@@ -93,12 +94,52 @@ impl<'a> Context<'a> {
         })
     }
 
-    pub(crate) fn push_bbox(&mut self, bbox: kurbo::Rect) {
+    fn push_bbox(&mut self, bbox: kurbo::Rect) {
         let new = self.bbox().intersect(bbox);
         self.bbox.push(new);
     }
 
-    pub(crate) fn pop_bbox(&mut self) {
+    pub(crate) fn push_clip_path(
+        &mut self,
+        clip_path: BezPath,
+        fill: FillRule,
+        device: &mut impl Device<'a>,
+    ) {
+        if let Some(clip_rect) = path_as_rect(&clip_path) {
+            let cur_bbox = self.bbox();
+
+            // If the clip path is a rect and completely covers the current bbox, don't emit it.
+            if cur_bbox
+                .min_x()
+                .is_nearly_greater_or_equal(clip_rect.min_x())
+                && cur_bbox
+                    .min_y()
+                    .is_nearly_greater_or_equal(clip_rect.min_y())
+                && cur_bbox.max_x().is_nearly_less_or_equal(clip_rect.max_x())
+                && cur_bbox.max_y().is_nearly_less_or_equal(clip_rect.max_y())
+            {
+                self.get_mut().clips.push(ClipType::Dummy);
+                return;
+            }
+        }
+
+        let bbox = clip_path.bounding_box();
+        device.push_clip_path(&ClipPath {
+            path: clip_path,
+            fill,
+        });
+        self.push_bbox(bbox);
+        self.get_mut().clips.push(ClipType::Real);
+    }
+
+    pub(crate) fn pop_clip_path(&mut self, device: &mut impl Device<'a>) {
+        if let Some(ClipType::Real) = self.get_mut().clips.pop() {
+            device.pop_clip_path();
+            self.pop_bbox();
+        }
+    }
+
+    fn pop_bbox(&mut self) {
         self.bbox.pop();
     }
 
@@ -117,12 +158,21 @@ impl<'a> Context<'a> {
             .unwrap_or(Affine::IDENTITY)
     }
 
-    pub(crate) fn restore_state(&mut self) {
-        if self.states.len() > 1 {
-            self.states.pop();
-        } else {
-            warn!("overflow in `restore_state");
+    pub(crate) fn restore_state(&mut self, device: &mut impl Device<'a>) {
+        let Some(target_clips) = self
+            .states
+            .get(self.states.len() - 2)
+            .map(|s| s.clips.len())
+        else {
+            warn!("underflowed graphics state");
+            return;
+        };
+
+        while self.get().clips.len() > target_clips {
+            self.pop_clip_path(device);
         }
+
+        self.states.pop();
     }
 
     pub(crate) fn path(&self) -> &BezPath {
@@ -214,5 +264,43 @@ impl<'a> Context<'a> {
 
     pub(crate) fn num_states(&self) -> usize {
         self.states.len()
+    }
+}
+
+fn path_as_rect(path: &BezPath) -> Option<Rect> {
+    let bbox = path.bounding_box();
+    let (min_x, min_y, max_x, max_y) = (bbox.min_x(), bbox.min_y(), bbox.max_x(), bbox.max_y());
+    let mut touched = [false; 4];
+
+    // One MoveTo, three LineTo, one ClosePath
+    if path.elements().len() != 5 {
+        return None;
+    }
+
+    let mut check_point = |p: Point| {
+        touched[0] |= p.x.is_nearly_equal(min_x);
+        touched[1] |= p.y.is_nearly_equal(min_y);
+        touched[2] |= p.x.is_nearly_equal(max_x);
+        touched[3] |= p.y.is_nearly_equal(max_y);
+    };
+
+    for el in path.elements() {
+        match el {
+            PathEl::MoveTo(p) => check_point(*p),
+            PathEl::LineTo(l) => check_point(*l),
+            PathEl::QuadTo(_, _) => {
+                return None;
+            }
+            PathEl::CurveTo(_, _, _) => {
+                return None;
+            }
+            PathEl::ClosePath => {}
+        }
+    }
+
+    if touched[0] && touched[1] && touched[2] && touched[3] {
+        Some(bbox)
+    } else {
+        None
     }
 }

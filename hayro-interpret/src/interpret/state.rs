@@ -2,7 +2,6 @@ use crate::StrokeProps;
 use crate::color::{ColorComponents, ColorSpace};
 use crate::context::Context;
 use crate::convert::{convert_line_cap, convert_line_join};
-use crate::device::Device;
 use crate::font::{Font, UNITS_PER_EM};
 use crate::function::Function;
 use crate::interpret::text::TextRenderingMode;
@@ -25,6 +24,12 @@ pub(crate) enum ActiveTransferFunction {
 }
 
 #[derive(Clone, Debug)]
+pub(crate) enum ClipType {
+    Dummy,
+    Real,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct State<'a> {
     // Note that the text state and ctm are theoretically part of the graphics state,
     // but we keep them separate for simplicity.
@@ -33,14 +38,14 @@ pub(crate) struct State<'a> {
     pub(crate) ctm: Affine,
     // Strictly speaking not part of the graphics state, but we keep it there for
     // consistency.
-    pub(crate) n_clips: u32,
+    pub(crate) clips: Vec<ClipType>,
 }
 
 impl Default for State<'_> {
     fn default() -> Self {
         State {
             ctm: Affine::IDENTITY,
-            n_clips: 0,
+            clips: vec![],
             text_state: TextState::default(),
             graphics_state: GraphicsState::default(),
         }
@@ -236,22 +241,6 @@ pub(crate) struct PaintData<'a> {
     pub(crate) color: ColorComponents,
     pub(crate) color_space: ColorSpace,
     pub(crate) pattern: Option<Pattern<'a>>,
-}
-
-pub(crate) fn save_sate(ctx: &mut Context) {
-    ctx.save_state();
-}
-
-pub(crate) fn restore_state<'a>(ctx: &mut Context<'a>, device: &mut impl Device<'a>) {
-    let mut num_clips = ctx.get().n_clips;
-    ctx.restore_state();
-    let target_clips = ctx.get().n_clips;
-
-    while num_clips > target_clips {
-        device.pop_clip_path();
-        ctx.pop_bbox();
-        num_clips -= 1;
-    }
 }
 
 pub(crate) fn handle_gs<'a>(
