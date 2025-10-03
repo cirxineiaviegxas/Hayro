@@ -62,6 +62,40 @@ impl Renderer {
         self.ctx.set_stroke(stroke);
     }
 
+    fn draw_image_with_alpha_mask(&mut self, rgb_data: RgbData, alpha_data: LumaData) {
+        let mask = {
+            let transform = *self.ctx.transform()
+                * Affine::scale_non_uniform(
+                    rgb_data.width as f64 / alpha_data.width as f64,
+                    rgb_data.height as f64 / alpha_data.height as f64,
+                );
+            let mut renderer = Renderer::new(
+                self.ctx.width(),
+                self.ctx.height(),
+                derive_settings(self.ctx.render_settings()),
+            );
+            let mut mask_pix = Pixmap::new(self.ctx.width(), self.ctx.height());
+            let rgb_data = RgbData {
+                data: vec![0; alpha_data.width as usize * alpha_data.height as usize * 3],
+                width: alpha_data.width,
+                height: alpha_data.height,
+                interpolate: alpha_data.interpolate,
+            };
+            renderer.ctx.set_transform(transform);
+            // Note that there is a circle between `draw_image` and `draw_image_with_alpha_mask`,
+            // but `draw_image_with_alpha_mask` is only called if the dimensions or interpolate
+            // values between alpha_data and rgb_data don't match, which they do here.
+            renderer.draw_image(rgb_data, Some(alpha_data));
+            renderer.ctx.flush();
+            renderer.ctx.render_to_pixmap(&mut mask_pix);
+            Mask::new_alpha(&mask_pix)
+        };
+
+        self.ctx.push_mask_layer(mask);
+        self.draw_image(rgb_data, None);
+        self.ctx.pop_layer();
+    }
+
     fn draw_image(&mut self, rgb_data: RgbData, alpha_data: Option<LumaData>) {
         let mut cur_transform = *self.ctx.transform();
 
@@ -72,17 +106,44 @@ impl Renderer {
         let mut rgb_width = rgb_data.width;
         let mut rgb_height = rgb_data.height;
 
-        let interpolate = rgb_data.interpolate;
+        let rgba_data = match alpha_data {
+            None => rgb_data
+                .data
+                .chunks_exact(3)
+                .flat_map(|rgb| [rgb[0], rgb[1], rgb[2], 255])
+                .collect::<Vec<_>>(),
+            Some(a) => {
+                if a.width != rgb_data.width
+                    || a.height != rgb_data.height
+                    || a.interpolate != rgb_data.interpolate
+                {
+                    return self.draw_image_with_alpha_mask(rgb_data, a);
+                } else {
+                    rgb_data
+                        .data
+                        .chunks_exact(3)
+                        .zip(a.data)
+                        .flat_map(|(rgb, a)| [rgb[0], rgb[1], rgb[2], a])
+                        .collect::<Vec<_>>()
+                }
+            }
+        };
 
-        let rgb_data = if x_scale >= 1.0 && y_scale >= 1.0 {
-            rgb_data.data
+        let quality = if rgb_data.interpolate {
+            ImageQuality::Medium
+        } else {
+            ImageQuality::Low
+        };
+
+        let mut rgba_data = if x_scale >= 1.0 && y_scale >= 1.0 {
+            rgba_data
         } else {
             // Resize the image, either doing down- or upsampling.
             let new_width = (rgb_width as f32 * x_scale).ceil().max(1.0) as u32;
             let new_height = (rgb_height as f32 * y_scale).ceil().max(1.0) as u32;
 
-            let image = DynamicImage::ImageRgb8(
-                ImageBuffer::from_raw(rgb_width, rgb_height, rgb_data.data.clone()).unwrap(),
+            let image = DynamicImage::ImageRgba8(
+                ImageBuffer::from_raw(rgb_width, rgb_height, rgba_data.clone()).unwrap(),
             );
             let resized = image.resize_exact(new_width, new_height, FilterType::CatmullRom);
 
@@ -96,41 +157,25 @@ impl Renderer {
             rgb_width = new_width;
             rgb_height = new_height;
 
-            resized.to_rgb8().into_raw()
+            resized.to_rgba8().into_raw()
         };
 
-        let alpha_data = if let Some(alpha_data) = alpha_data {
-            if alpha_data.width != rgb_width || alpha_data.height != rgb_height {
-                let image = DynamicImage::ImageLuma8(
-                    ImageBuffer::from_raw(
-                        alpha_data.width,
-                        alpha_data.height,
-                        alpha_data.data.clone(),
-                    )
-                    .unwrap(),
-                );
-                let resized = image.resize_exact(rgb_width, rgb_height, FilterType::CatmullRom);
-                resized.to_luma8().into_raw()
-            } else {
-                alpha_data.data
-            }
-        } else {
-            vec![255; rgb_width as usize * rgb_height as usize]
-        };
+        let (chunks, _) = rgba_data.as_chunks_mut::<4>();
 
-        let rgba_data = rgb_data
-            .chunks_exact(3)
-            .zip(alpha_data)
-            .map(|(rgb, a)| {
-                AlphaColor::from_rgba8(rgb[0], rgb[1], rgb[2], a)
-                    .premultiply()
-                    .to_rgba8()
-            })
-            .collect::<Vec<_>>();
+        for chunk in chunks {
+            *chunk = AlphaColor::from_rgba8(chunk[0], chunk[1], chunk[2], chunk[3])
+                .premultiply()
+                .to_rgba8()
+                .to_u8_array()
+        }
 
-        let pixmap = Pixmap::from_parts(rgba_data, rgb_width as u16, rgb_height as u16);
+        let pixmap = Pixmap::from_parts(
+            bytemuck::cast_vec(rgba_data),
+            rgb_width as u16,
+            rgb_height as u16,
+        );
 
-        self.draw_pixmap(Arc::new(pixmap), interpolate, cur_transform);
+        self.draw_pixmap(Arc::new(pixmap), quality, cur_transform);
     }
 
     fn push_clip_path_inner(&mut self, clip_path: &BezPath, fill: FillRule) {
@@ -143,13 +188,7 @@ impl Renderer {
         self.ctx.set_transform(old_transform);
     }
 
-    fn draw_pixmap(&mut self, pixmap: Arc<Pixmap>, interpolate: bool, transform: Affine) {
-        let quality = if !interpolate {
-            ImageQuality::Low
-        } else {
-            ImageQuality::Medium
-        };
-
+    fn draw_pixmap(&mut self, pixmap: Arc<Pixmap>, quality: ImageQuality, transform: Affine) {
         let (width, height) = (pixmap.width(), pixmap.height());
         let image = Image {
             image: ImageSource::Pixmap(pixmap),
