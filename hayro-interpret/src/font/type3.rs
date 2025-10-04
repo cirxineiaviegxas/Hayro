@@ -3,9 +3,9 @@ use crate::device::Device;
 use crate::font::glyph_simulator::GlyphSimulator;
 use crate::font::true_type::{read_encoding, read_widths};
 use crate::font::{Encoding, Glyph, Type3Glyph, UNITS_PER_EM};
-use crate::interpret;
 use crate::interpret::state::TextState;
 use crate::soft_mask::SoftMask;
+use crate::{BlendMode, interpret};
 use crate::{CacheKey, ClipPath, GlyphDrawMode, PathDrawMode};
 use crate::{Image, Paint};
 use hayro_syntax::content::TypedIter;
@@ -184,7 +184,7 @@ impl<'a, T: Device<'a>> Device<'a> for Type3ShapeGlyphDevice<'a, '_, T> {
         self.inner.push_clip_path(clip_path)
     }
 
-    fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask>) {}
+    fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask>, _: BlendMode) {}
 
     fn draw_glyph(
         &mut self,
@@ -210,4 +210,6 @@ impl<'a, T: Device<'a>> Device<'a> for Type3ShapeGlyphDevice<'a, '_, T> {
             self.inner.draw_image(Image::Stencil(s), transform)
         }
     }
+
+    fn set_blend_mode(&mut self, _: BlendMode) {}
 }

@@ -17,8 +17,8 @@ use hayro_interpret::font::Glyph;
 use hayro_interpret::hayro_syntax::page::Page;
 use hayro_interpret::util::Float32Ext;
 use hayro_interpret::{
-    CacheKey, ClipPath, Context, Device, GlyphDrawMode, Image, InterpreterSettings, Paint,
-    PathDrawMode, SoftMask, StrokeProps, interpret_page,
+    BlendMode, CacheKey, ClipPath, Context, Device, GlyphDrawMode, Image, InterpreterSettings,
+    Paint, PathDrawMode, SoftMask, StrokeProps, interpret_page,
 };
 use kurbo::{Affine, BezPath, Cap, Join, Rect};
 use siphasher::sip128::{Hasher128, SipHasher13};
@@ -67,6 +67,7 @@ pub(crate) struct SvgRenderer<'a> {
     pub(crate) tiling_patterns: Deduplicator<CachedTilingPattern<'a>>,
     pub(crate) dimensions: (f32, f32),
     pub(crate) cur_mask: Option<SoftMask<'a>>,
+    pub(crate) cur_blend_mode: BlendMode,
 }
 
 impl<'a> SvgRenderer<'a> {
@@ -95,7 +96,12 @@ impl<'a> SvgRenderer<'a> {
         }
     }
 
-    fn push_transparency_group_inner(&mut self, opacity: f32, mask: Option<MaskKind<'a>>) {
+    fn push_transparency_group_inner(
+        &mut self,
+        opacity: f32,
+        mask: Option<MaskKind<'a>>,
+        blend_mode: BlendMode,
+    ) {
         let mask_id = mask.map(|m| self.get_mask_id(m));
 
         self.xml.start_element("g");
@@ -103,6 +109,30 @@ impl<'a> SvgRenderer<'a> {
         if let Some(mask_id) = mask_id {
             self.xml
                 .write_attribute_fmt("mask", format_args!("url(#{mask_id})"));
+        }
+
+        if blend_mode != BlendMode::Normal {
+            let bm_name = match blend_mode {
+                BlendMode::Normal => "normal",
+                BlendMode::Multiply => "multiply",
+                BlendMode::Screen => "screen",
+                BlendMode::Overlay => "overlay",
+                BlendMode::Darken => "darken",
+                BlendMode::Lighten => "lighten",
+                BlendMode::ColorDodge => "color-dodge",
+                BlendMode::ColorBurn => "color-burn",
+                BlendMode::HardLight => "hard-light",
+                BlendMode::SoftLight => "soft-light",
+                BlendMode::Difference => "difference",
+                BlendMode::Exclusion => "exclusion",
+                BlendMode::Hue => "hue",
+                BlendMode::Saturation => "saturation",
+                BlendMode::Color => "color",
+                BlendMode::Luminosity => "luminosity",
+            };
+
+            self.xml
+                .write_attribute("style", &format!("mix-blend-mode:{}", bm_name));
         }
 
         if !opacity.is_nearly_equal(1.0) {
@@ -150,11 +180,29 @@ impl<'a> SvgRenderer<'a> {
             );
         }
     }
+
+    fn with_group(&mut self, func: impl FnOnce(&mut SvgRenderer<'a>)) {
+        let push_group = self.cur_mask.is_some() || self.cur_blend_mode != BlendMode::Normal;
+
+        if push_group {
+            self.push_transparency_group(1.0, self.cur_mask.clone(), self.cur_blend_mode);
+        }
+
+        func(self);
+
+        if push_group {
+            self.pop_transparency_group();
+        }
+    }
 }
 
 impl<'a> Device<'a> for SvgRenderer<'a> {
     fn set_soft_mask(&mut self, mask: Option<SoftMask<'a>>) {
         self.cur_mask = mask;
+    }
+
+    fn set_blend_mode(&mut self, blend_mode: BlendMode) {
+        self.cur_blend_mode = blend_mode;
     }
 
     fn draw_path(
@@ -164,17 +212,9 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
         paint: &Paint<'a>,
         draw_mode: &PathDrawMode,
     ) {
-        let push_group = self.cur_mask.is_some();
-
-        if push_group {
-            self.push_transparency_group(1.0, self.cur_mask.clone());
-        }
-
-        Self::draw_path(self, path, transform, paint, draw_mode);
-
-        if push_group {
-            self.pop_transparency_group();
-        }
+        self.with_group(|r| {
+            Self::draw_path(r, path, transform, paint, draw_mode);
+        })
     }
 
     fn push_clip_path(&mut self, clip_path: &ClipPath) {
@@ -190,8 +230,13 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
             .write_attribute_fmt("clip-path", format_args!("url(#{clip_id})"));
     }
 
-    fn push_transparency_group(&mut self, opacity: f32, mask: Option<SoftMask<'a>>) {
-        self.push_transparency_group_inner(opacity, mask.map(MaskKind::SoftMask));
+    fn push_transparency_group(
+        &mut self,
+        opacity: f32,
+        mask: Option<SoftMask<'a>>,
+        blend_mode: BlendMode,
+    ) {
+        self.push_transparency_group_inner(opacity, mask.map(MaskKind::SoftMask), blend_mode);
     }
 
     fn draw_glyph(
@@ -202,20 +247,13 @@ impl<'a> Device<'a> for SvgRenderer<'a> {
         paint: &Paint<'a>,
         draw_mode: &GlyphDrawMode,
     ) {
-        let push_group = self.cur_mask.is_some();
-
-        if push_group {
-            self.push_transparency_group(1.0, self.cur_mask.clone());
-        }
-
-        Self::draw_glyph(self, glyph, transform, glyph_transform, paint, draw_mode);
-
-        if push_group {
-            self.pop_transparency_group();
-        }
+        self.with_group(|r| {
+            Self::draw_glyph(r, glyph, transform, glyph_transform, paint, draw_mode);
+        })
     }
 
     fn draw_image(&mut self, image: Image<'a, '_>, transform: Affine) {
+        // TODO: Use Self::group
         match image {
             Image::Stencil(s) => {
                 s.with_stencil(|s, paint| {
@@ -252,6 +290,7 @@ impl<'a> SvgRenderer<'a> {
             tiling_patterns: Deduplicator::new('t'),
             cur_mask: None,
             dimensions: page.render_dimensions(),
+            cur_blend_mode: Default::default(),
         }
     }
 

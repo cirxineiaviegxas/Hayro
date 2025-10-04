@@ -7,10 +7,11 @@ use crate::function::Function;
 use crate::interpret::text::TextRenderingMode;
 use crate::pattern::Pattern;
 use crate::soft_mask::SoftMask;
+use crate::types::BlendMode;
 use crate::util::OptionLog;
 use hayro_syntax::content::ops::{LineCap, LineJoin};
 use hayro_syntax::object::dict::keys::{SMASK, TR, TR2};
-use hayro_syntax::object::{Dict, Name, Number, Object};
+use hayro_syntax::object::{Array, Dict, Name, Number, Object};
 use hayro_syntax::page::Resources;
 use kurbo::{Affine, BezPath, Vec2};
 use log::warn;
@@ -216,6 +217,7 @@ pub(crate) struct GraphicsState<'a> {
 
     pub(crate) soft_mask: Option<SoftMask<'a>>,
     pub(crate) transfer_function: Option<ActiveTransferFunction>,
+    pub(crate) blend_mode: BlendMode,
 }
 
 impl Default for GraphicsState<'_> {
@@ -232,6 +234,7 @@ impl Default for GraphicsState<'_> {
             non_stroke_pattern: None,
             soft_mask: None,
             transfer_function: None,
+            blend_mode: BlendMode::default(),
         }
     }
 }
@@ -308,15 +311,52 @@ pub(crate) fn handle_gs_single<'a>(
             }
         }
         "BM" => {
-            let name = dict.get::<Name>(key)?;
-            let mode = name.as_str();
-            if mode != "Normal" {
-                warn!("blend mode {mode} is not supported");
+            if let Some(name) = dict.get::<Name>(key.clone()) {
+                if let Some(bm) = convert_blend_mode(name.as_str()) {
+                    context.get_mut().graphics_state.blend_mode = bm;
+
+                    return Some(());
+                }
+            } else if let Some(arr) = dict.get::<Array>(key) {
+                for name in arr.iter::<Name>() {
+                    if let Some(bm) = convert_blend_mode(name.as_str()) {
+                        context.get_mut().graphics_state.blend_mode = bm;
+
+                        return Some(());
+                    }
+                }
             }
+
+            warn!("unknown blend mode, defaulting to Normal");
+            context.get_mut().graphics_state.blend_mode = BlendMode::Normal;
         }
         "Type" => {}
         _ => {}
     }
 
     Some(())
+}
+
+fn convert_blend_mode(name: &str) -> Option<BlendMode> {
+    let bm = match name {
+        "Normal" => BlendMode::Normal,
+        "Multiply" => BlendMode::Multiply,
+        "Screen" => BlendMode::Screen,
+        "Overlay" => BlendMode::Overlay,
+        "Darken" => BlendMode::Darken,
+        "Lighten" => BlendMode::Lighten,
+        "ColorDodge" => BlendMode::ColorDodge,
+        "ColorBurn" => BlendMode::ColorBurn,
+        "HardLight" => BlendMode::HardLight,
+        "SoftLight" => BlendMode::SoftLight,
+        "Difference" => BlendMode::Difference,
+        "Exclusion" => BlendMode::Exclusion,
+        "Hue" => BlendMode::Hue,
+        "Saturation" => BlendMode::Saturation,
+        "Color" => BlendMode::Color,
+        "Luminosity" => BlendMode::Luminosity,
+        _ => return None,
+    };
+
+    Some(bm)
 }

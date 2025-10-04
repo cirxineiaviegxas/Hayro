@@ -5,8 +5,8 @@
 
 use hayro_interpret::font::Glyph;
 use hayro_interpret::{
-    ClipPath, Context, Device, GlyphDrawMode, Image, InterpreterSettings, Paint, PathDrawMode,
-    SoftMask, interpret_page,
+    BlendMode, ClipPath, Context, Device, GlyphDrawMode, Image, InterpreterSettings, Paint,
+    PathDrawMode, SoftMask, interpret_page,
 };
 use hayro_syntax::Pdf;
 use image::{DynamicImage, ImageBuffer};
@@ -59,7 +59,7 @@ impl Device<'_> for ImageExtractor {
 
     fn push_clip_path(&mut self, _: &ClipPath) {}
 
-    fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask<'_>>) {}
+    fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask<'_>>, _: BlendMode) {}
 
     fn draw_glyph(
         &mut self,
@@ -127,4 +127,6 @@ impl Device<'_> for ImageExtractor {
             }
         }
     }
+
+    fn set_blend_mode(&mut self, _: BlendMode) {}
 }
