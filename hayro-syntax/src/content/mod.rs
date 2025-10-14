@@ -287,9 +287,31 @@ impl<'a> Iterator for TypedIter<'a> {
     type Item = TypedInstruction<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.untyped
-            .next()
-            .and_then(|op| TypedInstruction::dispatch(&op))
+        let op = &self.untyped.next()?;
+        match TypedInstruction::dispatch(op) {
+            Some(op) => Some(op),
+            // In case this returns `None`, the content stream is invalid. In case a path-drawing
+            // operator was used, let's abort completely, otherwise we might end up drawing random stuff.
+            // However, for other operators it could be worth it to just skip it but keep attempting
+            // to read other content operators.
+            None => {
+                if [
+                    &b"m"[..],
+                    &b"l"[..],
+                    &b"c"[..],
+                    &b"v"[..],
+                    &b"y"[..],
+                    &b"h"[..],
+                    &b"re"[..],
+                ]
+                .contains(&op.operator.0.deref())
+                {
+                    None
+                } else {
+                    Some(TypedInstruction::Fallback(op.operator.clone()))
+                }
+            }
+        }
     }
 }
 
