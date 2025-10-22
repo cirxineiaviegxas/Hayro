@@ -7,7 +7,7 @@ use crate::cache::Cache;
 use crate::color::{ColorComponents, ColorSpace};
 use crate::function::{Function, Values, interpolate};
 use crate::util::{Float32Ext, PointExt, RectExt};
-use hayro_common::bit::{BitReader, BitSize};
+use hayro_common::bit::BitReader;
 use hayro_syntax::object::Array;
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Object;
@@ -542,10 +542,6 @@ fn read_free_form_triangles(
     has_function: bool,
     decode: &[f32],
 ) -> Option<Vec<Triangle>> {
-    let bpf = BitSize::from_u8(bpf)?;
-    let bp_cord = BitSize::from_u8(bp_cord)?;
-    let bp_comp = BitSize::from_u8(bp_comp)?;
-
     let mut triangles = vec![];
 
     let ([x_min, x_max, y_min, y_max], decode) = split_decode(decode)?;
@@ -595,8 +591,8 @@ fn read_free_form_triangles(
 
 /// Common interpolation functions used across different shading types.
 struct InterpolationHelpers {
-    bp_coord: BitSize,
-    bp_comp: BitSize,
+    bp_coord: u8,
+    bp_comp: u8,
     coord_max: f32,
     comp_max: f32,
     x_min: f32,
@@ -606,16 +602,9 @@ struct InterpolationHelpers {
 }
 
 impl InterpolationHelpers {
-    fn new(
-        bp_coord: BitSize,
-        bp_comp: BitSize,
-        x_min: f32,
-        x_max: f32,
-        y_min: f32,
-        y_max: f32,
-    ) -> Self {
-        let coord_max = 2.0f32.powi(bp_coord.bits() as i32) - 1.0;
-        let comp_max = 2.0f32.powi(bp_comp.bits() as i32) - 1.0;
+    fn new(bp_coord: u8, bp_comp: u8, x_min: f32, x_max: f32, y_min: f32, y_max: f32) -> Self {
+        let coord_max = 2.0f32.powi(bp_coord as i32) - 1.0;
+        let comp_max = 2.0f32.powi(bp_comp as i32) - 1.0;
         Self {
             bp_coord,
             bp_comp,
@@ -671,7 +660,7 @@ impl InterpolationHelpers {
     fn read_triangle_vertex(
         &self,
         reader: &mut BitReader,
-        bpf: BitSize,
+        bpf: u8,
         has_function: bool,
         decode: &[f32],
     ) -> Option<TriangleVertex> {
@@ -787,9 +776,6 @@ fn read_lattice_triangles(
     vertices_per_row: u32,
     decode: &[f32],
 ) -> Option<Vec<Triangle>> {
-    let bp_cord = BitSize::from_u8(bp_cord)?;
-    let bp_comp = BitSize::from_u8(bp_comp)?;
-
     let mut lattices = vec![];
 
     let ([x_min, x_max, y_min, y_max], decode) = split_decode(decode)?;
@@ -885,10 +871,6 @@ fn read_patch_mesh<P, F>(
 where
     F: Fn([Point; 16], [ColorComponents; 4]) -> P,
 {
-    let bpf = BitSize::from_u8(bpf)?;
-    let bp_coord = BitSize::from_u8(bp_coord)?;
-    let bp_comp = BitSize::from_u8(bp_comp)?;
-
     let ([x_min, x_max, y_min, y_max], decode) = split_decode(decode)?;
     let mut reader = BitReader::new(data);
     let helpers = InterpolationHelpers::new(bp_coord, bp_comp, x_min, x_max, y_min, y_max);
