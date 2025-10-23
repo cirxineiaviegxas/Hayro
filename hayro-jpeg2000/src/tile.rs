@@ -1,27 +1,156 @@
-use crate::codestream::{CodingStyleInfo, Header, QuantizationInfo, ReaderExt, markers};
+use crate::codestream::{
+    ComponentCodingStyle, ComponentInfo, ComponentSizeInfo, GlobalCodingStyleInfo, Header,
+    QuantizationInfo, ReaderExt, SizeData, markers,
+};
 use hayro_common::byte::Reader;
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct IntRect {
+    pub(crate) x0: u32,
+    pub(crate) y0: u32,
+    pub(crate) x1: u32,
+    pub(crate) y1: u32,
+}
+
+impl IntRect {
+    pub(crate) fn new(x0: u32, y0: u32, x1: u32, y1: u32) -> Self {
+        Self { x0, y0, x1, y1 }
+    }
+
+    pub(crate) fn width(&self) -> u32 {
+        // See B-11.
+        self.x1 - self.x0
+    }
+
+    pub(crate) fn height(&self) -> u32 {
+        // See B-11.
+        self.y1 - self.y0
+    }
+}
 
 #[derive(Clone, Debug)]
 pub(crate) struct Tile<'a> {
-    pub(crate) parts: Vec<TilePart<'a>>,
+    tile_part_infos: Vec<TilePartInfo<'a>>,
+    pub(crate) rect: IntRect,
 }
 
-impl Tile<'_> {
-    fn new() -> Tile<'static> {
-        Tile { parts: vec![] }
+impl<'a> Tile<'a> {
+    fn new(idx: u32, size_data: &SizeData) -> Tile<'a> {
+        let raw_coords = size_data.tile_coords(idx);
+
+        Tile {
+            tile_part_infos: vec![],
+            rect: raw_coords,
+        }
     }
+
+    pub(crate) fn tile_parts(&self) -> impl Iterator<Item = TilePart<'_>> {
+        self.tile_part_infos.iter().map(|t| TilePart {
+            data: t.data,
+            tile: self,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct TilePartInfo<'a> {
+    pub(crate) data: &'a [u8],
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct TilePart<'a> {
     pub(crate) data: &'a [u8],
-    pub(crate) cod_components: Vec<CodingStyleInfo>,
-    pub(crate) qcd_components: Vec<QuantizationInfo>,
+    pub(crate) tile: &'a Tile<'a>,
+}
+
+pub(crate) struct TilePartInstance<'a> {
+    pub(crate) tile_part: &'a TilePart<'a>,
+    pub(crate) resolution: u16,
+    pub(crate) component_info: &'a ComponentInfo,
+    pub(crate) dimensions: IntRect,
+}
+
+impl<'a> TilePartInstance<'a> {
+    pub(crate) fn ppx(&self) -> u8 {
+        self.component_info
+            .coding_style_parameters
+            .parameters
+            .precinct_exponents[self.resolution as usize]
+            .0
+    }
+
+    pub(crate) fn ppy(&self) -> u8 {
+        self.component_info
+            .coding_style_parameters
+            .parameters
+            .precinct_exponents[self.resolution as usize]
+            .1
+    }
+
+    pub(crate) fn dimensions(&self) -> IntRect {
+        self.dimensions
+    }
+
+    pub(crate) fn num_precincts_x(&self) -> u32 {
+        // See B-16.
+        let IntRect { x0, x1, .. } = self.dimensions;
+
+        if x0 == x1 {
+            0
+        } else {
+            x1.div_ceil(2u32.pow(self.ppx() as u32)) - x0 / 2u32.pow(self.ppx() as u32)
+        }
+    }
+
+    pub(crate) fn num_precincts_y(&self) -> u32 {
+        // See B-16.
+        let IntRect { y0, y1, .. } = self.dimensions;
+
+        if y0 == y1 {
+            0
+        } else {
+            y1.div_ceil(2u32.pow(self.ppy() as u32)) - y0 / 2u32.pow(self.ppy() as u32)
+        }
+    }
+
+    pub(crate) fn num_precincts(&self) -> u32 {
+        self.num_precincts_x() * self.num_precincts_y()
+    }
+
+    pub(crate) fn code_block_width(&self) -> u8 {
+        // See B-17.
+        let xcb = self
+            .component_info
+            .coding_style_parameters
+            .parameters
+            .code_block_width;
+
+        if self.resolution > 0 {
+            u8::min(xcb, self.ppx() - 1)
+        } else {
+            u8::min(xcb, self.ppx())
+        }
+    }
+
+    pub(crate) fn code_block_height(&self) -> u8 {
+        // See B-18.
+        let ycb = self
+            .component_info
+            .coding_style_parameters
+            .parameters
+            .code_block_height;
+
+        if self.resolution > 0 {
+            u8::min(ycb, self.ppy() - 1)
+        } else {
+            u8::min(ycb, self.ppy())
+        }
+    }
 }
 
 pub(crate) fn read_tiles<'a>(
     reader: &mut Reader<'a>,
-    main_header: &Header,
+    main_header: &'a Header,
 ) -> Result<Vec<Tile<'a>>, &'static str> {
     let mut parsed_tile_parts = {
         let mut buf = vec![];
@@ -42,17 +171,18 @@ pub(crate) fn read_tiles<'a>(
         buf
     };
 
-    let mut tiles = vec![Tile::new(); main_header.size_data.num_tiles() as usize];
+    let mut tiles = (0..main_header.size_data.num_tiles() as usize)
+        .into_iter()
+        .map(|idx| Tile::new(idx as u32, &main_header.size_data))
+        .collect::<Vec<_>>();
 
     for tile_part in parsed_tile_parts {
         let cur_tile = tiles
             .get_mut(tile_part.tile_index as usize)
             .ok_or("tile part had invalid tile index")?;
 
-        cur_tile.parts.push(TilePart {
+        cur_tile.tile_part_infos.push(TilePartInfo {
             data: tile_part.data,
-            cod_components: tile_part.cod_components.clone(),
-            qcd_components: tile_part.qcd_components.clone(),
         });
     }
 
@@ -62,8 +192,6 @@ pub(crate) fn read_tiles<'a>(
 struct ParsedTilePart<'a> {
     tile_index: u16,
     tile_part_index: u8,
-    cod_components: Vec<CodingStyleInfo>,
-    qcd_components: Vec<QuantizationInfo>,
     data: &'a [u8],
 }
 
@@ -111,8 +239,6 @@ fn read_tile_part<'a>(reader: &mut Reader<'a>, main_header: &Header) -> Option<P
         data: tile_part_reader.tail()?,
         tile_index: header.tile_index,
         tile_part_index: header.tile_part_index,
-        cod_components: main_header.cod_components.clone(),
-        qcd_components: main_header.qcd_components.clone(),
     })
 }
 
@@ -139,4 +265,173 @@ pub(crate) fn sot_marker(reader: &mut Reader) -> Option<TilePartHeader> {
         tile_part_index,
         num_tile_parts,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::codestream::{
+        CodeBlockStyle, CodingStyleFlags, CodingStyleParameters, QuantizationStyle,
+        WaveletTransform,
+    };
+
+    /// Test case for the example in B.4.
+    #[test]
+    fn test_jpeg2000_standard_example_b4() {
+        let component_size_info_0 = ComponentSizeInfo {
+            precision: 8,
+            is_signed: false,
+            horizontal_resolution: 1,
+            vertical_resolution: 1,
+        };
+
+        let dummy_component_coding_style = ComponentCodingStyle {
+            flags: CodingStyleFlags::default(),
+            parameters: CodingStyleParameters {
+                num_decomposition_levels: 0,
+                num_resolution_levels: 0,
+                code_block_width: 0,
+                code_block_height: 0,
+                code_block_style: CodeBlockStyle::default(),
+                transformation: WaveletTransform::Irreversible97,
+                precinct_exponents: vec![],
+            },
+        };
+
+        let dummy_quantization_info = QuantizationInfo {
+            quantization_style: QuantizationStyle::NoQuantization,
+            guard_bits: 0,
+            step_sizes: vec![],
+        };
+
+        let component_info_0 = ComponentInfo {
+            size_info: component_size_info_0.clone(),
+            coding_style_parameters: dummy_component_coding_style.clone(),
+            quantization_info: dummy_quantization_info.clone(),
+        };
+
+        let component_size_info_1 = ComponentSizeInfo {
+            precision: 8,
+            is_signed: false,
+            horizontal_resolution: 2,
+            vertical_resolution: 2,
+        };
+
+        let component_info_1 = ComponentInfo {
+            size_info: component_size_info_1.clone(),
+            coding_style_parameters: dummy_component_coding_style.clone(),
+            quantization_info: dummy_quantization_info.clone(),
+        };
+
+        let size_data = SizeData {
+            reference_grid_width: 1432,
+            reference_grid_height: 954,
+            image_area_x_offset: 152,
+            image_area_y_offset: 234,
+            tile_width: 396,
+            tile_height: 297,
+            tile_x_offset: 0,
+            tile_y_offset: 0,
+            component_sizes: vec![component_size_info_0, component_size_info_1],
+        };
+
+        assert_eq!(size_data.image_width(), 1280);
+        assert_eq!(size_data.image_height(), 720);
+
+        assert_eq!(size_data.num_x_tiles(), 4);
+        assert_eq!(size_data.num_y_tiles(), 4);
+        assert_eq!(size_data.num_tiles(), 16);
+
+        let component_0 = &size_data.component_sizes[0];
+        let component_1 = &size_data.component_sizes[1];
+
+        let tile_0_0 = Tile::new(0, &size_data);
+        let coords_0_0 = component_info_0.scaled_rect(tile_0_0.rect);
+        assert_eq!(coords_0_0.x0, 152);
+        assert_eq!(coords_0_0.y0, 234);
+        assert_eq!(coords_0_0.x1, 396);
+        assert_eq!(coords_0_0.y1, 297);
+        assert_eq!(coords_0_0.width(), 244);
+        assert_eq!(coords_0_0.height(), 63);
+
+        let tile_1_0 = Tile::new(1, &size_data);
+        let coords_1_0 = component_info_0.scaled_rect(tile_1_0.rect);
+        assert_eq!(coords_1_0.x0, 396);
+        assert_eq!(coords_1_0.y0, 234);
+        assert_eq!(coords_1_0.x1, 792);
+        assert_eq!(coords_1_0.y1, 297);
+        assert_eq!(coords_1_0.width(), 396);
+        assert_eq!(coords_1_0.height(), 63);
+
+        let tile_0_1 = Tile::new(4, &size_data);
+        let coords_0_1 = component_info_0.scaled_rect(tile_0_1.rect);
+        assert_eq!(coords_0_1.x0, 152);
+        assert_eq!(coords_0_1.y0, 297);
+        assert_eq!(coords_0_1.x1, 396);
+        assert_eq!(coords_0_1.y1, 594);
+        assert_eq!(coords_0_1.width(), 244);
+        assert_eq!(coords_0_1.height(), 297);
+
+        let tile_1_1 = Tile::new(5, &size_data);
+        let coords_1_1 = component_info_0.scaled_rect(tile_1_1.rect);
+        assert_eq!(coords_1_1.x0, 396);
+        assert_eq!(coords_1_1.y0, 297);
+        assert_eq!(coords_1_1.x1, 792);
+        assert_eq!(coords_1_1.y1, 594);
+        assert_eq!(coords_1_1.width(), 396);
+        assert_eq!(coords_1_1.height(), 297);
+
+        let tile_3_3 = Tile::new(15, &size_data);
+        let coords_3_3 = component_info_0.scaled_rect(tile_3_3.rect);
+        assert_eq!(coords_3_3.x0, 1188);
+        assert_eq!(coords_3_3.y0, 891);
+        assert_eq!(coords_3_3.x1, 1432);
+        assert_eq!(coords_3_3.y1, 954);
+        assert_eq!(coords_3_3.width(), 244);
+        assert_eq!(coords_3_3.height(), 63);
+
+        let tile_0_0_comp1 = component_info_1.scaled_rect(tile_0_0.rect);
+        assert_eq!(tile_0_0_comp1.x0, 76);
+        assert_eq!(tile_0_0_comp1.y0, 117);
+        assert_eq!(tile_0_0_comp1.x1, 198);
+        assert_eq!(tile_0_0_comp1.y1, 149);
+        assert_eq!(tile_0_0_comp1.width(), 122);
+        assert_eq!(tile_0_0_comp1.height(), 32);
+
+        let tile_1_0_comp1 = component_info_1.scaled_rect(tile_1_0.rect);
+        assert_eq!(tile_1_0_comp1.x0, 198);
+        assert_eq!(tile_1_0_comp1.y0, 117);
+        assert_eq!(tile_1_0_comp1.x1, 396);
+        assert_eq!(tile_1_0_comp1.y1, 149);
+        assert_eq!(tile_1_0_comp1.width(), 198);
+        assert_eq!(tile_1_0_comp1.height(), 32);
+
+        let tile_0_1_comp1 = component_info_1.scaled_rect(tile_0_1.rect);
+        assert_eq!(tile_0_1_comp1.x0, 76);
+        assert_eq!(tile_0_1_comp1.y0, 149);
+        assert_eq!(tile_0_1_comp1.x1, 198);
+        assert_eq!(tile_0_1_comp1.y1, 297);
+        assert_eq!(tile_0_1_comp1.width(), 122);
+        assert_eq!(tile_0_1_comp1.height(), 148);
+
+        let tile_1_1_comp1 = component_info_1.scaled_rect(tile_1_1.rect);
+        assert_eq!(tile_1_1_comp1.x0, 198);
+        assert_eq!(tile_1_1_comp1.y0, 149);
+        assert_eq!(tile_1_1_comp1.x1, 396);
+        assert_eq!(tile_1_1_comp1.y1, 297);
+        assert_eq!(tile_1_1_comp1.width(), 198);
+        assert_eq!(tile_1_1_comp1.height(), 148);
+
+        let tile_2_1 = Tile::new(6, &size_data);
+        let tile_2_1_comp1 = component_info_1.scaled_rect(tile_2_1.rect);
+        assert_eq!(tile_2_1_comp1.x0, 396);
+        assert_eq!(tile_2_1_comp1.y0, 149);
+        assert_eq!(tile_2_1_comp1.x1, 594);
+        assert_eq!(tile_2_1_comp1.y1, 297);
+        assert_eq!(tile_2_1_comp1.width(), 198);
+        assert_eq!(tile_2_1_comp1.height(), 148);
+
+        assert_eq!(tile_1_1_comp1.width(), tile_2_1_comp1.width());
+        assert_eq!(tile_1_1_comp1.height(), tile_2_1_comp1.height());
+    }
 }

@@ -1,5 +1,5 @@
 use crate::t2::process_tiles;
-use crate::tile::read_tiles;
+use crate::tile::{IntRect, TilePart, TilePartInstance, read_tiles};
 use hayro_common::bit::BitReader;
 use hayro_common::byte::Reader;
 
@@ -22,8 +22,8 @@ pub(crate) fn read(stream: &[u8]) -> Result<(), &'static str> {
 #[derive(Debug)]
 pub(crate) struct Header {
     pub(crate) size_data: SizeData,
-    pub(crate) cod_components: Vec<CodingStyleInfo>,
-    pub(crate) qcd_components: Vec<QuantizationInfo>,
+    pub(crate) global_coding_style: GlobalCodingStyleInfo,
+    pub(crate) component_infos: Vec<ComponentInfo>,
 }
 
 fn read_header(reader: &mut Reader) -> Result<Header, &'static str> {
@@ -36,7 +36,7 @@ fn read_header(reader: &mut Reader) -> Result<Header, &'static str> {
     let mut cod = None;
     let mut qcd = None;
 
-    let num_components = size_data.components.len() as u16;
+    let num_components = size_data.component_sizes.len() as u16;
     let mut cod_components = vec![None; num_components as usize];
     let mut qcd_components = vec![None; num_components as usize];
 
@@ -74,52 +74,44 @@ fn read_header(reader: &mut Reader) -> Result<Header, &'static str> {
     let cod = cod.ok_or("missing COD marker")?;
     let qcd = qcd.ok_or("missing QCD marker")?;
 
+    let component_infos = size_data
+        .component_sizes
+        .iter()
+        .enumerate()
+        .map(|(idx, csi)| ComponentInfo {
+            size_info: *csi,
+            coding_style_parameters: cod_components[idx]
+                .clone()
+                .unwrap_or(cod.component_parameters.clone()),
+            quantization_info: qcd_components[idx].clone().unwrap_or(qcd.clone()),
+        })
+        .collect();
+
     Ok(Header {
         size_data,
-        cod_components: cod_components
-            .into_iter()
-            .map(|coc| {
-                let mut cloned = cod.clone();
-
-                // COC takes precedence over COD if available.
-                if let Some(coc) = coc {
-                    cloned.style = coc.scoc;
-                    cloned.parameters = coc.parameters;
-                }
-
-                cloned
-            })
-            .collect(),
-        qcd_components: qcd_components
-            .into_iter()
-            .map(|c| c.unwrap_or(qcd.clone()))
-            .collect(),
+        global_coding_style: cod.clone(),
+        component_infos,
     })
 }
 
 /// Progression order (Table A.16).
 #[derive(Debug, Clone, Copy)]
 enum ProgressionOrder {
-    /// Layer-Resolution-Component-Position.
-    Lrcp,
-    /// Resolution-Layer-Component-Position.
-    Rlcp,
-    /// Resolution-Position-Component-Layer.
-    Rpcl,
-    /// Position-Component-Resolution-Layer.
-    Pcrl,
-    /// Component-Position-Resolution-Layer.
-    Cprl,
+    LayerResolutionComponentPosition,
+    ResolutionLayerComponentPosition,
+    ResolutionPositionComponentLayer,
+    PositionComponentResolutionLayer,
+    ComponentPositionResolutionLayer,
 }
 
 impl ProgressionOrder {
     fn from_u8(value: u8) -> Result<Self, &'static str> {
         match value {
-            0 => Ok(ProgressionOrder::Lrcp),
-            1 => Ok(ProgressionOrder::Rlcp),
-            2 => Ok(ProgressionOrder::Rpcl),
-            3 => Ok(ProgressionOrder::Pcrl),
-            4 => Ok(ProgressionOrder::Cprl),
+            0 => Ok(ProgressionOrder::LayerResolutionComponentPosition),
+            1 => Ok(ProgressionOrder::ResolutionLayerComponentPosition),
+            2 => Ok(ProgressionOrder::ResolutionPositionComponentLayer),
+            3 => Ok(ProgressionOrder::PositionComponentResolutionLayer),
+            4 => Ok(ProgressionOrder::ComponentPositionResolutionLayer),
             _ => Err("invalid progression order"),
         }
     }
@@ -144,7 +136,7 @@ impl MultipleComponentTransform {
 
 /// Wavelet transformation type (Table A.20).
 #[derive(Debug, Clone, Copy)]
-enum WaveletTransform {
+pub(crate) enum WaveletTransform {
     Irreversible97,
     Reversible53,
 }
@@ -160,8 +152,8 @@ impl WaveletTransform {
 }
 
 /// Coding style flags (Table A.13).
-#[derive(Debug, Clone, Copy)]
-struct CodingStyleFlags {
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct CodingStyleFlags {
     raw: u8,
 }
 
@@ -184,8 +176,8 @@ impl CodingStyleFlags {
 }
 
 /// Code-block style flags (Table A.19).
-#[derive(Debug, Clone, Copy)]
-struct CodeBlockStyle {
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct CodeBlockStyle {
     selective_arithmetic_coding_bypass: bool,
     reset_context_probabilities: bool,
     termination_on_each_pass: bool,
@@ -207,18 +199,9 @@ impl CodeBlockStyle {
     }
 }
 
-/// Component information (A.5.1 and Table A.11).
-#[derive(Debug)]
-struct ComponentInfo {
-    precision: u8,
-    is_signed: bool,
-    horizontal_resolution: u8,
-    vertical_resolution: u8,
-}
-
 /// Quantization style (Table A.28).
 #[derive(Debug, Clone, Copy)]
-enum QuantizationStyle {
+pub(crate) enum QuantizationStyle {
     NoQuantization,
     ScalarDerived,
     ScalarExpounded,
@@ -237,79 +220,203 @@ impl QuantizationStyle {
 
 /// Common coding style parameters (A.6.1 and A.6.2).
 #[derive(Clone, Debug)]
-struct CodingStyleParameters {
-    num_decomposition_levels: u8,
-    code_block_width: u8,
-    code_block_height: u8,
-    code_block_style: CodeBlockStyle,
-    transformation: WaveletTransform,
-    precinct_sizes: Vec<u8>,
+pub(crate) struct CodingStyleParameters {
+    pub(crate) num_decomposition_levels: u16,
+    pub(crate) num_resolution_levels: u16,
+    pub(crate) code_block_width: u8,
+    pub(crate) code_block_height: u8,
+    pub(crate) code_block_style: CodeBlockStyle,
+    pub(crate) transformation: WaveletTransform,
+    pub(crate) precinct_exponents: Vec<(u8, u8)>,
 }
 
 /// Common quantization parameters (A.6.4 and A.6.5).
 #[derive(Clone, Debug)]
 pub(crate) struct QuantizationInfo {
-    quantization_style: QuantizationStyle,
-    guard_bits: u8,
-    step_sizes: Vec<u16>,
+    pub(crate) quantization_style: QuantizationStyle,
+    pub(crate) guard_bits: u8,
+    pub(crate) step_sizes: Vec<u16>,
 }
 
 /// Default values for coding style (A.6.1).
 #[derive(Debug, Clone)]
-pub(crate) struct CodingStyleInfo {
-    style: CodingStyleFlags,
-    progression_order: ProgressionOrder,
-    num_layers: u16,
-    mct: MultipleComponentTransform,
-    parameters: CodingStyleParameters,
+pub(crate) struct GlobalCodingStyleInfo {
+    pub(crate) progression_order: ProgressionOrder,
+    pub(crate) num_layers: u16,
+    pub(crate) mct: MultipleComponentTransform,
+    // This is the default used for all components, if not overridden by COC.
+    pub(crate) component_parameters: ComponentCodingStyle,
 }
 
 /// Values of coding style for each component (A.6.2).
 #[derive(Clone, Debug)]
-struct CodingStyleComponent {
-    scoc: CodingStyleFlags,
-    parameters: CodingStyleParameters,
+pub(crate) struct ComponentCodingStyle {
+    pub(crate) flags: CodingStyleFlags,
+    pub(crate) parameters: CodingStyleParameters,
 }
 
 #[derive(Debug)]
 pub(crate) struct SizeData {
     /// Width of the reference grid (Xsiz).
-    grid_width: u32,
+    pub(crate) reference_grid_width: u32,
     /// Height of the reference grid (Ysiz).
-    grid_height: u32,
+    pub(crate) reference_grid_height: u32,
     /// Horizontal offset from the origin of the reference grid to the
     /// left side of the image area (XOsiz).
-    image_area_x_offset: u32,
+    pub(crate) image_area_x_offset: u32,
     /// Vertical offset from the origin of the reference grid to the top side of the image area (YOsiz).
-    image_area_y_offset: u32,
+    pub(crate) image_area_y_offset: u32,
     /// Width of one reference tile with respect to the reference grid (XTSiz).
-    tile_width: u32,
+    pub(crate) tile_width: u32,
     /// Height of one reference tile with respect to the reference grid (YTSiz).
-    tile_height: u32,
+    pub(crate) tile_height: u32,
     /// Horizontal offset from the origin of the reference grid to the left side of the first tile (XTOSiz).
-    tile_x_offset: u32,
+    pub(crate) tile_x_offset: u32,
     /// Vertical offset from the origin of the reference grid to the top side of the first tile (YTOSiz).
-    tile_y_offset: u32,
+    pub(crate) tile_y_offset: u32,
     /// Component information (SSiz/XRSiz/YRSiz).
-    components: Vec<ComponentInfo>,
+    pub(crate) component_sizes: Vec<ComponentSizeInfo>,
+}
+
+impl SizeData {
+    /// Return the raw coordinates of the tile with the given index.
+    pub(crate) fn tile_coords(&self, idx: u32) -> IntRect {
+        let x_coord = self.tile_x_coord(idx);
+        let y_coord = self.tile_y_coord(idx);
+
+        // See B-7, B-8, B-9 and B-10.
+        let x0 = u32::max(
+            self.tile_x_offset + x_coord * self.tile_width,
+            self.image_area_x_offset,
+        );
+        let y0 = u32::max(
+            self.tile_y_offset + y_coord * self.tile_height,
+            self.image_area_y_offset,
+        );
+
+        // Note that `x1` and `y1` are exclusive.
+        let x1 = u32::min(
+            self.tile_x_offset + (x_coord + 1) * self.tile_width,
+            self.reference_grid_width,
+        );
+        let y1 = u32::min(
+            self.tile_y_offset + (y_coord + 1) * self.tile_height,
+            self.reference_grid_height,
+        );
+
+        IntRect::new(x0, y0, x1, y1)
+    }
+
+    pub(crate) fn tile_x_coord(&self, idx: u32) -> u32 {
+        // See B-6.
+        idx % self.num_x_tiles()
+    }
+
+    pub(crate) fn tile_y_coord(&self, idx: u32) -> u32 {
+        // See B-6.
+        // I believe the `ceil` in the spec should be a `floor` instead.
+        (idx as f64 / self.num_x_tiles() as f64).floor() as u32
+    }
+}
+
+/// Component information (A.5.1 and Table A.11).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ComponentSizeInfo {
+    pub(crate) precision: u8,
+    pub(crate) is_signed: bool,
+    pub(crate) horizontal_resolution: u8,
+    pub(crate) vertical_resolution: u8,
+}
+
+#[derive(Debug)]
+pub(crate) struct ComponentInfo {
+    pub(crate) size_info: ComponentSizeInfo,
+    pub(crate) coding_style_parameters: ComponentCodingStyle,
+    pub(crate) quantization_info: QuantizationInfo,
+}
+
+impl ComponentInfo {
+    /// Return the coordinates of the rectangle scaled by the horizontal and vertical
+    /// resolution of the component.
+    pub(crate) fn scaled_rect(&self, tile_rect: IntRect) -> IntRect {
+        if self.size_info.horizontal_resolution == 1 && self.size_info.vertical_resolution == 1 {
+            tile_rect
+        } else {
+            // As described in B-12.
+            let t_x0 = tile_rect
+                .x0
+                .div_ceil(self.size_info.horizontal_resolution as u32);
+            let t_y0 = tile_rect
+                .y0
+                .div_ceil(self.size_info.vertical_resolution as u32);
+            let t_x1 = tile_rect
+                .x1
+                .div_ceil(self.size_info.horizontal_resolution as u32);
+            let t_y1 = tile_rect
+                .y1
+                .div_ceil(self.size_info.vertical_resolution as u32);
+
+            IntRect::new(t_x0, t_y0, t_x1, t_y1)
+        }
+    }
+
+    pub(crate) fn tile_part_instance<'a>(
+        &'a self,
+        part: &'a TilePart<'a>,
+        resolution: u16,
+    ) -> TilePartInstance<'a> {
+        let dimensions = {
+            // See formula B-14.
+            let r = resolution;
+            let n_l = self
+                .coding_style_parameters
+                .parameters
+                .num_decomposition_levels;
+            let IntRect { x0, y0, x1, y1 } = self.scaled_rect(part.tile.rect);
+
+            let tx0 = x0.div_ceil(2u32.pow(n_l as u32 - r as u32));
+            let ty0 = y0.div_ceil(2u32.pow(n_l as u32 - r as u32));
+            let tx1 = x1.div_ceil(2u32.pow(n_l as u32 - r as u32));
+            let ty1 = y1.div_ceil(2u32.pow(n_l as u32 - r as u32));
+
+            IntRect::new(tx0, ty0, tx1, ty1)
+        };
+
+        TilePartInstance {
+            tile_part: part,
+            resolution,
+            component_info: self,
+            dimensions,
+        }
+    }
 }
 
 impl SizeData {
     /// The number of tiles in the x direction.
     pub(crate) fn num_x_tiles(&self) -> u32 {
         // See formula B-5.
-        (self.grid_width - self.tile_x_offset).div_ceil(self.tile_width)
+        (self.reference_grid_width - self.tile_x_offset).div_ceil(self.tile_width)
     }
 
     /// The number of tiles in the y direction.
     pub(crate) fn num_y_tiles(&self) -> u32 {
         // See formula B-5.
-        (self.grid_height - self.tile_y_offset).div_ceil(self.tile_height)
+        (self.reference_grid_height - self.tile_y_offset).div_ceil(self.tile_height)
     }
 
     /// The total number of tiles.
     pub(crate) fn num_tiles(&self) -> u32 {
         self.num_x_tiles() * self.num_y_tiles()
+    }
+
+    /// Return the overall width of the image.
+    pub(crate) fn image_width(&self) -> u32 {
+        self.reference_grid_width - self.image_area_x_offset
+    }
+
+    /// Return the overall height of the image.
+    pub(crate) fn image_height(&self) -> u32 {
+        self.reference_grid_height - self.image_area_y_offset
     }
 }
 
@@ -319,8 +426,14 @@ fn size_marker(reader: &mut Reader) -> Result<SizeData, &'static str> {
 
     if size_data.tile_width == 0
         || size_data.tile_height == 0
-        || size_data.grid_width == 0
-        || size_data.grid_height == 0
+        || size_data.reference_grid_width == 0
+        || size_data.reference_grid_height == 0
+    {
+        return Err("invalid image dimensions");
+    }
+
+    if size_data.tile_x_offset >= size_data.reference_grid_width
+        || size_data.tile_y_offset >= size_data.reference_grid_height
     {
         return Err("invalid image dimensions");
     }
@@ -340,6 +453,12 @@ fn size_marker(reader: &mut Reader) -> Result<SizeData, &'static str> {
         || size_data.tile_y_offset + size_data.tile_height <= size_data.image_area_y_offset
     {
         return Err("tile offsets are invalid");
+    }
+
+    for comp in &size_data.component_sizes {
+        if comp.precision == 0 || comp.vertical_resolution == 0 || comp.horizontal_resolution == 0 {
+            return Err("invalid component metadata");
+        }
     }
 
     Ok(size_data)
@@ -370,7 +489,7 @@ fn size_marker_inner(reader: &mut Reader) -> Option<SizeData> {
         let precision = (ssiz & 0x7F) + 1;
         let is_signed = (ssiz & 0x80) != 0;
 
-        components.push(ComponentInfo {
+        components.push(ComponentSizeInfo {
             precision,
             is_signed,
             horizontal_resolution: x_rsiz,
@@ -379,15 +498,15 @@ fn size_marker_inner(reader: &mut Reader) -> Option<SizeData> {
     }
 
     Some(SizeData {
-        grid_width: xsiz,
-        grid_height: ysiz,
+        reference_grid_width: xsiz,
+        reference_grid_height: ysiz,
         image_area_x_offset: x_osiz,
         image_area_y_offset: y_osiz,
         tile_width: xt_siz,
         tile_height: yt_siz,
         tile_x_offset: xto_siz,
         tile_y_offset: yto_siz,
-        components,
+        component_sizes: components,
     })
 }
 
@@ -395,55 +514,67 @@ fn coding_style_parameters(
     reader: &mut Reader,
     coding_style: &CodingStyleFlags,
 ) -> Option<CodingStyleParameters> {
-    let num_decomposition_levels = reader.read_byte()?;
-    let resolution_level = num_decomposition_levels.checked_add(1)?;
+    let num_decomposition_levels = reader.read_byte()? as u16;
+    let num_resolution_levels = num_decomposition_levels.checked_add(1)?;
     let code_block_width = reader.read_byte()?;
     let code_block_height = reader.read_byte()?;
     let code_block_style = CodeBlockStyle::from_u8(reader.read_byte()?);
     let transformation = WaveletTransform::from_u8(reader.read_byte()?).ok()?;
 
-    let mut precinct_sizes = Vec::new();
+    let mut precinct_exponents = Vec::new();
     if coding_style.has_precincts() {
-        for _ in 0..resolution_level {
+        // "Entropy coder with precincts defined below."
+        for _ in 0..num_resolution_levels {
+            // Table A.21.
             let precinct_size = reader.read_byte()?;
-            precinct_sizes.push(precinct_size);
+            let width_exp = precinct_size & 0xF;
+            let height_exp = precinct_size >> 4;
+            precinct_exponents.push((width_exp, height_exp));
+        }
+    } else {
+        // "Entropy coder, precincts with PPx = 15 and PPy = 15"
+        for _ in 0..num_resolution_levels {
+            precinct_exponents.push((15, 15));
         }
     }
 
     Some(CodingStyleParameters {
         num_decomposition_levels,
+        num_resolution_levels,
         code_block_width,
         code_block_height,
         code_block_style,
         transformation,
-        precinct_sizes,
+        precinct_exponents,
     })
 }
 
 /// COD marker (A.6.1).
-fn cod_marker(reader: &mut Reader) -> Option<CodingStyleInfo> {
+fn cod_marker(reader: &mut Reader) -> Option<GlobalCodingStyleInfo> {
     // Length.
     let _ = reader.read_u16()?;
 
-    let coding_style = CodingStyleFlags::from_u8(reader.read_byte()?);
+    let coding_style_flags = CodingStyleFlags::from_u8(reader.read_byte()?);
     let progression_order = ProgressionOrder::from_u8(reader.read_byte()?).ok()?;
 
     let num_layers = reader.read_u16()?;
     let mct = MultipleComponentTransform::from_u8(reader.read_byte()?).ok()?;
 
-    let coding_style_parameters = coding_style_parameters(reader, &coding_style)?;
+    let coding_style_parameters = coding_style_parameters(reader, &coding_style_flags)?;
 
-    Some(CodingStyleInfo {
-        style: coding_style,
+    Some(GlobalCodingStyleInfo {
         progression_order,
         num_layers,
         mct,
-        parameters: coding_style_parameters,
+        component_parameters: ComponentCodingStyle {
+            flags: coding_style_flags,
+            parameters: coding_style_parameters,
+        },
     })
 }
 
 /// COC marker (A.6.2).
-fn coc_marker(reader: &mut Reader, csiz: u16) -> Option<(u16, CodingStyleComponent)> {
+fn coc_marker(reader: &mut Reader, csiz: u16) -> Option<(u16, ComponentCodingStyle)> {
     // Length.
     let _ = reader.read_u16()?;
 
@@ -457,8 +588,8 @@ fn coc_marker(reader: &mut Reader, csiz: u16) -> Option<(u16, CodingStyleCompone
     // Read SPcoc - coding style parameters (same structure as SPcod from COD)
     let parameters = coding_style_parameters(reader, &coding_style)?;
 
-    let coc = CodingStyleComponent {
-        scoc: coding_style,
+    let coc = ComponentCodingStyle {
+        flags: coding_style,
         parameters,
     };
 

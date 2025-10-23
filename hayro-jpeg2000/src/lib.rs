@@ -6,6 +6,7 @@ use hayro_common::byte::Reader;
 
 pub mod boxes;
 mod codestream;
+mod progression;
 mod t2;
 mod tile;
 

@@ -1,14 +1,30 @@
 use crate::codestream::Header;
-use crate::tile::Tile;
+use crate::progression::{
+    IteratorInput, ProgressionIterator, ResolutionLevelLayerComponentPositionProgressionIterator,
+};
+use crate::tile::{Tile, TilePart};
 use hayro_common::bit::BitReader;
 
 pub(crate) fn process_tiles(tiles: &[Tile], header: &Header) -> Option<()> {
     for tile in tiles {
-        for part_tile in &tile.parts {
-            let mut reader = BitReader::new(&part_tile.data);
-            let zero_length = reader.read(1)?;
+        for tile_part in tile.tile_parts() {
+            process_packet(&tile_part, header)?;
         }
     }
+
+    Some(())
+}
+
+fn process_packet(tile: &TilePart, header: &Header) -> Option<()> {
+    let input = IteratorInput::new(
+        tile,
+        &header.component_infos,
+        header.global_coding_style.num_layers,
+    );
+    let iter = ResolutionLevelLayerComponentPositionProgressionIterator::new(input);
+
+    let mut reader = BitReader::new(&tile.data);
+    let zero_length = reader.read(1)?;
 
     Some(())
 }
