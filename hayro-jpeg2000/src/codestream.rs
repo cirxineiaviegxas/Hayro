@@ -1,5 +1,5 @@
 use crate::t2::process_tiles;
-use crate::tile::{IntRect, TilePart, TilePartInstance, read_tiles};
+use crate::tile::{IntRect, Tile, TileInstance, TilePart, read_tiles};
 use hayro_common::bit::BitReader;
 use hayro_common::byte::Reader;
 
@@ -57,7 +57,7 @@ fn read_header(reader: &mut Reader) -> Result<Header, &'static str> {
                 reader.read_marker()?;
                 qcd = Some(qcd_marker(reader).ok_or("failed to read QCD marker")?);
 
-                eprintln!("{:?}", qcd);
+                // eprintln!("{:?}", qcd);
             }
             markers::QCC => {
                 reader.read_marker()?;
@@ -304,7 +304,7 @@ impl SizeData {
             self.reference_grid_height,
         );
 
-        IntRect::new(x0, y0, x1, y1)
+        IntRect::from_ltrb(x0, y0, x1, y1)
     }
 
     pub(crate) fn tile_x_coord(&self, idx: u32) -> u32 {
@@ -338,7 +338,7 @@ pub(crate) struct ComponentInfo {
 impl ComponentInfo {
     /// Return the coordinates of the rectangle scaled by the horizontal and vertical
     /// resolution of the component.
-    pub(crate) fn scaled_rect(&self, tile_rect: IntRect) -> IntRect {
+    pub(crate) fn tile_component_rect(&self, tile_rect: IntRect) -> IntRect {
         if self.size_info.horizontal_resolution == 1 && self.size_info.vertical_resolution == 1 {
             tile_rect
         } else {
@@ -356,37 +356,43 @@ impl ComponentInfo {
                 .y1
                 .div_ceil(self.size_info.vertical_resolution as u32);
 
-            IntRect::new(t_x0, t_y0, t_x1, t_y1)
+            IntRect::from_ltrb(t_x0, t_y0, t_x1, t_y1)
         }
     }
 
-    pub(crate) fn tile_part_instance<'a>(
+    pub(crate) fn tile_instance<'a>(
         &'a self,
-        part: &'a TilePart<'a>,
+        tile: &Tile<'_>,
         resolution: u16,
-    ) -> TilePartInstance<'a> {
-        let dimensions = {
-            // See formula B-14.
-            let r = resolution;
-            let n_l = self
-                .coding_style_parameters
-                .parameters
-                .num_decomposition_levels;
-            let IntRect { x0, y0, x1, y1 } = self.scaled_rect(part.tile.rect);
+    ) -> TileInstance<'a> {
+        // See formula B-14.
+        let r = resolution;
+        let n_l = self
+            .coding_style_parameters
+            .parameters
+            .num_decomposition_levels;
+        let tile_component_rect = self.tile_component_rect(tile.rect);
 
-            let tx0 = x0.div_ceil(2u32.pow(n_l as u32 - r as u32));
-            let ty0 = y0.div_ceil(2u32.pow(n_l as u32 - r as u32));
-            let tx1 = x1.div_ceil(2u32.pow(n_l as u32 - r as u32));
-            let ty1 = y1.div_ceil(2u32.pow(n_l as u32 - r as u32));
+        let tx0 = tile_component_rect
+            .x0
+            .div_ceil(2u32.pow(n_l as u32 - r as u32));
+        let ty0 = tile_component_rect
+            .y0
+            .div_ceil(2u32.pow(n_l as u32 - r as u32));
+        let tx1 = tile_component_rect
+            .x1
+            .div_ceil(2u32.pow(n_l as u32 - r as u32));
+        let ty1 = tile_component_rect
+            .y1
+            .div_ceil(2u32.pow(n_l as u32 - r as u32));
 
-            IntRect::new(tx0, ty0, tx1, ty1)
-        };
+        let resolution_transformed_rect = IntRect::from_ltrb(tx0, ty0, tx1, ty1);
 
-        TilePartInstance {
-            tile_part: part,
+        TileInstance {
             resolution,
             component_info: self,
-            dimensions,
+            tile_component_rect,
+            resolution_transformed_rect,
         }
     }
 }
@@ -516,8 +522,8 @@ fn coding_style_parameters(
 ) -> Option<CodingStyleParameters> {
     let num_decomposition_levels = reader.read_byte()? as u16;
     let num_resolution_levels = num_decomposition_levels.checked_add(1)?;
-    let code_block_width = reader.read_byte()?;
-    let code_block_height = reader.read_byte()?;
+    let code_block_width = reader.read_byte()? + 2;
+    let code_block_height = reader.read_byte()? + 2;
     let code_block_style = CodeBlockStyle::from_u8(reader.read_byte()?);
     let transformation = WaveletTransform::from_u8(reader.read_byte()?).ok()?;
 
