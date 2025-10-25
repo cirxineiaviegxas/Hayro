@@ -1,8 +1,5 @@
-use crate::codestream::{
-    ComponentCodingStyle, ComponentInfo, ComponentSizeInfo, GlobalCodingStyleInfo, Header,
-    QuantizationInfo, ReaderExt, SizeData, markers,
-};
-use crate::t2::SubbandType;
+use crate::codestream::{ComponentInfo, Header, ReaderExt, SizeData, markers};
+use crate::packet::SubbandType;
 use hayro_common::byte::Reader;
 
 #[derive(Clone, Copy, Debug)]
@@ -198,13 +195,13 @@ impl<'a> TileInstance<'a> {
     pub(crate) fn code_blocks_x(&self) -> u32 {
         self.resolution_transformed_rect()
             .width()
-            .div_ceil(self.code_block_width() as u32)
+            .div_ceil(self.code_block_width())
     }
 
     pub(crate) fn code_blocks_y(&self) -> u32 {
         self.resolution_transformed_rect()
             .height()
-            .div_ceil(self.code_block_height() as u32)
+            .div_ceil(self.code_block_height())
     }
 
     pub(crate) fn code_block_width(&self) -> u32 {
@@ -246,12 +243,12 @@ pub(crate) fn read_tiles<'a>(
     reader: &mut Reader<'a>,
     main_header: &'a Header,
 ) -> Result<Vec<Tile<'a>>, &'static str> {
-    let mut parsed_tile_parts = {
+    let parsed_tile_parts = {
         let mut buf = vec![];
-        buf.push(read_tile_part(reader, &main_header).ok_or("failed to read first tile part")?);
+        buf.push(read_tile_part(reader, main_header).ok_or("failed to read first tile part")?);
 
         while reader.peek_marker() == Some(markers::SOT) {
-            buf.push(read_tile_part(reader, &main_header).ok_or("failed to read a tile part")?);
+            buf.push(read_tile_part(reader, main_header).ok_or("failed to read a tile part")?);
         }
 
         if reader.read_marker()? != markers::EOC {
@@ -266,7 +263,6 @@ pub(crate) fn read_tiles<'a>(
     };
 
     let mut tiles = (0..main_header.size_data.num_tiles() as usize)
-        .into_iter()
         .map(|idx| Tile::new(idx as u32, &main_header.size_data))
         .collect::<Vec<_>>();
 
@@ -365,8 +361,8 @@ pub(crate) fn sot_marker(reader: &mut Reader) -> Option<TilePartHeader> {
 mod tests {
     use super::*;
     use crate::codestream::{
-        CodeBlockStyle, CodingStyleFlags, CodingStyleParameters, QuantizationStyle,
-        WaveletTransform,
+        CodeBlockStyle, CodingStyleFlags, CodingStyleParameters, ComponentCodingStyle,
+        ComponentSizeInfo, QuantizationInfo, QuantizationStyle, WaveletTransform,
     };
 
     /// Test case for the example in B.4.

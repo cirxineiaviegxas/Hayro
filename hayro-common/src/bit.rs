@@ -94,6 +94,12 @@ impl<'a> BitReader<'a> {
         self.cur_pos % 8
     }
 
+    /// Get the tail (aligned to the current byte position) of the data.
+    #[inline]
+    pub fn tail(&self) -> &'a [u8] {
+        &self.data[self.byte_pos()..]
+    }
+
     /// Get the full byte (aligned to the byte boundary) of the current position.
     #[inline]
     pub fn cur_byte(&self) -> Option<u8> {
