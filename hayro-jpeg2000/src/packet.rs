@@ -211,8 +211,6 @@ fn process_packet<'a, T: ProgressionIterator<'a>>(
                     return None;
                 };
 
-                // TODO: Everything below here still broken
-
                 code_block.number_of_coding_passes += added_coding_passes;
 
                 eprintln!("number of coding passes: {}", added_coding_passes);
@@ -244,7 +242,7 @@ fn process_packet<'a, T: ProgressionIterator<'a>>(
             }
         }
 
-        // TODO: Support multiple codeword segments
+        // TODO: Support multiple codeword segments (10.7.2)
 
         reader.align();
         let packet_data = reader.tail();
