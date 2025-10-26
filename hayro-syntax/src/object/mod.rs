@@ -1,6 +1,7 @@
 //! Parsing and reading from PDF objects.
 
 pub use crate::object::array::Array;
+pub use crate::object::date::DateTime;
 pub use crate::object::dict::Dict;
 pub use crate::object::name::Name;
 use crate::object::name::skip_name_like;
@@ -15,6 +16,7 @@ use crate::reader::{Readable, ReaderContext, ReaderExt, Skippable};
 use std::fmt::Debug;
 
 mod bool;
+mod date;
 mod null;
 mod number;
 mod rect;
