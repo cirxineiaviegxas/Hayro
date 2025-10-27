@@ -1,9 +1,13 @@
+// TODO: Remove
+#![allow(warnings)]
+
 use crate::boxes::{
     COLOUR_SPECIFICATION, CONTIGUOUS_CODESTREAM, FILE_TYPE, IMAGE_HEADER, JP2_HEADER,
     JP2_SIGNATURE, read_box,
 };
 use hayro_common::byte::Reader;
 
+mod arithmetic_decoder;
 pub mod boxes;
 mod codestream;
 mod packet;
