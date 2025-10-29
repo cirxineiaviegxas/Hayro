@@ -1,3 +1,4 @@
+use crate::bitplane;
 use crate::codestream::{Header, ProgressionOrder};
 use crate::progression::{
     IteratorInput, ProgressionIterator, ResolutionLevelLayerComponentPositionProgressionIterator,
@@ -20,9 +21,9 @@ pub(crate) enum SubbandType {
 }
 
 struct SubBand<'a> {
-    subband_type: SubbandType,
-    rect: IntRect,
-    precincts: Vec<Precinct<'a>>,
+    pub(crate) subband_type: SubbandType,
+    pub(crate) rect: IntRect,
+    pub(crate) precincts: Vec<Precinct<'a>>,
 }
 
 #[derive(Clone)]
@@ -34,16 +35,16 @@ struct Precinct<'a> {
 }
 
 #[derive(Clone)]
-struct CodeBlock<'a> {
-    area: IntRect,
-    x_idx: u32,
-    y_idx: u32,
-    layer_data: Vec<&'a [u8]>,
-    has_been_included: bool,
-    missing_bit_planes: u8,
-    number_of_coding_passes: u32,
-    l_block: u32,
-    coefficients: Vec<u8>,
+pub(crate) struct CodeBlock<'a> {
+    pub(crate) area: IntRect,
+    pub(crate) x_idx: u32,
+    pub(crate) y_idx: u32,
+    pub(crate) layer_data: Vec<&'a [u8]>,
+    pub(crate) has_been_included: bool,
+    pub(crate) missing_bit_planes: u8,
+    pub(crate) number_of_coding_passes: u32,
+    pub(crate) l_block: u32,
+    pub(crate) coefficients: Vec<i16>,
 }
 
 #[derive(Clone)]
@@ -80,13 +81,40 @@ fn process_tile<'a, T: ProgressionIterator<'a>>(
     let mut component_data = build_component_data(tile, header);
 
     for tile_part in tile.tile_parts() {
-        process_packet(&tile_part, header, &mut component_data, &mut iterator)?;
+        parse_packet(&tile_part, header, &mut component_data, &mut iterator)?;
+    }
+
+    for (component_data, component_info) in
+        component_data.iter_mut().zip(header.component_infos.iter())
+    {
+        for resolution_level in &mut component_data.subbands {
+            for subband in resolution_level {
+                for precinct in &mut subband.precincts {
+                    for codeblock in &mut precinct.code_blocks {
+                        eprintln!(
+                            "decoding block {}x{}",
+                            codeblock.area.width(),
+                            codeblock.area.height()
+                        );
+                        bitplane::decode(
+                            codeblock,
+                            subband.subband_type,
+                            &component_info
+                                .coding_style_parameters
+                                .parameters
+                                .code_block_style,
+                        )?;
+                        eprintln!("{:?}", codeblock.coefficients);
+                    }
+                }
+            }
+        }
     }
 
     Some(())
 }
 
-fn process_packet<'a, T: ProgressionIterator<'a>>(
+fn parse_packet<'a, T: ProgressionIterator<'a>>(
     tile: &TilePart<'a>,
     header: &Header,
     component_data: &mut [ComponentData<'a>],
@@ -364,6 +392,7 @@ fn build_precincts(
             let blocks = build_precinct_code_blocks(
                 precinct_rect,
                 tile_instance,
+                sub_band_rect,
                 code_blocks_y,
                 code_blocks_x,
                 header.global_coding_style.num_layers,
@@ -393,6 +422,7 @@ fn build_precincts(
 fn build_precinct_code_blocks(
     precinct_rect: IntRect,
     tile_instance: &TileInstance,
+    sub_band_rect: IntRect,
     code_blocks_x: u32,
     code_blocks_y: u32,
     num_layers: u16,
@@ -415,7 +445,7 @@ fn build_precinct_code_blocks(
             let width = u32::min(code_block_width, precinct_rect.x1 - x);
             let height = u32::min(code_block_height, precinct_rect.y1 - y);
 
-            let area = IntRect::from_xywh(x, y, width, height);
+            let area = IntRect::from_xywh(x, y, width, height).intersect(sub_band_rect);
 
             blocks.push(CodeBlock {
                 x_idx,
