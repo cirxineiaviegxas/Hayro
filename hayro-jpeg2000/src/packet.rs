@@ -1,5 +1,7 @@
 use crate::bitmap::{Bitmap, ChannelContainer, ChannelData};
-use crate::codestream::{Header, MultipleComponentTransform, ProgressionOrder, QuantizationStyle};
+use crate::codestream::{
+    Header, MultipleComponentTransform, ProgressionOrder, QuantizationStyle, WaveletTransform,
+};
 use crate::progression::{
     IteratorInput, ProgressionIterator, ResolutionLevelLayerComponentPositionProgressionIterator,
 };
@@ -82,14 +84,16 @@ pub(crate) fn process_tiles(tiles: &[Tile], header: &Header) -> Option<Vec<Chann
             header.global_coding_style.num_layers,
         );
 
-        match header.global_coding_style.progression_order {
+        let mut samples = match header.global_coding_style.progression_order {
             ProgressionOrder::ResolutionLayerComponentPosition => {
                 let iter =
                     ResolutionLevelLayerComponentPositionProgressionIterator::new(iter_input);
-                process_tile(tile, header, iter, &mut channels)?;
+                process_tile(tile, header, iter)?
             }
             _ => unimplemented!(),
-        }
+        };
+
+        save_samples(tile, header, &mut channels, &mut samples)?;
     }
 
     Some(channels)
@@ -99,18 +103,17 @@ fn process_tile<'a, T: ProgressionIterator<'a>>(
     tile: &'a Tile<'a>,
     header: &Header,
     mut iterator: T,
-    channels: &mut [ChannelData],
-) -> Option<()> {
+) -> Option<Vec<Vec<f32>>> {
     let mut component_data = build_component_data(tile, header);
 
     for tile_part in tile.tile_parts() {
         parse_packet(&tile_part, header, &mut component_data, &mut iterator)?;
     }
 
-    for ((component_data, component_info), channel_data) in component_data
-        .iter_mut()
-        .zip(header.component_infos.iter())
-        .zip(channels.iter_mut())
+    let mut samples = vec![];
+
+    for (component_data, component_info) in
+        component_data.iter_mut().zip(header.component_infos.iter())
     {
         for resolution_level in &mut component_data.subbands {
             for subband in resolution_level {
@@ -160,19 +163,66 @@ fn process_tile<'a, T: ProgressionIterator<'a>>(
             }
         }
 
-        let mut samples = idwt::apply(
+        samples.push(idwt::apply(
             &component_data.subbands,
             component_info
                 .coding_style_parameters
                 .parameters
                 .transformation,
-        );
+        ));
+    }
 
-        if header.global_coding_style.mct == MultipleComponentTransform::Used {
-            unimplemented!();
+    Some(samples)
+}
+
+fn save_samples<'a>(
+    tile: &'a Tile<'a>,
+    header: &Header,
+    channels: &mut [ChannelData],
+    samples: &mut [Vec<f32>],
+) -> Option<()> {
+    if header.global_coding_style.mct == MultipleComponentTransform::Used {
+        let [s0, s1, s2] = samples else { return None };
+
+        let transform = header.component_infos[0].wavelet_transform();
+
+        if transform != header.component_infos[1].wavelet_transform()
+            || header.component_infos[1].wavelet_transform()
+                != header.component_infos[2].wavelet_transform()
+        {
+            return None;
         }
 
-        for sample in &mut samples {
+        let len = s0.len();
+
+        if len != s1.len() || s1.len() != s2.len() {
+            return None;
+        }
+
+        match transform {
+            WaveletTransform::Irreversible97 => {
+                unimplemented!()
+            }
+            WaveletTransform::Reversible53 => {
+                for ((y0, y1), y2) in s0.iter_mut().zip(s1.iter_mut()).zip(s2.iter_mut()) {
+                    let i1 = *y0 - ((*y2 + *y1) / 4.0).floor();
+                    let i0 = *y2 + i1;
+                    let i2 = *y1 + i1;
+
+                    *y0 = i0;
+                    *y1 = i1;
+                    *y2 = i2;
+                }
+            }
+        }
+    }
+
+    for ((samples, component_info), channel_data) in samples
+        .iter_mut()
+        .zip(header.component_infos.iter())
+        .zip(channels.iter_mut())
+    {
+        for sample in samples.iter_mut() {
             *sample += (1 << component_info.size_info.precision - 1) as f32;
         }
 
