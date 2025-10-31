@@ -12,6 +12,7 @@ pub(crate) mod bitplane;
 pub mod boxes;
 mod codestream;
 mod dequantize;
+pub(crate) mod idwt;
 mod packet;
 mod progression;
 mod tag_tree;
