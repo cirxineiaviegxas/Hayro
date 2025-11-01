@@ -1,3 +1,5 @@
+use crate::boxes::PALETTE;
+use crate::codestream::markers::{EPH, SOP};
 use crate::codestream::{ComponentInfo, Header, ReaderExt, SizeData, markers};
 use crate::packet::SubbandType;
 use hayro_common::byte::Reader;
@@ -158,14 +160,6 @@ impl<'a> TileInstance<'a> {
         IntRect::from_ltrb(tbx_0, tby_0, tbx_1, tby_1)
     }
 
-    pub(crate) fn precinct_width(&self) -> u32 {
-        2u32.pow(self.ppx() as u32)
-    }
-
-    pub(crate) fn precinct_height(&self) -> u32 {
-        2u32.pow(self.ppy() as u32)
-    }
-
     pub(crate) fn num_precincts_x(&self) -> u32 {
         // See B-16.
         let IntRect { x0, x1, .. } = self.resolution_transformed_rect;
@@ -173,7 +167,7 @@ impl<'a> TileInstance<'a> {
         if x0 == x1 {
             0
         } else {
-            x1.div_ceil(self.precinct_width()) - x0 / self.precinct_width()
+            x1.div_ceil(2u32.pow(self.ppx() as u32)) - x0 / 2u32.pow(self.ppx() as u32)
         }
     }
 
@@ -184,24 +178,12 @@ impl<'a> TileInstance<'a> {
         if y0 == y1 {
             0
         } else {
-            y1.div_ceil(self.precinct_height()) - y0 / self.precinct_height()
+            y1.div_ceil(2u32.pow(self.ppy() as u32)) - y0 / 2u32.pow(self.ppy() as u32)
         }
     }
 
     pub(crate) fn num_precincts(&self) -> u32 {
         self.num_precincts_x() * self.num_precincts_y()
-    }
-
-    pub(crate) fn code_blocks_x(&self) -> u32 {
-        self.resolution_transformed_rect()
-            .width()
-            .div_ceil(self.code_block_width())
-    }
-
-    pub(crate) fn code_blocks_y(&self) -> u32 {
-        self.resolution_transformed_rect()
-            .height()
-            .div_ceil(self.code_block_height())
     }
 
     pub(crate) fn code_block_width(&self) -> u32 {
@@ -292,7 +274,20 @@ fn read_tile_part<'a>(reader: &mut Reader<'a>, main_header: &Header) -> Option<P
 
     let (mut tile_part_reader, header) = {
         let sot_marker = sot_marker(reader)?;
-        let data = if sot_marker.tile_part_length == 0 {
+
+        if main_header
+            .global_coding_style
+            .component_parameters
+            .flags
+            .may_use_sop_markers()
+        {
+            if reader.peek_marker() == Some(SOP) {
+                reader.read_marker().ok()?;
+                reader.skip_bytes(4)?;
+            }
+        }
+
+        let mut data = if sot_marker.tile_part_length == 0 {
             // Data goes until EOC.
             let data = reader.tail()?;
             reader.jump_to_end();
@@ -308,6 +303,21 @@ fn read_tile_part<'a>(reader: &mut Reader<'a>, main_header: &Header) -> Option<P
 
             data
         };
+
+        if main_header
+            .global_coding_style
+            .component_parameters
+            .flags
+            .uses_eph_marker()
+        {
+            let (head, tail) = data.split_at(data.len() - 2);
+
+            if tail[1] != EPH {
+                return None;
+            }
+
+            data = head;
+        }
 
         (Reader::new(data), sot_marker)
     };

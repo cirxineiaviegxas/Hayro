@@ -60,8 +60,6 @@ fn read_header(reader: &mut Reader, metadata: ImageMetadata) -> Result<Header, &
             markers::QCD => {
                 reader.read_marker()?;
                 qcd = Some(qcd_marker(reader).ok_or("failed to read QCD marker")?);
-
-                // eprintln!("{:?}", qcd);
             }
             markers::QCC => {
                 reader.read_marker()?;
@@ -171,15 +169,15 @@ impl CodingStyleFlags {
         CodingStyleFlags { raw: value }
     }
 
-    fn has_precincts(&self) -> bool {
+    pub(crate) fn has_precincts(&self) -> bool {
         (self.raw & 0x01) != 0
     }
 
-    fn uses_sop_markers(&self) -> bool {
+    pub(crate) fn may_use_sop_markers(&self) -> bool {
         (self.raw & 0x01) != 0
     }
 
-    fn uses_eph_marker(&self) -> bool {
+    pub(crate) fn uses_eph_marker(&self) -> bool {
         (self.raw & 0x02) != 0
     }
 }
@@ -562,10 +560,6 @@ fn coding_style_parameters(
         for _ in 0..num_resolution_levels {
             precinct_exponents.push((15, 15));
         }
-    }
-
-    if coding_style.uses_sop_markers() || coding_style.uses_eph_marker() {
-        unimplemented!();
     }
 
     Some(CodingStyleParameters {
