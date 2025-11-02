@@ -1,6 +1,6 @@
 use crate::ImageMetadata;
 use crate::bitmap::{Bitmap, ChannelData};
-use crate::packet::process_tiles;
+use crate::packet::{SubbandType, process_tiles};
 use crate::tile::{IntRect, Tile, TileInstance, read_tiles};
 use hayro_common::byte::Reader;
 
@@ -244,12 +244,18 @@ pub(crate) struct CodingStyleParameters {
     pub(crate) precinct_exponents: Vec<(u8, u8)>,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct StepSize {
+    pub(crate) mantissa: u16,
+    pub(crate) exponent: u16,
+}
+
 /// Common quantization parameters (A.6.4 and A.6.5).
 #[derive(Clone, Debug)]
 pub(crate) struct QuantizationInfo {
     pub(crate) quantization_style: QuantizationStyle,
     pub(crate) guard_bits: u8,
-    pub(crate) step_sizes: Vec<u16>,
+    pub(crate) step_sizes: Vec<StepSize>,
 }
 
 /// Default values for coding style (A.6.1).
@@ -370,6 +376,49 @@ impl ComponentInfo {
                 .div_ceil(self.size_info.vertical_resolution as u32);
 
             IntRect::from_ltrb(t_x0, t_y0, t_x1, t_y1)
+        }
+    }
+
+    pub(crate) fn exponent_mantissa(
+        &self,
+        subband_type: SubbandType,
+        resolution: u16,
+    ) -> (u16, u16) {
+        let n_ll = self
+            .coding_style_parameters
+            .parameters
+            .num_decomposition_levels;
+
+        let sb_index = match subband_type {
+            // TODO: Shouldn't be reached.
+            SubbandType::LowLow => u16::MAX,
+            SubbandType::HighLow => 0,
+            SubbandType::LowHigh => 1,
+            SubbandType::HighHigh => 2,
+        };
+
+        let step_sizes = &self.quantization_info.step_sizes;
+        match self.quantization_info.quantization_style {
+            QuantizationStyle::NoQuantization | QuantizationStyle::ScalarExpounded => {
+                let entry = if resolution == 0 {
+                    step_sizes[0]
+                } else {
+                    step_sizes[(1 + (resolution - 1) * 3 + sb_index) as usize]
+                };
+
+                (entry.exponent, entry.mantissa)
+            }
+            QuantizationStyle::ScalarDerived => {
+                let e_0 = step_sizes[0].exponent;
+                let mantissa = step_sizes[0].mantissa;
+                let n_b = if resolution == 0 {
+                    n_ll
+                } else {
+                    n_ll + 1 - resolution
+                };
+
+                (e_0 - n_ll + n_b, mantissa)
+            }
         }
     }
 
@@ -696,24 +745,35 @@ fn quantization_parameters(
 ) -> Option<QuantizationInfo> {
     let mut step_sizes = Vec::new();
 
+    let irreversible = |val: u16| {
+        let exponent = (val >> 11);
+        let mantissa = (val & ((1 << 11) - 1));
+
+        StepSize { exponent, mantissa }
+    };
+
     match quantization_style {
         QuantizationStyle::NoQuantization => {
             // 8 bits per band (5 bits exponent, 3 bits reserved)
             for _ in 0..remaining_bytes {
                 let value = reader.read_byte()? as u16;
-                step_sizes.push(value);
+                step_sizes.push(StepSize {
+                    // Unused.
+                    mantissa: 0,
+                    exponent: (value >> 3),
+                });
             }
         }
         QuantizationStyle::ScalarDerived => {
             let value = reader.read_u16()?;
-            step_sizes.push(value);
+            step_sizes.push(irreversible(value));
         }
         QuantizationStyle::ScalarExpounded => {
-            // 16 bits per band
             let num_bands = remaining_bytes / 2;
             for _ in 0..num_bands {
                 let value = reader.read_u16()?;
-                step_sizes.push(value);
+
+                step_sizes.push(irreversible(value));
             }
         }
     }

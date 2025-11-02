@@ -129,10 +129,19 @@ fn process_tile<'a>(
     for (component_data, component_info) in
         component_data.iter_mut().zip(tile.component_info.iter())
     {
-        for resolution_level in &mut component_data.subbands {
+        for (resolution, resolution_level) in component_data.subbands.iter_mut().enumerate() {
             for subband in resolution_level {
+                let dequantization_step =
+                    dequantization_factor(subband.subband_type, resolution as u16, component_info);
+
                 for precinct in &mut subband.precincts {
                     for codeblock in &mut precinct.code_blocks {
+                        let num_bitplanes = {
+                            let (exponent, _) = component_info
+                                .exponent_mantissa(subband.subband_type, resolution as u16);
+                            // Equation (E-2)
+                            component_info.quantization_info.guard_bits as u16 + exponent - 1
+                        };
                         // eprintln!(
                         //     "decoding block {}x{}",
                         //     codeblock.area.width(),
@@ -141,17 +150,14 @@ fn process_tile<'a>(
                         bitplane::decode(
                             codeblock,
                             subband.subband_type,
+                            num_bitplanes,
                             &component_info
                                 .coding_style_parameters
                                 .parameters
                                 .code_block_style,
                         )?;
 
-                        if component_info.quantization_info.quantization_style
-                            != QuantizationStyle::NoQuantization
-                        {
-                            panic!("quantization not implemented yet.");
-                        }
+                        // eprintln!("{:?}", codeblock.coefficients);
 
                         // Copy the coefficients into the subband.
 
@@ -170,6 +176,10 @@ fn process_tile<'a>(
 
                             for (input, output) in in_row.iter().zip(out_row.iter_mut()) {
                                 *output = *input as f32;
+
+                                if let Some(q) = dequantization_step {
+                                    *output *= q;
+                                }
                             }
                         }
                     }
@@ -192,6 +202,33 @@ fn process_tile<'a>(
     }
 
     Some(samples)
+}
+
+fn dequantization_factor(
+    subband_type: SubbandType,
+    resolution: u16,
+    component_info: &ComponentInfo,
+) -> Option<f32> {
+    if component_info.quantization_info.quantization_style == QuantizationStyle::NoQuantization {
+        return None;
+    }
+
+    let (exponent, mantissa) = component_info.exponent_mantissa(subband_type, resolution);
+
+    let r_b = {
+        let log_gain = match subband_type {
+            SubbandType::LowLow => 0,
+            SubbandType::LowHigh => 1,
+            SubbandType::HighLow => 1,
+            SubbandType::HighHigh => 2,
+        };
+
+        component_info.size_info.precision as u16 + log_gain
+    };
+    let delta_b = 2.0f32.powf(r_b as f32 - exponent as f32)
+        * (1.0 + (mantissa as f32) / (2u32.pow(11) as f32));
+
+    Some(delta_b)
 }
 
 fn save_samples<'a>(
@@ -225,7 +262,15 @@ fn save_samples<'a>(
 
         match transform {
             WaveletTransform::Irreversible97 => {
-                unimplemented!()
+                for ((y0, y1), y2) in s0.iter_mut().zip(s1.iter_mut()).zip(s2.iter_mut()) {
+                    let i0 = *y0 + 1.402 * *y2;
+                    let i1 = *y0 - 0.34413 * *y1 - 0.71414 * *y2;
+                    let i2 = *y0 + 1.772 * *y1;
+
+                    *y0 = i0;
+                    *y1 = i1;
+                    *y2 = i2;
+                }
             }
             WaveletTransform::Reversible53 => {
                 for ((y0, y1), y2) in s0.iter_mut().zip(s1.iter_mut()).zip(s2.iter_mut()) {
