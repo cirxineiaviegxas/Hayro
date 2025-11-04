@@ -11,7 +11,7 @@ use crate::object::{Object, ObjectLike};
 use crate::reader::Reader;
 use crate::reader::{Readable, ReaderContext, ReaderExt, Skippable};
 use crate::util::OptionLog;
-use log::{info, warn};
+use log::warn;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
@@ -297,13 +297,8 @@ fn parse_fallback<'a>(r: &mut Reader<'a>, dict: &Dict<'a>) -> Option<Stream<'a>>
 
             let stream = Stream::new(data, dict.clone());
 
-            // Try decoding the stream to see if it is valid.
-            if stream.decoded().is_ok() {
-                info!("managed to reconstruct the stream");
-
-                // Seems like we found the end!
-                return Some(stream);
-            }
+            // Seems like we found the end!
+            return Some(stream);
         } else {
             r.read_byte()?;
         }
