@@ -1,5 +1,5 @@
 use crate::bitmap::ChannelData;
-use crate::bitplane::BitplaneDecodeContext;
+use crate::bitplane::CodeBlockDecodeContext;
 use crate::codestream::markers::{EPH, SOP};
 use crate::codestream::{
     ComponentInfo, Header, MultipleComponentTransform, ProgressionOrder, QuantizationStyle,
@@ -64,7 +64,6 @@ pub(crate) struct CodeBlock<'a> {
     pub(crate) missing_bit_planes: u8,
     pub(crate) number_of_coding_passes: u32,
     pub(crate) l_block: u32,
-    pub(crate) coefficients: Vec<i16>,
 }
 
 pub(crate) fn process_tiles(
@@ -153,7 +152,7 @@ fn process_tile<'a>(
     // Create the context once and then reuse it so that we can reuse the
     // allocations.
     // TODO: Reuse across different tiles.
-    let mut b_ctx = BitplaneDecodeContext::new();
+    let mut c_ctx = CodeBlockDecodeContext::new();
 
     for (component_data, component_info) in
         component_data.iter_mut().zip(tile.component_info.iter())
@@ -162,12 +161,12 @@ fn process_tile<'a>(
             &mut component_data.first_ll_sub_band,
             0,
             component_info,
-            &mut b_ctx,
+            &mut c_ctx,
         )?;
 
         for (resolution, decomposition) in component_data.decompositions.iter_mut().enumerate() {
             for sub_band in &mut decomposition.sub_bands {
-                process_sub_band(sub_band, resolution as u16 + 1, component_info, &mut b_ctx)?;
+                process_sub_band(sub_band, resolution as u16 + 1, component_info, &mut c_ctx)?;
             }
         }
 
@@ -190,7 +189,7 @@ fn process_sub_band(
     sub_band: &mut SubBand,
     resolution: u16,
     component_info: &ComponentInfo,
-    b_ctx: &mut BitplaneDecodeContext,
+    b_ctx: &mut CodeBlockDecodeContext,
 ) -> Result<(), &'static str> {
     let dequantization_step =
         dequantization_factor(sub_band.sub_band_type, resolution, component_info);
@@ -215,23 +214,33 @@ fn process_sub_band(
                 b_ctx,
             )?;
 
-            // Copy the coefficients into the sub-band.
+            // Turn the signs and magnitudes into singular coefficients and
+            // copy them into the sub-band.
 
             let x_offset = codeblock.rect.x0 - sub_band.rect.x0;
             let y_offset = codeblock.rect.y0 - sub_band.rect.y0;
 
-            for (y, in_row) in codeblock
-                .coefficients
-                .chunks_exact(codeblock.rect.width() as usize)
-                .enumerate()
-            {
+            let sign_iter = b_ctx.signs().chunks_exact(codeblock.rect.width() as usize);
+            let magnitude_iter = b_ctx
+                .magnitudes()
+                .chunks_exact(codeblock.rect.width() as usize);
+
+            for (y, (signs, magnitudes)) in sign_iter.zip(magnitude_iter).enumerate() {
                 let out_row = &mut sub_band.coefficients[((y_offset + y as u32)
                     * sub_band.rect.width())
                     as usize
                     + x_offset as usize..];
 
-                for (input, output) in in_row.iter().zip(out_row.iter_mut()) {
-                    *output = *input as f32;
+                for ((output, sign), magnitude) in out_row
+                    .iter_mut()
+                    .zip(signs.iter().copied())
+                    .zip(magnitudes.iter().copied())
+                {
+                    *output = magnitude.get() as f32;
+
+                    if sign != 0 {
+                        *output = -*output;
+                    }
 
                     if let Some(q) = dequantization_step {
                         *output *= q;
@@ -827,7 +836,6 @@ fn build_precinct_code_blocks(
                 missing_bit_planes: 0,
                 l_block: 3,
                 number_of_coding_passes: 0,
-                coefficients: vec![],
             });
 
             x += code_block_width;
