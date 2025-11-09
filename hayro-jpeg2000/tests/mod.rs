@@ -127,6 +127,26 @@ fn jasper_rgba_u8_cbstyle_02_resetprob() {
 }
 
 #[test]
+fn jasper_rgba_u8_cbstyle_04_termall() {
+    run_asset_test("jasper-rgba-u8-cbstyle-04-termall.jp2");
+}
+
+#[test]
+fn jasper_rgba_u8_cbstyle_04_termall_layers() {
+    run_asset_test("jasper-rgba-u8-cbstyle-04-termall-layers.jp2");
+}
+
+#[test]
+fn jasper_rgba_u8_cbstyle_06_resetprob_termall() {
+    run_asset_test("jasper-rgba-u8-cbstyle-06-resetprob-termall.jp2");
+}
+
+#[test]
+fn jasper_rgba_u8_cbstyle_36_termall_segsym() {
+    run_asset_test("jasper-rgba-u8-cbstyle-36-termall-segsym.jp2");
+}
+
+#[test]
 fn jasper_rgba_u8_cbstyle_08_vcausal() {
     run_asset_test("jasper-rgba-u8-cbstyle-08-vcausal.jp2");
 }
