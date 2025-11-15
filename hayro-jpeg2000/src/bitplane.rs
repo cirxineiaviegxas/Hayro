@@ -34,12 +34,19 @@ pub(crate) fn decode(
         return Ok(());
     }
 
+    // Validate the number of bitplanes.
+    if code_block.missing_bit_planes as u32
+        + 1
+        + (code_block.number_of_coding_passes - 1).div_ceil(3)
+        > num_bitplanes as u32
+    {
+        return Err("mismatch between indicated number of bitplanes and actual ones");
+    }
+
     if num_bitplanes as u32 > BITPLANE_BIT_SIZE {
         // If we want to adjust this, we need to change how `ComponentBits`
         // works.
         return Err("number of bitplanes is too high");
-    } else if 1 + (code_block.number_of_coding_passes - 1).div_ceil(3) > BITPLANE_BIT_SIZE {
-        return Err("code block has too many coding passes");
     }
 
     let mut layer_buffer = std::mem::take(&mut ctx.layer_buffer).unwrap_or_default();
@@ -998,7 +1005,7 @@ mod tests {
         decode(
             &code_block,
             SubBandType::HighLow,
-            5,
+            10,
             &CodeBlockStyle::default(),
             &mut ctx,
             &[Layer {
