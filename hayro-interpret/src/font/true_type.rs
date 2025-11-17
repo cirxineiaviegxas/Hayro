@@ -1,7 +1,8 @@
 use crate::CacheKey;
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
+use crate::font::cmap::CMap;
 use crate::font::generated::{glyph_names, mac_os_roman, mac_roman};
-use crate::font::{Encoding, FontFlags};
+use crate::font::{Encoding, FontFlags, glyph_name_to_unicode, read_to_unicode, unicode_from_name};
 use crate::util::{CodeMapExt, OptionLog};
 use hayro_syntax::object::Array;
 use hayro_syntax::object::Dict;
@@ -32,6 +33,7 @@ pub(crate) struct TrueTypeFont {
     cff_blob: Option<CffFontBlob>,
     differences: HashMap<u8, String>,
     cached_mappings: RefCell<HashMap<u8, GlyphId>>,
+    to_unicode: Option<CMap>,
 }
 
 impl TrueTypeFont {
@@ -66,6 +68,8 @@ impl TrueTypeFont {
             .ok()
             .and_then(|cff| CffFontBlob::new(Arc::new(cff.offset_data().as_ref().to_vec())));
 
+        let to_unicode = read_to_unicode(dict);
+
         Some(Self {
             base_font,
             cache_key,
@@ -76,6 +80,7 @@ impl TrueTypeFont {
             font_flags,
             encoding,
             cached_mappings: RefCell::new(HashMap::new()),
+            to_unicode,
         })
     }
 
@@ -125,27 +130,10 @@ impl TrueTypeFont {
                         && record.encoding_id() == 1
                         && let Ok(subtable) = record.subtable(cmap.offset_data())
                     {
-                        let convert = |input: &str| {
-                            u32::from_str_radix(input, 16)
-                                .ok()
-                                .and_then(char::from_u32)
-                                .map(|s| s.to_string())
-                        };
-
                         glyph = glyph.or_else(|| {
                             glyph_names::get(lookup)
                                 .map(|n| n.to_string())
-                                .or_else(|| {
-                                    lookup
-                                        .starts_with("uni")
-                                        .then(|| lookup.get(3..).and_then(convert))
-                                        .or_else(|| {
-                                            lookup
-                                                .starts_with("u")
-                                                .then(|| lookup.get(1..).and_then(convert))
-                                        })
-                                        .flatten()
-                                })
+                                .or_else(|| unicode_from_name(lookup).map(|n| n.to_string()))
                                 .and_then(|n| n.chars().next())
                                 .and_then(|c| subtable.map_codepoint(c))
                                 .filter(|g| *g != GlyphId::NOTDEF)
@@ -217,6 +205,22 @@ impl TrueTypeFont {
             })
             .warn_none(&format!("failed to find advance width for code {code}"))
             .unwrap_or(0.0)
+    }
+
+    pub(crate) fn char_code_to_unicode(&self, code: u32) -> Option<char> {
+        if let Some(to_unicode) = &self.to_unicode
+            && let Some(unicode) = to_unicode.lookup_code(code)
+        {
+            char::from_u32(unicode)
+        } else {
+            self.code_to_name(code as u8)
+                .and_then(glyph_name_to_unicode)
+        }
+
+        // TODO: The test PDFs below fail (but mutool can render them correctly).
+        // There is likely some other strategy that requires processing the font tables
+        // hayro-tests/pdfs/custom/font_truetype_7.pdf
+        // hayro-tests/pdfs/custom/font_truetype_6.pdf
     }
 }
 

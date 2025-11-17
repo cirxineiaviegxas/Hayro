@@ -110,4 +110,12 @@ impl OutlineFont {
             OutlineFont::Type0(t) => t.outline_glyph(glyph),
         }
     }
+
+    pub(crate) fn char_code_to_unicode(&self, char_code: u32) -> Option<char> {
+        match self {
+            OutlineFont::Type1(t) => t.char_code_to_unicode(char_code),
+            OutlineFont::TrueType(t) => t.char_code_to_unicode(char_code),
+            OutlineFont::Type0(t) => t.char_code_to_unicode(char_code),
+        }
+    }
 }

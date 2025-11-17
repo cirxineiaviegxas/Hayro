@@ -1,6 +1,7 @@
 use crate::CacheKey;
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::font::cmap::{CMap, parse_cmap};
+use crate::font::read_to_unicode;
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
 use hayro_syntax::object::Stream;
@@ -23,6 +24,7 @@ pub(crate) struct Type0Font {
     dw2: (f32, f32),
     widths: HashMap<u32, f32>,
     encoding: CMap,
+    to_unicode: Option<CMap>,
     widths2: HashMap<u32, [f32; 3]>,
     cid_to_gid_map: CidToGIdMap,
 }
@@ -54,10 +56,13 @@ impl Type0Font {
         let cid_to_gid_map = CidToGIdMap::new(&descendant_font).unwrap_or_default();
         let cache_key = dict.cache_key();
 
+        let to_unicode = read_to_unicode(dict);
+
         Some(Self {
             cache_key,
             horizontal,
             encoding: cmap,
+            to_unicode,
             font_type,
             dw: default_width,
             dw2,
@@ -133,6 +138,18 @@ impl Type0Font {
         } else {
             Vec2::new(-self.horizontal_width(cid) as f64 / 2.0, -self.dw2.0 as f64)
         }
+    }
+
+    pub(crate) fn char_code_to_unicode(&self, code: u32) -> Option<char> {
+        if let Some(to_unicode) = &self.to_unicode
+            && let Some(unicode) = to_unicode.lookup_code(code)
+        {
+            return char::from_u32(unicode);
+        }
+
+        // TODO: Implement CID collection mappings (Adobe-Japan1, Adobe-GB1, etc.).
+
+        None
     }
 }
 

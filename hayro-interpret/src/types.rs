@@ -165,6 +165,8 @@ pub enum GlyphDrawMode {
     Fill,
     /// Draw using a stroke.
     Stroke(StrokeProps),
+    /// Invisible text (for text extraction but not visual rendering).
+    Invisible,
 }
 
 /// Stroke properties.

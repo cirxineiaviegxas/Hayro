@@ -4,17 +4,19 @@ use crate::cache::Cache;
 use crate::context::Context;
 use crate::device::Device;
 use crate::font::cid::Type0Font;
-use crate::font::generated::{mac_expert, mac_os_roman, mac_roman, standard, win_ansi};
+use crate::font::generated::{
+    glyph_names, mac_expert, mac_os_roman, mac_roman, standard, win_ansi,
+};
 use crate::font::true_type::TrueTypeFont;
 use crate::font::type1::Type1Font;
 use crate::font::type3::Type3;
 use crate::interpret::state::State;
 use crate::{CacheKey, FontResolverFn, InterpreterSettings, Paint};
 use bitflags::bitflags;
-use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
 use hayro_syntax::object::dict::keys::SUBTYPE;
 use hayro_syntax::object::dict::keys::*;
+use hayro_syntax::object::{Dict, Stream};
 use hayro_syntax::page::Resources;
 use hayro_syntax::xref::XRef;
 use kurbo::{Affine, BezPath, Vec2};
@@ -42,6 +44,7 @@ pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 /// A container for the bytes of a PDF file.
 pub type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 
+use crate::font::cmap::{CMap, parse_cmap};
 use crate::util::hash128;
 pub use standard_font::StandardFont;
 
@@ -51,6 +54,36 @@ pub enum Glyph<'a> {
     Outline(OutlineGlyph),
     /// A type3 glyph, defined by PDF drawing instructions.
     Type3(Box<Type3Glyph<'a>>),
+}
+
+impl Glyph<'_> {
+    /// Returns the Unicode code point for this glyph, if available.
+    ///
+    /// This method attempts to determine the Unicode character that this glyph
+    /// represents. The exact fallback chain depends on the font type:
+    ///
+    /// **For Outline Fonts (Type1, TrueType, CFF):**
+    /// 1. ToUnicode CMap
+    /// 2. Glyph name → Unicode (via Adobe Glyph List)
+    /// 3. Unicode naming conventions (e.g., "uni0041", "u0041")
+    ///
+    /// **For CID Fonts (Type0):**
+    /// 1. ToUnicode CMap
+    ///
+    ///
+    /// **For Type3 Fonts:**
+    /// 1. ToUnicode CMap
+    ///
+    /// Returns `None` if the Unicode value could not be determined.
+    ///
+    /// Please note that this method is still somewhat experimental and might
+    /// not work reliably in all cases.
+    pub fn as_unicode(&self) -> Option<char> {
+        match self {
+            Glyph::Outline(g) => g.as_unicode(),
+            Glyph::Type3(g) => g.as_unicode(),
+        }
+    }
 }
 
 /// An identifier that uniquely identifies a glyph, for caching purposes.
@@ -71,6 +104,7 @@ impl CacheKey for GlyphIdentifier {
 pub struct OutlineGlyph {
     pub(crate) id: GlyphId,
     pub(crate) font: OutlineFont,
+    pub(crate) char_code: u32,
 }
 
 impl OutlineGlyph {
@@ -90,6 +124,13 @@ impl OutlineGlyph {
             font: self.font.clone(),
         }
     }
+
+    /// Returns the Unicode code point for this glyph, if available.
+    ///
+    /// See [`Glyph::as_unicode`] for details on the fallback chain used.
+    pub fn as_unicode(&self) -> Option<char> {
+        self.font.char_code_to_unicode(self.char_code)
+    }
 }
 
 /// A type3 glyph.
@@ -102,6 +143,7 @@ pub struct Type3Glyph<'a> {
     pub(crate) cache: Cache,
     pub(crate) xref: &'a XRef,
     pub(crate) settings: InterpreterSettings,
+    pub(crate) char_code: u32,
 }
 
 /// A glyph defined by PDF drawing instructions.
@@ -116,6 +158,13 @@ impl<'a> Type3Glyph<'a> {
     ) {
         self.font
             .render_glyph(self, transform, glyph_transform, paint, device);
+    }
+
+    /// Returns the Unicode code point for this glyph, if available.
+    ///
+    /// Note: Type3 fonts can only provide Unicode via ToUnicode CMap.
+    pub fn as_unicode(&self) -> Option<char> {
+        self.font.char_code_to_unicode(self.char_code)
     }
 }
 
@@ -181,6 +230,7 @@ impl<'a> Font<'a> {
     pub(crate) fn get_glyph(
         &self,
         glyph: GlyphId,
+        char_code: u32,
         ctx: &mut Context<'a>,
         resources: &Resources<'a>,
         origin_displacement: Vec2,
@@ -192,15 +242,27 @@ impl<'a> Font<'a> {
         let glyph = match &self.1 {
             FontType::Type1(t) => {
                 let font = OutlineFont::Type1(t.clone());
-                Glyph::Outline(OutlineGlyph { id: glyph, font })
+                Glyph::Outline(OutlineGlyph {
+                    id: glyph,
+                    font,
+                    char_code,
+                })
             }
             FontType::TrueType(t) => {
                 let font = OutlineFont::TrueType(t.clone());
-                Glyph::Outline(OutlineGlyph { id: glyph, font })
+                Glyph::Outline(OutlineGlyph {
+                    id: glyph,
+                    font,
+                    char_code,
+                })
             }
             FontType::Type0(t) => {
                 let font = OutlineFont::Type0(t.clone());
-                Glyph::Outline(OutlineGlyph { id: glyph, font })
+                Glyph::Outline(OutlineGlyph {
+                    id: glyph,
+                    font,
+                    char_code,
+                })
             }
             FontType::Type3(t) => {
                 let shape_glyph = Type3Glyph {
@@ -211,6 +273,7 @@ impl<'a> Font<'a> {
                     cache: ctx.object_cache.clone(),
                     xref: ctx.xref,
                     settings: ctx.settings.clone(),
+                    char_code,
                 };
 
                 Glyph::Type3(Box::new(shape_glyph))
@@ -490,4 +553,40 @@ impl Default for FallbackFontQuery {
             is_small_cap: false,
         }
     }
+}
+
+/// Convert a glyph name to a Unicode character, if possible.
+/// An incomplete implementation of the Adobe Glyph List Specification
+/// https://github.com/adobe-type-tools/agl-specification
+pub(crate) fn glyph_name_to_unicode(name: &str) -> Option<char> {
+    if let Some(unicode_str) = glyph_names::get(name) {
+        return unicode_str.chars().next();
+    }
+
+    unicode_from_name(name).or_else(|| {
+        warn!("failed to map glyph name {} to unicode", name);
+
+        None
+    })
+}
+
+pub(crate) fn unicode_from_name(name: &str) -> Option<char> {
+    let convert = |input: &str| u32::from_str_radix(input, 16).ok().and_then(char::from_u32);
+
+    name.starts_with("uni")
+        .then(|| name.get(3..).and_then(convert))
+        .or_else(|| {
+            name.starts_with("u")
+                .then(|| name.get(1..).and_then(convert))
+        })
+        .flatten()
+}
+
+pub(crate) fn read_to_unicode(dict: &Dict) -> Option<CMap> {
+    dict.get::<Stream>(TO_UNICODE)
+        .and_then(|s| s.decoded().ok())
+        .and_then(|data| {
+            let cmap_str = std::str::from_utf8(&data).ok()?;
+            parse_cmap(cmap_str)
+        })
 }

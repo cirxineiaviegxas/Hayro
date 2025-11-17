@@ -30,6 +30,7 @@ pub(crate) fn show_text_string<'a>(
 
         let (glyph, glyph_transform) = font.get_glyph(
             font.map_code(code),
+            code,
             ctx,
             resources,
             font.origin_displacement(code),
@@ -95,7 +96,17 @@ pub(crate) fn show_glyph<'a>(
                 &GlyphDrawMode::Stroke(stroke_props),
             );
         }
-        TextRenderingMode::Invisible => {}
+        TextRenderingMode::Invisible => {
+            // Still call draw_glyph for invisible text, so that it can
+            // for example be used for text extraction.
+            device.draw_glyph(
+                glyph,
+                ctx.get().ctm,
+                glyph_transform,
+                &get_paint(ctx, false),
+                &GlyphDrawMode::Invisible,
+            );
+        }
         TextRenderingMode::Clip => {
             clip_glyph(ctx, glyph, glyph_transform);
         }
