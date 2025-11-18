@@ -64,7 +64,6 @@ pub(crate) fn apply(
 
 struct IDWTInput<'a> {
     coefficients: &'a [f32],
-    rect: IntRect,
     sub_band_type: SubBandType,
 }
 
@@ -72,7 +71,6 @@ impl<'a> IDWTInput<'a> {
     fn from_sub_band(sub_band: &'a SubBand) -> IDWTInput<'a> {
         IDWTInput {
             coefficients: &sub_band.coefficients,
-            rect: sub_band.rect,
             sub_band_type: sub_band.sub_band_type,
         }
     }
@@ -80,7 +78,6 @@ impl<'a> IDWTInput<'a> {
     fn from_output(idwt_output: &'a IDWTOutput) -> IDWTInput<'a> {
         IDWTInput {
             coefficients: &idwt_output.coefficients,
-            rect: idwt_output.rect,
             // The output from a previous iteration turns into the LL sub band
             // for the next iteration.
             sub_band_type: SubBandType::LowLow,
@@ -116,6 +113,7 @@ fn interleave_samples(
 ) -> Vec<f32> {
     let mut coefficients =
         vec![0.0; (decomposition.rect.width() * decomposition.rect.height()) as usize];
+
     let IntRect {
         x0: u0,
         x1: u1,
@@ -139,18 +137,36 @@ fn interleave_samples(
             SubBandType::LowHigh | SubBandType::HighHigh => (v0 / 2, v1 / 2),
         };
 
-        for v_b in v_min..v_max {
-            for u_b in u_min..u_max {
-                let (x, y) = match sub_band.sub_band_type {
-                    SubBandType::LowLow => (2 * u_b, 2 * v_b),
-                    SubBandType::LowHigh => (2 * u_b, 2 * v_b + 1),
-                    SubBandType::HighLow => (2 * u_b + 1, 2 * v_b),
-                    SubBandType::HighHigh => (2 * u_b + 1, 2 * v_b + 1),
-                };
+        let num_v = v_max - v_min;
+        let num_u = u_max - u_min;
 
-                coefficients[((y - v0) * decomposition.rect.width() + (x - u0)) as usize] =
-                    sub_band.coefficients
-                        [((v_b - v_min) * sub_band.rect.width() + (u_b - u_min)) as usize];
+        if num_u == 0 || num_v == 0 {
+            continue;
+        }
+
+        // Hint compiler to drop bounds checks.
+        let sub_band_coefficients = &sub_band.coefficients[..(num_v * num_u) as usize];
+
+        let (start_x, start_y) = match sub_band.sub_band_type {
+            SubBandType::LowLow => (2 * u_min, 2 * v_min),
+            SubBandType::LowHigh => (2 * u_min, 2 * v_min + 1),
+            SubBandType::HighLow => (2 * u_min + 1, 2 * v_min),
+            SubBandType::HighHigh => (2 * u_min + 1, 2 * v_min + 1),
+        };
+
+        let coefficient_rows = coefficients
+            .chunks_exact_mut(decomposition.rect.width() as usize)
+            .skip((start_y - v0) as usize)
+            .step_by(2);
+
+        for (v_b, coefficient_row) in coefficient_rows.enumerate() {
+            // Hint compiler to drop bounds checks.
+            let coefficient_row =
+                &mut coefficient_row[(start_x - u0) as usize..][..(num_u - 1) as usize * 2 + 1];
+
+            for u_b in 0..num_u {
+                coefficient_row[u_b as usize * 2] =
+                    sub_band_coefficients[v_b * num_u as usize + u_b as usize];
             }
         }
     }
