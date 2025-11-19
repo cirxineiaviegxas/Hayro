@@ -4,6 +4,9 @@ use crate::codestream::WaveletTransform;
 use crate::decode::{Decomposition, SubBand, SubBandType};
 use crate::rect::IntRect;
 
+// Keep in sync with the type `F32` in the `simd` module!
+const SIMD_WIDTH: usize = 8;
+
 #[derive(Default, Copy, Clone)]
 pub(crate) struct Padding {
     pub(crate) left: usize,
@@ -60,13 +63,10 @@ pub(crate) fn apply(
         };
     }
 
-    let mut temp_buf = vec![];
-
     let mut output = filter_2d(
         IDWTInput::from_sub_band(ll_sub_band),
         &decompositions[0],
         transform,
-        &mut temp_buf,
         sub_bands,
     );
 
@@ -75,7 +75,6 @@ pub(crate) fn apply(
             IDWTInput::from_output(&output),
             decomposition,
             transform,
-            &mut temp_buf,
             sub_bands,
         );
     }
@@ -115,19 +114,13 @@ fn filter_2d(
     input: IDWTInput,
     decomposition: &Decomposition,
     transform: WaveletTransform,
-    temp_buf: &mut Vec<f32>,
     sub_bands: &[SubBand],
 ) -> IDWTOutput {
     let mut interleaved_samples = interleave_samples(input, decomposition, sub_bands, transform);
 
     if decomposition.rect.width() > 0 && decomposition.rect.height() > 0 {
         filter_horizontal(&mut interleaved_samples, decomposition.rect, transform);
-        filter_vertical(
-            &mut interleaved_samples,
-            temp_buf,
-            decomposition.rect,
-            transform,
-        );
+        simd::filter_vertical_simd(&mut interleaved_samples, decomposition.rect, transform);
     }
 
     IDWTOutput {
@@ -152,8 +145,12 @@ fn interleave_samples(
     let new_padding = {
         let left_padding = left_extension(transform, decomposition.rect.x0 as usize) + 1;
         let top_padding = left_extension(transform, decomposition.rect.y0 as usize) + 1;
-        let right_padding = right_extension(transform, decomposition.rect.x1 as usize);
+        let mut right_padding = right_extension(transform, decomposition.rect.x1 as usize);
         let bottom_padding = right_extension(transform, decomposition.rect.y1 as usize);
+
+        let current_width = left_padding + decomposition.rect.width() as usize + right_padding;
+        let target_width = current_width.next_multiple_of(SIMD_WIDTH);
+        right_padding += target_width - current_width;
 
         Padding::new(left_padding, top_padding, right_padding, bottom_padding)
     };
@@ -252,6 +249,7 @@ fn filter_horizontal(samples: &mut InterleavedSamples, rect: IntRect, transform:
 }
 
 /// The VER_SR procedure from F.3.5.
+#[allow(dead_code)]
 fn filter_vertical(
     samples: &mut InterleavedSamples,
     temp_buf: &mut Vec<f32>,
@@ -422,6 +420,255 @@ fn periodic_symmetric_extension(idx: usize, start: usize, end: usize) -> usize {
     let span = 2 * (end as i32 - start as i32 - 1);
     let offset = (idx as i32 - start as i32).rem_euclid(span);
     (start as i32 + offset.min(span - offset)) as usize
+}
+
+mod simd {
+    use crate::codestream::WaveletTransform;
+    use crate::idwt::{
+        InterleavedSamples, left_extension, periodic_symmetric_extension, right_extension,
+    };
+    use crate::rect::IntRect;
+    use fearless_simd::*;
+
+    const SIMD_WIDTH: usize = super::SIMD_WIDTH;
+    type F32<S> = f32x8<S>;
+
+    pub(super) fn filter_vertical_simd(
+        samples: &mut InterleavedSamples,
+        rect: IntRect,
+        transform: WaveletTransform,
+    ) {
+        let level = Level::new();
+        dispatch!(level, simd => filter_vertical_simd_impl(simd, samples, rect, transform));
+    }
+
+    /// The VER_SR procedure from F.3.5.
+    #[inline(always)]
+    fn filter_vertical_simd_impl<S: Simd>(
+        simd: S,
+        samples: &mut InterleavedSamples,
+        rect: IntRect,
+        transform: WaveletTransform,
+    ) {
+        let total_width = rect.width() as usize + samples.padding.left + samples.padding.right;
+        filter_rows_simd(
+            simd,
+            &mut samples.coefficients,
+            samples.padding.top,
+            samples.padding.top + rect.height() as usize,
+            total_width,
+            transform,
+        );
+    }
+
+    /// The 1D_SR procedure from F.3.6.
+    #[inline(always)]
+    fn filter_rows_simd<S: Simd>(
+        simd: S,
+        scanline: &mut [f32],
+        start: usize,
+        end: usize,
+        stride: usize,
+        transform: WaveletTransform,
+    ) {
+        if start == end - 1 {
+            if !start.is_multiple_of(2) {
+                for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                    let mut loaded = F32::from_slice(
+                        simd,
+                        &scanline[(start * stride) + base_column..][..SIMD_WIDTH],
+                    );
+                    loaded /= 2.0;
+                    scanline[(start * stride) + base_column..][..SIMD_WIDTH]
+                        .copy_from_slice(&loaded.val);
+                }
+            }
+
+            return;
+        }
+
+        extend_signal_simd(simd, scanline, start, end, stride, transform);
+
+        match transform {
+            WaveletTransform::Reversible53 => {
+                reversible_filter_53r_simd(simd, scanline, start, end, stride);
+            }
+            WaveletTransform::Irreversible97 => {
+                irreversible_filter_97i_simd(simd, scanline, start, end, stride);
+            }
+        }
+    }
+
+    /// The 1D_EXTR procedure, defined in F.3.7.
+    #[inline(always)]
+    fn extend_signal_simd<S: Simd>(
+        simd: S,
+        scanline: &mut [f32],
+        start: usize,
+        end: usize,
+        stride: usize,
+        transform: WaveletTransform,
+    ) {
+        let i_left = left_extension(transform, start);
+        let i_right = right_extension(transform, end);
+
+        for i in (start - i_left)..start {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let idx = periodic_symmetric_extension(i, start, end);
+                let loaded =
+                    F32::from_slice(simd, &scanline[idx * stride + base_column..][..SIMD_WIDTH]);
+                scanline[i * stride + base_column..][..SIMD_WIDTH].copy_from_slice(&loaded.val);
+            }
+        }
+
+        for i in end..(end + i_right) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let idx = periodic_symmetric_extension(i, start, end);
+                let loaded =
+                    F32::from_slice(simd, &scanline[idx * stride + base_column..][..SIMD_WIDTH]);
+                scanline[i * stride + base_column..][..SIMD_WIDTH].copy_from_slice(&loaded.val);
+            }
+        }
+    }
+
+    /// The 1D FILTER 5-3R procedure from F.3.8.1.
+    #[inline(always)]
+    fn reversible_filter_53r_simd<S: Simd>(
+        simd: S,
+        scanline: &mut [f32],
+        start: usize,
+        end: usize,
+        stride: usize,
+    ) {
+        // Equation (F-5).
+        for n in start / 2..(end / 2) + 1 {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = 2 * n * stride + base_column;
+
+                let mut s1 = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                let s2 = F32::from_slice(simd, &scanline[base_idx - stride..][..SIMD_WIDTH]);
+                let s3 = F32::from_slice(simd, &scanline[base_idx + stride..][..SIMD_WIDTH]);
+
+                s1 -= ((s2 + s3 + 2.0) / 4.0).floor();
+
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&s1.val);
+            }
+        }
+
+        // Equation (F-6).
+        for n in start / 2..(end / 2) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * n + 1) * stride + base_column;
+
+                let mut s1 = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                let s2 = F32::from_slice(simd, &scanline[base_idx - stride..][..SIMD_WIDTH]);
+                let s3 = F32::from_slice(simd, &scanline[base_idx + stride..][..SIMD_WIDTH]);
+
+                s1 += ((s2 + s3) / 2.0).floor();
+
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&s1.val);
+            }
+        }
+    }
+
+    /// The 1D Filter 9-7I procedure from F.3.8.2 executed with SIMD.
+    #[inline(always)]
+    fn irreversible_filter_97i_simd<S: Simd>(
+        simd: S,
+        scanline: &mut [f32],
+        start: usize,
+        end: usize,
+        stride: usize,
+    ) {
+        const ALPHA: f32 = -1.586_134_3;
+        const BETA: f32 = -0.052_980_117;
+        const GAMMA: f32 = 0.882_911_1;
+        const DELTA: f32 = 0.443_506_87;
+        const KAPPA: f32 = 1.230_174_1;
+
+        let alpha = F32::splat(simd, ALPHA);
+        let beta = F32::splat(simd, BETA);
+        let gamma = F32::splat(simd, GAMMA);
+        let delta = F32::splat(simd, DELTA);
+        let kappa = F32::splat(simd, KAPPA);
+        let inv_kappa = F32::splat(simd, 1.0 / KAPPA);
+
+        // Step 1.
+        for i in (start / 2 - 1)..(end / 2 + 2) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * i) * stride + base_column;
+                let mut vals = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                vals *= kappa;
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&vals.val);
+            }
+        }
+
+        // Step 2.
+        for i in (start / 2 - 2)..(end / 2 + 2) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * i + 1) * stride + base_column;
+                let mut vals = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                vals *= inv_kappa;
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&vals.val);
+            }
+        }
+
+        // Step 3.
+        for i in (start / 2 - 1)..(end / 2 + 2) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * i) * stride + base_column;
+
+                let mut s1 = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                let s2 = F32::from_slice(simd, &scanline[base_idx - stride..][..SIMD_WIDTH]);
+                let s3 = F32::from_slice(simd, &scanline[base_idx + stride..][..SIMD_WIDTH]);
+
+                s1 -= delta * (s2 + s3);
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&s1.val);
+            }
+        }
+
+        // Step 4.
+        for i in (start / 2 - 1)..(end / 2 + 1) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * i + 1) * stride + base_column;
+
+                let mut s1 = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                let s2 = F32::from_slice(simd, &scanline[base_idx - stride..][..SIMD_WIDTH]);
+                let s3 = F32::from_slice(simd, &scanline[base_idx + stride..][..SIMD_WIDTH]);
+
+                s1 -= gamma * (s2 + s3);
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&s1.val);
+            }
+        }
+
+        // Step 5.
+        for i in (start / 2)..(end / 2 + 1) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * i) * stride + base_column;
+
+                let mut s1 = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                let s2 = F32::from_slice(simd, &scanline[base_idx - stride..][..SIMD_WIDTH]);
+                let s3 = F32::from_slice(simd, &scanline[base_idx + stride..][..SIMD_WIDTH]);
+
+                s1 -= beta * (s2 + s3);
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&s1.val);
+            }
+        }
+
+        // Step 6.
+        for i in (start / 2)..(end / 2) {
+            for base_column in (0..stride).step_by(SIMD_WIDTH) {
+                let base_idx = (2 * i + 1) * stride + base_column;
+
+                let mut s1 = F32::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
+                let s2 = F32::from_slice(simd, &scanline[base_idx - stride..][..SIMD_WIDTH]);
+                let s3 = F32::from_slice(simd, &scanline[base_idx + stride..][..SIMD_WIDTH]);
+
+                s1 -= alpha * (s2 + s3);
+                scanline[base_idx..][..SIMD_WIDTH].copy_from_slice(&s1.val);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
