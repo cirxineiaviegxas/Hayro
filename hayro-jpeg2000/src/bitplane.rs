@@ -302,8 +302,8 @@ impl CoefficientState {
     }
 
     #[inline(always)]
-    fn is_magnitude_refined(&self) -> bool {
-        (self.0 >> HAS_MAGNITUDE_REFINEMENT_SHIFT) & 1 == 1
+    fn magnitude_refinement(&self) -> u8 {
+        (self.0 >> HAS_MAGNITUDE_REFINEMENT_SHIFT) & 1
     }
 
     #[inline(always)]
@@ -354,8 +354,12 @@ impl Coefficient {
 const COEFFICIENTS_PADDING: u32 = 1;
 
 /// Store the significances of each neighbor for a specific coefficient.
-/// Each bit is used for one neighbor, starting from the top-left and
-/// going over all neighbors in row-major order.
+/// The order from MSB to LSB is as follows:
+///
+/// top-left, top, top-right, left, bottom-left, right, bottom-right, bottom.
+///
+/// See the `context_label_sign_coding` method for why we aren't simply using
+/// row-major order.
 #[derive(Default, Copy, Clone)]
 struct NeighborSignificances(u8);
 
@@ -376,40 +380,28 @@ impl NeighborSignificances {
         self.0 |= 1 << 4;
     }
 
-    fn set_right(&mut self) {
+    fn set_bottom_left(&mut self) {
         self.0 |= 1 << 3;
     }
 
-    fn set_bottom_left(&mut self) {
+    fn set_right(&mut self) {
         self.0 |= 1 << 2;
     }
 
-    fn set_bottom(&mut self) {
+    fn set_bottom_right(&mut self) {
         self.0 |= 1 << 1;
     }
 
-    fn set_bottom_right(&mut self) {
+    fn set_bottom(&mut self) {
         self.0 |= 1;
     }
 
-    fn horizontal(&self) -> u8 {
-        (self.0 & 0b00011000).count_ones() as u8
+    fn all(&self) -> u8 {
+        self.0
     }
 
-    fn top(&self) -> u8 {
-        (self.0 & 0b01000000).count_ones() as u8
-    }
-
-    fn vertical(&self) -> u8 {
-        (self.0 & 0b01000010).count_ones() as u8
-    }
-
-    fn diagonal(&self) -> u8 {
-        (self.0 & 0b10100101).count_ones() as u8
-    }
-
-    fn diagonal_top(&self) -> u8 {
-        (self.0 & 0b10100000).count_ones() as u8
+    fn all_without_bottom(&self) -> u8 {
+        self.0 & 0b11110100
     }
 }
 
@@ -523,10 +515,6 @@ impl CodeBlockDecodeContext {
         }
     }
 
-    fn significance_state(&self, position: Position) -> u8 {
-        self.coefficient_states[position.index(self.padded_width)].significance()
-    }
-
     fn is_significant(&self, position: Position) -> bool {
         self.coefficient_states[position.index(self.padded_width)].is_significant()
     }
@@ -563,8 +551,8 @@ impl CodeBlockDecodeContext {
         self.coefficient_states[position.index(self.padded_width)].set_magnitude_refined();
     }
 
-    fn is_magnitude_refined(&self, position: Position) -> bool {
-        self.coefficient_states[position.index(self.padded_width)].is_magnitude_refined()
+    fn magnitude_refinement(&self, position: Position) -> u8 {
+        self.coefficient_states[position.index(self.padded_width)].magnitude_refinement()
     }
 
     fn is_zero_coded(&self, position: Position) -> bool {
@@ -583,10 +571,7 @@ impl CodeBlockDecodeContext {
 
     #[inline]
     fn sign(&self, position: Position) -> u8 {
-        if self.coefficients[position.index_x as usize
-            + position.index_y as usize * (self.width as usize + COEFFICIENTS_PADDING as usize * 2)]
-            .has_sign()
-        {
+        if self.coefficients[position.index(self.padded_width)].has_sign() {
             1
         } else {
             0
@@ -599,37 +584,14 @@ impl CodeBlockDecodeContext {
     }
 
     #[inline]
-    fn horizontal_significance_states(&self, pos: Position) -> u8 {
-        self.neighbor_significances[pos.index(self.padded_width)].horizontal()
-    }
-
-    #[inline]
-    fn vertical_significance_states(&self, pos: Position) -> u8 {
-        let neighbors = &self.neighbor_significances[pos.index(self.padded_width)];
-
-        if self.vertically_causal && self.neighbor_in_next_stripe(pos, pos.real_y() + 1) {
-            neighbors.top()
-        } else {
-            neighbors.vertical()
-        }
-    }
-
-    #[inline(always)]
-    fn diagonal_significance_states(&self, pos: Position) -> u8 {
-        let neighbors = &self.neighbor_significances[pos.index(self.padded_width)];
-
-        if self.vertically_causal && self.neighbor_in_next_stripe(pos, pos.real_y() + 1) {
-            neighbors.diagonal_top()
-        } else {
-            neighbors.diagonal()
-        }
-    }
-
-    #[inline]
     fn neighborhood_significance_states(&self, pos: Position) -> u8 {
-        self.horizontal_significance_states(pos)
-            + self.vertical_significance_states(pos)
-            + self.diagonal_significance_states(pos)
+        let neighbors = &self.neighbor_significances[pos.index(self.padded_width)];
+
+        if self.vertically_causal && self.neighbor_in_next_stripe(pos, pos.real_y() + 1) {
+            neighbors.all_without_bottom()
+        } else {
+            neighbors.all()
+        }
     }
 }
 
@@ -795,6 +757,69 @@ fn for_each_position(width: u32, height: u32, mut action: impl FnMut(&mut Positi
     }
 }
 
+/// See `context_label_sign_coding`. This table contains all context labels
+/// for each combination of the bit-packed field. (255, 255) represent
+/// impossible combinations.
+#[rustfmt::skip]
+const SIGN_CONTEXT_LOOKUP: [(u8, u8); 256] = [
+    (9,0), (10,0), (10,1), (0,0), (12,0), (13,0), (11,0), (0,0), (12,1), (11,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (12,0), (13,0), (11,0), (0,0), (12,0), (13,0), (11,0), (0,0), (9,0),
+    (10,0), (10,1), (0,0), (0,0), (0,0), (0,0), (0,0), (12,1), (11,1), (13,1), (0,0), (9,0), (10,0), (10,1), (0,0), (12,1), (11,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (10,0), (10,0), (9,0), (0,0), (13,0), (13,0), (12,0), (0,0), (11,1), (11,1), (12,1),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (13,0), (13,0), (12,0), (0,0), (13,0), (13,0), (12,0), (0,0), (10,0), (10,0), (9,0), (0,0), (0,0), (0,0), (0,0), (0,0), (11,1), (11,1), (12,1), (0,0),
+    (10,0), (10,0), (9,0), (0,0), (11,1), (11,1), (12,1), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (10,1), (9,0), (10,1), (0,0), (11,0), (12,0), (11,0), (0,0), (13,1), (12,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (11,0), (12,0), (11,0), (0,0), (11,0), (12,0),
+    (11,0), (0,0), (10,1), (9,0), (10,1), (0,0), (0,0), (0,0), (0,0), (0,0), (13,1), (12,1), (13,1), (0,0), (10,1), (9,0), (10,1), (0,0), (13,1), (12,1), (13,1), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+];
+
+#[rustfmt::skip]
+const ZERO_CTX_LL_LH_LOOKUP: [u8; 256] = [
+    0, 3, 1, 3, 5, 7, 6, 7, 1, 3, 2, 3, 6, 7, 6, 7, 5, 7, 6, 7, 8, 8, 8, 8, 6,
+    7, 6, 7, 8, 8, 8, 8, 1, 3, 2, 3, 6, 7, 6, 7, 2, 3, 2, 3, 6, 7, 6, 7, 6, 7,
+    6, 7, 8, 8, 8, 8, 6, 7, 6, 7, 8, 8, 8, 8, 3, 4, 3, 4, 7, 7, 7, 7, 3, 4, 3,
+    4, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 7, 7, 7, 7, 8, 8, 8, 8, 3, 4, 3, 4,
+    7, 7, 7, 7, 3, 4, 3, 4, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 7, 7, 7, 7, 8,
+    8, 8, 8, 1, 3, 2, 3, 6, 7, 6, 7, 2, 3, 2, 3, 6, 7, 6, 7, 6, 7, 6, 7, 8, 8,
+    8, 8, 6, 7, 6, 7, 8, 8, 8, 8, 2, 3, 2, 3, 6, 7, 6, 7, 2, 3, 2, 3, 6, 7, 6,
+    7, 6, 7, 6, 7, 8, 8, 8, 8, 6, 7, 6, 7, 8, 8, 8, 8, 3, 4, 3, 4, 7, 7, 7, 7,
+    3, 4, 3, 4, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 7, 7, 7, 7, 8, 8, 8, 8, 3,
+    4, 3, 4, 7, 7, 7, 7, 3, 4, 3, 4, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 7, 7,
+    7, 7, 8, 8, 8, 8,
+];
+
+#[rustfmt::skip]
+const ZERO_CTX_HL_LOOKUP: [u8; 256] = [
+    0, 5, 1, 6, 3, 7, 3, 7, 1, 6, 2, 6, 3, 7, 3, 7, 3, 7, 3, 7, 4, 7, 4, 7, 3,
+    7, 3, 7, 4, 7, 4, 7, 1, 6, 2, 6, 3, 7, 3, 7, 2, 6, 2, 6, 3, 7, 3, 7, 3, 7,
+    3, 7, 4, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 5, 8, 6, 8, 7, 8, 7, 8, 6, 8, 6,
+    8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 6, 8, 6, 8,
+    7, 8, 7, 8, 6, 8, 6, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7,
+    8, 7, 8, 1, 6, 2, 6, 3, 7, 3, 7, 2, 6, 2, 6, 3, 7, 3, 7, 3, 7, 3, 7, 4, 7,
+    4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 2, 6, 2, 6, 3, 7, 3, 7, 2, 6, 2, 6, 3, 7, 3,
+    7, 3, 7, 3, 7, 4, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 6, 8, 6, 8, 7, 8, 7, 8,
+    6, 8, 6, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 6,
+    8, 6, 8, 7, 8, 7, 8, 6, 8, 6, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8, 7, 8,
+    7, 8, 7, 8, 7, 8,
+];
+
+#[rustfmt::skip]
+const ZERO_CTX_HH_LOOKUP: [u8; 256] = [
+    0, 1, 3, 4, 1, 2, 4, 5, 3, 4, 6, 7, 4, 5, 7, 7, 1, 2, 4, 5, 2, 2, 5, 5, 4,
+    5, 7, 7, 5, 5, 7, 7, 3, 4, 6, 7, 4, 5, 7, 7, 6, 7, 8, 8, 7, 7, 8, 8, 4, 5,
+    7, 7, 5, 5, 7, 7, 7, 7, 8, 8, 7, 7, 8, 8, 1, 2, 4, 5, 2, 2, 5, 5, 4, 5, 7,
+    7, 5, 5, 7, 7, 2, 2, 5, 5, 2, 2, 5, 5, 5, 5, 7, 7, 5, 5, 7, 7, 4, 5, 7, 7,
+    5, 5, 7, 7, 7, 7, 8, 8, 7, 7, 8, 8, 5, 5, 7, 7, 5, 5, 7, 7, 7, 7, 8, 8, 7,
+    7, 8, 8, 3, 4, 6, 7, 4, 5, 7, 7, 6, 7, 8, 8, 7, 7, 8, 8, 4, 5, 7, 7, 5, 5,
+    7, 7, 7, 7, 8, 8, 7, 7, 8, 8, 6, 7, 8, 8, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    8, 7, 7, 8, 8, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 5, 7, 7, 5, 5, 7, 7,
+    7, 7, 8, 8, 7, 7, 8, 8, 5, 5, 7, 7, 5, 5, 7, 7, 7, 7, 8, 8, 7, 7, 8, 8, 7,
+    7, 8, 8, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 8, 8, 7, 7, 8, 8, 8, 8,
+    8, 8, 8, 8, 8, 8,
+];
+
 /// Decode a sign bit (Section D.3.2).
 #[inline(always)]
 fn decode_sign_bit<T: BitDecoder>(
@@ -805,39 +830,38 @@ fn decode_sign_bit<T: BitDecoder>(
     /// Based on Table D.2.
     #[inline(always)]
     fn context_label_sign_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> (u8, u8) {
-        #[inline(always)]
-        fn neighbor_contribution(ctx: &CodeBlockDecodeContext, pos: Position) -> i32 {
-            let sigma = ctx.significance_state(pos);
-
-            let multiplied = if ctx.sign(pos) == 0 { 1 } else { -1 };
-
-            multiplied * sigma as i32
-        }
-
-        let h = (neighbor_contribution(ctx, pos.left()) + neighbor_contribution(ctx, pos.right()))
-            .clamp(-1, 1);
+        // A lot of subtleties going on here, all in the interest of achieving
+        // the best performance. Fundamentally, we need to determine the
+        // significances as well as signs of the four neighbors (i.e. not
+        // including the diagonal neighbors) and based on what the sum of signs
+        // is, we assign a context label.
         let suppress_lower =
             ctx.vertically_causal && ctx.neighbor_in_next_stripe(pos, pos.real_y() + 1);
-        let v = (neighbor_contribution(ctx, pos.top())
-            + if suppress_lower {
-                0
-            } else {
-                neighbor_contribution(ctx, pos.bottom())
-            })
-        .clamp(-1, 1);
+        // First, let's get all neighbor significances and mask out the diagonals.
+        let significances = ctx.neighborhood_significance_states(pos) & 0b0101_0101;
 
-        match (h, v) {
-            (1, 1) => (13, 0),
-            (1, 0) => (12, 0),
-            (1, -1) => (11, 0),
-            (0, 1) => (10, 0),
-            (0, 0) => (9, 0),
-            (0, -1) => (10, 1),
-            (-1, 1) => (11, 1),
-            (-1, 0) => (12, 1),
-            (-1, -1) => (13, 1),
-            _ => unreachable!(),
-        }
+        // Get all the signs.
+        let left_sign = ctx.sign(pos.left());
+        let right_sign = ctx.sign(pos.right());
+        let top_sign = ctx.sign(pos.top());
+        let bottom_sign = if suppress_lower {
+            0
+        } else {
+            ctx.sign(pos.bottom())
+        };
+
+        // Due to the specific layout of `NeighborSignificances`, direct neighbors
+        // and diagonals are interleaved. Therefore, we create a new bit-packed
+        // representation that indicates whether the top/left/right/bottom sign
+        // is positive, negative, or insignificant. We need two bits for this.
+        // 00 represents insignificant, 01 positive and 10 negative. 11
+        // is an invalid combination.
+        let signs = (top_sign << 6) | (left_sign << 4) | (right_sign << 2) | bottom_sign;
+        let negative_significances = significances & signs;
+        let positive_significances = significances & !signs;
+        let merged_significances = (negative_significances << 1) | positive_significances;
+
+        SIGN_CONTEXT_LOOKUP[merged_significances as usize]
     }
 
     let (ctx_label, xor_bit) = context_label_sign_coding(pos, ctx);
@@ -853,73 +877,23 @@ fn decode_sign_bit<T: BitDecoder>(
 /// Return the context label for zero coding (Section D.3.1).
 #[inline(always)]
 fn context_label_zero_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> u8 {
-    let mut horizontal = ctx.horizontal_significance_states(pos);
-    let mut vertical = ctx.vertical_significance_states(pos);
-    let diagonal = ctx.diagonal_significance_states(pos);
+    let neighbors = ctx.neighborhood_significance_states(pos);
 
     match ctx.sub_band_type {
-        SubBandType::LowLow | SubBandType::LowHigh | SubBandType::HighLow => {
-            if ctx.sub_band_type == SubBandType::HighLow {
-                std::mem::swap(&mut horizontal, &mut vertical);
-            }
-
-            if horizontal == 2 {
-                8
-            } else if horizontal == 1 && vertical >= 1 {
-                7
-            } else if horizontal == 1 && vertical == 0 && diagonal >= 1 {
-                6
-            } else if horizontal == 1 && vertical == 0 && diagonal == 0 {
-                5
-            } else if horizontal == 0 && vertical == 2 {
-                4
-            } else if horizontal == 0 && vertical == 1 {
-                3
-            } else if horizontal == 0 && vertical == 0 && diagonal >= 2 {
-                2
-            } else if horizontal == 0 && vertical == 0 && diagonal == 1 {
-                1
-            } else {
-                0
-            }
-        }
-        SubBandType::HighHigh => {
-            let hv = horizontal + vertical;
-
-            if diagonal >= 3 {
-                8
-            } else if hv >= 1 && diagonal == 2 {
-                7
-            } else if hv == 0 && diagonal == 2 {
-                6
-            } else if hv >= 2 && diagonal == 1 {
-                5
-            } else if hv == 1 && diagonal == 1 {
-                4
-            } else if hv == 0 && diagonal == 1 {
-                3
-            } else if hv >= 2 && diagonal == 0 {
-                2
-            } else if hv == 1 && diagonal == 0 {
-                1
-            } else {
-                0
-            }
-        }
+        SubBandType::LowLow | SubBandType::LowHigh => ZERO_CTX_LL_LH_LOOKUP[neighbors as usize],
+        SubBandType::HighLow => ZERO_CTX_HL_LOOKUP[neighbors as usize],
+        SubBandType::HighHigh => ZERO_CTX_HH_LOOKUP[neighbors as usize],
     }
 }
 
 /// Return the context label for magnitude refinement coding (Table D.4).
 fn context_label_magnitude_refinement_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> u8 {
-    if ctx.is_magnitude_refined(pos) {
-        16
-    } else {
-        let summed = ctx.horizontal_significance_states(pos)
-            + ctx.vertical_significance_states(pos)
-            + ctx.diagonal_significance_states(pos);
+    // If magnitude refined, then 16.
+    let m1 = ctx.magnitude_refinement(pos) * 16;
+    // Else: If at least one neighbor is significant then 15, else 14.
+    let m2 = 14 + ctx.neighborhood_significance_states(pos).min(1);
 
-        if summed >= 1 { 15 } else { 14 }
-    }
+    u8::max(m1, m2)
 }
 
 #[derive(Default, Copy, Clone, Debug)]
