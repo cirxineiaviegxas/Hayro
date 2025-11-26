@@ -13,10 +13,10 @@ use crate::codestream::{
 use crate::idwt::IDWTOutput;
 use crate::progression::{
     IteratorInput, ProgressionData, build_component_position_resolution_layer_sequence,
-    build_layer_resolution_component_position_sequence,
     build_position_component_resolution_layer_sequence,
-    build_resolution_layer_component_position_sequence,
     build_resolution_position_component_layer_sequence,
+    layer_resolution_component_position_progression,
+    resolution_layer_component_position_progression,
 };
 use crate::rect::IntRect;
 use crate::tag_tree::{TagNode, TagTree};
@@ -54,7 +54,7 @@ pub(crate) fn decode(data: &[u8], header: &Header) -> Result<Vec<ChannelData>, &
 
         match tile.progression_order {
             ProgressionOrder::LayerResolutionComponentPosition => {
-                let iterator = build_layer_resolution_component_position_sequence(&iter_input);
+                let iterator = layer_resolution_component_position_progression(&iter_input);
                 decode_tile(
                     tile,
                     header,
@@ -64,7 +64,7 @@ pub(crate) fn decode(data: &[u8], header: &Header) -> Result<Vec<ChannelData>, &
                 )?
             }
             ProgressionOrder::ResolutionLayerComponentPosition => {
-                let iterator = build_resolution_layer_component_position_sequence(&iter_input);
+                let iterator = resolution_layer_component_position_progression(&iter_input);
                 decode_tile(
                     tile,
                     header,
