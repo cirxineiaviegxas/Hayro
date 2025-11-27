@@ -12,11 +12,11 @@ use crate::codestream::{
 };
 use crate::idwt::IDWTOutput;
 use crate::progression::{
-    IteratorInput, ProgressionData, build_component_position_resolution_layer_sequence,
-    build_position_component_resolution_layer_sequence,
-    build_resolution_position_component_layer_sequence,
+    IteratorInput, ProgressionData, component_position_resolution_layer_progression,
     layer_resolution_component_position_progression,
+    position_component_resolution_layer_progression,
     resolution_layer_component_position_progression,
+    resolution_position_component_layer_progression,
 };
 use crate::rect::IntRect;
 use crate::tag_tree::{TagNode, TagTree};
@@ -74,7 +74,7 @@ pub(crate) fn decode(data: &[u8], header: &Header) -> Result<Vec<ChannelData>, &
                 )?
             }
             ProgressionOrder::ResolutionPositionComponentLayer => {
-                let iterator = build_resolution_position_component_layer_sequence(&iter_input);
+                let iterator = resolution_position_component_layer_progression(&iter_input);
                 decode_tile(
                     tile,
                     header,
@@ -84,7 +84,7 @@ pub(crate) fn decode(data: &[u8], header: &Header) -> Result<Vec<ChannelData>, &
                 )?
             }
             ProgressionOrder::PositionComponentResolutionLayer => {
-                let iterator = build_position_component_resolution_layer_sequence(&iter_input);
+                let iterator = position_component_resolution_layer_progression(&iter_input);
                 decode_tile(
                     tile,
                     header,
@@ -94,7 +94,7 @@ pub(crate) fn decode(data: &[u8], header: &Header) -> Result<Vec<ChannelData>, &
                 )?
             }
             ProgressionOrder::ComponentPositionResolutionLayer => {
-                let iterator = build_component_position_resolution_layer_sequence(&iter_input);
+                let iterator = component_position_resolution_layer_progression(&iter_input);
                 decode_tile(
                     tile,
                     header,
@@ -246,9 +246,15 @@ pub(crate) struct Precinct {
 }
 
 pub(crate) struct PrecinctData {
+    /// The x coordinate mapped back to the reference grid.
+    pub(crate) r_x: u32,
+    /// The y coordinate mapped back to the reference grid.
+    pub(crate) r_y: u32,
+    /// The actual rectangle of the precinct (in the sub-band coordinate
+    /// system).
     pub(crate) rect: IntRect,
-    pub(crate) _x: u32,
-    pub(crate) _y: u32,
+    /// The index of the precinct in the sub-band.
+    pub(crate) idx: u32,
 }
 
 #[derive(Clone)]

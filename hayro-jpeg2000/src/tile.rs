@@ -247,8 +247,6 @@ fn parse_tile_part<'a>(
 /// A tile, instantiated to a specific component.
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct ComponentTile<'a> {
-    /// The underlying tile.
-    pub(crate) tile: &'a Tile<'a>,
     /// The information of the component of the tile.
     pub(crate) component_info: &'a ComponentInfo,
     /// The rectangle of the component tile.
@@ -282,13 +280,12 @@ impl<'a> ComponentTile<'a> {
         };
 
         ComponentTile {
-            tile,
             component_info,
             rect,
         }
     }
 
-    pub(crate) fn resolution_tiles(&self) -> impl IntoIterator<Item = ResolutionTile<'_>> {
+    pub(crate) fn resolution_tiles(&self) -> impl Iterator<Item = ResolutionTile<'_>> {
         (0..self
             .component_info
             .coding_style
@@ -476,8 +473,9 @@ impl<'a> ResolutionTile<'a> {
         let mut y_start = (self.rect.y0 / (1 << ppy)) * (1 << ppy);
         let mut x_start = (self.rect.x0 / (1 << ppx)) * (1 << ppx);
 
-        // TODO: I don't really understand where the specification mentions this
-        // is necessary. I just copied this from the Serenity decoder.
+        // It is unclear why this is necessary, but it is. The spec only
+        // mentions that ppx/ppy must be decreased when calculating codeblock
+        // dimensions, but not that it's necessary for precincts as well.
         if self.resolution > 0 {
             ppx -= 1;
             ppy -= 1;
@@ -489,17 +487,43 @@ impl<'a> ResolutionTile<'a> {
         let ppx_pow2 = 1 << ppx;
         let ppy_pow2 = 1 << ppy;
 
-        (0..num_precincts_y)
-            .map(move |y| y * ppy_pow2 + y_start)
-            .flat_map(move |y0| {
-                (0..num_precincts_x)
-                    .map(move |x| x * ppx_pow2 + x_start)
-                    .map(move |x0| PrecinctData {
-                        rect: IntRect::from_xywh(x0, y0, ppx_pow2, ppy_pow2),
-                        _x: x0,
-                        _y: y0,
-                    })
+        (0..num_precincts_y).flat_map(move |y| {
+            let y0 = y * ppy_pow2 + y_start;
+
+            (0..num_precincts_x).map(move |x| {
+                let x0 = x * ppx_pow2 + x_start;
+                PrecinctData {
+                    // Map back to reference grid coordinates. See the formula
+                    // described in B.12.1.3.
+                    r_x: self
+                        .component_tile
+                        .component_info
+                        .size_info
+                        .horizontal_resolution as u32
+                        * x
+                        * (1 << (self.precinct_exponent_x() as u16
+                            + self
+                                .component_tile
+                                .component_info
+                                .num_decomposition_levels()
+                            - self.resolution)),
+                    r_y: self
+                        .component_tile
+                        .component_info
+                        .size_info
+                        .vertical_resolution as u32
+                        * y
+                        * (1 << (self.precinct_exponent_y() as u16
+                            + self
+                                .component_tile
+                                .component_info
+                                .num_decomposition_levels()
+                            - self.resolution)),
+                    rect: IntRect::from_xywh(x0, y0, ppx_pow2, ppy_pow2),
+                    idx: num_precincts_x * y + x,
+                }
             })
+        })
     }
 
     pub(crate) fn code_block_width(&self) -> u32 {
