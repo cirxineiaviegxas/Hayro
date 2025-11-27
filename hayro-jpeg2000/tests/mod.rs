@@ -4,6 +4,7 @@ use image::{DynamicImage, ImageBuffer, ImageFormat, Rgba, RgbaImage};
 use indicatif::{ProgressBar, ProgressStyle};
 use moxcms::{ColorProfile, Layout, TransformOptions};
 use rayon::prelude::*;
+use serde::Deserialize;
 use std::any::Any;
 use std::cmp::max;
 use std::fs;
@@ -17,8 +18,10 @@ const REPLACE: Option<&str> = option_env!("REPLACE");
 static WORKSPACE_PATH: LazyLock<PathBuf> =
     LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(""));
 
-static ASSETS_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKSPACE_PATH.join("assets"));
 static SNAPSHOTS_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKSPACE_PATH.join("snapshots"));
+static TEST_INPUTS_PATH: LazyLock<PathBuf> = LazyLock::new(|| WORKSPACE_PATH.join("test-inputs"));
+
+const INPUT_MANIFESTS: &[(&str, &str)] = &[("serenity", "manifest_serenity.json")];
 
 static DIFFS_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let path = WORKSPACE_PATH.join("diffs");
@@ -50,7 +53,7 @@ fn run_harness() -> bool {
     };
 
     if asset_files.is_empty() {
-        eprintln!("No .jp2 assets were found in {}", ASSETS_PATH.display());
+        eprintln!("No test inputs were found. Run `python sync_inputs.py` to download them.");
         return false;
     }
 
@@ -66,7 +69,7 @@ fn run_harness() -> bool {
     let reports: Vec<TestReport> = asset_files
         .par_iter()
         .map(|asset| {
-            let name = asset.file_name().unwrap().to_string_lossy().to_string();
+            let name = asset.display_name.clone();
             progress_bar.set_message(name.clone());
             let start = Instant::now();
             let outcome = catch_unwind(AssertUnwindSafe(|| run_asset_test(asset))).unwrap_or_else(
@@ -150,83 +153,141 @@ impl Drop for PanicHookGuard {
     }
 }
 
-fn collect_asset_files() -> Result<Vec<PathBuf>, String> {
-    let mut files = vec![];
-    let dir = fs::read_dir(&*ASSETS_PATH).map_err(|err| {
-        format!(
-            "failed to read assets directory {}: {err}",
-            ASSETS_PATH.display()
-        )
-    })?;
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ManifestItem {
+    Simple(String),
+    Detailed {
+        id: String,
+        #[serde(default = "default_render")]
+        render: bool,
+    },
+}
 
-    for entry in dir {
-        let entry = entry.map_err(|err| format!("failed to read asset entry: {err}"))?;
-        let path = entry.path();
-        if path.is_file()
-            && path
-                .extension()
-                .and_then(|ext| ext.to_str())
-                .map(|ext| ext.eq_ignore_ascii_case("jp2") || ext.eq_ignore_ascii_case("jpf"))
-                .unwrap_or(false)
-        {
-            files.push(path);
+struct AssetEntry {
+    relative_path: PathBuf,
+    display_name: String,
+    render: bool,
+}
+
+impl AssetEntry {
+    fn new(namespace: &str, id: String, render: bool) -> Self {
+        let relative_path = Path::new(namespace).join(&id);
+        let display_name = relative_path.display().to_string();
+        Self {
+            relative_path,
+            display_name,
+            render,
+        }
+    }
+}
+
+impl ManifestItem {
+    fn into_asset(self, namespace: &str) -> AssetEntry {
+        match self {
+            ManifestItem::Simple(id) => AssetEntry::new(namespace, id, true),
+            ManifestItem::Detailed { id, render } => AssetEntry::new(namespace, id, render),
+        }
+    }
+}
+
+fn default_render() -> bool {
+    true
+}
+
+fn collect_asset_files() -> Result<Vec<AssetEntry>, String> {
+    let mut files = vec![];
+
+    for (namespace, manifest_rel_path) in INPUT_MANIFESTS {
+        let manifest_path = WORKSPACE_PATH.join(manifest_rel_path);
+        let content = fs::read_to_string(&manifest_path)
+            .map_err(|err| format!("failed to read manifest {}: {err}", manifest_path.display()))?;
+        let entries: Vec<ManifestItem> = serde_json::from_str(&content).map_err(|err| {
+            format!(
+                "failed to parse manifest {}: {err}",
+                manifest_path.display()
+            )
+        })?;
+
+        for entry in entries {
+            let asset_entry = entry.into_asset(namespace);
+            let absolute_path = TEST_INPUTS_PATH.join(&asset_entry.relative_path);
+            if !absolute_path.exists() {
+                return Err(format!(
+                    "missing test input {} (expected at {})",
+                    asset_entry.display_name,
+                    absolute_path.display()
+                ));
+            }
+            files.push(asset_entry);
         }
     }
 
-    files.sort();
+    files.sort_by(|a, b| a.display_name.cmp(&b.display_name));
     Ok(files)
 }
 
-fn run_asset_test(asset_path: &Path) -> Result<(), String> {
-    let file_name = asset_path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| format!("asset path is not valid UTF-8: {}", asset_path.display()))?
-        .to_string();
+fn run_asset_test(asset: &AssetEntry) -> Result<(), String> {
+    let asset_path = TEST_INPUTS_PATH.join(&asset.relative_path);
+    let asset_name = &asset.display_name;
 
     let data =
-        fs::read(asset_path).map_err(|err| format!("failed to read {}: {err}", file_name))?;
-    let bitmap = read(&data).map_err(|err| format!("failed to decode {}: {err:?}", file_name))?;
+        fs::read(&asset_path).map_err(|err| format!("failed to read {}: {err}", asset_name))?;
+    let bitmap_result = read(&data);
+
+    if !asset.render {
+        // Crash-only test: just execute the decoder to ensure it handles the file.
+        let _ = bitmap_result;
+        return Ok(());
+    }
+
+    let bitmap =
+        bitmap_result.map_err(|err| format!("failed to decode {}: {err:?}", asset_name))?;
 
     let rgba = bitmap_to_dynamic_image(bitmap).into_rgba8();
-    let reference_name = Path::new(&file_name)
-        .with_extension("png")
-        .file_name()
-        .unwrap()
-        .to_owned();
+    let reference_path = asset.relative_path.with_extension("png");
+    let snapshot_path = SNAPSHOTS_PATH.join(&reference_path);
 
-    let snapshot_path = SNAPSHOTS_PATH.join(&reference_name);
-
-    fs::create_dir_all(&*SNAPSHOTS_PATH)
-        .map_err(|err| format!("failed to create snapshots directory: {err}"))?;
+    if let Some(parent) = snapshot_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("failed to create snapshot directory: {err}"))?;
+    }
 
     if !snapshot_path.exists() {
         rgba.save_with_format(&snapshot_path, ImageFormat::Png)
-            .map_err(|err| format!("failed to save snapshot for {}: {err}", file_name))?;
-        return Err(format!("new reference image was created for {}", file_name));
+            .map_err(|err| format!("failed to save snapshot for {}: {err}", asset_name))?;
+        return Err(format!(
+            "new reference image was created for {}",
+            asset_name
+        ));
     }
 
     let expected = image::open(&snapshot_path)
-        .map_err(|err| format!("failed to load snapshot for {}: {err}", file_name))?
+        .map_err(|err| format!("failed to load snapshot for {}: {err}", asset_name))?
         .into_rgba8();
     let (diff_image, pixel_diff) = get_diff(&expected, &rgba);
 
     if pixel_diff > 0 {
-        let diff_path = DIFFS_PATH.join(&reference_name);
+        let diff_path = DIFFS_PATH.join(&reference_path);
+
+        if let Some(parent) = diff_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|err| format!("failed to create diff directory: {err}"))?;
+        }
 
         diff_image
             .save_with_format(&diff_path, ImageFormat::Png)
-            .map_err(|err| format!("failed to save diff for {}: {err}", file_name))?;
+            .map_err(|err| format!("failed to save diff for {}: {err}", asset_name))?;
 
         if REPLACE.is_some() {
             rgba.save_with_format(&snapshot_path, ImageFormat::Png)
-                .map_err(|err| format!("failed to replace snapshot for {}: {err}", file_name))?;
-            return Err(format!("snapshot was replaced for {}", file_name));
+                .map_err(|err| format!("failed to replace snapshot for {}: {err}", asset_name))?;
+            return Err(format!("snapshot was replaced for {}", asset_name));
         }
 
         return Err(format!(
             "pixel diff {} detected for {}",
-            pixel_diff, file_name
+            pixel_diff, asset_name
         ));
     }
 
