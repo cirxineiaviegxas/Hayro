@@ -471,6 +471,14 @@ fn size_marker(reader: &mut Reader) -> Result<SizeData, &'static str> {
         }
     }
 
+    const MAX_DIMENSIONS: usize = 60000;
+
+    if size_data.image_width() as usize > MAX_DIMENSIONS
+        || size_data.image_height() as usize > MAX_DIMENSIONS
+    {
+        return Err("image is too large");
+    }
+
     Ok(size_data)
 }
 
