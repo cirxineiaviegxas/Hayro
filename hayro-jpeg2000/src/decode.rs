@@ -630,8 +630,13 @@ fn get_code_block_data<'a>(
     storage: &mut DecompositionStorage<'a>,
 ) -> Result<(), &'static str> {
     for tile_part in &tile.tile_parts {
-        if get_code_block_data_inner(tile_part, &mut progression_iterator, tile_ctx, storage)
-            .is_none()
+        if get_code_block_data_inner(
+            tile_part.clone(),
+            &mut progression_iterator,
+            tile_ctx,
+            storage,
+        )
+        .is_none()
         {
             warn!(
                 "failed to fully process a tile part in tile {}, decoded image might be corrupted",
@@ -644,7 +649,7 @@ fn get_code_block_data<'a>(
 }
 
 fn get_code_block_data_inner<'a>(
-    tile_part: &TilePart<'a>,
+    mut tile_part: TilePart<'a>,
     mut progression_iterator: impl Iterator<Item = ProgressionData>,
     tile_ctx: &mut TileDecodeContext<'a>,
     storage: &mut DecompositionStorage<'a>,
@@ -655,14 +660,7 @@ fn get_code_block_data_inner<'a>(
     // Otherwise, `tile_part.packet_body` contains packet headers and data
     // in an interleaved fashion.
 
-    let (mut packet_body_reader, mut header_or_all_data) =
-        if let Some(packet_headers) = tile_part.packet_headers {
-            (Some(BitReader::new(tile_part.packet_body)), packet_headers)
-        } else {
-            (None, tile_part.packet_body)
-        };
-
-    while !header_or_all_data.is_empty() {
+    while !tile_part.header().at_end() {
         let progression_data = progression_iterator.next()?;
         let resolution = progression_data.resolution;
         let component_info = &tile_ctx.tile.component_infos[progression_data.component as usize];
@@ -670,17 +668,16 @@ fn get_code_block_data_inner<'a>(
             &mut storage.tile_decompositions[progression_data.component as usize];
         let sub_band_iter = tile_decompositions.sub_band_iter(resolution, &storage.decompositions);
 
-        if component_info.coding_style.flags.may_use_sop_markers() {
-            let mut reader = BitReader::new(header_or_all_data);
-            if reader.peek_marker() == Some(SOP) {
-                reader.read_marker().ok()?;
-                reader.skip_bytes(4)?;
-                header_or_all_data = reader.tail()?;
-            }
+        let header_reader = tile_part.header();
+
+        if component_info.coding_style.flags.may_use_sop_markers()
+            && header_reader.peek_marker() == Some(SOP)
+        {
+            header_reader.read_marker().ok()?;
+            header_reader.skip_bytes(4)?;
         }
 
-        let mut reader = BitReader::new(header_or_all_data);
-        let zero_length = reader.read_bits_with_stuffing(1)? == 0;
+        let zero_length = header_reader.read_bits_with_stuffing(1)? == 0;
 
         // B.10.3 Zero length packet
         // "The first bit in the packet header denotes whether the packet has a length of zero
@@ -691,7 +688,7 @@ fn get_code_block_data_inner<'a>(
                 get_code_block_lengths(
                     sub_band,
                     &progression_data,
-                    &mut reader,
+                    header_reader,
                     storage,
                     component_info,
                 )?;
@@ -699,48 +696,37 @@ fn get_code_block_data_inner<'a>(
         }
 
         // TODO: What to do with the note below B.10.3?
-        reader.align();
+        header_reader.align();
 
-        let read_packet_body = |reader: &mut BitReader<'a>| {
-            if component_info.coding_style.flags.uses_eph_marker()
-                && reader.read_marker().ok()? != EPH
-            {
-                return None;
-            }
+        // Now read the packet body.
+        let body_reader = tile_part.body();
 
-            if !zero_length {
-                for sub_band in sub_band_iter {
-                    let sub_band = &mut storage.sub_bands[sub_band];
-                    let precinct = &mut storage.precincts[sub_band.precincts.clone()]
-                        [progression_data.precinct as usize];
-                    let code_blocks = &mut storage.code_blocks[precinct.code_blocks.clone()];
+        if component_info.coding_style.flags.uses_eph_marker()
+            && body_reader.read_marker().ok()? != EPH
+        {
+            return None;
+        }
 
-                    for code_block in code_blocks {
-                        let layer = &mut storage.layers[code_block.layers.clone()]
-                            [progression_data.layer_num as usize];
+        if !zero_length {
+            for sub_band in sub_band_iter {
+                let sub_band = &mut storage.sub_bands[sub_band];
+                let precinct = &mut storage.precincts[sub_band.precincts.clone()]
+                    [progression_data.precinct as usize];
+                let code_blocks = &mut storage.code_blocks[precinct.code_blocks.clone()];
 
-                        if let Some(segments) = layer.segments.clone() {
-                            let segments = &mut storage.segments[segments.clone()];
+                for code_block in code_blocks {
+                    let layer = &mut storage.layers[code_block.layers.clone()]
+                        [progression_data.layer_num as usize];
 
-                            for segment in segments {
-                                segment.data = reader.read_bytes(segment.data_length as usize)?
-                            }
+                    if let Some(segments) = layer.segments.clone() {
+                        let segments = &mut storage.segments[segments.clone()];
+
+                        for segment in segments {
+                            segment.data = body_reader.read_bytes(segment.data_length as usize)?
                         }
                     }
                 }
             }
-
-            Some(())
-        };
-
-        if let Some(body_reader) = &mut packet_body_reader {
-            read_packet_body(body_reader)?;
-            header_or_all_data = reader.tail()?;
-        } else {
-            let packet_data = reader.tail()?;
-            let mut data_reader = BitReader::new(packet_data);
-            read_packet_body(&mut data_reader)?;
-            header_or_all_data = data_reader.tail()?;
         }
     }
 
