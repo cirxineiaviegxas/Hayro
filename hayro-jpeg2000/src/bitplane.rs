@@ -11,108 +11,55 @@
 
 use crate::arithmetic_decoder::{ArithmeticDecoder, ArithmeticDecoderContext};
 use crate::codestream::CodeBlockStyle;
-use crate::decode::{CodeBlock, DecompositionStorage, SubBandType};
+use crate::decode::{CodeBlock, DecompositionStorage, SubBandType, TileDecodeContext};
 use crate::reader::BitReader;
-
-#[derive(Default)]
-pub(crate) struct BitPlaneDecodeBuffers {
-    combined_layers: Vec<u8>,
-    segment_ranges: Vec<usize>,
-    segment_coding_passes: Vec<u8>,
-}
-impl BitPlaneDecodeBuffers {
-    fn reset(&mut self) {
-        self.combined_layers.clear();
-        self.segment_ranges.clear();
-        self.segment_coding_passes.clear();
-
-        // The design of these two buffers is that the ranges are stored
-        // as [idx, idx + 1), so we need to store the first 0 when resetting.
-        self.segment_ranges.push(0);
-        self.segment_coding_passes.push(0);
-    }
-}
 
 /// Decode the layers of the given code block into coefficients.
 ///
 /// The result will be stored in the form of a vector of signs and magnitudes
 /// in the bitplane decoder context.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn decode(
     code_block: &CodeBlock,
     sub_band_type: SubBandType,
-    mut num_bitplanes: u8,
+    total_bitplanes: u8,
     style: &CodeBlockStyle,
-    ctx: &mut CodeBlockDecodeContext,
-    bp_buffers: &mut BitPlaneDecodeBuffers,
+    tile_ctx: &mut TileDecodeContext,
     storage: &DecompositionStorage,
     strict: bool,
 ) -> Result<(), &'static str> {
-    ctx.reset(code_block, sub_band_type, style);
-
-    if code_block.number_of_coding_passes == 0 {
-        return Ok(());
-    }
-
-    // "The maximum number of bit-planes available for the representation of
-    // coefficients in any sub-band, b, is given by Mb as defined in Equation
-    // (E-2). In general however, the number of actual bit-planes for which
-    // coding passes are generated is Mb – P, where the number of missing most
-    // significant bit-planes, P, may vary from code-block to code-block."
-
-    // See issue 399. If this subtraction fails the file is in theory invalid,
-    // but we still try to be lenient.
-    num_bitplanes = if strict {
-        num_bitplanes
-            .checked_sub(code_block.missing_bit_planes)
-            .ok_or("number of missing bit planes was too hgh")?
-    } else {
-        num_bitplanes.saturating_sub(code_block.missing_bit_planes)
-    };
-
-    if num_bitplanes == 0 {
-        return Ok(());
-    }
-
-    let max_coding_passes = if num_bitplanes == 1 {
-        1
-    } else {
-        1 + 3 * (num_bitplanes - 1)
-    };
-
-    if max_coding_passes < code_block.number_of_coding_passes && strict {
-        return Err("codeblock contains too many coding passes");
-    }
+    tile_ctx.bit_plane_decode_context.reset(
+        code_block,
+        sub_band_type,
+        style,
+        total_bitplanes,
+        strict,
+    )?;
+    tile_ctx.bit_plane_decode_buffers.reset();
 
     decode_inner(
         code_block,
-        num_bitplanes,
-        max_coding_passes,
         storage,
-        ctx,
-        bp_buffers,
-        strict,
+        &mut tile_ctx.bit_plane_decode_context,
+        &mut tile_ctx.bit_plane_decode_buffers,
     )
     .ok_or("failed to decode code-block")?;
 
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn decode_inner(
     code_block: &CodeBlock,
-    num_bitplanes: u8,
-    max_coding_passes: u8,
     storage: &DecompositionStorage,
-    ctx: &mut CodeBlockDecodeContext,
+    ctx: &mut BitPlaneDecodeContext,
     bp_buffers: &mut BitPlaneDecodeBuffers,
-    strict: bool,
 ) -> Option<()> {
     bp_buffers.reset();
 
     let mut last_segment_idx = 0;
     let mut coding_passes = 0;
 
+    // Build a list so that we can associate coding passes with their segments
+    // and data more easily.
     for layer in &storage.layers[code_block.layers.start..code_block.layers.end] {
         if let Some(range) = layer.segments.clone() {
             let layer_segments = &storage.segments[range.clone()];
@@ -145,25 +92,26 @@ fn decode_inner(
 
     if is_normal_mode {
         // Only one termination per code block, so we can just decode the
-        // whole range in one single pass.
+        // whole range in one single go, processing all coding passes at once.
         let mut decoder = ArithmeticDecoder::new(&bp_buffers.combined_layers);
         handle_coding_passes(
             0,
-            code_block.number_of_coding_passes.min(max_coding_passes),
+            code_block
+                .number_of_coding_passes
+                .min(ctx.max_coding_passes),
             ctx,
             &mut decoder,
-            strict,
         )?;
     } else {
-        // Otherwise, each segment introduces a termination. For selective
-        // arithmetic coding bypass, each segment only covers one coding pass
+        // Otherwise, each segment introduces a termination. For "termination on
+        // each pass", each segment only covers one coding pass
         // and a termination is introduced every time. Otherwise, for only
         // arithmetic coding bypass, terminations are introduced based on the
         // exact index of the covered coding passes (see Table D.9).
         for segment in 0..bp_buffers.segment_coding_passes.len() - 1 {
             let start_coding_pass = bp_buffers.segment_coding_passes[segment];
             let end_coding_pass =
-                bp_buffers.segment_coding_passes[segment + 1].min(max_coding_passes);
+                bp_buffers.segment_coding_passes[segment + 1].min(ctx.max_coding_passes);
 
             let data = &bp_buffers.combined_layers
                 [bp_buffers.segment_ranges[segment]..bp_buffers.segment_ranges[segment + 1]];
@@ -181,22 +129,10 @@ fn decode_inner(
 
             if use_arithmetic {
                 let mut decoder = ArithmeticDecoder::new(data);
-                handle_coding_passes(
-                    start_coding_pass,
-                    end_coding_pass,
-                    ctx,
-                    &mut decoder,
-                    strict,
-                )?;
+                handle_coding_passes(start_coding_pass, end_coding_pass, ctx, &mut decoder)?;
             } else {
-                let mut decoder = BypassDecoder::new(data, strict);
-                handle_coding_passes(
-                    start_coding_pass,
-                    end_coding_pass,
-                    ctx,
-                    &mut decoder,
-                    strict,
-                )?;
+                let mut decoder = BypassDecoder::new(data, ctx.strict);
+                handle_coding_passes(start_coding_pass, end_coding_pass, ctx, &mut decoder)?;
             }
         }
     }
@@ -208,7 +144,7 @@ fn decode_inner(
         .iter_mut()
         .zip(ctx.coefficient_states.iter().copied())
     {
-        let count = num_bitplanes - coefficient_state.num_bitplanes();
+        let count = ctx.bitplanes - coefficient_state.num_bitplanes();
         coefficient.push_zeroes(count);
     }
 
@@ -218,9 +154,8 @@ fn decode_inner(
 fn handle_coding_passes(
     start: u8,
     end: u8,
-    ctx: &mut CodeBlockDecodeContext,
+    ctx: &mut BitPlaneDecodeContext,
     decoder: &mut impl BitDecoder,
-    strict: bool,
 ) -> Option<()> {
     for coding_pass in start..end {
         enum PassType {
@@ -248,7 +183,7 @@ fn handle_coding_passes(
                     let b2 = decoder.read_bit(ctx.arithmetic_decoder_context(18))?;
                     let b3 = decoder.read_bit(ctx.arithmetic_decoder_context(18))?;
 
-                    if (b0 != 1 || b1 != 0 || b2 != 1 || b3 != 0) && strict {
+                    if (b0 != 1 || b1 != 0 || b2 != 1 || b3 != 0) && ctx.strict {
                         return None;
                     }
                 }
@@ -366,10 +301,6 @@ impl Coefficient {
         self.0 |= (sign as u32) << 31;
     }
 
-    fn has_sign(&self) -> bool {
-        self.0 & 0x80000000 != 0
-    }
-
     fn sign(&self) -> u32 {
         (self.0 >> 31) & 1
     }
@@ -434,17 +365,38 @@ impl NeighborSignificances {
         self.0
     }
 
+    // Needed for vertically causal context.
     fn all_without_bottom(&self) -> u8 {
         self.0 & 0b11110100
     }
 }
 
-pub(crate) struct CodeBlockDecodeContext {
+#[derive(Default)]
+pub(crate) struct BitPlaneDecodeBuffers {
+    combined_layers: Vec<u8>,
+    segment_ranges: Vec<usize>,
+    segment_coding_passes: Vec<u8>,
+}
+
+impl BitPlaneDecodeBuffers {
+    fn reset(&mut self) {
+        self.combined_layers.clear();
+        self.segment_ranges.clear();
+        self.segment_coding_passes.clear();
+
+        // The design of these two buffers is that the ranges are stored
+        // as [idx, idx + 1), so we need to store the first 0 when resetting.
+        self.segment_ranges.push(0);
+        self.segment_coding_passes.push(0);
+    }
+}
+
+pub(crate) struct BitPlaneDecodeContext {
     /// A vector of bit-packed fields for each coefficient in the code-block.
     coefficient_states: Vec<CoefficientState>,
     /// The neighbor significances for each coefficient.
     neighbor_significances: Vec<NeighborSignificances>,
-    /// The magnitude and signs each coefficient that is successively built
+    /// The magnitude and signs of each coefficient that is successively built
     /// as we advance through the bitplanes.
     coefficients: Vec<Coefficient>,
     /// The width of the code-block we are processing.
@@ -455,13 +407,19 @@ pub(crate) struct CodeBlockDecodeContext {
     height: u32,
     /// The code-block style for the current code-block.
     style: CodeBlockStyle,
+    /// The number of bitplanes (minus implicitly missing bitplanes) to decode.
+    bitplanes: u8,
+    /// Whether strict mode is enabled.
+    strict: bool,
+    /// The maximum number of coding passes to process.
+    max_coding_passes: u8,
     /// The type of sub-band the current code block belongs to.
     sub_band_type: SubBandType,
     /// The arithmetic decoder contexts for each context label.
     contexts: [ArithmeticDecoderContext; 19],
 }
 
-impl Default for CodeBlockDecodeContext {
+impl Default for BitPlaneDecodeContext {
     fn default() -> Self {
         Self {
             coefficient_states: vec![],
@@ -471,20 +429,25 @@ impl Default for CodeBlockDecodeContext {
             padded_width: COEFFICIENTS_PADDING * 2,
             height: 0,
             style: CodeBlockStyle::default(),
+            bitplanes: 0,
+            max_coding_passes: 0,
+            strict: false,
             sub_band_type: SubBandType::LowLow,
             contexts: [ArithmeticDecoderContext::default(); 19],
         }
     }
 }
 
-impl CodeBlockDecodeContext {
+impl BitPlaneDecodeContext {
     /// Completely reset context so that it can be reused for a new code-block.
     pub(crate) fn reset(
         &mut self,
         code_block: &CodeBlock,
         sub_band_type: SubBandType,
         code_block_style: &CodeBlockStyle,
-    ) {
+        total_bitplanes: u8,
+        strict: bool,
+    ) -> Result<(), &'static str> {
         let (width, height) = (code_block.rect.width(), code_block.rect.height());
         let padded_width = width + COEFFICIENTS_PADDING * 2;
         let padded_height = height + COEFFICIENTS_PADDING * 2;
@@ -508,18 +471,46 @@ impl CodeBlockDecodeContext {
         self.sub_band_type = sub_band_type;
         self.style = *code_block_style;
         self.reset_contexts();
+
+        // "The maximum number of bit-planes available for the representation of
+        // coefficients in any sub-band, b, is given by Mb as defined in Equation
+        // (E-2). In general however, the number of actual bit-planes for which
+        // coding passes are generated is Mb – P, where the number of missing most
+        // significant bit-planes, P, may vary from code-block to code-block."
+
+        // See issue 399. If this subtraction fails the file is in theory invalid,
+        // but we still try to be lenient.
+        self.bitplanes = if strict {
+            total_bitplanes
+                .checked_sub(code_block.missing_bit_planes)
+                .ok_or("number of missing bit planes was too hgh")?
+        } else {
+            total_bitplanes.saturating_sub(code_block.missing_bit_planes)
+        };
+
+        self.max_coding_passes = if self.bitplanes == 0 {
+            0
+        } else {
+            1 + 3 * (self.bitplanes - 1)
+        };
+
+        if self.max_coding_passes < code_block.number_of_coding_passes && strict {
+            return Err("codeblock contains too many coding passes");
+        }
+
+        Ok(())
     }
 
     pub(crate) fn coefficient_rows(&self) -> impl Iterator<Item = &[Coefficient]> {
         self.coefficients
             .chunks_exact(self.padded_width as usize)
+            // Exclude the padding that we added.
             .map(|row| &row[COEFFICIENTS_PADDING as usize..][..self.width as usize])
             .skip(COEFFICIENTS_PADDING as usize)
             .take(self.height as usize)
     }
 
     fn set_sign(&mut self, pos: Position, sign: u8) {
-        // Using `or` is okay here because we only set the sign once.
         self.coefficients[pos.index(self.padded_width)].set_sign(sign);
     }
 
@@ -539,6 +530,7 @@ impl CodeBlockDecodeContext {
         self.contexts[18].index = 46;
     }
 
+    /// Reset state that is transient for each bitplane that is decoded.
     fn reset_for_next_bitplane(&mut self) {
         for el in &mut self.coefficient_states {
             el.set_zero_coded(0);
@@ -601,25 +593,20 @@ impl CodeBlockDecodeContext {
 
     #[inline]
     fn sign(&self, position: Position) -> u8 {
-        if self.coefficients[position.index(self.padded_width)].has_sign() {
-            1
-        } else {
-            0
-        }
+        self.coefficients[position.index(self.padded_width)].sign() as u8
     }
 
     #[inline]
-    fn neighbor_in_next_stripe(&self, pos: Position, neighbor_y: u32) -> bool {
-        neighbor_y < self.height && (neighbor_y >> 2) > (pos.real_y() >> 2)
+    fn neighbor_in_next_stripe(&self, pos: Position) -> bool {
+        let neighbor = pos.bottom();
+        neighbor.real_y() < self.height && (neighbor.real_y() >> 2) > (pos.real_y() >> 2)
     }
 
     #[inline]
     fn neighborhood_significance_states(&self, pos: Position) -> u8 {
         let neighbors = &self.neighbor_significances[pos.index(self.padded_width)];
 
-        if self.style.vertically_causal_context
-            && self.neighbor_in_next_stripe(pos, pos.real_y() + 1)
-        {
+        if self.style.vertically_causal_context && self.neighbor_in_next_stripe(pos) {
             neighbors.all_without_bottom()
         } else {
             neighbors.all()
@@ -628,8 +615,9 @@ impl CodeBlockDecodeContext {
 }
 
 /// Perform the cleanup pass, specified in D.3.4.
+///
 /// See also the flow chart in Figure 7.3 in the JPEG2000 book.
-fn cleanup_pass(ctx: &mut CodeBlockDecodeContext, decoder: &mut impl BitDecoder) -> Option<()> {
+fn cleanup_pass(ctx: &mut BitPlaneDecodeContext, decoder: &mut impl BitDecoder) -> Option<()> {
     for_each_position(
         ctx.width,
         ctx.height,
@@ -712,7 +700,7 @@ fn cleanup_pass(ctx: &mut CodeBlockDecodeContext, decoder: &mut impl BitDecoder)
 ///
 /// See also the flow chart in Figure 7.4 in the JPEG2000 book.
 fn significance_propagation_pass(
-    ctx: &mut CodeBlockDecodeContext,
+    ctx: &mut BitPlaneDecodeContext,
     decoder: &mut impl BitDecoder,
 ) -> Option<()> {
     for_each_position(
@@ -749,7 +737,7 @@ fn significance_propagation_pass(
 ///
 /// See also the flow chart in Figure 7.5 in the JPEG2000 book.
 fn magnitude_refinement_pass(
-    ctx: &mut CodeBlockDecodeContext,
+    ctx: &mut BitPlaneDecodeContext,
     decoder: &mut impl BitDecoder,
 ) -> Option<()> {
     for_each_position(
@@ -797,21 +785,35 @@ fn for_each_position(
 }
 
 /// See `context_label_sign_coding`. This table contains all context labels
-/// for each combination of the bit-packed field. (255, 255) represent
+/// for each combination of the bit-packed field. (0, 0) represent
 /// impossible combinations.
 #[rustfmt::skip]
 const SIGN_CONTEXT_LOOKUP: [(u8, u8); 256] = [
-    (9,0), (10,0), (10,1), (0,0), (12,0), (13,0), (11,0), (0,0), (12,1), (11,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (12,0), (13,0), (11,0), (0,0), (12,0), (13,0), (11,0), (0,0), (9,0),
-    (10,0), (10,1), (0,0), (0,0), (0,0), (0,0), (0,0), (12,1), (11,1), (13,1), (0,0), (9,0), (10,0), (10,1), (0,0), (12,1), (11,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
-    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (10,0), (10,0), (9,0), (0,0), (13,0), (13,0), (12,0), (0,0), (11,1), (11,1), (12,1),
-    (0,0), (0,0), (0,0), (0,0), (0,0), (13,0), (13,0), (12,0), (0,0), (13,0), (13,0), (12,0), (0,0), (10,0), (10,0), (9,0), (0,0), (0,0), (0,0), (0,0), (0,0), (11,1), (11,1), (12,1), (0,0),
-    (10,0), (10,0), (9,0), (0,0), (11,1), (11,1), (12,1), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
-    (0,0), (0,0), (0,0), (10,1), (9,0), (10,1), (0,0), (11,0), (12,0), (11,0), (0,0), (13,1), (12,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (11,0), (12,0), (11,0), (0,0), (11,0), (12,0),
-    (11,0), (0,0), (10,1), (9,0), (10,1), (0,0), (0,0), (0,0), (0,0), (0,0), (13,1), (12,1), (13,1), (0,0), (10,1), (9,0), (10,1), (0,0), (13,1), (12,1), (13,1), (0,0), (0,0), (0,0), (0,0),
-    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
-    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
-    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
-    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (9,0), (10,0), (10,1), (0,0), (12,0), (13,0), (11,0), (0,0), (12,1), (11,1), 
+    (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (12,0), (13,0), (11,0), (0,0), 
+    (12,0), (13,0), (11,0), (0,0), (9,0), (10,0), (10,1), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (12,1), (11,1), (13,1), (0,0), (9,0), (10,0), (10,1), (0,0), 
+    (12,1), (11,1), (13,1), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
+    (0,0), (0,0), (0,0), (10,0), (10,0), (9,0), (0,0), (13,0), (13,0), (12,0), 
+    (0,0), (11,1), (11,1), (12,1), (0,0), (0,0), (0,0), (0,0), (0,0), (13,0), 
+    (13,0), (12,0), (0,0), (13,0), (13,0), (12,0), (0,0), (10,0), (10,0), (9,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (11,1), (11,1), (12,1), (0,0), (10,0), 
+    (10,0), (9,0), (0,0), (11,1), (11,1), (12,1), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (10,1), (9,0), (10,1), (0,0), 
+    (11,0), (12,0), (11,0), (0,0), (13,1), (12,1), (13,1), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (11,0), (12,0), (11,0), (0,0), (11,0), (12,0), (11,0), (0,0), 
+    (10,1), (9,0), (10,1), (0,0), (0,0), (0,0), (0,0), (0,0), (13,1), (12,1), 
+    (13,1), (0,0), (10,1), (9,0), (10,1), (0,0), (13,1), (12,1), (13,1), (0,0),
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), 
+    (0,0), (0,0), (0,0), (0,0), (0,0), (0,0), (0,0),
 ];
 
 #[rustfmt::skip]
@@ -863,19 +865,18 @@ const ZERO_CTX_HH_LOOKUP: [u8; 256] = [
 #[inline(always)]
 fn decode_sign_bit<T: BitDecoder>(
     pos: Position,
-    ctx: &mut CodeBlockDecodeContext,
+    ctx: &mut BitPlaneDecodeContext,
     decoder: &mut T,
 ) -> Option<()> {
     /// Based on Table D.2.
     #[inline(always)]
-    fn context_label_sign_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> (u8, u8) {
+    fn context_label_sign_coding(pos: Position, ctx: &BitPlaneDecodeContext) -> (u8, u8) {
         // A lot of subtleties going on here, all in the interest of achieving
         // the best performance. Fundamentally, we need to determine the
         // significances as well as signs of the four neighbors (i.e. not
         // including the diagonal neighbors) and based on what the sum of signs
         // is, we assign a context label.
-        let suppress_lower = ctx.style.vertically_causal_context
-            && ctx.neighbor_in_next_stripe(pos, pos.real_y() + 1);
+
         // First, let's get all neighbor significances and mask out the diagonals.
         let significances = ctx.neighborhood_significance_states(pos) & 0b0101_0101;
 
@@ -883,7 +884,8 @@ fn decode_sign_bit<T: BitDecoder>(
         let left_sign = ctx.sign(pos.left());
         let right_sign = ctx.sign(pos.right());
         let top_sign = ctx.sign(pos.top());
-        let bottom_sign = if suppress_lower {
+        let bottom_sign = if ctx.style.vertically_causal_context && ctx.neighbor_in_next_stripe(pos)
+        {
             0
         } else {
             ctx.sign(pos.bottom())
@@ -900,6 +902,7 @@ fn decode_sign_bit<T: BitDecoder>(
         let positive_significances = significances & !signs;
         let merged_significances = (negative_significances << 1) | positive_significances;
 
+        // Now we can just perform one single lookup!
         SIGN_CONTEXT_LOOKUP[merged_significances as usize]
     }
 
@@ -917,9 +920,12 @@ fn decode_sign_bit<T: BitDecoder>(
 
 /// Return the context label for zero coding (Section D.3.1).
 #[inline(always)]
-fn context_label_zero_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> u8 {
+fn context_label_zero_coding(pos: Position, ctx: &BitPlaneDecodeContext) -> u8 {
     let neighbors = ctx.neighborhood_significance_states(pos);
 
+    // Once again, the neighbors field is bit-packed, so we can just generate
+    // a table for all u8 values and assign the correct context based on the
+    // exact value of that field.
     match ctx.sub_band_type {
         SubBandType::LowLow | SubBandType::LowHigh => ZERO_CTX_LL_LH_LOOKUP[neighbors as usize],
         SubBandType::HighLow => ZERO_CTX_HL_LOOKUP[neighbors as usize],
@@ -928,7 +934,7 @@ fn context_label_zero_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> u8 
 }
 
 /// Return the context label for magnitude refinement coding (Table D.4).
-fn context_label_magnitude_refinement_coding(pos: Position, ctx: &CodeBlockDecodeContext) -> u8 {
+fn context_label_magnitude_refinement_coding(pos: Position, ctx: &BitPlaneDecodeContext) -> u8 {
     // If magnitude refined, then 16.
     let m1 = ctx.magnitude_refinement(pos) * 16;
     // Else: If at least one neighbor is significant then 15, else 14.
@@ -939,6 +945,9 @@ fn context_label_magnitude_refinement_coding(pos: Position, ctx: &CodeBlockDecod
 
 #[derive(Default, Copy, Clone, Debug)]
 struct Position {
+    // Since we use a padding scheme for bitplane decoding (so that we don't need
+    // to special-case the neighbors of border values), these x and y values
+    // are always COEFFICIENTS_PADDING more than the actual x and y index.
     index_x: u32,
     index_y: u32,
 }
@@ -946,8 +955,8 @@ struct Position {
 impl Position {
     fn new(x: u32, y: u32) -> Position {
         Self {
-            index_x: x + 1,
-            index_y: y + 1,
+            index_x: x + COEFFICIENTS_PADDING,
+            index_y: y + COEFFICIENTS_PADDING,
         }
     }
 
@@ -1029,11 +1038,12 @@ impl BitDecoder for BypassDecoder<'_> {
     fn read_bit(&mut self, _: &mut ArithmeticDecoderContext) -> Option<u32> {
         self.0.read_bits_with_stuffing(1).or({
             if !self.1 {
-                // Just pad with ones. Not sure if zeroes would be better here,
-                // but since the arithmetic decoder is also padded with 0xFF
-                // maybe 1 is the better choice?
+                // If not in strict mode, just pad with ones. Not sure if
+                // zeroes would be better here, but since the arithmetic decoder
+                // is also padded with 0xFF maybe 1 is the better choice?
                 Some(1)
             } else {
+                // We have too little data, return `None`.
                 None
             }
         })
