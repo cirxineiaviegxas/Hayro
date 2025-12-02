@@ -47,6 +47,9 @@ pub use hayro_interpret::{InterpreterSettings, Pdf};
 use kurbo::{Affine, Rect, Shape};
 use std::ops::RangeInclusive;
 pub use vello_cpu::Pixmap;
+use vello_cpu::color::AlphaColor;
+use vello_cpu::color::Srgb;
+use vello_cpu::color::palette::css::TRANSPARENT;
 use vello_cpu::color::palette::css::WHITE;
 use vello_cpu::{Level, RenderMode};
 
@@ -65,6 +68,9 @@ pub struct RenderSettings {
     /// The height of the viewport. If this is set to `None`, the height will be chosen
     /// automatically based on the scale factor and the dimensions of the PDF.
     pub height: Option<u16>,
+    /// The background color. Determines the color of the base
+    /// rectangle during rendering to a pixmap.
+    pub bg_color: AlphaColor<Srgb>,
 }
 
 impl Default for RenderSettings {
@@ -74,6 +80,7 @@ impl Default for RenderSettings {
             y_scale: 1.0,
             width: None,
             height: None,
+            bg_color: TRANSPARENT,
         }
     }
 }
@@ -111,7 +118,7 @@ pub fn render(
 
     let mut device = Renderer::new(pix_width, pix_height, vc_settings);
 
-    device.ctx.set_paint(WHITE);
+    device.ctx.set_paint(render_settings.bg_color);
     device
         .ctx
         .fill_rect(&Rect::new(0.0, 0.0, pix_width as f64, pix_height as f64));
@@ -155,6 +162,7 @@ pub fn render_pdf(
                 &RenderSettings {
                     x_scale: scale,
                     y_scale: scale,
+                    bg_color: WHITE,
                     ..Default::default()
                 },
             );

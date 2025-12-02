@@ -3,6 +3,7 @@
 use hayro::{Pdf, RenderSettings, render};
 use hayro_interpret::InterpreterSettings;
 use std::sync::Arc;
+use vello_cpu::color::palette::css::WHITE;
 
 fn main() {
     if let Ok(()) = log::set_logger(&LOGGER) {
@@ -27,6 +28,7 @@ fn main() {
     let render_settings = RenderSettings {
         x_scale: scale,
         y_scale: scale,
+        bg_color: WHITE,
         ..Default::default()
     };
 

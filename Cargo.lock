@@ -497,6 +497,7 @@ dependencies = [
  "hayro",
  "js-sys",
  "log",
+ "vello_cpu",
  "wasm-bindgen",
  "web-sys",
 ]

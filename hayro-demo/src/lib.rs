@@ -2,6 +2,7 @@ use console_error_panic_hook;
 use hayro::{FontQuery, InterpreterSettings, Pdf, RenderSettings};
 use js_sys;
 use std::sync::Arc;
+use vello_cpu::color::palette::css::WHITE;
 use wasm_bindgen::prelude::*;
 
 struct ConsoleLogger;
@@ -118,6 +119,7 @@ impl PdfViewer {
         let render_settings_base = RenderSettings {
             x_scale: 1.0,
             y_scale: 1.0,
+            bg_color: WHITE,
             ..Default::default()
         };
         let base_pixmap = hayro::render(page, &interpreter_settings, &render_settings_base);
@@ -136,6 +138,7 @@ impl PdfViewer {
         let render_settings = RenderSettings {
             x_scale: scale,
             y_scale: scale,
+            bg_color: WHITE,
             ..Default::default()
         };
 
