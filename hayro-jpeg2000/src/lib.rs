@@ -13,6 +13,7 @@ mod arithmetic_decoder;
 pub mod bitmap;
 pub(crate) mod bitplane;
 pub mod boxes;
+mod build;
 mod codestream;
 mod decode;
 mod icc;
