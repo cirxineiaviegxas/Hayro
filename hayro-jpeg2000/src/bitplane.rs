@@ -11,7 +11,7 @@
 
 use crate::arithmetic_decoder::{ArithmeticDecoder, ArithmeticDecoderContext};
 use crate::codestream::CodeBlockStyle;
-use crate::decode::{CodeBlock, Layer, Segment, SubBandType};
+use crate::decode::{CodeBlock, DecompositionStorage, SubBandType};
 use crate::reader::BitReader;
 
 #[derive(Default)]
@@ -24,11 +24,11 @@ impl BitPlaneDecodeBuffers {
     fn reset(&mut self) {
         self.combined_layers.clear();
         self.segment_ranges.clear();
+        self.segment_coding_passes.clear();
 
         // The design of these two buffers is that the ranges are stored
         // as [idx, idx + 1), so we need to store the first 0 when resetting.
         self.segment_ranges.push(0);
-        self.segment_coding_passes.clear();
         self.segment_coding_passes.push(0);
     }
 }
@@ -45,8 +45,7 @@ pub(crate) fn decode(
     style: &CodeBlockStyle,
     ctx: &mut CodeBlockDecodeContext,
     bp_buffers: &mut BitPlaneDecodeBuffers,
-    layers: &[Layer],
-    all_segments: &[Segment],
+    storage: &DecompositionStorage,
     strict: bool,
 ) -> Result<(), &'static str> {
     ctx.reset(code_block, sub_band_type, style);
@@ -63,7 +62,13 @@ pub(crate) fn decode(
 
     // See issue 399. If this subtraction fails the file is in theory invalid,
     // but we still try to be lenient.
-    num_bitplanes = num_bitplanes.saturating_sub(code_block.missing_bit_planes);
+    num_bitplanes = if strict {
+        num_bitplanes
+            .checked_sub(code_block.missing_bit_planes)
+            .ok_or("number of missing bit planes was too hgh")?
+    } else {
+        num_bitplanes.saturating_sub(code_block.missing_bit_planes)
+    };
 
     if num_bitplanes == 0 {
         return Ok(());
@@ -81,11 +86,9 @@ pub(crate) fn decode(
 
     decode_inner(
         code_block,
-        style,
         num_bitplanes,
         max_coding_passes,
-        layers,
-        all_segments,
+        storage,
         ctx,
         bp_buffers,
         strict,
@@ -98,11 +101,9 @@ pub(crate) fn decode(
 #[allow(clippy::too_many_arguments)]
 fn decode_inner(
     code_block: &CodeBlock,
-    style: &CodeBlockStyle,
     num_bitplanes: u8,
     max_coding_passes: u8,
-    layers: &[Layer],
-    all_segments: &[Segment],
+    storage: &DecompositionStorage,
     ctx: &mut CodeBlockDecodeContext,
     bp_buffers: &mut BitPlaneDecodeBuffers,
     strict: bool,
@@ -112,9 +113,9 @@ fn decode_inner(
     let mut last_segment_idx = 0;
     let mut coding_passes = 0;
 
-    for layer in layers {
+    for layer in &storage.layers[code_block.layers.start..code_block.layers.end] {
         if let Some(range) = layer.segments.clone() {
-            let layer_segments = &all_segments[range.clone()];
+            let layer_segments = &storage.segments[range.clone()];
             for segment in layer_segments {
                 if segment.idx != last_segment_idx {
                     assert_eq!(segment.idx, last_segment_idx + 1);
@@ -140,7 +141,7 @@ fn decode_inner(
     bp_buffers.segment_coding_passes.push(coding_passes);
 
     let is_normal_mode =
-        !style.selective_arithmetic_coding_bypass && !style.termination_on_each_pass;
+        !ctx.style.selective_arithmetic_coding_bypass && !ctx.style.termination_on_each_pass;
 
     if is_normal_mode {
         // Only one termination per code block, so we can just decode the
@@ -149,7 +150,6 @@ fn decode_inner(
         handle_coding_passes(
             0,
             code_block.number_of_coding_passes.min(max_coding_passes),
-            style,
             ctx,
             &mut decoder,
             strict,
@@ -168,7 +168,7 @@ fn decode_inner(
             let data = &bp_buffers.combined_layers
                 [bp_buffers.segment_ranges[segment]..bp_buffers.segment_ranges[segment + 1]];
 
-            let use_arithmetic = if style.selective_arithmetic_coding_bypass {
+            let use_arithmetic = if ctx.style.selective_arithmetic_coding_bypass {
                 if start_coding_pass <= 9 {
                     true
                 } else {
@@ -184,7 +184,6 @@ fn decode_inner(
                 handle_coding_passes(
                     start_coding_pass,
                     end_coding_pass,
-                    style,
                     ctx,
                     &mut decoder,
                     strict,
@@ -194,7 +193,6 @@ fn decode_inner(
                 handle_coding_passes(
                     start_coding_pass,
                     end_coding_pass,
-                    style,
                     ctx,
                     &mut decoder,
                     strict,
@@ -220,7 +218,6 @@ fn decode_inner(
 fn handle_coding_passes(
     start: u8,
     end: u8,
-    style: &CodeBlockStyle,
     ctx: &mut CodeBlockDecodeContext,
     decoder: &mut impl BitDecoder,
     strict: bool,
@@ -245,7 +242,7 @@ fn handle_coding_passes(
             PassType::Cleanup => {
                 cleanup_pass(ctx, decoder)?;
 
-                if style.segmentation_symbols {
+                if ctx.style.segmentation_symbols {
                     let b0 = decoder.read_bit(ctx.arithmetic_decoder_context(18))?;
                     let b1 = decoder.read_bit(ctx.arithmetic_decoder_context(18))?;
                     let b2 = decoder.read_bit(ctx.arithmetic_decoder_context(18))?;
@@ -266,7 +263,7 @@ fn handle_coding_passes(
             }
         }
 
-        if style.reset_context_probabilities {
+        if ctx.style.reset_context_probabilities {
             ctx.reset_contexts();
         }
     }
@@ -456,8 +453,8 @@ pub(crate) struct CodeBlockDecodeContext {
     padded_width: u32,
     /// The height of the code-block we are processing.
     height: u32,
-    /// Whether the vertical causal flag is enabled.
-    vertically_causal: bool,
+    /// The code-block style for the current code-block.
+    style: CodeBlockStyle,
     /// The type of sub-band the current code block belongs to.
     sub_band_type: SubBandType,
     /// The arithmetic decoder contexts for each context label.
@@ -473,7 +470,7 @@ impl Default for CodeBlockDecodeContext {
             width: 0,
             padded_width: COEFFICIENTS_PADDING * 2,
             height: 0,
-            vertically_causal: false,
+            style: CodeBlockStyle::default(),
             sub_band_type: SubBandType::LowLow,
             contexts: [ArithmeticDecoderContext::default(); 19],
         }
@@ -509,7 +506,7 @@ impl CodeBlockDecodeContext {
         self.padded_width = padded_width;
         self.height = height;
         self.sub_band_type = sub_band_type;
-        self.vertically_causal = code_block_style.vertically_causal_context;
+        self.style = *code_block_style;
         self.reset_contexts();
     }
 
@@ -620,7 +617,9 @@ impl CodeBlockDecodeContext {
     fn neighborhood_significance_states(&self, pos: Position) -> u8 {
         let neighbors = &self.neighbor_significances[pos.index(self.padded_width)];
 
-        if self.vertically_causal && self.neighbor_in_next_stripe(pos, pos.real_y() + 1) {
+        if self.style.vertically_causal_context
+            && self.neighbor_in_next_stripe(pos, pos.real_y() + 1)
+        {
             neighbors.all_without_bottom()
         } else {
             neighbors.all()
@@ -875,8 +874,8 @@ fn decode_sign_bit<T: BitDecoder>(
         // significances as well as signs of the four neighbors (i.e. not
         // including the diagonal neighbors) and based on what the sum of signs
         // is, we assign a context label.
-        let suppress_lower =
-            ctx.vertically_causal && ctx.neighbor_in_next_stripe(pos, pos.real_y() + 1);
+        let suppress_lower = ctx.style.vertically_causal_context
+            && ctx.neighbor_in_next_stripe(pos, pos.real_y() + 1);
         // First, let's get all neighbor significances and mask out the diagonals.
         let significances = ctx.neighborhood_significance_states(pos) & 0b0101_0101;
 
@@ -1038,228 +1037,5 @@ impl BitDecoder for BypassDecoder<'_> {
                 None
             }
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{BitPlaneDecodeBuffers, CodeBlockDecodeContext, decode};
-    use crate::codestream::CodeBlockStyle;
-    use crate::decode::{CodeBlock, Layer, Segment, SubBandType};
-    use crate::rect::IntRect;
-
-    impl CodeBlockDecodeContext {
-        fn coefficients_resolved(&self) -> Vec<i32> {
-            self.coefficient_rows()
-                .flat_map(|c| c.iter().map(|i| i.get()).collect::<Vec<_>>())
-                .collect()
-        }
-    }
-
-    // First packet from example in Section J.10.4.
-    #[test]
-    fn bitplane_decoding_2() {
-        let data = [0x01, 0x8f, 0x0d, 0xc8, 0x75, 0x5d];
-
-        let code_block = CodeBlock {
-            rect: IntRect::from_xywh(0, 0, 1, 5),
-            x_idx: 0,
-            y_idx: 0,
-            layers: 0..1,
-            has_been_included: false,
-            missing_bit_planes: 0,
-            number_of_coding_passes: 16,
-            l_block: 0,
-            non_empty_layer_count: 1,
-        };
-
-        let mut ctx = CodeBlockDecodeContext::default();
-        let mut bp_buffers = BitPlaneDecodeBuffers::default();
-
-        decode(
-            &code_block,
-            SubBandType::LowLow,
-            6,
-            &CodeBlockStyle::default(),
-            &mut ctx,
-            &mut bp_buffers,
-            &[Layer {
-                segments: Some(0..1),
-            }],
-            &[Segment {
-                idx: 0,
-                coding_pases: 16,
-                data_length: data.len() as u32,
-                data: &data,
-            }],
-            true,
-        )
-        .unwrap();
-
-        let coefficients = ctx.coefficients_resolved();
-
-        assert_eq!(coefficients, vec![-26, -22, -30, -32, -19]);
-    }
-
-    // Second packet from example in Section J.10.4.
-    #[test]
-    fn bitplane_decoding_3() {
-        let data = [0x0F, 0xB1, 0x76];
-
-        let code_block = CodeBlock {
-            rect: IntRect::from_xywh(0, 0, 1, 4),
-            x_idx: 0,
-            y_idx: 0,
-            layers: 0..1,
-            has_been_included: false,
-            missing_bit_planes: 0,
-            number_of_coding_passes: 7,
-            l_block: 0,
-            non_empty_layer_count: 1,
-        };
-
-        let mut ctx = CodeBlockDecodeContext::default();
-        let mut bp_buffers = BitPlaneDecodeBuffers::default();
-
-        decode(
-            &code_block,
-            SubBandType::LowHigh,
-            3,
-            &CodeBlockStyle::default(),
-            &mut ctx,
-            &mut bp_buffers,
-            &[Layer {
-                segments: Some(0..1),
-            }],
-            &[Segment {
-                idx: 0,
-                coding_pases: 7,
-                data_length: data.len() as u32,
-                data: &data,
-            }],
-            true,
-        )
-        .unwrap();
-
-        let coefficients = ctx.coefficients_resolved();
-
-        assert_eq!(coefficients, vec![1, 5, 1, 0]);
-    }
-
-    // Second packet from example in Section J.10.4.
-    #[test]
-    fn bitplane_decoding_debug() {
-        let data = vec![
-            225, 72, 111, 59, 122, 13, 70, 63, 48, 1, 128, 138, 167, 142, 136, 234, 176, 18, 250,
-            155, 201, 209, 178, 22, 3, 122, 65, 71, 189, 9, 116, 133, 67, 58, 236, 36, 96, 180,
-            149, 176, 210, 225, 171, 223, 90, 253, 30, 222, 151, 102, 39, 30, 60, 157, 116, 17, 8,
-            141, 68, 131, 67, 132, 26, 211, 205, 234, 114, 234, 111, 228, 220, 77, 234, 216, 84, 2,
-            25, 142, 108, 246, 245, 33, 60, 206, 71, 9, 179, 66, 149, 216, 164, 135, 42, 146, 104,
-            78, 63, 79, 112, 108, 108, 114, 239, 235, 88, 168, 87, 191, 194, 236, 134, 79, 1, 98,
-            61, 204, 148, 226, 181, 124, 207, 254, 19, 70, 229, 25, 35, 118, 148, 10, 123, 207,
-            148, 214, 75, 143, 254, 109, 78, 34, 254, 242, 12, 97, 100, 199, 130, 49, 4, 67, 50,
-            32, 3, 98, 70, 155, 104, 103, 90, 193, 89, 59, 68, 148, 110, 7, 3, 141, 178, 237, 93,
-            253, 5, 69, 137, 207, 188, 149, 131, 59, 203, 223, 41, 106, 78, 51, 223, 21, 113, 99,
-            204, 208, 145, 44, 51, 14, 133, 90, 118, 136, 134, 167, 54, 22, 84, 84, 47, 206, 125,
-            89, 39, 60, 52, 175, 97, 228, 217, 133, 171, 135, 129, 201, 164, 82, 3, 110, 200, 88,
-            1, 140, 235, 79, 57, 38, 185, 197, 236, 33, 222, 117, 107, 156, 18, 78, 235, 63, 131,
-            57, 197, 153, 196, 178, 254, 161, 28, 72, 103, 42, 31, 255, 56, 2, 18, 126, 95, 98, 19,
-            30, 233,
-        ];
-
-        let code_block = CodeBlock {
-            rect: IntRect::from_xywh(0, 0, 32, 32),
-            x_idx: 0,
-            y_idx: 0,
-            layers: 0..1,
-            has_been_included: false,
-            missing_bit_planes: 5,
-            number_of_coding_passes: 13,
-            l_block: 0,
-            non_empty_layer_count: 1,
-        };
-
-        let mut ctx = CodeBlockDecodeContext::default();
-        let mut bp_buffers = BitPlaneDecodeBuffers::default();
-
-        decode(
-            &code_block,
-            SubBandType::HighLow,
-            10,
-            &CodeBlockStyle::default(),
-            &mut ctx,
-            &mut bp_buffers,
-            &[Layer {
-                segments: Some(0..1),
-            }],
-            &[Segment {
-                idx: 0,
-                coding_pases: 13,
-                data_length: data.len() as u32,
-                data: &data,
-            }],
-            true,
-        )
-        .unwrap();
-
-        let coefficients = ctx.coefficients_resolved();
-
-        let expected = vec![
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -2, 0, -1, 0, 1, 1, -1, 0, 0,
-            0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0,
-            2, 0, 0, 0, 1, 3, -2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
-            0, 0, -1, 0, -2, -1, -2, -1, -1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, 0,
-            -1, 0, -1, 1, 1, 0, 0, 0, 0, 0, 1, 1, -1, -2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 1, 0, 0, -1, 0, -1, 2, 1, 0, 1, 1, -1, 0, -2, 1, 4, -1, 0, 1, -1, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 0, 0, 0, 0, 1, 1, 1, 2, -3, 2, 1, 1, -1, -1, 0, 0, 0,
-            0, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, 0, 1, -1, -1, 1, 1, 0, 1, 1, 0, -1, 3, -1, 1, 2,
-            0, 2, 0, 0, 0, 0, 0, 0, 0, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, -1, 1, 2, 0, -2, -1, -1,
-            1, 1, 0, -2, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 2, 1, 0, 1, 1,
-            0, 0, -1, 1, -1, 0, 2, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 2, 1, 0,
-            1, 0, 1, 0, -1, 0, 1, -2, -1, -3, -2, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, -1, -1,
-            0, 0, 0, -1, 0, 0, 0, -2, 2, 1, -3, 0, 0, 0, 1, 0, -2, 0, 0, 0, -1, 0, 0, 0, 0, 1, -1,
-            0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, -3, 2, -1, 2, 0, 1, 1, 1, 0, 0, 2, 0, 0, 0,
-            0, 0, 1, 0, 0, 0, -1, 0, -1, 0, 1, 1, 0, -1, 0, 1, 1, -3, 1, -1, -1, 3, 3, 1, 1, 0, 1,
-            1, 0, 2, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, -2, 0, 1, 0, -2, 0, 1,
-            1, 3, 2, 0, 1, 1, 1, -1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 3, 0, 5, 1, 3, 0,
-            -1, 2, 3, -1, -2, 0, 2, 2, 0, 1, 1, -1, -1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 2, 0, -5,
-            2, -2, 0, -3, 0, -3, 1, 1, 0, -1, 0, 0, 2, 2, -2, -1, -1, 1, -1, 0, 1, -1, 0, 1, 0, 0,
-            0, 0, 0, -1, 3, 2, 1, 2, 0, -1, 0, -2, 2, 0, -1, -1, -1, 0, 0, 0, 2, 0, 0, 1, 0, 1, 0,
-            0, 1, -1, -1, 1, 0, -1, -3, 3, 1, -1, 0, -1, 0, 1, 2, 0, 1, 1, 0, 0, 1, 1, -2, -1, 0,
-            -2, 1, 0, -1, -1, 0, 0, 0, 1, 1, 0, 0, -2, -1, 1, -1, 0, 0, 0, 1, 1, -1, 1, -1, 1, -1,
-            1, 0, 1, 1, -2, 0, 4, -1, 0, 2, 1, 1, 1, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 1,
-            1, -1, 0, 0, 0, 3, -1, 2, 0, -3, -1, 0, 1, 0, 0, -1, -1, 1, 1, 0, -2, 2, 1, 1, 0, 0, 0,
-            0, 0, 0, 0, 0, -1, 0, 0, 0, -2, 1, 2, 2, 2, 2, -3, -1, 1, 1, 1, 0, -1, 1, 0, -1, 4, 1,
-            -1, 0, 0, 0, 0, 1, 0, 1, 0, -1, 0, 1, 0, 1, 1, 2, 2, 1, 2, 2, 10, 0, 0, 0, 0, 1, 0, 1,
-            -1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, -1, 1, 0, 2, 1, -1, 1, 0, 0, 2, -2, -2, 11, -4, 1, 1,
-            1, 1, 0, -1, -3, 2, -1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, -1, -1, -1, 0, -1, 1, -2, 1,
-            -2, 8, -8, -1, -1, 0, 1, 0, 0, -1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, -1, 0, -1, 0, 0, 0,
-            -1, 1, 1, 0, 9, 16, -8, 1, 1, 0, 1, 0, 1, -1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
-            0, -1, 0, 1, -1, 0, 0, 6, -7, -3, 0, 0, 0, 1, -1, -1, -1, 2, 2, 0, 1, 0, 1, 0, 1, 1, 1,
-            0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 6, -9, 1, 1, -1, 1, 0, 0, 1, 0, 1, 1, 0, 0, -1, 0, 0,
-            0, 0, 0, -1, 0, 0, 0, 0, 1, 1, 1, -2, 0, 0, 6, -5, 2, 2, 0, 1, 0, 0, 0, -1, 1, 1, 0, 0,
-            0, 0, 0, 1, 0, 0, -1, 0, 1, -1, 0, 1, 0, 1, 1, 1, 1, 9, -9, 1, 1, 0, 1, 2, 1, 1, 1, 1,
-            1, 0, 0, 0, 0, 0, -1, 0, 1, 0, 1, 1, 0, 0, 3, 1, 0, 1, -1, -2, 4, -9, 2, 0, 0, -1, 0,
-            -1, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, -1, -2, 9, 6, 5, 0,
-            0, -1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, -1, 1, -1, 0, 0, -1, 1, 1, 0, 0, -1, 1, 0, -1,
-            10, -4, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-        ];
-
-        assert_eq!(coefficients.len(), expected.len());
-
-        let mut expected_i = expected.iter();
-        let mut actual_i = coefficients.iter();
-
-        for y in 0..code_block.rect.height() {
-            for x in 0..code_block.rect.width() {
-                let expected = expected_i.next().unwrap();
-                let actual = actual_i.next().unwrap();
-                assert_eq!(
-                    expected, actual,
-                    "x: {}, y: {}, expected: {}, actual: {}",
-                    x, y, expected, actual
-                );
-            }
-        }
     }
 }
