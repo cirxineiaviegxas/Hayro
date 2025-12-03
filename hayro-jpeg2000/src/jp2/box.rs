@@ -1,3 +1,7 @@
+//! Parsing a JP2 box, as specified in I.4.
+
+#![allow(dead_code)]
+
 use crate::reader::BitReader;
 
 /// JP2 signature box - 'jP\040\040'.
@@ -47,7 +51,6 @@ pub(crate) struct Jp2Box<'a> {
 /// Converts a box tag to its string representation.
 ///
 /// Box tags are stored as 4-byte ASCII codes in big-endian format.
-/// For example, 0x66747970 represents "ftyp".
 pub(crate) fn tag_to_string(tag: u32) -> String {
     let bytes = [
         ((tag >> 24) & 0xFF) as u8,
@@ -58,7 +61,7 @@ pub(crate) fn tag_to_string(tag: u32) -> String {
     String::from_utf8_lossy(&bytes).to_string()
 }
 
-pub(crate) fn read_box<'a>(reader: &mut BitReader<'a>) -> Option<Jp2Box<'a>> {
+pub(crate) fn read<'a>(reader: &mut BitReader<'a>) -> Option<Jp2Box<'a>> {
     let l_box = reader.read_u32()?;
     let t_box = reader.read_u32()?;
 

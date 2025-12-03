@@ -1,29 +1,9 @@
-use crate::DecodeSettings;
-use crate::bitmap::ChannelData;
-use crate::bitplane::BITPLANE_BIT_SIZE;
-use crate::build::SubBandType;
-use crate::decode::decode;
+//! Read and decode a JPEG2000 codestream, as described in Annex A.
+
+use super::DecodeSettings;
+use super::bitplane::BITPLANE_BIT_SIZE;
+use super::build::SubBandType;
 use crate::reader::BitReader;
-
-pub(crate) fn read(
-    stream: &[u8],
-    settings: &DecodeSettings,
-) -> Result<(Header, Vec<ChannelData>), &'static str> {
-    let mut reader = BitReader::new(stream);
-
-    let marker = reader.read_marker()?;
-    if marker != markers::SOC {
-        return Err("invalid marker: expected SOC marker");
-    }
-
-    let header = read_header(&mut reader, settings)?;
-    let code_stream_data = reader
-        .tail()
-        .ok_or("code stream data is missing from image")?;
-    let decoded = decode(code_stream_data, &header)?;
-
-    Ok((header, decoded))
-}
 
 #[derive(Debug)]
 pub(crate) struct Header {
@@ -34,7 +14,10 @@ pub(crate) struct Header {
     pub(crate) strict: bool,
 }
 
-fn read_header(reader: &mut BitReader, settings: &DecodeSettings) -> Result<Header, &'static str> {
+pub(crate) fn read_header(
+    reader: &mut BitReader,
+    settings: &DecodeSettings,
+) -> Result<Header, &'static str> {
     if reader.read_marker()? != markers::SIZ {
         return Err("expected SIZ marker after SOC");
     }
@@ -294,7 +277,6 @@ pub(crate) struct CodeBlockStyle {
     pub(crate) reset_context_probabilities: bool,
     pub(crate) termination_on_each_pass: bool,
     pub(crate) vertically_causal_context: bool,
-    pub(crate) _predictable_termination: bool,
     pub(crate) segmentation_symbols: bool,
 }
 
@@ -305,7 +287,8 @@ impl CodeBlockStyle {
             reset_context_probabilities: (value & 0x02) != 0,
             termination_on_each_pass: (value & 0x04) != 0,
             vertically_causal_context: (value & 0x08) != 0,
-            _predictable_termination: (value & 0x10) != 0,
+            // The predictable termination flag is only informative and
+            // can therefore be ignored.
             segmentation_symbols: (value & 0x20) != 0,
         }
     }
@@ -416,8 +399,6 @@ impl SizeData {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ComponentSizeInfo {
     pub(crate) precision: u8,
-    // TODO: What is this field for?
-    pub(crate) _is_signed: bool,
     pub(crate) horizontal_resolution: u8,
     pub(crate) vertical_resolution: u8,
 }
@@ -530,7 +511,9 @@ fn size_marker_inner(reader: &mut BitReader) -> Option<SizeData> {
         let y_rsiz = reader.read_byte()?;
 
         let precision = (ssiz & 0x7F) + 1;
-        let is_signed = (ssiz & 0x80) != 0;
+        // No idea how to process signed images, but as far as I can tell
+        // openjpeg and others just accept it as is, so let's do the same.
+        let _is_signed = (ssiz & 0x80) != 0;
 
         // In theory up to 38 is allowed, but we don't support more than that.
         if precision as u32 > BITPLANE_BIT_SIZE {
@@ -539,7 +522,6 @@ fn size_marker_inner(reader: &mut BitReader) -> Option<SizeData> {
 
         components.push(ComponentSizeInfo {
             precision,
-            _is_signed: is_signed,
             horizontal_resolution: x_rsiz,
             vertical_resolution: y_rsiz,
         });
@@ -679,7 +661,6 @@ pub(crate) fn coc_marker(reader: &mut BitReader, csiz: u16) -> Option<(u16, Codi
     };
     let coding_style = CodingStyleFlags::from_u8(reader.read_byte()?);
 
-    // Read SPcoc - coding style parameters (same structure as SPcod from COD)
     let parameters = coding_style_parameters(reader, &coding_style)?;
 
     let coc = CodingStyleComponent {
@@ -722,10 +703,10 @@ pub(crate) fn qcc_marker(reader: &mut BitReader, csiz: u16) -> Option<(u16, Quan
     let guard_bits = (sqcc_val >> 5) & 0x07;
 
     let component_index_size = if csiz < 257 { 1 } else { 2 };
-    let remaining_bytes = (length
+    let remaining_bytes = length
         .checked_sub(2)?
         .checked_sub(component_index_size)?
-        .checked_sub(1)?) as usize;
+        .checked_sub(1)? as usize;
 
     let mut parameters = quantization_parameters(reader, quantization_style, remaining_bytes)?;
     parameters.guard_bits = guard_bits;
@@ -775,34 +756,9 @@ fn quantization_parameters(
 
     Some(QuantizationInfo {
         quantization_style,
-        guard_bits: 0, // Will be set by caller.
+        guard_bits: 0,
         step_sizes,
     })
-}
-
-// TODO: Use this
-fn _skip_code(marker_code: u8) -> bool {
-    // All markers with the marker code between 0xFF30 and 0xFF3F have no marker
-    // segment parameters. They shall be skipped by the decoder.
-    (0x30..=0x3F).contains(&marker_code)
-}
-
-pub(crate) trait ReaderExt: Clone {
-    fn read_marker(&mut self) -> Result<u8, &'static str>;
-    fn peek_marker(&mut self) -> Option<u8> {
-        self.clone().read_marker().ok()
-    }
-}
-
-impl ReaderExt for BitReader<'_> {
-    fn read_marker(&mut self) -> Result<u8, &'static str> {
-        if self.peek_byte().ok_or("invalid marker")? != 0xFF {
-            return Err("invalid marker");
-        }
-
-        self.read_byte().unwrap();
-        self.read_byte().ok_or("invalid marker")
-    }
 }
 
 #[allow(unused)]
