@@ -8,7 +8,7 @@ use super::tile::{ComponentTile, ResolutionTile, Tile};
 use std::cmp::Ordering;
 use std::iter;
 
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub(crate) struct ProgressionData {
     pub(crate) layer_num: u16,
     pub(crate) resolution: u16,
@@ -17,28 +17,80 @@ pub(crate) struct ProgressionData {
 }
 
 pub(crate) struct IteratorInput<'a> {
-    layers: u16,
+    layers: (u16, u16),
     tile: &'a Tile<'a>,
-    max_resolutions: u16,
+    resolutions: (u16, u16),
+    components: (u8, u8),
 }
 
 impl<'a> IteratorInput<'a> {
     pub(crate) fn new(tile: &'a Tile<'a>) -> Self {
-        let max_resolutions = tile
+        Self::new_with_custom_bounds(
+            tile,
+            // Will be clamped automatically.
+            (0, u16::MAX),
+            (0, u16::MAX),
+            (0, u8::MAX),
+        )
+    }
+
+    pub(crate) fn new_with_custom_bounds(
+        tile: &'a Tile<'a>,
+        mut resolutions: (u16, u16),
+        mut layers: (u16, u16),
+        mut components: (u8, u8),
+    ) -> Self {
+        let max_resolution = tile
             .component_infos
             .iter()
             .map(|c| c.coding_style.parameters.num_resolution_levels)
             .max()
             .unwrap_or(0);
+        let max_layer = tile.num_layers;
+        let max_component = tile.component_infos.len() as u8;
+
+        // Make sure we don't exceed what's actually possible
+        resolutions.1 = resolutions.1.min(max_resolution);
+        layers.1 = layers.1.min(max_layer);
+        components.1 = components.1.min(max_component);
+
+        assert!(resolutions.1 > resolutions.0);
+        assert!(layers.1 > layers.0);
+        assert!(components.1 > components.0);
 
         Self {
-            layers: tile.num_layers,
+            layers,
             tile,
-            max_resolutions,
+            resolutions,
+            components,
         }
     }
 
-    fn component_tiles(&'a self) -> Vec<ComponentTile<'a>> {
+    fn min_layer(&self) -> u16 {
+        self.layers.0
+    }
+
+    fn max_layer(&self) -> u16 {
+        self.layers.1
+    }
+
+    fn min_resolution(&self) -> u16 {
+        self.resolutions.0
+    }
+
+    fn max_resolution(&self) -> u16 {
+        self.resolutions.1
+    }
+
+    fn min_comp(&self) -> u8 {
+        self.components.0
+    }
+
+    fn max_comp(&self) -> u8 {
+        self.components.1
+    }
+
+    fn component_tiles(&self) -> Vec<ComponentTile<'a>> {
         self.tile
             .component_infos
             .iter()
@@ -49,20 +101,19 @@ impl<'a> IteratorInput<'a> {
 
 /// B.12.1.1 Layer-resolution level-component-position progression.
 pub(crate) fn layer_resolution_component_position_progression<'a>(
-    input: &'a IteratorInput<'a>,
+    input: IteratorInput<'a>,
 ) -> impl Iterator<Item = ProgressionData> + 'a {
-    let num_components = input.tile.component_infos.len();
-
     let component_tiles = input.component_tiles();
 
-    let mut layer = 0;
-    let mut resolution = 0;
-    let mut component_idx = 0;
+    let mut layer = input.min_layer();
+    let mut resolution = input.min_resolution();
+    let mut component_idx = input.min_comp();
+
     let mut resolution_tile = ResolutionTile::new(component_tiles[0], resolution);
     let mut precinct = 0;
 
     iter::from_fn(move || {
-        if resolution == input.max_resolutions {
+        if resolution == input.max_resolution() {
             return None;
         }
 
@@ -71,22 +122,23 @@ pub(crate) fn layer_resolution_component_position_progression<'a>(
                 precinct = 0;
                 component_idx += 1;
 
-                if component_idx == num_components {
-                    component_idx = 0;
+                if component_idx == input.max_comp() {
+                    component_idx = input.min_comp();
 
                     resolution += 1;
 
-                    if resolution == input.max_resolutions {
-                        resolution = 0;
+                    if resolution == input.max_resolution() {
+                        resolution = input.min_resolution();
                         layer += 1;
 
-                        if layer == input.layers {
+                        if layer == input.max_layer() {
                             return None;
                         }
                     }
                 }
 
-                resolution_tile = ResolutionTile::new(component_tiles[component_idx], resolution);
+                resolution_tile =
+                    ResolutionTile::new(component_tiles[component_idx as usize], resolution);
 
                 // Only yield if the resolution tile has precincts, otherwise
                 // we need to keep advancing.
@@ -99,7 +151,7 @@ pub(crate) fn layer_resolution_component_position_progression<'a>(
         let data = ProgressionData {
             layer_num: layer,
             resolution,
-            component: component_idx as u8,
+            component: component_idx,
             precinct,
         };
 
@@ -111,20 +163,19 @@ pub(crate) fn layer_resolution_component_position_progression<'a>(
 
 /// B.12.1.2 Resolution level-layer-component-position progression.
 pub(crate) fn resolution_layer_component_position_progression<'a>(
-    input: &'a IteratorInput<'a>,
+    input: IteratorInput<'a>,
 ) -> impl Iterator<Item = ProgressionData> + 'a {
-    let num_components = input.tile.component_infos.len();
-
     let component_tiles = input.component_tiles();
 
     let mut layer = 0;
     let mut resolution = 0;
     let mut component_idx = 0;
-    let mut resolution_tile = ResolutionTile::new(component_tiles[component_idx], resolution);
+    let mut resolution_tile =
+        ResolutionTile::new(component_tiles[component_idx as usize], resolution);
     let mut precinct = 0;
 
     iter::from_fn(move || {
-        if resolution == input.max_resolutions {
+        if resolution == input.max_resolution() {
             return None;
         }
 
@@ -133,21 +184,22 @@ pub(crate) fn resolution_layer_component_position_progression<'a>(
                 precinct = 0;
                 component_idx += 1;
 
-                if component_idx == num_components {
+                if component_idx == input.max_comp() {
                     component_idx = 0;
                     layer += 1;
 
-                    if layer == input.layers {
+                    if layer == input.max_layer() {
                         layer = 0;
                         resolution += 1;
 
-                        if resolution == input.max_resolutions {
+                        if resolution == input.max_resolution() {
                             return None;
                         }
                     }
                 }
 
-                resolution_tile = ResolutionTile::new(component_tiles[component_idx], resolution);
+                resolution_tile =
+                    ResolutionTile::new(component_tiles[component_idx as usize], resolution);
 
                 // Only yield if the resolution tile has precincts, otherwise
                 // we need to keep advancing.
@@ -160,7 +212,7 @@ pub(crate) fn resolution_layer_component_position_progression<'a>(
         let data = ProgressionData {
             layer_num: layer,
             resolution,
-            component: component_idx as u8,
+            component: component_idx,
             precinct,
         };
 
@@ -186,13 +238,24 @@ struct PrecinctStore {
 }
 
 fn position_progression_common<'a>(
-    input: &'a IteratorInput<'a>,
+    input: IteratorInput<'a>,
     sort: impl FnMut(&PrecinctStore, &PrecinctStore) -> Ordering,
 ) -> impl Iterator<Item = ProgressionData> + 'a {
     let mut elements = vec![];
 
-    for (component_idx, component) in input.tile.component_tiles().enumerate() {
-        for (resolution, resolution_tile) in component.resolution_tiles().enumerate() {
+    for (component_idx, component) in input
+        .tile
+        .component_tiles()
+        .enumerate()
+        .skip(input.min_comp() as usize)
+        .take(input.max_comp() as usize - input.min_comp() as usize)
+    {
+        for (resolution, resolution_tile) in component
+            .resolution_tiles()
+            .enumerate()
+            .skip(input.min_resolution() as usize)
+            .take(input.max_resolution() as usize - input.min_resolution() as usize)
+        {
             elements.extend(resolution_tile.precincts().map(|d| PrecinctStore {
                 precinct_y: d.r_y,
                 precinct_x: d.r_x,
@@ -205,8 +268,8 @@ fn position_progression_common<'a>(
 
     elements.sort_by(sort);
 
-    elements.into_iter().flat_map(|e| {
-        (0..input.layers).map(move |layer| ProgressionData {
+    elements.into_iter().flat_map(move |e| {
+        (input.min_layer()..input.max_layer()).map(move |layer| ProgressionData {
             layer_num: layer,
             resolution: e.resolution,
             component: e.component_idx,
@@ -217,7 +280,7 @@ fn position_progression_common<'a>(
 
 /// B.12.1.3 Resolution level-position-component-layer progression.
 pub(crate) fn resolution_position_component_layer_progression<'a>(
-    input: &'a IteratorInput<'a>,
+    input: IteratorInput<'a>,
 ) -> impl Iterator<Item = ProgressionData> + 'a {
     position_progression_common(input, |p, s| {
         p.resolution
@@ -231,7 +294,7 @@ pub(crate) fn resolution_position_component_layer_progression<'a>(
 
 /// B.12.1.4 Position-component-resolution level-layer progression.
 pub(crate) fn position_component_resolution_layer_progression<'a>(
-    input: &'a IteratorInput<'a>,
+    input: IteratorInput<'a>,
 ) -> impl Iterator<Item = ProgressionData> + 'a {
     position_progression_common(input, |p, s| {
         p.precinct_y
@@ -245,7 +308,7 @@ pub(crate) fn position_component_resolution_layer_progression<'a>(
 
 /// B.12.1.5 Component-position-resolution level-layer progression.
 pub(crate) fn component_position_resolution_layer_progression<'a>(
-    input: &'a IteratorInput<'a>,
+    input: IteratorInput<'a>,
 ) -> impl Iterator<Item = ProgressionData> + 'a {
     position_progression_common(input, |p, s| {
         p.component_idx
