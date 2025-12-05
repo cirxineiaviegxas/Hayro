@@ -1,4 +1,64 @@
+/*!
+A memory-safe, pure-Rust JPEG 2000 decoder.
+
+`hayro-jpeg2000` can decode both raw JPEG 2000 codestreams (`.j2c`) and images wrapped
+inside the JP2 container format. The decoder supports the vast majority of features
+defined in the JPEG2000 core coding system (ISO/IEC 15444-1) as well as some color
+spaces from the extensions (ISO/IEC 15444-2). There are still some missing pieces
+for some "obscure" features(like for example support for progression order
+changes in tile-parts), but all features that actually commonly appear in real-life
+images should be supported (if not, please open an issue!).
+
+The decoder abstracts away most of the internal complexity of JPEG2000
+and yields a simple 8-bit image with either greyscale, RGB, CMYK or an ICC-based
+color space, which can then be processed further according to your needs.
+
+# Example
+```rust,no_run
+use hayro_jpeg2000::{decode, DecodeSettings};
+
+let data = std::fs::read("image.jp2").unwrap();
+let bitmap = decode(&data, &DecodeSettings::default()).unwrap();
+
+println!(
+    "decoded {}x{} image in {:?} with alpha={}",
+    bitmap.width,
+    bitmap.height,
+    bitmap.color_space,
+    bitmap.has_alpha,
+);
+```
+
+If you want to see a more comprehensive example, please take a look
+at the example in [GitHub](https://github.com/LaurenzV/hayro/blob/main/hayro-jpeg2000/examples/png.rs),
+which shows you the main steps needed to convert a JPEG2000 image into PNG for example.
+
+# Testing
+The decoder has been tested against 20.000+ images scraped from random PDFs
+on the internet and also passes a large part of the OpenJPEG test suite. So you
+can expect the crate to perform decently in terms of decoding correctness.
+
+# Performance
+A decent amount of effort has already been put into optimizing this crate
+(both in terms of raw performance but also memory allocations). However, there
+are some more important optimizations that have not been implemented yet, so
+there is definitely still room for improvement (and I am planning on implementing
+them eventually).
+
+Overall, you should expect this crate to have worse performance than OpenJPEG,
+but the difference gap should not be too large.
+
+# Safety
+By default, the crate has the `simd` feature enabled, which uses the
+[`fearless_simd`](https://github.com/linebender/fearless_simd) crate to accelerate
+important parts of the pipeline. If you want to eliminate any usage of unsafe
+in this crate as well as its dependencies, you can simply disable this
+feature, at the cost of worse decoding performance. Unsafe code is forbidden
+via a crate-level attribute.
+*/
+
 #![forbid(unsafe_code)]
+#![forbid(missing_docs)]
 
 use crate::j2c::ComponentData;
 use crate::jp2::cdef::{ChannelAssociation, ChannelType};
@@ -11,9 +71,20 @@ mod j2c;
 mod jp2;
 pub(crate) mod reader;
 
+/// Settings to apply during decoding.
 #[derive(Debug, Copy, Clone)]
 pub struct DecodeSettings {
     /// Whether palette indices should be resolved.
+    ///
+    /// JPEG2000 images can be stored in two different ways. First, by storing
+    /// RGB values (depending on the color space) for each pixel. Secondly, by
+    /// only storing a single index for each channel, and then resolving the
+    /// actual color using the index.
+    ///
+    /// If you disable this option, in case you have an image with palette
+    /// indices, they will not be resolved, but instead a grayscale image
+    /// will be returned, with each pixel value corresponding to the palette
+    /// index of the location.
     pub resolve_palette_indices: bool,
     /// Whether strict mode should be enabled when decoding.
     ///
@@ -31,38 +102,66 @@ impl Default for DecodeSettings {
     }
 }
 
+/// The color space of the image.
 #[derive(Debug, Clone)]
 pub enum ColorSpace {
+    /// A grayscale image.
     Gray,
+    /// An RGB image.
     RGB,
+    /// A CMYK image.
     CMYK,
+    /// An image based on an ICC profile.
     Icc {
+        /// The raw data of the ICC profile.
         profile: Vec<u8>,
-        num_components: u8,
+        /// The number of channels used by the ICC profile.
+        num_channels: u8,
     },
 }
 
 impl ColorSpace {
+    /// Return the number of expected channels for the color space.
     pub fn num_channels(&self) -> u8 {
         match self {
             ColorSpace::Gray => 1,
             ColorSpace::RGB => 3,
             ColorSpace::CMYK => 4,
-            ColorSpace::Icc { num_components, .. } => *num_components,
+            ColorSpace::Icc {
+                num_channels: num_components,
+                ..
+            } => *num_components,
         }
     }
 }
 
+/// A bitmap storing the decoded result of the image.
 pub struct Bitmap {
+    /// The color space of the image.
     pub color_space: ColorSpace,
+    /// The raw pixel data of the image. The result will always be in
+    /// 8-bit (in case the original image had a different bit-depth,
+    /// hayro-jpeg2000 always scales to 8-bit).
+    ///
+    /// The size is guaranteed to equal
+    /// `width * height * (num_channels + (if has_alpha { 1 } else { 0 })`.
+    /// Pixels are interleaved on a per-channel basis, the alpha channel always
+    /// appearing as the last channel, if available.
     pub data: Vec<u8>,
+    /// Whether the image has an alpha channel.
     pub has_alpha: bool,
+    /// The width of the image.
     pub width: u32,
+    /// The height of the image.
     pub height: u32,
+    /// The original bit depth of the image. You usually don't need to do anything
+    /// with this parameter, it just exists for informational purposes.
     pub original_bit_depth: u8,
 }
 
-pub fn read(data: &[u8], settings: &DecodeSettings) -> Result<Bitmap, &'static str> {
+/// Decode a JPEG2000 codestream (or a codestream wrapped in a JP2 file) into
+/// a bitmap.
+pub fn decode(data: &[u8], settings: &DecodeSettings) -> Result<Bitmap, &'static str> {
     // JP2 signature box: 00 00 00 0C 6A 50 20 20
     const JP2_MAGIC: &[u8] = b"\x00\x00\x00\x0C\x6A\x50\x20\x20";
     // Codestream signature: FF 4F FF 51 (SOC + SIZ markers)
@@ -274,7 +373,7 @@ fn resolve_color_space(
                     // Use an ICC profile to process the RommRGB color space.
                     ColorSpace::Icc {
                         profile: include_bytes!("../assets/ISO22028-2_ROMM-RGB.icc").to_vec(),
-                        num_components: 3,
+                        num_channels: 3,
                     }
                 }
                 // TODO: Actually implement this.
@@ -293,7 +392,7 @@ fn resolve_color_space(
             if let Some(metadata) = ICCMetadata::from_data(icc) {
                 ColorSpace::Icc {
                     profile: icc.clone(),
-                    num_components: metadata.color_space.num_components(),
+                    num_channels: metadata.color_space.num_components(),
                 }
             } else {
                 // See OPENJPEG test orb-blue10-lin-jp2.jp2. They seem to
