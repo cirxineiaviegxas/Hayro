@@ -46,13 +46,13 @@ fn parse_index_impl<'a>(count: u32, s: &mut Stream<'a>) -> Option<Index<'a>> {
 }
 
 #[inline]
-pub(crate) fn skip_index<T: IndexSize>(s: &mut Stream) -> Option<()> {
+pub(crate) fn skip_index<T: IndexSize>(s: &mut Stream<'_>) -> Option<()> {
     let count = s.read::<T>()?;
     skip_index_impl(count.to_u32(), s)
 }
 
 #[inline(never)]
-fn skip_index_impl(count: u32, s: &mut Stream) -> Option<()> {
+fn skip_index_impl(count: u32, s: &mut Stream<'_>) -> Option<()> {
     if count == 0 || count == u32::MAX {
         return Some(());
     }
@@ -209,10 +209,10 @@ impl FromData for OffsetSize {
     #[inline]
     fn parse(data: &[u8]) -> Option<Self> {
         match data.first()? {
-            1 => Some(OffsetSize::Size1),
-            2 => Some(OffsetSize::Size2),
-            3 => Some(OffsetSize::Size3),
-            4 => Some(OffsetSize::Size4),
+            1 => Some(Self::Size1),
+            2 => Some(Self::Size2),
+            3 => Some(Self::Size3),
+            4 => Some(Self::Size4),
             _ => None,
         }
     }
@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn parse_offset_size() {
-        assert_eq!(core::mem::size_of::<OffsetSize>(), 1);
+        assert_eq!(size_of::<OffsetSize>(), 1);
 
         assert_eq!(Stream::new(&[0x00]).read::<OffsetSize>(), None);
         assert_eq!(

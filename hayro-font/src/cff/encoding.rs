@@ -36,7 +36,7 @@ impl FromData for Format1Range {
     #[inline]
     fn parse(data: &[u8]) -> Option<Self> {
         let mut s = Stream::new(data);
-        Some(Format1Range {
+        Some(Self {
             first: s.read::<u8>()?,
             left: s.read::<u8>()?,
         })
@@ -55,7 +55,7 @@ impl FromData for Supplement {
     #[inline]
     fn parse(data: &[u8]) -> Option<Self> {
         let mut s = Stream::new(data);
-        Some(Supplement {
+        Some(Self {
             code: s.read::<u8>()?,
             name: s.read::<StringId>()?,
         })
@@ -97,7 +97,7 @@ impl Encoding<'_> {
         }
     }
 
-    pub(crate) fn code_to_gid(&self, charset: &Charset, code: u8) -> Option<GlyphId> {
+    pub(crate) fn code_to_gid(&self, charset: &Charset<'_>, code: u8) -> Option<GlyphId> {
         if !self.supplemental.is_empty()
             && let Some(ref s) = self.supplemental.into_iter().find(|s| s.code == code)
         {

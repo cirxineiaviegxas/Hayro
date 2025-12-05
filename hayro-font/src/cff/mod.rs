@@ -258,7 +258,7 @@ impl<'a> Table<'a> {
 
     /// Returns the CID corresponding to a glyph ID.
     ///
-    /// Returns `None` if this is not a CIDFont.
+    /// Returns `None` if this is not a `CIDFont`.
     pub fn glyph_cid(&self, glyph_id: GlyphId) -> Option<u16> {
         match self.kind {
             FontKind::SID(_) => None,
@@ -268,7 +268,7 @@ impl<'a> Table<'a> {
 }
 
 impl core::fmt::Debug for Table<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Table {{ ... }}")
     }
 }
@@ -375,7 +375,7 @@ struct TopDict {
     fd_select_offset: Option<usize>,
 }
 
-fn parse_top_dict(s: &mut Stream) -> Option<TopDict> {
+fn parse_top_dict(s: &mut Stream<'_>) -> Option<TopDict> {
     let mut top_dict = TopDict::default();
 
     let index = parse_index::<u16>(s)?;
@@ -466,15 +466,15 @@ fn parse_font_dict(data: &[u8]) -> Option<Range<usize>> {
 }
 
 /// In CID fonts, to get local subroutines we have to:
-///   1. Find Font DICT index via FDSelect by GID.
-///   2. Get Font DICT data from FDArray using this index.
+///   1. Find Font DICT index via `FDSelect` by GID.
+///   2. Get Font DICT data from `FDArray` using this index.
 ///   3. Get a Private DICT offset from a Font DICT.
 ///   4. Get a local subroutine offset from Private DICT.
 ///   5. Parse a local subroutine at offset.
 fn parse_cid_local_subrs<'a>(
     data: &'a [u8],
     glyph_id: GlyphId,
-    cid: &CIDMetadata,
+    cid: &CIDMetadata<'_>,
 ) -> Option<Index<'a>> {
     let font_dict_index = cid.fd_select.font_dict_index(glyph_id)?;
     let font_dict_data = cid.fd_array.get(u32::from(font_dict_index))?;
@@ -503,7 +503,7 @@ struct CharStringParserContext<'a> {
 
 fn parse_char_string(
     data: &[u8],
-    metadata: &Table,
+    metadata: &Table<'_>,
     glyph_id: GlyphId,
     width_only: bool,
     builder: &mut dyn OutlineBuilder,
@@ -564,10 +564,10 @@ fn parse_char_string(
 }
 
 fn _parse_char_string(
-    ctx: &mut CharStringParserContext,
+    ctx: &mut CharStringParserContext<'_>,
     char_string: &[u8],
     depth: u8,
-    p: &mut CharStringParser,
+    p: &mut CharStringParser<'_>,
 ) -> Result<(), OutlineError> {
     let mut s = Stream::new(char_string);
     while !s.at_end() {
@@ -686,7 +686,7 @@ fn _parse_char_string(
                     let dx = p.stack.pop();
 
                     if ctx.width.is_none() && !p.stack.is_empty() {
-                        ctx.width = Some(p.stack.pop())
+                        ctx.width = Some(p.stack.pop());
                     }
 
                     ctx.has_seac = true;
@@ -839,7 +839,7 @@ fn _parse_char_string(
     Ok(())
 }
 
-fn seac_code_to_glyph_id(charset: &Charset, n: f32) -> Option<GlyphId> {
+fn seac_code_to_glyph_id(charset: &Charset<'_>, n: f32) -> Option<GlyphId> {
     let code = u8::try_num_from(n)?;
 
     let sid = STANDARD_ENCODING[usize::from(code)];

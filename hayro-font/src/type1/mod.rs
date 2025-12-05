@@ -432,7 +432,7 @@ impl<'a> Stream<'a> {
     }
 
     fn next_token(&mut self) -> Option<&'a [u8]> {
-        let skip_token = |st: &mut Stream| -> usize {
+        let skip_token = |st: &mut Stream<'_>| -> usize {
             let mut count = 1;
             while let Some(ch) = st.read_bytes(1) {
                 if is_whitespace(ch[0]) || is_self_delim_after_token(ch[0]) {
@@ -518,7 +518,7 @@ impl<'a> Stream<'a> {
     }
 
     fn read_font_matrix(&mut self) -> Option<[f32; 6]> {
-        let mut entries = [0.0f32; 6];
+        let mut entries = [0.0_f32; 6];
         let mut idx = 0;
 
         // Skip '[';
@@ -644,7 +644,7 @@ impl<'a> Stream<'a> {
 
 fn decrypt_charstring(data: &[u8], len_iv: i64, use_decryption: bool) -> Option<Vec<u8>> {
     let mut r = 4330;
-    let mut cb: Copied<Iter<u8>> = data.iter().copied();
+    let mut cb: Copied<Iter<'_, u8>> = data.iter().copied();
     let mut decrypted = vec![];
 
     for _ in 0..len_iv {
@@ -652,7 +652,7 @@ fn decrypt_charstring(data: &[u8], len_iv: i64, use_decryption: bool) -> Option<
     }
 
     for byte in cb {
-        decrypted.push(decrypt_byte(byte, &mut r, use_decryption))
+        decrypted.push(decrypt_byte(byte, &mut r, use_decryption));
     }
 
     Some(decrypted)
@@ -690,8 +690,8 @@ pub(crate) enum EncodingType {
 impl EncodingType {
     pub(crate) fn encode(&self, code: u8) -> Option<&str> {
         match self {
-            EncodingType::Standard => STANDARD.get(&code).copied(),
-            EncodingType::Custom(c) => c.get(&code).map(|s| s.as_str()),
+            Self::Standard => STANDARD.get(&code).copied(),
+            Self::Custom(c) => c.get(&code).map(|s| s.as_str()),
         }
     }
 }
