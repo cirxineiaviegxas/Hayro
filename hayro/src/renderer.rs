@@ -33,10 +33,10 @@ impl Renderer {
         Self {
             ctx: RenderContext::new_with(width, height, settings),
             inside_pattern: false,
-            soft_mask_cache: Default::default(),
+            soft_mask_cache: HashMap::default(),
             glyph_cache: Some(HashMap::new()),
             cur_mask: None,
-            cur_blend_mode: Default::default(),
+            cur_blend_mode: BlendMode::default(),
             in_type3_glyph: false,
         }
     }
@@ -77,7 +77,7 @@ impl Renderer {
                     rgb_data.width as f64 / alpha_data.width as f64,
                     rgb_data.height as f64 / alpha_data.height as f64,
                 );
-            let mut renderer = Renderer::new(
+            let mut renderer = Self::new(
                 self.ctx.width(),
                 self.ctx.height(),
                 derive_settings(self.ctx.render_settings()),
@@ -196,7 +196,7 @@ impl Renderer {
             *chunk = AlphaColor::from_rgba8(chunk[0], chunk[1], chunk[2], chunk[3])
                 .premultiply()
                 .to_rgba8()
-                .to_u8_array()
+                .to_u8_array();
         }
 
         // The problem is that by default, when applying a bilinear or bicubic scaling, we will
@@ -238,11 +238,11 @@ impl Renderer {
     }
 
     // TODO: Remove this method once vello_cpu supports inline blends.
-    fn with_blend(&mut self, op: impl FnOnce(&mut Renderer)) {
+    fn with_blend(&mut self, op: impl FnOnce(&mut Self)) {
         let push = self.cur_blend_mode != BlendMode::default();
         if push {
             self.ctx
-                .push_blend_layer(convert_blend_mode(self.cur_blend_mode))
+                .push_blend_layer(convert_blend_mode(self.cur_blend_mode));
         }
 
         op(self);
@@ -281,7 +281,7 @@ impl Renderer {
     }
 
     #[must_use]
-    fn set_paint(&mut self, paint: &Paint, path: &BezPath, is_stroke: bool) -> Option<BezPath> {
+    fn set_paint(&mut self, paint: &Paint<'_>, path: &BezPath, is_stroke: bool) -> Option<BezPath> {
         let mut paint_transform = Affine::IDENTITY;
         let mut clip_path = None;
 
@@ -358,7 +358,7 @@ impl Renderer {
                         let pix_width = x_step.abs().round() as u16;
                         let pix_height = y_step.abs().round() as u16;
 
-                        let mut renderer = Renderer {
+                        let mut renderer = Self {
                             ctx: RenderContext::new_with(
                                 pix_width,
                                 pix_height,
@@ -366,9 +366,9 @@ impl Renderer {
                             ),
                             cur_mask: None,
                             inside_pattern: true,
-                            soft_mask_cache: Default::default(),
+                            soft_mask_cache: HashMap::default(),
                             glyph_cache: Some(HashMap::new()),
-                            cur_blend_mode: Default::default(),
+                            cur_blend_mode: BlendMode::default(),
                             in_type3_glyph: false,
                         };
                         let mut initial_transform = Affine::scale_non_uniform(xs as f64, ys as f64)
@@ -418,7 +418,7 @@ impl Renderer {
         &mut self,
         path: &BezPath,
         transform: Affine,
-        paint: &Paint,
+        paint: &Paint<'_>,
         stroke_props: &StrokeProps,
         is_text: bool,
     ) {
@@ -437,7 +437,13 @@ impl Renderer {
         }
     }
 
-    fn fill_path(&mut self, path: &BezPath, transform: Affine, paint: &Paint, fill_rule: FillRule) {
+    fn fill_path(
+        &mut self,
+        path: &BezPath,
+        transform: Affine,
+        paint: &Paint<'_>,
+        fill_rule: FillRule,
+    ) {
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.set_transform(transform);
 
@@ -598,7 +604,7 @@ impl<'a> Device<'a> for Renderer {
                                     interpolate: stencil.interpolate,
                                     scale_factors: stencil.scale_factors,
                                 };
-                                let mut sub_renderer = Renderer::new(
+                                let mut sub_renderer = Self::new(
                                     width,
                                     height,
                                     derive_settings(self.ctx.render_settings()),
@@ -643,7 +649,7 @@ impl<'a> Device<'a> for Renderer {
                     self.ctx.set_transform(transform);
                     self.with_blend(|r| {
                         r.draw_image(rgb, alpha);
-                    })
+                    });
                 });
             }
         }
@@ -658,7 +664,7 @@ impl<'a> Device<'a> for Renderer {
     fn push_transparency_group(
         &mut self,
         opacity: f32,
-        mask: Option<SoftMask>,
+        mask: Option<SoftMask<'_>>,
         blend_mode: BlendMode,
     ) {
         let settings = *self.ctx.render_settings();
@@ -688,7 +694,7 @@ impl<'a> Device<'a> for Renderer {
         self.ctx.pop_layer();
     }
 
-    fn set_soft_mask(&mut self, mask: Option<SoftMask>) {
+    fn set_soft_mask(&mut self, mask: Option<SoftMask<'_>>) {
         let settings = *self.ctx.render_settings();
         self.cur_mask = mask.map(|m| {
             let width = self.ctx.width();
@@ -788,19 +794,14 @@ fn render_shading_texture(
     )
 }
 
-fn draw_soft_mask(
-    mask: &SoftMask,
-    settings: vello_cpu::RenderSettings,
-    width: u16,
-    height: u16,
-) -> Mask {
+fn draw_soft_mask(mask: &SoftMask<'_>, settings: RenderSettings, width: u16, height: u16) -> Mask {
     let mut renderer = Renderer {
         ctx: RenderContext::new_with(width, height, derive_settings(&settings)),
         inside_pattern: false,
         cur_mask: None,
-        soft_mask_cache: Default::default(),
+        soft_mask_cache: HashMap::default(),
         glyph_cache: Some(HashMap::new()),
-        cur_blend_mode: Default::default(),
+        cur_blend_mode: BlendMode::default(),
         in_type3_glyph: false,
     };
 

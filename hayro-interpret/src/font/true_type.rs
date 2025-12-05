@@ -37,15 +37,15 @@ pub(crate) struct TrueTypeFont {
 }
 
 impl TrueTypeFont {
-    pub(crate) fn new(dict: &Dict) -> Option<TrueTypeFont> {
-        let descriptor = dict.get::<Dict>(FONT_DESC).unwrap_or_default();
+    pub(crate) fn new(dict: &Dict<'_>) -> Option<Self> {
+        let descriptor = dict.get::<Dict<'_>>(FONT_DESC).unwrap_or_default();
 
         let font_flags = descriptor.get::<u32>(FLAGS).and_then(FontFlags::from_bits);
 
         let widths = read_widths(dict, &descriptor);
         let (encoding, differences) = read_encoding(dict);
         let base_font = descriptor
-            .get::<Stream>(FONT_FILE2)
+            .get::<Stream<'_>>(FONT_FILE2)
             .and_then(|s| s.decoded().ok())
             .and_then(|d| OpenTypeFontBlob::new(Arc::new(d.to_vec()), 0))?;
 
@@ -137,7 +137,7 @@ impl TrueTypeFont {
                                 .and_then(|n| n.chars().next())
                                 .and_then(|c| subtable.map_codepoint(c))
                                 .filter(|g| *g != GlyphId::NOTDEF)
-                        })
+                        });
                     }
                 }
 
@@ -151,7 +151,7 @@ impl TrueTypeFont {
                                 .or_else(|| mac_roman::get_inverse(lookup))
                                 .and_then(|c| subtable.map_codepoint(c))
                                 .filter(|g| *g != GlyphId::NOTDEF)
-                        })
+                        });
                     }
                 }
             }
@@ -169,10 +169,10 @@ impl TrueTypeFont {
                     && matches!(record.encoding_id(), 0 | 1)
                 {
                     if let Ok(subtable) = record.subtable(cmap.offset_data()) {
-                        for offset in [0x0000u32, 0xF000, 0xF100, 0xF200] {
+                        for offset in [0x0000_u32, 0xF000, 0xF100, 0xF200] {
                             glyph = glyph
                                 .or_else(|| subtable.map_codepoint(code as u32 + offset))
-                                .filter(|g| *g != GlyphId::NOTDEF)
+                                .filter(|g| *g != GlyphId::NOTDEF);
                         }
                     }
                 } else if matches!(
@@ -183,7 +183,7 @@ impl TrueTypeFont {
                 {
                     glyph = glyph
                         .or_else(|| subtable.map_codepoint(code))
-                        .filter(|g| *g != GlyphId::NOTDEF)
+                        .filter(|g| *g != GlyphId::NOTDEF);
                 }
             }
         }
@@ -224,12 +224,12 @@ impl TrueTypeFont {
     }
 }
 
-pub(crate) fn read_widths(dict: &Dict, descriptor: &Dict) -> Vec<f32> {
+pub(crate) fn read_widths(dict: &Dict<'_>, descriptor: &Dict<'_>) -> Vec<f32> {
     let mut widths = Vec::new();
 
     let first_char = dict.get::<usize>(FIRST_CHAR);
     let last_char = dict.get::<usize>(LAST_CHAR);
-    let widths_arr = dict.get::<Array>(WIDTHS);
+    let widths_arr = dict.get::<Array<'_>>(WIDTHS);
     let missing_width = descriptor.get::<f32>(MISSING_WIDTH).unwrap_or(0.0);
 
     if let (Some(fc), Some(lc), Some(w)) = (first_char, last_char, widths_arr) {
@@ -265,9 +265,9 @@ impl CacheKey for TrueTypeFont {
     }
 }
 
-pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
-    fn get_encoding_base(dict: &Dict, name: Name) -> Encoding {
-        match dict.get::<Name>(name.clone()) {
+pub(crate) fn read_encoding(dict: &Dict<'_>) -> (Encoding, HashMap<u8, String>) {
+    fn get_encoding_base(dict: &Dict<'_>, name: Name<'_>) -> Encoding {
+        match dict.get::<Name<'_>>(name.clone()) {
             Some(n) => match n.deref() {
                 WIN_ANSI_ENCODING => Encoding::WinAnsi,
                 MAC_ROMAN_ENCODING => Encoding::MacRoman,
@@ -284,9 +284,9 @@ pub(crate) fn read_encoding(dict: &Dict) -> (Encoding, HashMap<u8, String>) {
 
     let mut map = HashMap::new();
 
-    if let Some(encoding_dict) = dict.get::<Dict>(ENCODING) {
-        if let Some(differences) = encoding_dict.get::<Array>(DIFFERENCES) {
-            let entries = differences.iter::<Object>();
+    if let Some(encoding_dict) = dict.get::<Dict<'_>>(ENCODING) {
+        if let Some(differences) = encoding_dict.get::<Array<'_>>(DIFFERENCES) {
+            let entries = differences.iter::<Object<'_>>();
 
             let mut code = 0;
 

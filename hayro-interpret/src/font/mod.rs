@@ -63,16 +63,16 @@ impl Glyph<'_> {
     /// represents. The exact fallback chain depends on the font type:
     ///
     /// **For Outline Fonts (Type1, TrueType, CFF):**
-    /// 1. ToUnicode CMap
+    /// 1. `ToUnicode` `CMap`
     /// 2. Glyph name → Unicode (via Adobe Glyph List)
     /// 3. Unicode naming conventions (e.g., "uni0041", "u0041")
     ///
     /// **For CID Fonts (Type0):**
-    /// 1. ToUnicode CMap
+    /// 1. `ToUnicode` `CMap`
     ///
     ///
     /// **For Type3 Fonts:**
-    /// 1. ToUnicode CMap
+    /// 1. `ToUnicode` `CMap`
     ///
     /// Returns `None` if the Unicode value could not be determined.
     ///
@@ -162,7 +162,7 @@ impl<'a> Type3Glyph<'a> {
 
     /// Returns the Unicode code point for this glyph, if available.
     ///
-    /// Note: Type3 fonts can only provide Unicode via ToUnicode CMap.
+    /// Note: Type3 fonts can only provide Unicode via `ToUnicode` `CMap`.
     pub fn as_unicode(&self) -> Option<char> {
         self.font.char_code_to_unicode(self.char_code)
     }
@@ -179,7 +179,7 @@ pub(crate) struct Font<'a>(u128, FontType<'a>);
 
 impl<'a> Font<'a> {
     pub(crate) fn new(dict: &Dict<'a>, resolver: &FontResolverFn) -> Option<Self> {
-        let f_type = match dict.get::<Name>(SUBTYPE)?.deref() {
+        let f_type = match dict.get::<Name<'_>>(SUBTYPE)?.deref() {
             TYPE1 | MM_TYPE1 => FontType::Type1(Rc::new(Type1Font::new(dict, resolver)?)),
             TRUE_TYPE => TrueTypeFont::new(dict)
                 .map(Rc::new)
@@ -361,11 +361,11 @@ impl Encoding {
             return Some(".notdef");
         }
         match self {
-            Encoding::Standard => standard::get(code),
-            Encoding::MacRoman => mac_roman::get(code).or_else(|| mac_os_roman::get(code)),
-            Encoding::WinAnsi => win_ansi::get(code),
-            Encoding::MacExpert => mac_expert::get(code),
-            Encoding::BuiltIn => None,
+            Self::Standard => standard::get(code),
+            Self::MacRoman => mac_roman::get(code).or_else(|| mac_os_roman::get(code)),
+            Self::WinAnsi => win_ansi::get(code),
+            Self::MacExpert => mac_expert::get(code),
+            Self::BuiltIn => None,
         }
     }
 }
@@ -396,15 +396,15 @@ pub enum FontStretch {
 impl FontStretch {
     fn from_string(s: &str) -> Self {
         match s {
-            "UltraCondensed" => FontStretch::UltraCondensed,
-            "ExtraCondensed" => FontStretch::ExtraCondensed,
-            "Condensed" => FontStretch::Condensed,
-            "SemiCondensed" => FontStretch::SemiCondensed,
-            "SemiExpanded" => FontStretch::SemiExpanded,
-            "Expanded" => FontStretch::Expanded,
-            "ExtraExpanded" => FontStretch::ExtraExpanded,
-            "UltraExpanded" => FontStretch::UltraExpanded,
-            _ => FontStretch::Normal,
+            "UltraCondensed" => Self::UltraCondensed,
+            "ExtraCondensed" => Self::ExtraCondensed,
+            "Condensed" => Self::Condensed,
+            "SemiCondensed" => Self::SemiCondensed,
+            "SemiExpanded" => Self::SemiExpanded,
+            "Expanded" => Self::Expanded,
+            "ExtraExpanded" => Self::ExtraExpanded,
+            "UltraExpanded" => Self::UltraExpanded,
+            _ => Self::Normal,
         }
     }
 }
@@ -462,7 +462,7 @@ pub struct FallbackFontQuery {
 }
 
 impl FallbackFontQuery {
-    pub(crate) fn new(dict: &Dict) -> Self {
+    pub(crate) fn new(dict: &Dict<'_>) -> Self {
         let mut data = Self::default();
 
         let remove_subset_prefix = |s: String| {
@@ -474,18 +474,18 @@ impl FallbackFontQuery {
         };
 
         data.post_script_name = dict
-            .get::<Name>(BASE_FONT)
+            .get::<Name<'_>>(BASE_FONT)
             .map(|n| remove_subset_prefix(n.as_str().to_string()));
 
-        if let Some(descriptor) = dict.get::<Dict>(FONT_DESC) {
+        if let Some(descriptor) = dict.get::<Dict<'_>>(FONT_DESC) {
             data.font_name = dict
-                .get::<Name>(FONT_NAME)
+                .get::<Name<'_>>(FONT_NAME)
                 .map(|n| remove_subset_prefix(n.as_str().to_string()));
             data.font_family = descriptor
-                .get::<Name>(FONT_FAMILY)
+                .get::<Name<'_>>(FONT_FAMILY)
                 .map(|n| n.as_str().to_string());
             data.font_stretch = descriptor
-                .get::<Name>(FONT_STRETCH)
+                .get::<Name<'_>>(FONT_STRETCH)
                 .map(|n| FontStretch::from_string(n.as_str()))
                 .unwrap_or(FontStretch::Normal);
             data.font_weight = descriptor.get::<u32>(FONT_WEIGHT).unwrap_or(400);
@@ -557,7 +557,7 @@ impl Default for FallbackFontQuery {
 
 /// Convert a glyph name to a Unicode character, if possible.
 /// An incomplete implementation of the Adobe Glyph List Specification
-/// https://github.com/adobe-type-tools/agl-specification
+/// <https://github.com/adobe-type-tools/agl-specification>
 pub(crate) fn glyph_name_to_unicode(name: &str) -> Option<char> {
     if let Some(unicode_str) = glyph_names::get(name) {
         return unicode_str.chars().next();
@@ -582,8 +582,8 @@ pub(crate) fn unicode_from_name(name: &str) -> Option<char> {
         .flatten()
 }
 
-pub(crate) fn read_to_unicode(dict: &Dict) -> Option<CMap> {
-    dict.get::<Stream>(TO_UNICODE)
+pub(crate) fn read_to_unicode(dict: &Dict<'_>) -> Option<CMap> {
+    dict.get::<Stream<'_>>(TO_UNICODE)
         .and_then(|s| s.decoded().ok())
         .and_then(|data| {
             let cmap_str = std::str::from_utf8(&data).ok()?;

@@ -18,7 +18,7 @@ pub(crate) struct Type4 {
 
 impl Type4 {
     /// Create a new type 4 function.
-    pub(crate) fn new(stream: &Stream) -> Option<Self> {
+    pub(crate) fn new(stream: &Stream<'_>) -> Option<Self> {
         let dict = stream.dict().clone();
         let clamper = Clamper::new(&dict)?;
 
@@ -56,22 +56,22 @@ enum Argument {
 
 impl Default for Argument {
     fn default() -> Self {
-        Argument::Float(0.0)
+        Self::Float(0.0)
     }
 }
 
 impl Argument {
     fn as_bool(&self) -> bool {
         match self {
-            Argument::Float(f) => *f != 0.0,
-            Argument::Bool(b) => *b,
+            Self::Float(f) => *f != 0.0,
+            Self::Bool(b) => *b,
         }
     }
 
     fn as_f32(&self) -> f32 {
         match self {
-            Argument::Float(f) => *f,
-            Argument::Bool(b) => {
+            Self::Float(f) => *f,
+            Self::Bool(b) => {
                 if *b {
                     1.0
                 } else {
@@ -420,7 +420,7 @@ fn parse_procedure(data: &[u8]) -> Option<Vec<PostScriptOp>> {
     parse_procedure_inner(&mut r)
 }
 
-fn parse_procedure_inner(r: &mut Reader) -> Option<Vec<PostScriptOp>> {
+fn parse_procedure_inner(r: &mut Reader<'_>) -> Option<Vec<PostScriptOp>> {
     let mut stack = ParseStack::new();
 
     let mut ops = vec![];
@@ -446,7 +446,7 @@ fn parse_procedure_inner(r: &mut Reader) -> Option<Vec<PostScriptOp>> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum PostScriptOp {
+pub(super) enum PostScriptOp {
     Number(Number),
     Abs,
     Add,
@@ -493,12 +493,12 @@ pub enum PostScriptOp {
 }
 
 impl PostScriptOp {
-    fn from_reader(r: &mut Reader, stack: &mut ParseStack) -> Option<Self> {
+    fn from_reader(r: &mut Reader<'_>, stack: &mut ParseStack) -> Option<Self> {
         let op = if let Some(n) = r.read::<Number>(&ReaderContext::dummy()) {
             // TODO: Support radix numbers
             Self::Number(n)
         } else {
-            let op = r.read::<content::Operator>(&ReaderContext::dummy())?;
+            let op = r.read::<content::Operator<'_>>(&ReaderContext::dummy())?;
             match op.as_ref() {
                 b"abs" => Self::Abs,
                 b"add" => Self::Add,
@@ -561,7 +561,7 @@ impl PostScriptOp {
 #[cfg(test)]
 mod tests {
     use crate::function::type4::{PostScriptOp, Type4, parse_procedure};
-    use crate::function::{Clamper, Function, FunctionType, Values};
+    use crate::function::{Clamper, Function, FunctionType, TupleVec, Values};
     use std::f32::consts::LN_10;
     use std::sync::Arc;
 
@@ -582,7 +582,7 @@ mod tests {
                 PostScriptOp::Exch,
                 PostScriptOp::Roll,
             ]
-        )
+        );
     }
 
     #[test]
@@ -599,7 +599,7 @@ mod tests {
                     vec![PostScriptOp::Number(Number::from_i32(1))]
                 )
             ]
-        )
+        );
     }
 
     fn op_impl(prog: &str, out: &[f32]) {
@@ -609,7 +609,7 @@ mod tests {
         let type4 = Type4 {
             program: procedure,
             clamper: Clamper {
-                domain: Default::default(),
+                domain: TupleVec::default(),
                 range: None,
             },
         };

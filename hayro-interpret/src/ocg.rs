@@ -8,30 +8,30 @@ pub(crate) struct OcgState {
 }
 
 impl OcgState {
-    fn dummy() -> OcgState {
-        OcgState {
-            inactive_ocgs: Default::default(),
+    fn dummy() -> Self {
+        Self {
+            inactive_ocgs: HashSet::default(),
             visibility_stack: vec![],
         }
     }
 
-    pub(crate) fn from_catalog(catalog: &Dict) -> Self {
-        let Some(oc_properties) = catalog.get::<Dict>(OCPROPERTIES) else {
+    pub(crate) fn from_catalog(catalog: &Dict<'_>) -> Self {
+        let Some(oc_properties) = catalog.get::<Dict<'_>>(OCPROPERTIES) else {
             return Self::dummy();
         };
 
-        let Some(config) = oc_properties.get::<Dict>(D) else {
+        let Some(config) = oc_properties.get::<Dict<'_>>(D) else {
             return Self::dummy();
         };
 
         let mut inactive = HashSet::new();
 
         let base_state = config
-            .get::<Name>(BASE_STATE)
+            .get::<Name<'_>>(BASE_STATE)
             .and_then(|b| BaseState::from_name(b.as_ref()));
 
         if base_state.unwrap_or(BaseState::On) == BaseState::Off
-            && let Some(ocgs) = oc_properties.get::<Array>(OCGS)
+            && let Some(ocgs) = oc_properties.get::<Array<'_>>(OCGS)
         {
             for item in ocgs.raw_iter() {
                 if let Some(ref_) = item.as_obj_ref() {
@@ -42,7 +42,7 @@ impl OcgState {
         }
 
         let mut read_ocg_array = |key, insert_active: bool| {
-            if let Some(arr) = config.get::<Array>(key) {
+            if let Some(arr) = config.get::<Array<'_>>(key) {
                 for item in arr.raw_iter() {
                     if let Some(ref_) = item.as_obj_ref() {
                         let id: ObjectIdentifier = ref_.into();
@@ -101,9 +101,9 @@ enum BaseState {
 impl BaseState {
     fn from_name(name: &[u8]) -> Option<Self> {
         match name {
-            b"ON" => Some(BaseState::On),
-            b"OFF" => Some(BaseState::Off),
-            b"Unchanged" => Some(BaseState::Unchanged),
+            b"ON" => Some(Self::On),
+            b"OFF" => Some(Self::Off),
+            b"Unchanged" => Some(Self::Unchanged),
             _ => None,
         }
     }
