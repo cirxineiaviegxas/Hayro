@@ -46,12 +46,13 @@ use hayro_interpret::{ClipPath, interpret_page};
 pub use hayro_interpret::{InterpreterSettings, Pdf};
 use kurbo::{Affine, Rect, Shape};
 use std::ops::RangeInclusive;
-pub use vello_cpu::Pixmap;
+pub use vello_cpu;
+
 use vello_cpu::color::AlphaColor;
 use vello_cpu::color::Srgb;
 use vello_cpu::color::palette::css::TRANSPARENT;
 use vello_cpu::color::palette::css::WHITE;
-use vello_cpu::{Level, RenderMode};
+use vello_cpu::{Level, Pixmap, RenderMode};
 
 mod renderer;
 
