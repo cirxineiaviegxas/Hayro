@@ -784,6 +784,8 @@ mod tests {
             component_sizes: vec![component_size_info_0, component_size_info_1],
             x_shrink_factor: 1,
             y_shrink_factor: 1,
+            x_resolution_shrink_factor: 1,
+            y_resolution_shrink_factor: 1,
         };
 
         assert_eq!(size_data.image_width(), 1280);
@@ -815,6 +817,7 @@ mod tests {
             },
             component_infos: vec![],
             ppm_packets: vec![],
+            skipped_resolution_levels: 0,
             strict: false,
         };
 

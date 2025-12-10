@@ -44,5 +44,15 @@
   "kakadu-lossless-cmyka-u8-prog1-layers1-res6.jp2",
   "openjpeg-lossless-bgra-u8.jp2",
   "kakadu-lossless-lab-alpha-u8-prog1-layers1-res6.jp2",
-  "kakadu-lossless-lab-u8-prog1-layers1-res6.jp2"
+  "kakadu-lossless-lab-u8-prog1-layers1-res6.jp2",
+  {
+    "id": "indexed-small_res1",
+    "path": "indexed-small.jp2",
+    "target_resolution": [1, 1]
+  },
+  {
+    "id": "large_target_resolution",
+    "path": "jasper-tile4x2-res5.jp2",
+    "target_resolution": [1000, 1000]
+  }
 ]

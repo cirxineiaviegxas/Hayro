@@ -16,7 +16,7 @@ use super::progression::{
     resolution_position_component_layer_progression,
 };
 use super::tag_tree::TagNode;
-use super::tile::{ComponentTile, Tile};
+use super::tile::{ComponentTile, ResolutionTile, Tile};
 use super::{ComponentData, bitplane, build, idwt, mct, segment, tile};
 use crate::reader::BitReader;
 use log::trace;
@@ -109,7 +109,13 @@ fn decode_tile<'a>(
     // for each component tile so we can reuse allocations better.
     for (idx, component_info) in header.component_infos.iter().enumerate() {
         // Next, we apply the inverse discrete wavelet transform.
-        idwt::apply(storage, tile_ctx, idx, component_info.wavelet_transform());
+        idwt::apply(
+            storage,
+            tile_ctx,
+            idx,
+            header,
+            component_info.wavelet_transform(),
+        );
         // Finally, we store the raw samples for the tile area in the correct
         // location. Note that in case we have MCT, we are not applying it yet.
         // It will be applied in the very end once all tiles have been processed.
@@ -275,7 +281,10 @@ fn decode_component_tile_bit_planes<'a>(
     header: &Header<'_>,
 ) -> Result<(), &'static str> {
     for (tile_decompositions_idx, component_info) in tile.component_infos.iter().enumerate() {
-        for resolution in 0..component_info.num_resolution_levels() {
+        // Only decode the resolution levels we actually care about.
+        for resolution in
+            0..component_info.num_resolution_levels() - header.skipped_resolution_levels
+        {
             let tile_composition = &storage.tile_decompositions[tile_decompositions_idx];
             let sub_band_iter = tile_composition.sub_band_iter(resolution, &storage.decompositions);
 
@@ -402,6 +411,10 @@ fn store<'a>(
     let idwt_output = &mut tile_ctx.idwt_output;
 
     let component_tile = ComponentTile::new(tile, component_info);
+    let resolution_tile = ResolutionTile::new(
+        component_tile,
+        component_info.num_resolution_levels() - 1 - header.skipped_resolution_levels,
+    );
 
     // If we have MCT, the sign shift needs to be applied after the
     // MCT transform. We take care of that in the main decode method.
@@ -411,8 +424,6 @@ fn store<'a>(
             *sample += (1 << (component_info.size_info.precision - 1)) as f32;
         }
     }
-
-    assert_eq!(idwt_output.rect, component_tile.rect);
 
     let (scale_x, scale_y) = (
         component_info.size_info.horizontal_resolution,
@@ -446,12 +457,13 @@ fn store<'a>(
         let output_row_iter = channel_data
             .container
             .chunks_exact_mut(header.size_data.image_width() as usize)
-            .skip(tile.rect.y0.saturating_sub(image_y_offset) as usize);
+            .skip(resolution_tile.rect.y0.saturating_sub(image_y_offset) as usize);
 
         for (input_row, output_row) in input_row_iter.zip(output_row_iter) {
             let input_row = &input_row[skip_x as usize..];
             let output_row = &mut output_row
-                [tile.rect.x0.saturating_sub(image_x_offset) as usize..][..input_row.len()];
+                [resolution_tile.rect.x0.saturating_sub(image_x_offset) as usize..]
+                [..input_row.len()];
 
             output_row.copy_from_slice(input_row);
         }
@@ -472,17 +484,13 @@ fn store<'a>(
             .div_ceil(y_shrink_factor);
 
         // Otherwise, copy sample by sample.
-        for y in component_tile.rect.y0..component_tile.rect.y1 {
+        for y in resolution_tile.rect.y0..resolution_tile.rect.y1 {
             let relative_y = (y - component_tile.rect.y0) as usize;
-            // Note that the shrink factor is always either 1 or `scale_y`, so
-            // the result will be, too.
-            let reference_grid_y = (scale_y as u32) / y_shrink_factor * y;
+            let reference_grid_y = (scale_y as u32 * y) / y_shrink_factor;
 
-            for x in component_tile.rect.x0..component_tile.rect.x1 {
+            for x in resolution_tile.rect.x0..resolution_tile.rect.x1 {
                 let relative_x = (x - component_tile.rect.x0) as usize;
-                // Note that the shrink factor is always either 1 or `scale_x`, so
-                // the result will be, too.
-                let reference_grid_x = (scale_x as u32) / x_shrink_factor * x;
+                let reference_grid_x = (scale_x as u32 * x) / x_shrink_factor;
 
                 let sample = idwt_output.coefficients[(relative_y + idwt_output.padding.top)
                     * idwt_output.total_width() as usize

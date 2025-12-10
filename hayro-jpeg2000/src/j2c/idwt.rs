@@ -4,6 +4,7 @@ use super::build::{Decomposition, SubBand, SubBandType};
 use super::codestream::WaveletTransform;
 use super::decode::{DecompositionStorage, TileDecodeContext};
 use super::rect::IntRect;
+use crate::j2c::Header;
 
 // Keep in sync with the type `F32` in the `simd` modules!
 const SIMD_WIDTH: usize = 8;
@@ -70,11 +71,16 @@ pub(crate) fn apply(
     storage: &DecompositionStorage<'_>,
     tile_ctx: &mut TileDecodeContext<'_>,
     component_idx: usize,
+    header: &Header<'_>,
     transform: WaveletTransform,
 ) {
     let tile_decompositions = &storage.tile_decompositions[component_idx];
 
-    let decompositions = &storage.decompositions[tile_decompositions.decompositions.clone()];
+    let mut decompositions = &storage.decompositions[tile_decompositions.decompositions.clone()];
+    // If we requested a lower resolution level, we can skip some decompositions.
+    decompositions = &decompositions[..decompositions
+        .len()
+        .saturating_sub(header.skipped_resolution_levels as usize)];
     let ll_sub_band = &storage.sub_bands[tile_decompositions.first_ll_sub_band];
 
     // To explain a bit why we have this scratch buffer and another coefficient

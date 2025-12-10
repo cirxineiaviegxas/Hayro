@@ -11,6 +11,7 @@ pub(crate) struct Header<'a> {
     pub(crate) global_coding_style: CodingStyleDefault,
     pub(crate) component_infos: Vec<ComponentInfo>,
     pub(crate) ppm_packets: Vec<PpmPacket<'a>>,
+    pub(crate) skipped_resolution_levels: u16,
     /// Whether strict mode is enabled for decoding.
     pub(crate) strict: bool,
 }
@@ -34,7 +35,7 @@ pub(crate) fn read_header<'a>(
         return Err("expected SIZ marker after SOC");
     }
 
-    let size_data = size_marker(reader)?;
+    let mut size_data = size_marker(reader)?;
 
     let mut cod = None;
     let mut qcd = None;
@@ -125,6 +126,34 @@ pub(crate) fn read_header<'a>(
         })
         .collect();
 
+    // Components can have different number of resolution levels. In that case, we
+    // can only skip as many resolution levels as the component with the smallest
+    // number of resolution levels.
+    let min_num_resolution_levels = component_infos
+        .iter()
+        .map(|c| c.num_resolution_levels())
+        .min()
+        .unwrap();
+    let skipped_resolution_levels =
+        if let Some((target_width, target_height)) = settings.target_resolution {
+            let width_log = (size_data.image_width() / target_width)
+                .checked_ilog2()
+                .unwrap_or(0);
+            let height_log = (size_data.image_height() / target_height)
+                .checked_ilog2()
+                .unwrap_or(0);
+
+            width_log.min(height_log) as u16
+        } else {
+            0
+        }
+        .min(min_num_resolution_levels - 1);
+
+    // If the user defined a maximum resolution level that is lower than the
+    // maximum available one, the final image needs to be shrinked further.
+    size_data.x_resolution_shrink_factor *= 1 << skipped_resolution_levels;
+    size_data.y_resolution_shrink_factor *= 1 << skipped_resolution_levels;
+
     ppm_markers.sort_by(|p0, p1| p0.sequence_idx.cmp(&p1.sequence_idx));
 
     let header = Header {
@@ -136,6 +165,7 @@ pub(crate) fn read_header<'a>(
             .flat_map(|i| i.packets)
             .filter_map(|p| if p.data.is_empty() { None } else { Some(p) })
             .collect(),
+        skipped_resolution_levels,
         strict: settings.strict,
     };
 
@@ -412,6 +442,10 @@ pub(crate) struct SizeData {
     pub(crate) x_shrink_factor: u32,
     /// Shrink factor in the y direction. See the comment in the parsing method.
     pub(crate) y_shrink_factor: u32,
+    /// Shrink factor in the x direction due to requesting a lower resolution level.
+    pub(crate) x_resolution_shrink_factor: u32,
+    /// Shrink factor in the y direction due to requesting a lower resolution level.
+    pub(crate) y_resolution_shrink_factor: u32,
 }
 
 impl SizeData {
@@ -454,12 +488,14 @@ impl SizeData {
 
     /// Return the overall width of the image.
     pub(crate) fn image_width(&self) -> u32 {
-        (self.reference_grid_width - self.image_area_x_offset).div_ceil(self.x_shrink_factor)
+        (self.reference_grid_width - self.image_area_x_offset)
+            .div_ceil(self.x_shrink_factor * self.x_resolution_shrink_factor)
     }
 
     /// Return the overall height of the image.
     pub(crate) fn image_height(&self) -> u32 {
-        (self.reference_grid_height - self.image_area_y_offset).div_ceil(self.y_shrink_factor)
+        (self.reference_grid_height - self.image_area_y_offset)
+            .div_ceil(self.y_shrink_factor * self.y_resolution_shrink_factor)
     }
 }
 
@@ -592,6 +628,8 @@ fn size_marker_inner(reader: &mut BitReader<'_>) -> Option<SizeData> {
         component_sizes: components,
         x_shrink_factor,
         y_shrink_factor,
+        x_resolution_shrink_factor: 1,
+        y_resolution_shrink_factor: 1,
     })
 }
 

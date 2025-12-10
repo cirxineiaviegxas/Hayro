@@ -96,6 +96,8 @@ pub struct DecodeSettings {
     /// It is recommended to leave this flag disabled, unless you have a
     /// specific reason not to.
     pub strict: bool,
+    /// A hint for the target resolution that the image should be decoded at.
+    pub target_resolution: Option<(u32, u32)>,
 }
 
 impl Default for DecodeSettings {
@@ -103,6 +105,7 @@ impl Default for DecodeSettings {
         Self {
             resolve_palette_indices: true,
             strict: false,
+            target_resolution: None,
         }
     }
 }
@@ -133,7 +136,7 @@ impl<'a> Image<'a> {
         const CODESTREAM_MAGIC: &[u8] = b"\xFF\x4F\xFF\x51";
 
         if data.starts_with(JP2_MAGIC) {
-            jp2::parse(data, settings)
+            jp2::parse(data, *settings)
         } else if data.starts_with(CODESTREAM_MAGIC) {
             j2c::parse(data, settings)
         } else {
