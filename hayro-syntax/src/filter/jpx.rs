@@ -9,6 +9,7 @@ impl ImageColorSpace {
             Self::Gray => 1,
             Self::Rgb => 3,
             Self::Cmyk => 4,
+            Self::Unknown(num) => *num,
         }
     }
 }
@@ -31,6 +32,7 @@ pub(crate) fn decode(data: &[u8], params: &ImageDecodeParams) -> Option<FilterRe
         ColorSpace::Gray => ImageColorSpace::Gray,
         ColorSpace::RGB => ImageColorSpace::Rgb,
         ColorSpace::CMYK => ImageColorSpace::Cmyk,
+        ColorSpace::Unknown { num_channels } => ImageColorSpace::Unknown(*num_channels),
         ColorSpace::Icc {
             num_channels: num_components,
             ..
