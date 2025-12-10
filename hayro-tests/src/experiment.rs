@@ -5,6 +5,7 @@ use rayon::prelude::*;
 use std::collections::HashSet;
 use std::env;
 use std::fs;
+use std::panic::catch_unwind;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU32;
 use std::sync::{Arc, LazyLock};
@@ -103,15 +104,28 @@ fn check_jpx_images(folder: &str) {
                     {
                         let raw_data = stream.raw_data();
 
-                        match hayro_jpeg2000::Image::new(&raw_data, &DecodeSettings::default())
-                            .and_then(|image| image.decode())
-                        {
-                            Ok(_) => {
+                        let settings = DecodeSettings {
+                            resolve_palette_indices: false,
+                            strict: false,
+                            target_resolution: Some((2000, 2000)),
+                        };
+
+                        let decoded = catch_unwind(|| {
+                            hayro_jpeg2000::Image::new(&raw_data, &settings)
+                                .and_then(|image| image.decode())
+                        });
+
+                        match decoded {
+                            Ok(Ok(_)) => {
                                 // println!("ok!")
                             }
-                            Err(e) => {
+                            Ok(Err(e)) => {
                                 eprintln!("{}", name);
                                 eprintln!("{}", e);
+                            }
+                            Err(_) => {
+                                eprintln!("{}", name);
+                                eprintln!("panic while decoding JPX image");
                             }
                         }
                     }

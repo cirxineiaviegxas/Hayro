@@ -8,7 +8,7 @@ use crate::jp2::colr::ColorSpecificationBox;
 use crate::jp2::pclr::PaletteBox;
 use crate::reader::BitReader;
 use crate::{DecodeSettings, Image, resolve_alpha_and_color_space};
-use log::{debug, warn};
+use log::debug;
 
 pub(crate) mod r#box;
 pub(crate) mod cdef;
@@ -109,12 +109,7 @@ pub(crate) fn parse<'a>(
             r#box::CONTIGUOUS_CODESTREAM => {
                 parsed_codestream = Ok(crate::j2c::parse_raw(current_box.data, &settings)?);
             }
-            _ => {
-                warn!(
-                    "ignoring outer box {}",
-                    r#box::tag_to_string(current_box.box_type)
-                );
-            }
+            _ => {}
         }
     }
 
