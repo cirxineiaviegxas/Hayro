@@ -1135,5 +1135,13 @@
     "id": "issue6365",
     "last_page": 4
   },
-  "issue17289"
+  "issue17289",
+  "issue10880",
+  "issue10989",
+  {
+    "id": "issue9425",
+    "last_page": 5
+  },
+  "issue12841",
+  "issue15492"
 ]

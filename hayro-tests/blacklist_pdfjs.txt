@@ -203,12 +203,7 @@ issue12295
 issue11768
 
 # corrupt jpeg image
-issue10880
-issue10989
-issue9425
-issue 12841
 issue8169
-issue15492
 
 # text should be bold but isnt
 issue9291
