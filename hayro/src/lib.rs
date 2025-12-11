@@ -130,6 +130,7 @@ pub fn render(
 
     device.push_transparency_group(1.0, None, BlendMode::Normal);
     interpret_page(page, &mut state, &mut device);
+
     device.pop_transparency_group();
 
     device.pop_clip_path();
