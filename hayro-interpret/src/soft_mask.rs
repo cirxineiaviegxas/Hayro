@@ -62,20 +62,20 @@ struct Repr<'a> {
     xref: &'a XRef,
 }
 
+impl Hash for Repr<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.obj_id.hash(state);
+        self.root_transform.cache_key().hash(state);
+    }
+}
+
 /// A soft mask.
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct SoftMask<'a>(Arc<Repr<'a>>);
 
 impl Debug for SoftMask<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "SoftMask({:?})", self.0.obj_id)
-    }
-}
-
-impl Hash for SoftMask<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        // Soft masks are uniquely identified by their object
-        self.0.obj_id.hash(state);
     }
 }
 
