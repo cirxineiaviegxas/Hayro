@@ -1,0 +1,18 @@
+[package]
+name = "hayro-ccitt"
+version = "0.1.0"
+description = "A placeholder CCITT decoder crate for future experimentation."
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+readme = "README.md"
+license.workspace = true
+
+[dependencies]
+log = "0.4"
+
+[features]
+default = []
+
+#[lints]
+#workspace = true
