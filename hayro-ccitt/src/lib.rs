@@ -6,6 +6,21 @@ mod bit;
 mod decode;
 mod tables;
 
+/// The encoding mode for CCITT fax decoding.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum EncodingMode {
+    /// Group 4 (MMR) - Pure 2D encoding, no EOL codes.
+    /// PDF K < 0.
+    Group4,
+    /// Group 3 1D (MH) - Pure 1D encoding with EOL codes.
+    /// PDF K = 0.
+    Group3_1D,
+    /// Group 3 2D (MR) - Mixed 1D/2D encoding with EOL + tag bits.
+    /// PDF K > 0. The value indicates that after each 1D reference line,
+    /// at most K-1 lines may be 2D encoded.
+    Group3_2D { k: u32 },
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct DecodeSettings {
     pub strict: bool,
@@ -14,6 +29,7 @@ pub struct DecodeSettings {
     pub end_of_block: bool,
     pub end_of_line: bool,
     pub rows_are_byte_aligned: bool,
+    pub encoding: EncodingMode,
 }
 
 pub trait Decoder {
@@ -25,8 +41,45 @@ pub fn decode(data: &[u8], decoder: &mut impl Decoder, settings: &DecodeSettings
     let mut ctx = DecoderContext::new(decoder, settings);
     let mut reader = BitReader::new(data);
 
+    match settings.encoding {
+        EncodingMode::Group4 => decode_group4(&mut ctx, &mut reader)?,
+        EncodingMode::Group3_1D => decode_group3_1d(&mut ctx, &mut reader)?,
+        EncodingMode::Group3_2D { .. } => {
+            unimplemented!();
+        }
+    }
+
+    reader.align();
+    Some(reader.byte_pos())
+}
+
+fn decode_group3_1d<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader) -> Option<()> {
+    // It seems like PDF producers are a bit sloppy with the `end_of_line` flag,
+    // so we just always try to read one.
+    let _ = reader.read_eol_if_available();
+
     loop {
-        if settings.end_of_block {
+        while ctx.a0().unwrap_or(0) < ctx.max_idx {
+            let run_length = reader.decode_run(ctx.is_white)? as usize;
+            ctx.push_pixels(run_length);
+            ctx.is_white = !ctx.is_white;
+        }
+
+        ctx.check_eol(reader);
+
+        let num_eol = reader.read_eol_if_available();
+
+        if num_eol == 6 {
+            break;
+        }
+    }
+
+    Some(())
+}
+
+fn decode_group4<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader) -> Option<()> {
+    loop {
+        if ctx.settings.end_of_block {
             // In this case, bit stream is terminated by an explicit marker.
             if reader.peak_bits(24) == Some(EOFB) {
                 // Consume the EOFB marker
@@ -36,7 +89,7 @@ pub fn decode(data: &[u8], decoder: &mut impl Decoder, settings: &DecodeSettings
         } else {
             // Otherwise, the length needs to be inferred from the number of
             // expected rows.
-            if ctx.decoded_rows == settings.rows {
+            if ctx.decoded_rows == ctx.settings.rows {
                 break;
             }
         }
@@ -60,7 +113,7 @@ pub fn decode(data: &[u8], decoder: &mut impl Decoder, settings: &DecodeSettings
                 ctx.push_pixels(a1a2);
                 ctx.is_white = !ctx.is_white;
 
-                ctx.check_eol(&mut reader);
+                ctx.check_eol(reader);
             }
             // 2.2.3.2 Vertical mode.
             Mode::Vertical(i) => {
@@ -75,15 +128,12 @@ pub fn decode(data: &[u8], decoder: &mut impl Decoder, settings: &DecodeSettings
                 ctx.push_pixels(a1.checked_sub(a0)?);
                 ctx.is_white = !ctx.is_white;
 
-                ctx.check_eol(&mut reader);
+                ctx.check_eol(reader);
             }
         }
     }
 
-    reader.align();
-
-    // Return the number of bytes consumed.
-    Some(reader.byte_pos())
+    Some(())
 }
 
 struct DecoderContext<'a, T: Decoder> {
