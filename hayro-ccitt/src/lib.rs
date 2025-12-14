@@ -113,16 +113,11 @@ fn decode_group3_1d<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitRea
     let _ = reader.read_eol_if_available();
 
     loop {
-        while ctx.a0().unwrap_or(0) < ctx.max_idx {
-            let run_length = reader.decode_run(ctx.is_white)? as usize;
-            ctx.push_pixels(run_length);
-            ctx.is_white = !ctx.is_white;
-        }
-
-        ctx.check_eol(reader)?;
-
+        decode_1d_line(ctx, reader)?;
+        ctx.next_line(reader)?;
         let num_eol = reader.read_eol_if_available();
 
+        // RTC.
         if num_eol == 6 {
             break;
         }
@@ -148,13 +143,32 @@ fn decode_group4<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader
             }
         }
 
+        decode_2d_line(ctx, reader)?;
+        ctx.next_line(reader)?;
+    }
+
+    Some(())
+}
+
+fn decode_1d_line<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader) -> Option<()> {
+    while !ctx.at_eol() {
+        let run_length = reader.decode_run(ctx.is_white)? as usize;
+        ctx.push_pixels(run_length);
+        ctx.is_white = !ctx.is_white;
+    }
+
+    Some(())
+}
+
+fn decode_2d_line<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader) -> Option<()> {
+    while !ctx.at_eol() {
         let mode = reader.decode_mode()?;
 
         match mode {
             // 2.2.3.1 Pass mode.
             Mode::Pass => {
                 ctx.push_pixels(ctx.b2 - ctx.a0().unwrap_or(0));
-                ctx.start_run();
+                ctx.update_b();
                 // No color change happens in pass mode.
             }
             // 2.2.3.3 Horizontal mode.
@@ -167,7 +181,7 @@ fn decode_group4<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader
                 ctx.push_pixels(a1a2);
                 ctx.is_white = !ctx.is_white;
 
-                ctx.check_eol(reader)?;
+                ctx.update_b();
             }
             // 2.2.3.2 Vertical mode.
             Mode::Vertical(i) => {
@@ -182,7 +196,7 @@ fn decode_group4<T: Decoder>(ctx: &mut DecoderContext<T>, reader: &mut BitReader
                 ctx.push_pixels(a1.checked_sub(a0)?);
                 ctx.is_white = !ctx.is_white;
 
-                ctx.check_eol(reader)?;
+                ctx.update_b();
             }
         }
     }
@@ -249,7 +263,9 @@ impl<'a, T: Decoder> DecoderContext<'a, T> {
             None
         } else {
             // Otherwise, the index just point to the next element to be decoded.
-            Some(self.coding_line.len())
+            // For invalid files, it's possible that there are more elements than
+            // there should be, so clamp to the maximum index.
+            Some(self.coding_line.len().min(self.max_idx))
         }
     }
 
@@ -266,7 +282,9 @@ impl<'a, T: Decoder> DecoderContext<'a, T> {
             (0, 0)
         };
 
-        self.b1 = start;
+        // Make sure `b1` is never more than the maximum index, otherwise
+        // we might get OOB when calling `find_b2`.
+        self.b1 = start.min(self.max_idx);
 
         while self.b1 < self.max_idx {
             let current_color = self.reference_line[self.b1];
@@ -330,39 +348,41 @@ impl<'a, T: Decoder> DecoderContext<'a, T> {
         if self.is_white { 0 } else { 1 }
     }
 
-    fn start_run(&mut self) {
+    fn update_b(&mut self) {
         self.find_b1();
         self.find_b2();
     }
 
-    fn check_eol(&mut self, reader: &mut BitReader) -> Option<()> {
-        if self.a0().unwrap_or(0) >= self.max_idx {
-            // Go to next line.
+    fn at_eol(&self) -> bool {
+        self.a0().unwrap_or(0) == self.max_idx
+    }
 
-            if self.coding_line.len() != self.settings.columns as usize {
-                warn!("coding line has wrong size");
+    fn next_line(&mut self, reader: &mut BitReader) -> Option<()> {
+        // Go to next line.
 
-                return None;
-            }
+        if self.coding_line.len() != self.settings.columns as usize {
+            warn!("coding line has wrong size");
 
-            // Flush any partial byte with zero padding before finishing the line.
-            if let Some(byte) = self.packer.flush() {
-                self.decoder.push_byte(byte ^ self.invert_mask);
-            }
-
-            core::mem::swap(&mut self.reference_line, &mut self.coding_line);
-            self.reference_line.resize(self.max_idx + 1, 0);
-            self.coding_line.clear();
-            self.is_white = true;
-            self.decoded_rows += 1;
-            self.decoder.next_line();
-
-            if self.settings.rows_are_byte_aligned {
-                reader.align();
-            }
+            return None;
         }
 
-        self.start_run();
+        // Flush any partial byte with zero padding before finishing the line.
+        if let Some(byte) = self.packer.flush() {
+            self.decoder.push_byte(byte ^ self.invert_mask);
+        }
+
+        core::mem::swap(&mut self.reference_line, &mut self.coding_line);
+        self.reference_line.resize(self.max_idx + 1, 0);
+        self.coding_line.clear();
+        self.is_white = true;
+        self.decoded_rows += 1;
+        self.decoder.next_line();
+
+        if self.settings.rows_are_byte_aligned {
+            reader.align();
+        }
+
+        self.update_b();
 
         Some(())
     }
