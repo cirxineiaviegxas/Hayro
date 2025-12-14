@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use hayro::Pdf;
 use hayro_jpeg2000::DecodeSettings;
 use hayro_syntax::Filter;
@@ -59,7 +61,7 @@ fn main() {
     }
 
     let folder = &args[1];
-    check_jpx_images(folder);
+    check_ccitt_images(folder);
 }
 
 fn load_pdf_paths(folder: &str, mut custom_condition: impl FnMut(&str) -> bool) -> Vec<PathBuf> {
@@ -138,6 +140,51 @@ fn check_jpx_images(folder: &str) {
 
         if count.is_multiple_of(100) {
             eprintln!("Processed {} PDFs", count);
+        }
+    });
+}
+
+fn check_ccitt_images(folder: &str) {
+    let paths = load_pdf_paths(folder, |_| true);
+
+    println!("Found {} PDF files", paths.len());
+
+    let pdf_count = AtomicU32::new(0);
+    let ccitt_count = AtomicU32::new(0);
+
+    paths.par_iter().for_each(|path| {
+        let name = path.file_stem().unwrap().to_str().unwrap().to_string();
+        let data = Arc::new(fs::read(path).unwrap());
+
+        if let Ok(pdf) = Pdf::new(data.clone()) {
+            for object in pdf.objects() {
+                if let Some(stream) = object.into_stream()
+                    && stream.filters().contains(&Filter::CcittFaxDecode)
+                {
+                    let decoded = catch_unwind(std::panic::AssertUnwindSafe(|| stream.decoded()));
+
+                    match decoded {
+                        Ok(Ok(_)) => {
+                            ccitt_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        }
+                        Ok(Err(e)) => {
+                            eprintln!("{}", name);
+                            eprintln!("CCITT decode error: {:?}", e);
+                        }
+                        Err(_) => {
+                            eprintln!("{}", name);
+                            eprintln!("panic while decoding CCITT image");
+                        }
+                    }
+                }
+            }
+        }
+
+        let count = pdf_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        if count.is_multiple_of(1000) {
+            let images = ccitt_count.load(std::sync::atomic::Ordering::Relaxed);
+            eprintln!("Processed {} PDFs, {} CCITT images decoded", count, images);
         }
     });
 }
