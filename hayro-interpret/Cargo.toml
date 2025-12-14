@@ -3,8 +3,10 @@ name = "hayro-interpret"
 version = "0.4.0"
 description = "A crate for interpreting PDF files."
 edition = { workspace = true }
+authors = { workspace = true }
 repository = { workspace = true }
 license = { workspace = true }
+readme = "README.md"
 
 [dependencies]
 hayro-common = { workspace = true }
