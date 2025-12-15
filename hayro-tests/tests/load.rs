@@ -447,6 +447,12 @@ fn issue684() {
 }
 
 #[test]
+fn issue705() {
+    let file = include_bytes!("../pdfs/load/issue705.pdf");
+    load(file);
+}
+
+#[test]
 fn metadata_in_object_stream() {
     // Normally, in an encrypted PDF file strings need to be encrypted when they are not
     // in a stream. Therefore, we need to ensure that no encryption is applied when the object
