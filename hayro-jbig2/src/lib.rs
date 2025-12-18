@@ -28,10 +28,11 @@ mod file;
 mod reader;
 mod segment;
 
-use bitmap::{Bitmap, DecodedRegion};
+use bitmap::DecodedRegion;
 use file::{File, parse_file};
 use reader::Reader;
 use segment::SegmentType;
+use segment::generic_refinement_region::decode_generic_refinement_region;
 use segment::generic_region::decode_generic_region;
 use segment::page_info::{PageInformation, parse_page_information};
 
@@ -77,18 +78,45 @@ pub fn decode(data: &[u8]) -> Result<Image, &'static str> {
             SegmentType::ImmediateGenericRegion | SegmentType::ImmediateLosslessGenericRegion => {
                 let ctx = ctx.as_mut().map_err(|e| *e)?;
                 let region = decode_generic_region(&mut reader)?;
-
-                ctx.page_bitmap.combine(
-                    &region.bitmap,
-                    region.x_location,
-                    region.y_location,
-                    region.combination_operator,
-                );
+                ctx.page_bitmap.combine(&region);
             }
             SegmentType::IntermediateGenericRegion => {
                 let ctx = ctx.as_mut().map_err(|e| *e)?;
                 let region = decode_generic_region(&mut reader)?;
                 ctx.store_region(seg.header.segment_number, region);
+            }
+            SegmentType::IntermediateGenericRefinementRegion => {
+                let ctx = ctx.as_mut().map_err(|e| *e)?;
+
+                // Same logic as immediate refinement, but store result instead of combining.
+                let reference = seg
+                    .header
+                    .referred_to_segments
+                    .first()
+                    .and_then(|&num| ctx.get_referred_segment(num))
+                    .unwrap_or(&ctx.page_bitmap);
+
+                let region = decode_generic_refinement_region(&mut reader, reference)?;
+                ctx.store_region(seg.header.segment_number, region);
+            }
+            SegmentType::ImmediateGenericRefinementRegion
+            | SegmentType::ImmediateLosslessGenericRefinementRegion => {
+                let ctx = ctx.as_mut().map_err(|e| *e)?;
+
+                // "3) Determine the buffer associated with the region segment that
+                // this segment refers to." (7.4.7.5)
+                //
+                // "2) If there are no referred-to segments, then use the page
+                // bitmap as the reference buffer." (7.4.7.5)
+                let reference = seg
+                    .header
+                    .referred_to_segments
+                    .first()
+                    .and_then(|&num| ctx.get_referred_segment(num))
+                    .unwrap_or(&ctx.page_bitmap);
+
+                let region = decode_generic_refinement_region(&mut reader, reference)?;
+                ctx.page_bitmap.combine(&region);
             }
             SegmentType::EndOfPage | SegmentType::EndOfFile => {
                 break;
@@ -132,7 +160,7 @@ pub(crate) struct DecodeContext {
     /// The parsed page information.
     pub page_info: PageInformation,
     /// The page bitmap that regions are combined into.
-    pub page_bitmap: Bitmap,
+    pub page_bitmap: DecodedRegion,
     /// Decoded intermediate regions, stored as (segment_number, region) pairs.
     pub referred_segments: Vec<(u32, DecodedRegion)>,
 }
@@ -176,7 +204,7 @@ pub(crate) fn get_ctx(
     // "Bit 2: Page default pixel value. This bit contains the initial value
     // for every pixel in the page, before any region segments are decoded
     // or drawn." (7.4.8.5)
-    let mut page_bitmap = Bitmap::new(page_info.width, height);
+    let mut page_bitmap = DecodedRegion::new(page_info.width, height);
     if page_info.flags.default_pixel != 0 {
         // Fill with true (black) if default pixel is 1.
         for pixel in &mut page_bitmap.data {
