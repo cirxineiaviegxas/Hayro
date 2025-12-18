@@ -34,7 +34,9 @@ use reader::Reader;
 use segment::SegmentType;
 use segment::generic_refinement_region::decode_generic_refinement_region;
 use segment::generic_region::decode_generic_region;
+use segment::halftone_region::decode_halftone_region;
 use segment::page_info::{PageInformation, parse_page_information};
+use segment::pattern_dictionary::{PatternDictionary, decode_pattern_dictionary};
 
 /// A decoded JBIG2 image.
 #[derive(Debug, Clone)]
@@ -83,6 +85,37 @@ pub fn decode(data: &[u8]) -> Result<Image, &'static str> {
             SegmentType::IntermediateGenericRegion => {
                 let ctx = ctx.as_mut().map_err(|e| *e)?;
                 let region = decode_generic_region(&mut reader)?;
+                ctx.store_region(seg.header.segment_number, region);
+            }
+            SegmentType::PatternDictionary => {
+                let ctx = ctx.as_mut().map_err(|e| *e)?;
+                let dictionary = decode_pattern_dictionary(&mut reader)?;
+                ctx.store_pattern_dictionary(seg.header.segment_number, dictionary);
+            }
+            SegmentType::ImmediateHalftoneRegion | SegmentType::ImmediateLosslessHalftoneRegion => {
+                let ctx = ctx.as_mut().map_err(|e| *e)?;
+
+                let pattern_dict = seg
+                    .header
+                    .referred_to_segments
+                    .first()
+                    .and_then(|&num| ctx.get_pattern_dictionary(num))
+                    .ok_or("halftone region requires a pattern dictionary")?;
+
+                let region = decode_halftone_region(&mut reader, pattern_dict)?;
+                ctx.page_bitmap.combine(&region);
+            }
+            SegmentType::IntermediateHalftoneRegion => {
+                let ctx = ctx.as_mut().map_err(|e| *e)?;
+
+                let pattern_dict = seg
+                    .header
+                    .referred_to_segments
+                    .first()
+                    .and_then(|&num| ctx.get_pattern_dictionary(num))
+                    .ok_or("halftone region requires a pattern dictionary")?;
+
+                let region = decode_halftone_region(&mut reader, pattern_dict)?;
                 ctx.store_region(seg.header.segment_number, region);
             }
             SegmentType::IntermediateGenericRefinementRegion => {
@@ -163,6 +196,8 @@ pub(crate) struct DecodeContext {
     pub page_bitmap: DecodedRegion,
     /// Decoded intermediate regions, stored as (segment_number, region) pairs.
     pub referred_segments: Vec<(u32, DecodedRegion)>,
+    /// Decoded pattern dictionaries, stored as (segment_number, dictionary) pairs.
+    pub pattern_dictionaries: Vec<(u32, PatternDictionary)>,
 }
 
 impl DecodeContext {
@@ -172,13 +207,26 @@ impl DecodeContext {
     }
 
     /// Look up a referred segment by number using binary search.
-    pub fn get_referred_segment(&self, segment_number: u32) -> Option<&DecodedRegion> {
+    fn get_referred_segment(&self, segment_number: u32) -> Option<&DecodedRegion> {
         self.referred_segments
             // We iterate over the segments in order (which themselves are sorted),
             // so here we can just do a binary search.
             .binary_search_by_key(&segment_number, |(num, _)| *num)
             .ok()
             .map(|idx| &self.referred_segments[idx].1)
+    }
+
+    /// Store a decoded pattern dictionary for later reference.
+    fn store_pattern_dictionary(&mut self, segment_number: u32, dictionary: PatternDictionary) {
+        self.pattern_dictionaries.push((segment_number, dictionary));
+    }
+
+    /// Look up a pattern dictionary by segment number using binary search.
+    fn get_pattern_dictionary(&self, segment_number: u32) -> Option<&PatternDictionary> {
+        self.pattern_dictionaries
+            .binary_search_by_key(&segment_number, |(num, _)| *num)
+            .ok()
+            .map(|idx| &self.pattern_dictionaries[idx].1)
     }
 }
 
@@ -216,5 +264,6 @@ pub(crate) fn get_ctx(
         page_info,
         page_bitmap,
         referred_segments: Vec::new(),
+        pattern_dictionaries: Vec::new(),
     })
 }
