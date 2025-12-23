@@ -10,6 +10,7 @@ TEST_INPUTS_DIR = SCRIPT_DIR / "test-inputs"
 REMOTE_BASE = "https://hayro-assets.dev/jbig2"
 MANIFESTS = [
     ("serenity", SCRIPT_DIR / "manifest_serenity.json"),
+    ("power_jbig2", SCRIPT_DIR / "manifest_power_jbig2.json"),
 ]
 
 
