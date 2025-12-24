@@ -567,6 +567,10 @@ fn size_marker_inner(reader: &mut BitReader<'_>) -> Option<SizeData> {
     let yto_siz = reader.read_u32()?;
     let csiz = reader.read_u16()?;
 
+    if x_osiz >= xsiz || y_osiz >= ysiz {
+        return None;
+    }
+
     if csiz == 0 {
         return None;
     }
