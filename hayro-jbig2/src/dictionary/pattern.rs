@@ -2,10 +2,10 @@
 
 use crate::bitmap::DecodedRegion;
 use crate::reader::Reader;
-use crate::segment::generic_region::{
+use crate::region::CombinationOperator;
+use crate::region::generic::{
     AdaptiveTemplatePixel, GbTemplate, decode_bitmap_arith, decode_bitmap_mmr,
 };
-use crate::segment::region::CombinationOperator;
 
 /// Template used for pattern dictionary arithmetic coding (7.4.4.1.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
