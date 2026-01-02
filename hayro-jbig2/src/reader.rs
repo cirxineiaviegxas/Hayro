@@ -28,11 +28,6 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
-    pub(crate) fn remaining(&self) -> usize {
-        self.data.len().saturating_sub(self.byte_pos())
-    }
-
-    #[inline]
     pub(crate) fn tail(&self) -> Option<&'a [u8]> {
         self.data.get(self.byte_pos()..)
     }
@@ -111,7 +106,7 @@ impl<'a> Reader<'a> {
 
     #[inline(always)]
     pub(crate) fn read_bits(&mut self, count: u8) -> Result<u32, &'static str> {
-        let mut value = 0u32;
+        let mut value = 0_u32;
         for _ in 0..count {
             let bit = self
                 .read_bit()

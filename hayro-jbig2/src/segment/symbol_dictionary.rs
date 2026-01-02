@@ -148,11 +148,11 @@ pub(crate) struct SymbolDictionaryFlags {
 
     /// "Bit 8: Bitmap coding context used. If SDHUFF is 1 and SDREFAGG is 0 then
     /// this field must contain the value 0." (7.4.2.1.1)
-    pub bitmap_context_used: bool,
+    pub _bitmap_context_used: bool,
 
     /// "Bit 9: Bitmap coding context retained. If SDHUFF is 1 and SDREFAGG is 0
     /// then this field must contain the value 0." (7.4.2.1.1)
-    pub bitmap_context_retained: bool,
+    pub _bitmap_context_retained: bool,
 
     /// "Bits 10-11: SDTEMPLATE. This field controls the template used to decode
     /// symbol bitmaps if SDHUFF is 0. If SDHUFF is 1, this field must contain
@@ -259,8 +259,8 @@ pub(crate) fn parse_symbol_dictionary_header(
         sdhuffdw,
         sdhuffbmsize,
         sdhuffagginst,
-        bitmap_context_used,
-        bitmap_context_retained,
+        _bitmap_context_used: bitmap_context_used,
+        _bitmap_context_retained: bitmap_context_retained,
         sdtemplate,
         sdrtemplate,
     };
@@ -367,8 +367,6 @@ fn parse_symbol_dictionary_refinement_at_flags(
 ///    dictionary segments and tables segments"
 #[derive(Debug, Clone)]
 pub(crate) struct SymbolDictionary {
-    /// The parsed segment header.
-    pub header: SymbolDictionaryHeader,
     /// The exported symbols (SDEXSYMS).
     /// "The symbols exported by this symbol dictionary. Contains SDNUMEXSYMS
     /// symbols." (Table 14)
@@ -392,10 +390,7 @@ pub(crate) fn decode_symbol_dictionary(
     // "6) Invoke the symbol dictionary decoding procedure described in 6.5"
     let exported_symbols = decode_symbols(reader, &header, input_symbols, referred_tables)?;
 
-    Ok(SymbolDictionary {
-        header,
-        exported_symbols,
-    })
+    Ok(SymbolDictionary { exported_symbols })
 }
 
 /// Symbol dictionary decoding procedure (6.5).
@@ -519,18 +514,12 @@ fn decode_symbols_huffman(
         let hcfirstsym = nsymsdecoded;
 
         // "c) Decode each symbol within the height class as follows:"
-        loop {
+        // "If the result of this decoding is OOB then all the symbols
+        // in this height class have been decoded; proceed to step 4 d)."
+        while let HuffmanResult::Value(dw) = sdhuffdw.decode(reader)? {
             // "i) Decode the delta width for the symbol as described in 6.5.7."
             // "If SDHUFF is 1, decode a value using the Huffman table specified by
             // SDHUFFDW." (6.5.7)
-            let dw = match sdhuffdw.decode(reader)? {
-                HuffmanResult::Value(v) => v,
-                HuffmanResult::OutOfBand => {
-                    // "If the result of this decoding is OOB then all the symbols
-                    // in this height class have been decoded; proceed to step 4 d)."
-                    break;
-                }
-            };
 
             // "Set: SYMWIDTH = SYMWIDTH + DW, TOTWIDTH = TOTWIDTH + SYMWIDTH"
             symwidth = symwidth
@@ -877,16 +866,10 @@ where
         let mut symwidth: u32 = 0;
 
         // "c) Decode each symbol within the height class as follows:"
-        loop {
+        // "If the result of this decoding is OOB then all the symbols
+        // in this height class have been decoded; proceed to step 4 d)."
+        while let Some(dw) = iadw.decode(&mut arith_decoder) {
             // "i) Decode the delta width for the symbol as described in 6.5.7."
-            let dw = match iadw.decode(&mut arith_decoder) {
-                Some(v) => v,
-                None => {
-                    // "If the result of this decoding is OOB then all the symbols
-                    // in this height class have been decoded; proceed to step 4 d)."
-                    break;
-                }
-            };
 
             // "Set: SYMWIDTH = SYMWIDTH + DW"
             // DW can be negative, but the result must be non-negative.

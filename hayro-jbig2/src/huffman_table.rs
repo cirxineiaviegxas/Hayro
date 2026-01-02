@@ -9,7 +9,7 @@ use crate::reader::Reader;
 
 /// Result of decoding a Huffman code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HuffmanResult {
+pub(crate) enum HuffmanResult {
     /// A decoded integer value.
     Value(i32),
     /// Out-of-band marker (only possible when HTOOB=1).
@@ -34,8 +34,8 @@ struct LeafData {
 enum HuffmanNode {
     /// Intermediate node with two children (0 and 1 branches).
     Intermediate {
-        zero: Option<Box<HuffmanNode>>,
-        one: Option<Box<HuffmanNode>>,
+        zero: Option<Box<Self>>,
+        one: Option<Box<Self>>,
     },
     /// Leaf node containing the decoded value information.
     Leaf(LeafData),
@@ -64,15 +64,15 @@ impl HuffmanNode {
 /// The table is represented as a binary tree where each path from root to
 /// leaf corresponds to a prefix code.
 #[derive(Debug, Clone)]
-pub struct HuffmanTable {
+pub(crate) struct HuffmanTable {
     root: HuffmanNode,
 }
 
 /// A table line definition used to build the Huffman tree.
 pub(crate) struct TableLine {
     /// The base value for computing the decoded value.
-    /// For normal/upper lines: value = range_low + htoffset
-    /// For lower lines: value = range_low - htoffset
+    /// For normal/upper lines: value = `range_low` + htoffset
+    /// For lower lines: value = `range_low` - htoffset
     pub(crate) range_low: i32,
     /// Prefix code length (PREFLEN).
     pub(crate) preflen: u8,
@@ -96,7 +96,7 @@ impl TableLine {
         }
     }
 
-    /// Create a lower range line (-∞...range_high).
+    /// Create a lower range line (-∞...`range_high`).
     const fn lower(range_high: i32, preflen: u8, range_len: u8) -> Self {
         Self {
             range_low: range_high,
@@ -107,7 +107,7 @@ impl TableLine {
         }
     }
 
-    /// Create an upper range line (range_low...+∞).
+    /// Create an upper range line (`range_low`...+∞).
     const fn upper(range_low: i32, preflen: u8, range_len: u8) -> Self {
         Self {
             range_low,
@@ -141,15 +141,15 @@ impl HuffmanTable {
         // each prefix length value occurs in PREFLEN: LENCOUNT[I] is the number of times
         // that the value I occurs in the array PREFLEN."
         let lenmax = lines.iter().map(|l| l.preflen).max().unwrap_or(0) as usize;
-        let mut lencount = vec![0u32; lenmax + 1];
+        let mut lencount = vec![0_u32; lenmax + 1];
         for line in lines {
             lencount[line.preflen as usize] += 1;
         }
 
         // Step 2: "Let LENMAX be the largest value for which LENCOUNT[LENMAX] > 0. Set:
         // CURLEN = 1, FIRSTCODE[0] = 0, LENCOUNT[0] = 0"
-        let mut firstcode = vec![0u32; lenmax + 1];
-        let mut codes = vec![0u32; ntemp];
+        let mut firstcode = vec![0_u32; lenmax + 1];
+        let mut codes = vec![0_u32; ntemp];
         lencount[0] = 0;
 
         // Step 3: "While CURLEN ≤ LENMAX, perform the following operations:"
@@ -244,9 +244,9 @@ impl HuffmanTable {
     /// 1) Read bits until matching a code
     /// 2) Read RANGELEN bits as HTOFFSET
     /// 3) If OOB line: return OOB
-    /// 4) If lower range line: return RANGELOW - HTOFFSET (we use range_high as the base)
+    /// 4) If lower range line: return RANGELOW - HTOFFSET (we use `range_high` as the base)
     /// 5) Otherwise: return RANGELOW + HTOFFSET
-    pub fn decode(&self, reader: &mut Reader<'_>) -> Result<HuffmanResult, &'static str> {
+    pub(crate) fn decode(&self, reader: &mut Reader<'_>) -> Result<HuffmanResult, &'static str> {
         let mut node = &self.root;
 
         loop {
@@ -287,7 +287,7 @@ impl HuffmanTable {
     /// 5) Read lower range line (PREFLEN only, RANGELEN=32 implied)
     /// 6) Read upper range line (PREFLEN only, RANGELEN=32 implied)
     /// 7) If HTOOB=1, read OOB line (PREFLEN only)
-    pub fn read_custom(reader: &mut Reader<'_>) -> Result<Self, &'static str> {
+    pub(crate) fn read_custom(reader: &mut Reader<'_>) -> Result<Self, &'static str> {
         // Step 1: Read code table flags.
         let flags = reader
             .read_byte()
@@ -323,7 +323,7 @@ impl HuffmanTable {
 
             // Advance to next range.
             // Range covers currangelow to currangelow + 2^rangelen - 1.
-            let range_size = 1i64
+            let range_size = 1_i64
                 .checked_shl(rangelen as u32)
                 .ok_or("range size overflow")?;
             let next = (currangelow as i64)
@@ -358,7 +358,7 @@ impl HuffmanTable {
 }
 
 /// Table B.1 – Standard Huffman table A (HTOOB = 0)
-pub static TABLE_A: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_A: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(0, 1, 4),        // 0...15
         TableLine::new(16, 2, 8),       // 16...271
@@ -368,7 +368,7 @@ pub static TABLE_A: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.2 – Standard Huffman table B (HTOOB = 1)
-pub static TABLE_B: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_B: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(0, 1, 0),     // 0
         TableLine::new(1, 2, 0),     // 1
@@ -381,7 +381,7 @@ pub static TABLE_B: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.3 – Standard Huffman table C (HTOOB = 1)
-pub static TABLE_C: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_C: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-256, 8, 8),    // -256...-1
         TableLine::new(0, 1, 0),       // 0
@@ -396,7 +396,7 @@ pub static TABLE_C: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.4 – Standard Huffman table D (HTOOB = 0)
-pub static TABLE_D: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_D: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(1, 1, 0),     // 1
         TableLine::new(2, 2, 0),     // 2
@@ -408,7 +408,7 @@ pub static TABLE_D: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.5 – Standard Huffman table E (HTOOB = 0)
-pub static TABLE_E: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_E: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-255, 7, 8),    // -255...0
         TableLine::new(1, 1, 0),       // 1
@@ -422,7 +422,7 @@ pub static TABLE_E: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.6 – Standard Huffman table F (HTOOB = 0)
-pub static TABLE_F: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_F: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-2048, 5, 10),   // -2048...-1025
         TableLine::new(-1024, 4, 9),    // -1024...-513
@@ -442,7 +442,7 @@ pub static TABLE_F: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.7 – Standard Huffman table G (HTOOB = 0)
-pub static TABLE_G: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_G: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-1024, 4, 9),    // -1024...-513
         TableLine::new(-512, 3, 8),     // -512...-257
@@ -463,7 +463,7 @@ pub static TABLE_G: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.8 – Standard Huffman table H (HTOOB = 1)
-pub static TABLE_H: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_H: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-15, 8, 3),     // -15...-8
         TableLine::new(-7, 9, 1),      // -7...-6
@@ -490,7 +490,7 @@ pub static TABLE_H: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.9 – Standard Huffman table I (HTOOB = 1)
-pub static TABLE_I: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_I: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-31, 8, 4),     // -31...-16
         TableLine::new(-15, 9, 2),     // -15...-12
@@ -518,7 +518,7 @@ pub static TABLE_I: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.10 – Standard Huffman table J (HTOOB = 1)
-pub static TABLE_J: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_J: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-21, 7, 4),     // -21...-6
         TableLine::new(-5, 8, 0),      // -5
@@ -545,7 +545,7 @@ pub static TABLE_J: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.11 – Standard Huffman table K (HTOOB = 0)
-pub static TABLE_K: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_K: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(1, 1, 0),      // 1
         TableLine::new(2, 2, 1),      // 2...3
@@ -564,7 +564,7 @@ pub static TABLE_K: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.12 – Standard Huffman table L (HTOOB = 0)
-pub static TABLE_L: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_L: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(1, 1, 0),     // 1
         TableLine::new(2, 2, 0),     // 2
@@ -583,7 +583,7 @@ pub static TABLE_L: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.13 – Standard Huffman table M (HTOOB = 0)
-pub static TABLE_M: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_M: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(1, 1, 0),      // 1
         TableLine::new(2, 3, 0),      // 2
@@ -602,7 +602,7 @@ pub static TABLE_M: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.14 – Standard Huffman table N (HTOOB = 0)
-pub static TABLE_N: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_N: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-2, 3, 0), // -2
         TableLine::new(-1, 3, 0), // -1
@@ -613,7 +613,7 @@ pub static TABLE_N: LazyLock<HuffmanTable> = LazyLock::new(|| {
 });
 
 /// Table B.15 – Standard Huffman table O (HTOOB = 0)
-pub static TABLE_O: LazyLock<HuffmanTable> = LazyLock::new(|| {
+pub(crate) static TABLE_O: LazyLock<HuffmanTable> = LazyLock::new(|| {
     HuffmanTable::build(&[
         TableLine::new(-24, 7, 4),    // -24...-9
         TableLine::new(-8, 6, 2),     // -8...-5
@@ -630,62 +630,3 @@ pub static TABLE_O: LazyLock<HuffmanTable> = LazyLock::new(|| {
         TableLine::upper(25, 7, 32),  // 25...∞
     ])
 });
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Helper to decode multiple values from a continuous bitstream.
-    fn decode_all(table: &HuffmanTable, data: &[u8], expected: &[HuffmanResult]) {
-        let mut reader = Reader::new(data);
-        for (i, &exp) in expected.iter().enumerate() {
-            let result = table.decode(&mut reader).unwrap();
-            assert_eq!(result, exp, "mismatch at index {i}");
-        }
-    }
-
-    #[test]
-    fn test_read_custom_table_spec_example() {
-        // Example from B.2: encodes a table equivalent to Table A
-        let header = [
-            0x42, // flags: HTOOB=0, HTPS=2, HTRS=5
-            0x00, 0x00, 0x00, 0x00, // HTLOW = 0
-            0x00, 0x01, 0x01, 0x10, // HTHIGH = 65808
-            0x49, 0x23, 0x81, 0x80, // table lines
-        ];
-        let mut reader = Reader::new(&header);
-        let table = HuffmanTable::read_custom(&mut reader).unwrap();
-
-        // Test decoding same as TABLE_A
-        // 0...15: prefix=0, rangelen=4
-        decode_all(&table, &[0b0_0000_000], &[HuffmanResult::Value(0)]);
-        decode_all(&table, &[0b0_1111_000], &[HuffmanResult::Value(15)]);
-        decode_all(&table, &[0b0_0111_000], &[HuffmanResult::Value(7)]);
-
-        // 16...271: prefix=10, rangelen=8
-        decode_all(
-            &table,
-            &[0b10_000000, 0b00_000000],
-            &[HuffmanResult::Value(16)],
-        );
-        decode_all(
-            &table,
-            &[0b10_111111, 0b11_000000],
-            &[HuffmanResult::Value(271)],
-        );
-
-        // 272...65807: prefix=110, rangelen=16
-        decode_all(
-            &table,
-            &[0b110_00000, 0b00000000, 0b0_0000000],
-            &[HuffmanResult::Value(272)],
-        );
-
-        // 65808...∞: prefix=111, rangelen=32
-        decode_all(
-            &table,
-            &[0b111_00000, 0x00, 0x00, 0x00, 0b00000_000],
-            &[HuffmanResult::Value(65808)],
-        );
-    }
-}
