@@ -131,10 +131,14 @@ fn parse_segments<'a>(
     reader: &mut Reader<'a>,
     organization: FileOrganization,
 ) -> Result<Vec<Segment<'a>>, &'static str> {
+    let mut segments = Vec::new();
+
     match organization {
-        FileOrganization::Sequential => parse_segments_sequential(reader),
-        FileOrganization::RandomAccess => parse_segments_random_access(reader),
+        FileOrganization::Sequential => parse_segments_sequential(reader, &mut segments)?,
+        FileOrganization::RandomAccess => parse_segments_random_access(reader, &mut segments)?,
     }
+
+    Ok(segments)
 }
 
 /// Parse segments in sequential organization.
@@ -142,11 +146,10 @@ fn parse_segments<'a>(
 /// "In this organization, the file structure looks like Figure D.1. A file header
 /// is followed by a sequence of segments. The two parts of each segment are stored
 /// together: first the segment header then the segment data." (D.1)
-fn parse_segments_sequential<'a>(
+pub(crate) fn parse_segments_sequential<'a>(
     reader: &mut Reader<'a>,
-) -> Result<Vec<Segment<'a>>, &'static str> {
-    let mut segments = Vec::new();
-
+    segments: &mut Vec<Segment<'a>>,
+) -> Result<(), &'static str> {
     loop {
         if reader.at_end() {
             break;
@@ -164,7 +167,7 @@ fn parse_segments_sequential<'a>(
         }
     }
 
-    Ok(segments)
+    Ok(())
 }
 
 /// Parse segments in random-access organization.
@@ -175,8 +178,8 @@ fn parse_segments_sequential<'a>(
 /// segment, and so on." (D.2)
 fn parse_segments_random_access<'a>(
     reader: &mut Reader<'a>,
-) -> Result<Vec<Segment<'a>>, &'static str> {
-    // First, read all segment headers.
+    segments: &mut Vec<Segment<'a>>,
+) -> Result<(), &'static str> {
     let mut headers = Vec::new();
 
     loop {
@@ -197,11 +200,9 @@ fn parse_segments_random_access<'a>(
     }
 
     // Then, read all segment data.
-    let mut segments = Vec::with_capacity(headers.len());
-
     for header in headers {
         segments.push(parse_segment_data(reader, header)?);
     }
 
-    Ok(segments)
+    Ok(())
 }
