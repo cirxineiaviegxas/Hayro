@@ -11,8 +11,11 @@ This crate implements the CCITT Group 3 and Group 4 fax compression algorithms
 as defined in ITU-T Recommendations T.4 and T.6. These encodings are commonly
 used for bi-level (black and white) images in PDF documents and fax transmissions.
 
-The main entry point is the [decode] function, which takes encoded data and
-decoding settings, and outputs the decoded pixels through a [Decoder] trait.
+The main entry point is the [`decode`] function, which takes encoded data and
+decoding settings, and outputs the decoded pixels through a [`Decoder`] trait
+that can be implemented according to your needs.
+
+The crate is `no_std` compatible but requires an allocator to be available.
 
 ## Safety
 Unsafe code is forbidden via a crate-level attribute.
@@ -24,5 +27,8 @@ Licensed under either of
 - MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
 at your option.
+
+[`decode`]: https://docs.rs/hayro-ccitt/latest/hayro_ccitt/fn.decode.html
+[`Decoder`]: https://docs.rs/hayro-ccitt/latest/hayro_ccitt/trait.Decoder.html
 
 <!-- cargo-rdme end -->
