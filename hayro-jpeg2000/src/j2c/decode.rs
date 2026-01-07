@@ -18,17 +18,18 @@ use super::progression::{
 use super::tag_tree::TagNode;
 use super::tile::{ComponentTile, ResolutionTile, Tile};
 use super::{ComponentData, bitplane, build, idwt, mct, segment, tile};
+use crate::error::{DecodingError, Result, TileError, bail};
 use crate::j2c::segment::MAX_BITPLANE_COUNT;
 use crate::reader::BitReader;
 use log::trace;
 use std::ops::Range;
 
-pub(crate) fn decode(data: &[u8], header: &Header<'_>) -> Result<Vec<ComponentData>, &'static str> {
+pub(crate) fn decode(data: &[u8], header: &Header<'_>) -> Result<Vec<ComponentData>> {
     let mut reader = BitReader::new(data);
     let tiles = tile::parse(&mut reader, header)?;
 
     if tiles.is_empty() {
-        return Err("the image doesn't contain any tiles");
+        bail!(TileError::Invalid);
     }
 
     let mut tile_ctx = TileDecodeContext::new(header, &tiles[0]);
@@ -56,15 +57,15 @@ pub(crate) fn decode(data: &[u8], header: &Header<'_>) -> Result<Vec<ComponentDa
                 }
                 ProgressionOrder::ResolutionPositionComponentLayer => Box::new(
                     resolution_position_component_layer_progression(iter_input)
-                        .ok_or("failed to build progression iterator")?,
+                        .ok_or(DecodingError::InvalidProgressionIterator)?,
                 ),
                 ProgressionOrder::PositionComponentResolutionLayer => Box::new(
                     position_component_resolution_layer_progression(iter_input)
-                        .ok_or("failed to build progression iterator")?,
+                        .ok_or(DecodingError::InvalidProgressionIterator)?,
                 ),
                 ProgressionOrder::ComponentPositionResolutionLayer => Box::new(
                     component_position_resolution_layer_progression(iter_input)
-                        .ok_or("failed to build progression iterator")?,
+                        .ok_or(DecodingError::InvalidProgressionIterator)?,
                 ),
             };
 
@@ -94,7 +95,7 @@ fn decode_tile<'a>(
     progression_iterator: Box<dyn Iterator<Item = ProgressionData> + '_>,
     tile_ctx: &mut TileDecodeContext<'a>,
     storage: &mut DecompositionStorage<'a>,
-) -> Result<(), &'static str> {
+) -> Result<()> {
     tile_ctx.set_tile(tile);
     storage.reset();
 
@@ -283,7 +284,7 @@ fn decode_component_tile_bit_planes<'a>(
     tile_ctx: &mut TileDecodeContext<'a>,
     storage: &mut DecompositionStorage<'a>,
     header: &Header<'_>,
-) -> Result<(), &'static str> {
+) -> Result<()> {
     for (tile_decompositions_idx, component_info) in tile.component_infos.iter().enumerate() {
         // Only decode the resolution levels we actually care about.
         for resolution in
@@ -315,7 +316,7 @@ fn decode_sub_band_bitplanes(
     tile_ctx: &mut TileDecodeContext<'_>,
     storage: &mut DecompositionStorage<'_>,
     header: &Header<'_>,
-) -> Result<(), &'static str> {
+) -> Result<()> {
     let sub_band = &storage.sub_bands[sub_band_idx];
 
     let dequantization_step = {
@@ -348,10 +349,10 @@ fn decode_sub_band_bitplanes(
         let num_bitplanes = (component_info.quantization_info.guard_bits as u16)
             .checked_add(exponent)
             .and_then(|x| x.checked_sub(1))
-            .ok_or("invalid number of bitplanes")?;
+            .ok_or(DecodingError::InvalidBitplaneCount)?;
 
         if num_bitplanes > MAX_BITPLANE_COUNT as u16 {
-            return Err("number of bitplanes is too large");
+            bail!(DecodingError::TooManyBitplanes);
         }
 
         num_bitplanes as u8

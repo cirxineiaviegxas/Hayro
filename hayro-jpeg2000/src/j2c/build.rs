@@ -4,6 +4,7 @@ use super::decode::{DecompositionStorage, TileDecodeContext, TileDecompositions}
 use super::rect::IntRect;
 use super::tag_tree::TagTree;
 use super::tile::{ResolutionTile, Tile};
+use crate::error::{DecodingError, Result};
 use log::trace;
 use std::iter;
 use std::ops::Range;
@@ -14,7 +15,7 @@ pub(crate) fn build(
     tile: &Tile<'_>,
     tile_ctx: &mut TileDecodeContext<'_>,
     storage: &mut DecompositionStorage<'_>,
-) -> Result<(), &'static str> {
+) -> Result<()> {
     build_decompositions(tile, tile_ctx, storage)
 }
 
@@ -22,7 +23,7 @@ fn build_decompositions(
     tile: &Tile<'_>,
     tile_ctx: &mut TileDecodeContext<'_>,
     storage: &mut DecompositionStorage<'_>,
-) -> Result<(), &'static str> {
+) -> Result<()> {
     let mut total_coefficients = 0;
 
     for component_tile in tile.component_tiles() {
@@ -37,44 +38,44 @@ fn build_decompositions(
         let d_start = storage.decompositions.len();
         let mut resolution_tiles = component_tile.resolution_tiles();
 
-        let mut build_sub_band =
-            |sub_band_type: SubBandType,
-             resolution_tile: &ResolutionTile<'_>,
-             storage: &mut DecompositionStorage<'_>| {
-                let sub_band_rect = resolution_tile.sub_band_rect(sub_band_type);
+        let mut build_sub_band = |sub_band_type: SubBandType,
+                                  resolution_tile: &ResolutionTile<'_>,
+                                  storage: &mut DecompositionStorage<'_>|
+         -> Result<usize> {
+            let sub_band_rect = resolution_tile.sub_band_rect(sub_band_type);
 
-                trace!(
-                    "r {} making sub-band {} for component {component_idx}",
-                    resolution_tile.resolution, sub_band_type as u8
-                );
-                trace!(
-                    "Sub-band rect: [{},{} {}x{}], ll rect [{},{} {}x{}]",
-                    sub_band_rect.x0,
-                    sub_band_rect.y0,
-                    sub_band_rect.width(),
-                    sub_band_rect.height(),
-                    resolution_tile.rect.x0,
-                    resolution_tile.rect.y0,
-                    resolution_tile.rect.width(),
-                    resolution_tile.rect.height(),
-                );
+            trace!(
+                "r {} making sub-band {} for component {component_idx}",
+                resolution_tile.resolution, sub_band_type as u8
+            );
+            trace!(
+                "Sub-band rect: [{},{} {}x{}], ll rect [{},{} {}x{}]",
+                sub_band_rect.x0,
+                sub_band_rect.y0,
+                sub_band_rect.width(),
+                sub_band_rect.height(),
+                resolution_tile.rect.x0,
+                resolution_tile.rect.y0,
+                resolution_tile.rect.width(),
+                resolution_tile.rect.height(),
+            );
 
-                let precincts = build_precincts(resolution_tile, sub_band_rect, tile_ctx, storage)?;
+            let precincts = build_precincts(resolution_tile, sub_band_rect, tile_ctx, storage)?;
 
-                let added_coefficients = (sub_band_rect.width() * sub_band_rect.height()) as usize;
-                let coefficients = coefficient_counter..(coefficient_counter + added_coefficients);
-                coefficient_counter += added_coefficients;
+            let added_coefficients = (sub_band_rect.width() * sub_band_rect.height()) as usize;
+            let coefficients = coefficient_counter..(coefficient_counter + added_coefficients);
+            coefficient_counter += added_coefficients;
 
-                let idx = storage.sub_bands.len();
-                storage.sub_bands.push(SubBand {
-                    sub_band_type,
-                    rect: sub_band_rect,
-                    precincts: precincts.clone(),
-                    coefficients,
-                });
+            let idx = storage.sub_bands.len();
+            storage.sub_bands.push(SubBand {
+                sub_band_type,
+                rect: sub_band_rect,
+                precincts: precincts.clone(),
+                coefficients,
+            });
 
-                Ok(idx)
-            };
+            Ok(idx)
+        };
 
         // Resolution 0 always is the LL sub-band.
         let ll_resolution_tile = resolution_tiles.next().unwrap();
@@ -111,12 +112,12 @@ fn build_precincts(
     sub_band_rect: IntRect,
     tile_ctx: &mut TileDecodeContext<'_>,
     storage: &mut DecompositionStorage<'_>,
-) -> Result<Range<usize>, &'static str> {
+) -> Result<Range<usize>> {
     let start = storage.precincts.len();
 
     for precinct_data in resolution_tile
         .precincts()
-        .ok_or("failed to build precincts")?
+        .ok_or(DecodingError::InvalidPrecinct)?
     {
         let precinct_rect = precinct_data.rect;
 
