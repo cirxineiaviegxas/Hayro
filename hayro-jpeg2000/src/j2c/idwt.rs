@@ -9,21 +9,7 @@ use crate::j2c::Header;
 
 #[derive(Default, Copy, Clone)]
 pub(crate) struct Padding {
-    pub(crate) left: usize,
-    pub(crate) top: usize,
     pub(crate) right: usize,
-    pub(crate) bottom: usize,
-}
-
-impl Padding {
-    fn new(left: usize, top: usize, right: usize, bottom: usize) -> Self {
-        Self {
-            left,
-            top,
-            right,
-            bottom,
-        }
-    }
 }
 
 /// The output from performing the IDWT operation.
@@ -53,7 +39,7 @@ impl IDWTOutput {
 impl IDWTOutput {
     /// The total width of the output, including padding.
     pub(crate) fn total_width(&self) -> u32 {
-        self.padding.left as u32 + self.rect.width() + self.padding.right as u32
+        self.rect.width() + self.padding.right as u32
     }
 }
 
@@ -94,15 +80,8 @@ pub(crate) fn apply(
     let (scratch_buf, output) = (&mut tile_ctx.idwt_scratch_buffer, &mut tile_ctx.idwt_output);
 
     let estimate_buffer_size = |decomposition: &Decomposition| {
-        // The maximum horizontal padding size (determined by
-        // `left_extension`/`right_extension`) is 4 + 1 = 5.
-        const MAX_HORIZONTAL_PADDING: usize = 5;
-        // For the width, we also need to account for additional padding on the
-        // right side added for SIMD (see `interleave_samples`).
-        let total_width = MAX_HORIZONTAL_PADDING
-            + decomposition.rect.width() as usize
-            + MAX_HORIZONTAL_PADDING
-            + SIMD_WIDTH;
+        // For the width, we need to account for SIMD padding on the right.
+        let total_width = decomposition.rect.width() as usize + SIMD_WIDTH;
         let total_height = decomposition.rect.height() as usize;
 
         let min = total_width * total_height;
@@ -224,7 +203,7 @@ fn filter_2d(
 ) -> IDWTTempOutput {
     // First interleave all sub-bands into a single buffer. We also
     // apply a padding so that we can transparently deal with border values.
-    let padding = interleave_samples(input, decomposition, coefficients, transform, storage);
+    let padding = interleave_samples(input, decomposition, coefficients, storage);
 
     if decomposition.rect.width() > 0 && decomposition.rect.height() > 0 {
         filter_horizontal(coefficients, padding, decomposition.rect, transform);
@@ -242,47 +221,24 @@ fn interleave_samples(
     input: IDWTInput<'_>,
     decomposition: &Decomposition,
     coefficients: &mut Vec<f32>,
-    transform: WaveletTransform,
     storage: &DecompositionStorage<'_>,
 ) -> Padding {
     let new_padding = {
-        // The reason why we need + 1 for the left padding is very subtle.
-        // In general, the methods return how many indices to the left of the
-        // border can possibly be accessed. This is dependent on the wavelet
-        // transform but also whether the start index (indicated by the rect
-        // of the decomposition) is even or odd.
-        //
-        // For example, let's say we are using the 5-3 transform and our index
-        // is even. According to the table, we need a padding of one to the left.
-        // This makes sense, because our `base_idx` in 5-3 is (start / 2) * 2.
-        // And the lowest access is `base_idx - 1`. So, for example, if start is
-        // 2, then:
-        // base_idx = (2 / 2) * 2 = 2,
-        // and our lowest access is 1, so a padding of 1 is sufficient.
-        // However, if we were to add only a padding of 1, our previously even
-        // index now becomes uneven (3), and the previous math doesn't work
-        // anymore since the evenness changed. Now, if we rerun the calculation:
-        // base_idx = (3 / 2) * 2 = 2,
-        // and our lowest access is therefore 1 again, which represents a delta
-        // of 2 instead of the previously calculated 1.
-        // Therefore, we always need to add a padding of 1 to the left to prevent
-        // OOB accesses.
-        let left_padding = left_extension(transform, decomposition.rect.x0 as usize) + 1;
-        let mut right_padding = right_extension(transform, decomposition.rect.x1 as usize);
-
         // For vertical filtering, we use SIMD to process multiple columns at
-        // the same time. Therefore, we add additional padding to the
-        // right such that we can always iterate in chunks of our SIMD width
-        // without having to deal with any remainder.
-        let current_width = left_padding + decomposition.rect.width() as usize + right_padding;
+        // the same time. Therefore, we add padding to the right such that we
+        // can always iterate in chunks of our SIMD width without having to
+        // deal with any remainder.
+        let current_width = decomposition.rect.width() as usize;
         let target_width = current_width.next_multiple_of(SIMD_WIDTH);
-        right_padding += target_width - current_width;
+        let right_padding = target_width - current_width;
 
-        Padding::new(left_padding, 0, right_padding, 0)
+        Padding {
+            right: right_padding,
+        }
     };
 
-    let total_width = decomposition.rect.width() as usize + new_padding.left + new_padding.right;
-    let total_height = decomposition.rect.height() as usize + new_padding.top + new_padding.bottom;
+    let total_width = decomposition.rect.width() as usize + new_padding.right;
+    let total_height = decomposition.rect.height() as usize;
 
     // Just a sanity check. We should have allocated enough upfront before
     // starting the IDWT.
@@ -323,9 +279,7 @@ fn interleave_samples(
         let num_v = v_max - v_min;
         let num_u = u_max - u_min;
 
-        let input_left_padding = idwt_input.padding.left;
-        let input_right_padding = idwt_input.padding.right;
-        let input_total_width = num_u + input_left_padding as u32 + input_right_padding as u32;
+        let input_total_width = num_u as usize + idwt_input.padding.right;
 
         if num_u == 0 || num_v == 0 {
             continue;
@@ -340,8 +294,8 @@ fn interleave_samples(
 
         let coefficient_rows = coefficients
             .chunks_exact_mut(total_width)
-            .map(|s| &mut s[new_padding.left..][..decomposition.rect.width() as usize])
-            .skip((start_y - v0) as usize + new_padding.top)
+            .map(|s| &mut s[..decomposition.rect.width() as usize])
+            .skip((start_y - v0) as usize)
             .step_by(2);
 
         for (v_b, coefficient_row) in coefficient_rows.enumerate().take(num_v as usize) {
@@ -350,11 +304,8 @@ fn interleave_samples(
                 &mut coefficient_row[(start_x - u0) as usize..][..(num_u - 1) as usize * 2 + 1];
 
             for u_b in 0..num_u {
-                coefficient_row[u_b as usize * 2] = idwt_input.coefficients[(v_b
-                    + idwt_input.padding.top)
-                    * input_total_width as usize
-                    + u_b as usize
-                    + input_left_padding];
+                coefficient_row[u_b as usize * 2] =
+                    idwt_input.coefficients[v_b * input_total_width + u_b as usize];
             }
         }
     }
@@ -369,61 +320,73 @@ fn filter_horizontal(
     rect: IntRect,
     transform: WaveletTransform,
 ) {
-    let total_width = rect.width() as usize + padding.left + padding.right;
+    let width = rect.width() as usize;
+    let total_width = width + padding.right;
 
     for scanline in coefficients
         .chunks_exact_mut(total_width)
-        .skip(padding.top)
         .take(rect.height() as usize)
     {
-        filter_row(
-            scanline,
-            padding.left,
-            padding.left + rect.width() as usize,
-            transform,
-        );
+        filter_row(&mut scanline[..width], width, rect.x0 as usize, transform);
     }
 }
 
 /// The `1D_SR` procedure from F.3.6.
-fn filter_row(scanline: &mut [f32], start: usize, end: usize, transform: WaveletTransform) {
-    if start == end - 1 {
-        if !start.is_multiple_of(2) {
-            scanline[start] /= 2.0;
+fn filter_row(scanline: &mut [f32], width: usize, x0: usize, transform: WaveletTransform) {
+    if width == 1 {
+        if !x0.is_multiple_of(2) {
+            scanline[0] /= 2.0;
         }
 
         return;
     }
 
-    extend_signal(scanline, start, end, transform);
-
     match transform {
-        WaveletTransform::Reversible53 => reversible_filter_53r(scanline, start, end),
-        WaveletTransform::Irreversible97 => irreversible_filter_97i(scanline, start, end),
+        WaveletTransform::Reversible53 => reversible_filter_53r(scanline, width, x0),
+        WaveletTransform::Irreversible97 => irreversible_filter_97i(scanline, width, x0),
     }
 }
 
 /// The 1D FILTER 5-3R procedure from F.3.8.1.
-fn reversible_filter_53r(scanline: &mut [f32], start: usize, end: usize) {
-    // Hint the compiler that we won't go OOB to emit bound checks.
-    let scanline = &mut scanline[..2 * (end / 2 + 1)];
+fn reversible_filter_53r(scanline: &mut [f32], width: usize, x0: usize) {
+    // Note that this for loop does not match exactly what's in the reference.
+    // There is a clever subtlety that we can make use of to make the loop shorter.
+    //
+    // In the reference, the presented semantics of IDWT is that we explicitly
+    // store the left/right padding in an array. As part of the for loop, we will
+    // first modify an out-of-bound column (conceptually at the relative location
+    // -1) before proceeding to the columns that are actually inside of the image.
+    // However, the key insight is that for example the column at location -1 will
+    // actually have the same filtered values as the column at location of 1 due
+    // to reflection. The same applies to -3 and 3, etc.
+    // Therefore, as long as we properly reflect the lower and upper indices,
+    // we don't need to compute and store those boundary values explicitly.
+    //
+    // The above comment also applies to the 9-7 filter.
+
+    // Indices depend on whether the _global_ start coordinate is even or odd.
+    let first_even = x0 % 2;
+    let first_odd = 1 - first_even;
 
     // Equation (F-5).
-    for n in start / 2..(end / 2) + 1 {
-        let base_idx = 2 * n;
-        scanline[base_idx] -=
-            ((scanline[base_idx - 1] + scanline[base_idx + 1] + 2.0) * 0.25).floor();
+    // Originally: for i in (start / 2)..(end / 2 + 1).
+    for i in (first_even..width).step_by(2) {
+        let left = periodic_symmetric_extension(i, -1, width);
+        let right = periodic_symmetric_extension(i, 1, width);
+        scanline[i] -= ((scanline[left] + scanline[right] + 2.0) * 0.25).floor();
     }
 
     // Equation (F-6).
-    for n in start / 2..(end / 2) {
-        let base_idx = 2 * n + 1;
-        scanline[base_idx] += ((scanline[base_idx - 1] + scanline[base_idx + 1]) * 0.5).floor();
+    // Originally: for i in (start / 2)..(end / 2).
+    for i in (first_odd..width).step_by(2) {
+        let left = periodic_symmetric_extension(i, -1, width);
+        let right = periodic_symmetric_extension(i, 1, width);
+        scanline[i] += ((scanline[left] + scanline[right]) * 0.5).floor();
     }
 }
 
 /// The 1D Filter 9-7I procedure from F.3.8.2.
-fn irreversible_filter_97i(scanline: &mut [f32], start: usize, end: usize) {
+fn irreversible_filter_97i(scanline: &mut [f32], width: usize, x0: usize) {
     // Table F.4.
     const ALPHA: f32 = -1.586_134_3;
     const BETA: f32 = -0.052_980_117;
@@ -432,124 +395,73 @@ fn irreversible_filter_97i(scanline: &mut [f32], start: usize, end: usize) {
     const KAPPA: f32 = 1.230_174_1;
     const INV_KAPPA: f32 = 1.0 / KAPPA;
 
-    // Hint the compiler that we won't go OOB to emit bound checks.
-    let scanline = &mut scanline[..2 * (end / 2 + 2)];
+    let first_even = x0 % 2;
+    let first_odd = 1 - first_even;
 
     // Step 1.
-    for i in (start / 2 - 1)..(end / 2 + 2) {
-        scanline[2 * i] *= KAPPA;
+    // Originally: for i in (start / 2 - 1)..(end / 2 + 2).
+    for i in (first_even..width).step_by(2) {
+        scanline[i] *= KAPPA;
     }
 
     // Step 2.
-    for i in (start / 2 - 2)..(end / 2 + 2) {
-        scanline[2 * i + 1] *= INV_KAPPA;
+    // Originally: for i in (start / 2 - 2)..(end / 2 + 2).
+    for i in (first_odd..width).step_by(2) {
+        scanline[i] *= INV_KAPPA;
     }
 
     // Step 3.
-    for i in (start / 2 - 1)..(end / 2 + 2) {
-        scanline[2 * i] -= DELTA * (scanline[2 * i - 1] + scanline[2 * i + 1]);
+    // Originally: for i in (start / 2 - 1)..(end / 2 + 2).
+    for i in (first_even..width).step_by(2) {
+        let left = periodic_symmetric_extension(i, -1, width);
+        let right = periodic_symmetric_extension(i, 1, width);
+        scanline[i] -= DELTA * (scanline[left] + scanline[right]);
     }
 
     // Step 4.
-    for i in (start / 2 - 1)..(end / 2 + 1) {
-        scanline[2 * i + 1] -= GAMMA * (scanline[2 * i] + scanline[2 * i + 2]);
+    // Originally: for i in (start / 2 - 1)..((x0 + width) / 2 + 1).
+    for i in (first_odd..width).step_by(2) {
+        let left = periodic_symmetric_extension(i, -1, width);
+        let right = periodic_symmetric_extension(i, 1, width);
+        scanline[i] -= GAMMA * (scanline[left] + scanline[right]);
     }
 
     // Step 5.
-    for i in (start / 2)..(end / 2 + 1) {
-        scanline[2 * i] -= BETA * (scanline[2 * i - 1] + scanline[2 * i + 1]);
+    // Originally: for i in (start / 2)..(end / 2 + 1).
+    for i in (first_even..width).step_by(2) {
+        let left = periodic_symmetric_extension(i, -1, width);
+        let right = periodic_symmetric_extension(i, 1, width);
+        scanline[i] -= BETA * (scanline[left] + scanline[right]);
     }
 
     // Step 6.
-    for i in (start / 2)..(end / 2) {
-        scanline[2 * i + 1] -= ALPHA * (scanline[2 * i] + scanline[2 * i + 2]);
+    // Originally: for i in (start / 2)..(end / 2).
+    for i in (first_odd..width).step_by(2) {
+        let left = periodic_symmetric_extension(i, -1, width);
+        let right = periodic_symmetric_extension(i, 1, width);
+        scanline[i] -= ALPHA * (scanline[left] + scanline[right]);
     }
 }
 
-/// The `1D_EXTR` procedure, defined in F.3.7.
-fn extend_signal(scanline: &mut [f32], start: usize, end: usize, transform: WaveletTransform) {
-    let i_left = left_extension(transform, start);
-    let i_right = right_extension(transform, end);
-
-    for i in (start - i_left)..start {
-        scanline[i] = scanline[periodic_symmetric_extension(i, start, end)];
-    }
-
-    for i in end..(end + i_right) {
-        scanline[i] = scanline[periodic_symmetric_extension(i, start, end)];
-    }
-}
-
-fn left_extension(transform: WaveletTransform, start: usize) -> usize {
-    // Table F.2.
-    match transform {
-        WaveletTransform::Reversible53 => {
-            if start.is_multiple_of(2) {
-                1
-            } else {
-                2
-            }
-        }
-        WaveletTransform::Irreversible97 => {
-            if start.is_multiple_of(2) {
-                3
-            } else {
-                4
-            }
-        }
-    }
-}
-
-fn right_extension(transform: WaveletTransform, end: usize) -> usize {
-    // Table F.3.
-    match transform {
-        WaveletTransform::Reversible53 => {
-            if end.is_multiple_of(2) {
-                2
-            } else {
-                1
-            }
-        }
-        WaveletTransform::Irreversible97 => {
-            if end.is_multiple_of(2) {
-                4
-            } else {
-                3
-            }
-        }
-    }
-}
-
-/// Perform the periodic symmetric extension, specified in Equation (F-4).
-fn periodic_symmetric_extension(idx: usize, start: usize, end: usize) -> usize {
-    let span = 2 * (end as i32 - start as i32 - 1);
-    let offset = (idx as i32 - start as i32).rem_euclid(span);
-    (start as i32 + offset.min(span - offset)) as usize
-}
-
-/// The `1D_EXTR` procedure, defined in F.3.7.
+/// Part of the `1D_EXTR` procedure, defined in F.3.7.
 ///
-/// Similar `extend_signal` but it only computes the indices of the upper/lower
-/// row needed for the vertical SIMD filtering implementation. In that case,
-/// we only need to access one upper/lower out-of-bounds row at most,
-/// significantly simplifying the implementation.
+/// It performs a basic periodic symmetric extension. Our formula looks different
+/// because we have no start offset and also want to avoid converting `usize`
+/// to `isize` in case it's negative.
 #[inline(always)]
-fn upper_and_lower_row(row: usize, height: usize) -> (usize, usize) {
-    let lower = if row == 0 {
-        // Would access index -1, so reflect to 1.
-        1
+fn periodic_symmetric_extension(idx: usize, offset: isize, length: usize) -> usize {
+    if offset < 0 {
+        let abs_offset = (-offset) as usize;
+        abs_offset.abs_diff(idx)
     } else {
-        row - 1
-    };
-
-    let upper = if row == height - 1 {
-        // Would access index `height`, so reflect to height - 2.
-        height - 2
-    } else {
-        row + 1
-    };
-
-    (lower, upper)
+        let new_idx = idx + offset as usize;
+        if new_idx >= length {
+            let overshoot = new_idx - length;
+            length - 2 - overshoot
+        } else {
+            new_idx
+        }
+    }
 }
 
 /// The `VER_SR` procedure from F.3.5.
@@ -570,12 +482,12 @@ fn filter_vertical_impl<S: Simd>(
     rect: IntRect,
     transform: WaveletTransform,
 ) {
-    let stride = rect.width() as usize + padding.left + padding.right;
+    let stride = rect.width() as usize + padding.right;
     let height = rect.height() as usize;
-    let start = rect.y0 as usize;
+    let y0 = rect.y0 as usize;
 
     if height == 1 {
-        if !start.is_multiple_of(2) {
+        if !y0.is_multiple_of(2) {
             for base_column in (0..stride).step_by(SIMD_WIDTH) {
                 let mut loaded = f32x8::from_slice(simd, &scanline[base_column..][..SIMD_WIDTH]);
                 loaded /= 2.0;
@@ -587,10 +499,10 @@ fn filter_vertical_impl<S: Simd>(
 
     match transform {
         WaveletTransform::Reversible53 => {
-            reversible_filter_53r_simd(simd, scanline, height, stride, start);
+            reversible_filter_53r_simd(simd, scanline, height, stride, y0);
         }
         WaveletTransform::Irreversible97 => {
-            irreversible_filter_97i_simd(simd, scanline, height, stride, start);
+            irreversible_filter_97i_simd(simd, scanline, height, stride, y0);
         }
     }
 }
@@ -602,36 +514,20 @@ fn reversible_filter_53r_simd<S: Simd>(
     scanline: &mut [f32],
     height: usize,
     stride: usize,
-    start: usize,
+    y0: usize,
 ) {
-    let end = start + height;
-
-    // Note that this for loop does not match exactly what's in the reference.
-    // There is a clever subtlety that we can make use of to make the loop shorter.
-    //
-    // In the reference, the presented semantics of IDWT is that we explicitly
-    // store the top/bottom padding in an array. As part of the for loop, we will
-    // first modify an out-of-bound row (conceptually at the relative location
-    // -1) before proceeding to the rows that are actually inside of the image.
-    // However, the key insight is that the row at location -1 will actually
-    // have the same filtered values as the row at location of 1 due to reflection.
-    // Therefore, as long as we properly reflect -1 to 1 (and do the same for the
-    // upper value), we can skip thous boundary rows. This is reflected in the different
-    // start/end values of the loop.
-    //
-    // The above comment also applies to the 9-7 filter.
+    let first_even = y0 % 2;
+    let first_odd = 1 - first_even;
 
     // Equation (F-5).
-    // Originally: for i in start / 2..(end / 2) + 1.
-    for i in start.div_ceil(2)..end.div_ceil(2) {
-        let local_row = 2 * i - start;
-        let (row_above, row_below) = upper_and_lower_row(local_row, height);
+    // Originally: for i in (start / 2)..(end / 2 + 1).
+    for row in (first_even..height).step_by(2) {
+        let row_above = periodic_symmetric_extension(row, -1, height);
+        let row_below = periodic_symmetric_extension(row, 1, height);
 
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let mut s1 = f32x8::from_slice(
-                simd,
-                &scanline[local_row * stride + base_column..][..SIMD_WIDTH],
-            );
+            let mut s1 =
+                f32x8::from_slice(simd, &scanline[row * stride + base_column..][..SIMD_WIDTH]);
             let s2 = f32x8::from_slice(
                 simd,
                 &scanline[row_above * stride + base_column..][..SIMD_WIDTH],
@@ -642,20 +538,19 @@ fn reversible_filter_53r_simd<S: Simd>(
             );
 
             s1 -= ((s2 + s3 + 2.0) * 0.25).floor();
-            s1.store(&mut scanline[local_row * stride + base_column..][..SIMD_WIDTH]);
+            s1.store(&mut scanline[row * stride + base_column..][..SIMD_WIDTH]);
         }
     }
 
     // Equation (F-6).
-    for i in start / 2..end / 2 {
-        let local_row = 2 * i + 1 - start;
-        let (row_above, row_below) = upper_and_lower_row(local_row, height);
+    // Originally: for i in (start / 2)..(end / 2).
+    for row in (first_odd..height).step_by(2) {
+        let row_above = periodic_symmetric_extension(row, -1, height);
+        let row_below = periodic_symmetric_extension(row, 1, height);
 
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let mut s1 = f32x8::from_slice(
-                simd,
-                &scanline[local_row * stride + base_column..][..SIMD_WIDTH],
-            );
+            let mut s1 =
+                f32x8::from_slice(simd, &scanline[row * stride + base_column..][..SIMD_WIDTH]);
             let s2 = f32x8::from_slice(
                 simd,
                 &scanline[row_above * stride + base_column..][..SIMD_WIDTH],
@@ -666,7 +561,7 @@ fn reversible_filter_53r_simd<S: Simd>(
             );
 
             s1 += ((s2 + s3) * 0.5).floor();
-            s1.store(&mut scanline[local_row * stride + base_column..][..SIMD_WIDTH]);
+            s1.store(&mut scanline[row * stride + base_column..][..SIMD_WIDTH]);
         }
     }
 }
@@ -678,7 +573,7 @@ fn irreversible_filter_97i_simd<S: Simd>(
     scanline: &mut [f32],
     height: usize,
     stride: usize,
-    start: usize,
+    y0: usize,
 ) {
     const ALPHA: f32 = -1.586_134_3;
     const BETA: f32 = -0.052_980_117;
@@ -695,16 +590,15 @@ fn irreversible_filter_97i_simd<S: Simd>(
     let kappa = f32x8::splat(simd, KAPPA);
     let inv_kappa = f32x8::splat(simd, INV_KAPPA);
 
-    let end = start + height;
+    // Determine which local row indices correspond to even/odd global positions.
+    let first_even = y0 % 2;
+    let first_odd = 1 - first_even;
 
     // Step 1.
-    // Originally: for i in (start / 2 - 1)..(end / 2 + 2). See the comment in
-    // `reversible_filter_53r_simd`.
-    for i in start.div_ceil(2)..end.div_ceil(2) {
-        let local_row = 2 * i - start;
-
+    // Originally: for i in (start / 2 - 1)..(end / 2 + 2).
+    for row in (first_even..height).step_by(2) {
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let base_idx = local_row * stride + base_column;
+            let base_idx = row * stride + base_column;
             let mut vals = f32x8::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
             vals = vals * kappa;
             vals.store(&mut scanline[base_idx..][..SIMD_WIDTH]);
@@ -712,13 +606,10 @@ fn irreversible_filter_97i_simd<S: Simd>(
     }
 
     // Step 2.
-    // Originally: for i in (start / 2 - 2)..(end / 2 + 2). See the comment in
-    // `reversible_filter_53r_simd`.
-    for i in start / 2..end / 2 {
-        let local_row = 2 * i + 1 - start;
-
+    // Originally: for i in (start / 2 - 2)..(end / 2 + 2).
+    for row in (first_odd..height).step_by(2) {
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let base_idx = local_row * stride + base_column;
+            let base_idx = row * stride + base_column;
             let mut vals = f32x8::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
             vals = vals * inv_kappa;
             vals.store(&mut scanline[base_idx..][..SIMD_WIDTH]);
@@ -726,14 +617,13 @@ fn irreversible_filter_97i_simd<S: Simd>(
     }
 
     // Step 3.
-    // Originally: for i in (start / 2 - 1)..(end / 2 + 2). See the comment in
-    // `reversible_filter_53r_simd`.
-    for i in start.div_ceil(2)..end.div_ceil(2) {
-        let local_row = 2 * i - start;
-        let (row_above, row_below) = upper_and_lower_row(local_row, height);
+    // Originally: for i in (start / 2 - 1)..(end / 2 + 2).
+    for row in (first_even..height).step_by(2) {
+        let row_above = periodic_symmetric_extension(row, -1, height);
+        let row_below = periodic_symmetric_extension(row, 1, height);
 
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let base_idx = local_row * stride + base_column;
+            let base_idx = row * stride + base_column;
 
             let mut s1 = f32x8::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
             let s2 = f32x8::from_slice(
@@ -751,14 +641,13 @@ fn irreversible_filter_97i_simd<S: Simd>(
     }
 
     // Step 4.
-    // Originally: for i in (start / 2 - 1)..(end / 2 + 1). See the comment in
-    // `reversible_filter_53r_simd`.
-    for i in start / 2..end / 2 {
-        let local_row = 2 * i + 1 - start;
-        let (row_above, row_below) = upper_and_lower_row(local_row, height);
+    // Originally: for i in (start / 2 - 1)..(end / 2 + 1).
+    for row in (first_odd..height).step_by(2) {
+        let row_above = periodic_symmetric_extension(row, -1, height);
+        let row_below = periodic_symmetric_extension(row, 1, height);
 
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let base_idx = local_row * stride + base_column;
+            let base_idx = row * stride + base_column;
 
             let mut s1 = f32x8::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
             let s2 = f32x8::from_slice(
@@ -776,14 +665,13 @@ fn irreversible_filter_97i_simd<S: Simd>(
     }
 
     // Step 5.
-    // Originally: for i in (start / 2)..(end / 2 + 1). See the comment in
-    // `reversible_filter_53r_simd`.
-    for i in start.div_ceil(2)..end.div_ceil(2) {
-        let local_row = 2 * i - start;
-        let (row_above, row_below) = upper_and_lower_row(local_row, height);
+    // Originally: for i in (start / 2)..(end / 2 + 1).
+    for row in (first_even..height).step_by(2) {
+        let row_above = periodic_symmetric_extension(row, -1, height);
+        let row_below = periodic_symmetric_extension(row, 1, height);
 
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let base_idx = local_row * stride + base_column;
+            let base_idx = row * stride + base_column;
 
             let mut s1 = f32x8::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
             let s2 = f32x8::from_slice(
@@ -801,14 +689,13 @@ fn irreversible_filter_97i_simd<S: Simd>(
     }
 
     // Step 6.
-    // Originally: for i in (start / 2 - 2)..(end / 2 + 2). See the comment in
-    // `reversible_filter_53r_simd`.
-    for i in start / 2..end / 2 {
-        let local_row = 2 * i + 1 - start;
-        let (row_above, row_below) = upper_and_lower_row(local_row, height);
+    // Originally: for i in (start / 2)..(end / 2).
+    for row in (first_odd..height).step_by(2) {
+        let row_above = periodic_symmetric_extension(row, -1, height);
+        let row_below = periodic_symmetric_extension(row, 1, height);
 
         for base_column in (0..stride).step_by(SIMD_WIDTH) {
-            let base_idx = local_row * stride + base_column;
+            let base_idx = row * stride + base_column;
 
             let mut s1 = f32x8::from_slice(simd, &scanline[base_idx..][..SIMD_WIDTH]);
             let s2 = f32x8::from_slice(
@@ -823,35 +710,5 @@ fn irreversible_filter_97i_simd<S: Simd>(
             s1 -= alpha * (s2 + s3);
             s1.store(&mut scanline[base_idx..][..SIMD_WIDTH]);
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::j2c::codestream::WaveletTransform;
-
-    #[test]
-    fn pse() {
-        assert_eq!(super::periodic_symmetric_extension(0, 3, 6), 4);
-        assert_eq!(super::periodic_symmetric_extension(1, 3, 6), 5);
-        assert_eq!(super::periodic_symmetric_extension(2, 3, 6), 4);
-        assert_eq!(super::periodic_symmetric_extension(3, 3, 6), 3);
-        assert_eq!(super::periodic_symmetric_extension(4, 3, 6), 4);
-        assert_eq!(super::periodic_symmetric_extension(5, 3, 6), 5);
-        assert_eq!(super::periodic_symmetric_extension(6, 3, 6), 4);
-        assert_eq!(super::periodic_symmetric_extension(7, 3, 6), 3);
-        assert_eq!(super::periodic_symmetric_extension(8, 3, 6), 4);
-        assert_eq!(super::periodic_symmetric_extension(9, 3, 6), 5);
-    }
-
-    #[test]
-    fn extend_1d() {
-        let mut data = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0, 0.0];
-        super::extend_signal(&mut data, 3, 9, WaveletTransform::Reversible53);
-
-        assert_eq!(
-            data,
-            [0.0, 3.0, 2.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 5.0, 0.0]
-        );
     }
 }
