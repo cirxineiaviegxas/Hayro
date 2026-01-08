@@ -81,7 +81,12 @@ pub mod object;
 pub mod page;
 pub mod xref;
 
-// This module should only be used by hayro crates and is considered an implementation detail.
+// We only expose them so hayro-interpret can use them, but they are not intended
+// to be used by others
+#[doc(hidden)]
+pub mod bit_reader;
+#[doc(hidden)]
+pub mod byte_reader;
 #[doc(hidden)]
 pub mod reader;
 

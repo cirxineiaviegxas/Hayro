@@ -55,7 +55,7 @@ impl<'a> BitReader<'a> {
             0..=32 => {
                 let bit_pos = self.bit_pos();
                 let end_byte_pos = (bit_pos + bit_size as usize - 1) / 8;
-                let mut read = [0u8; 8];
+                let mut read = [0_u8; 8];
 
                 for (i, r) in read.iter_mut().enumerate().take(end_byte_pos + 1) {
                     *r = *self.data.get(byte_pos + i)?;
@@ -116,7 +116,7 @@ impl<'a> BitReader<'a> {
 
 /// Get the mask for the given bit size.
 pub fn bit_mask(bit_size: u8) -> u32 {
-    ((1u64 << bit_size as u64) - 1) as u32
+    ((1_u64 << bit_size as u64) - 1) as u32
 }
 /// A bit writer.
 #[derive(Debug)]
@@ -143,7 +143,7 @@ impl<'a> BitWriter<'a> {
 
     /// Split off the already-written parts and return a new bit writer for the tail.
     #[inline]
-    pub fn split_off(self) -> (&'a [u8], BitWriter<'a>) {
+    pub fn split_off(self) -> (&'a [u8], Self) {
         // Assumes that we are currently aligned to a byte boundary!
         let (left, right) = self.data.split_at_mut(self.cur_pos / 8);
         (
@@ -283,7 +283,11 @@ impl BitChunk {
     }
 
     /// Create a new bit chunk from the given reader.
-    pub fn from_reader(bit_reader: &mut BitReader, bit_size: u8, chunk_len: usize) -> Option<Self> {
+    pub fn from_reader(
+        bit_reader: &mut BitReader<'_>,
+        bit_size: u8,
+        chunk_len: usize,
+    ) -> Option<Self> {
         if bit_size > 16 {
             return None;
         }
@@ -294,7 +298,7 @@ impl BitChunk {
             bits.push(bit_reader.read(bit_size)? as u16);
         }
 
-        Some(BitChunk { bits })
+        Some(Self { bits })
     }
 }
 
@@ -322,7 +326,7 @@ mod tests {
 
     #[test]
     fn bit_writer_16() {
-        let mut buf = vec![0u8; 6];
+        let mut buf = vec![0_u8; 6];
         let mut writer = BitWriter::new(&mut buf, 16).unwrap();
         writer
             .write(u16::from_be_bytes([0x01, 0x02]) as u32)
@@ -358,7 +362,7 @@ mod tests {
 
     #[test]
     fn bit_writer_8() {
-        let mut buf = vec![0u8; 3];
+        let mut buf = vec![0_u8; 3];
         let mut writer = BitWriter::new(&mut buf, 8).unwrap();
         writer.write(0x01).unwrap();
         writer.write(0x02).unwrap();
@@ -378,7 +382,7 @@ mod tests {
 
     #[test]
     fn bit_writer_4() {
-        let mut buf = vec![0u8; 3];
+        let mut buf = vec![0_u8; 3];
         let mut writer = BitWriter::new(&mut buf, 4).unwrap();
         writer.write(0b1001).unwrap();
         writer.write(0b1000).unwrap();
@@ -404,7 +408,7 @@ mod tests {
 
     #[test]
     fn bit_writer_2() {
-        let mut buf = vec![0u8; 2];
+        let mut buf = vec![0_u8; 2];
         let mut writer = BitWriter::new(&mut buf, 2).unwrap();
         writer.write(0b10).unwrap();
         writer.write(0b01).unwrap();
@@ -434,7 +438,7 @@ mod tests {
 
     #[test]
     fn bit_writer_1() {
-        let mut buf = vec![0u8; 2];
+        let mut buf = vec![0_u8; 2];
         let mut writer = BitWriter::new(&mut buf, 1).unwrap();
         writer.write(0b1).unwrap();
         writer.write(0b0).unwrap();
@@ -526,25 +530,25 @@ mod tests {
 
     #[test]
     fn bit_writer_rejects_invalid_sizes() {
-        let mut buf = [0u8; 4];
+        let mut buf = [0_u8; 4];
         assert!(BitWriter::new(&mut buf, 0).is_none());
         assert!(BitWriter::new(&mut buf, 33).is_none());
     }
 
     #[test]
     fn bit_writer_round_trip_all_bit_sizes() {
-        for bit_size in 1u8..=32 {
+        for bit_size in 1_u8..=32 {
             let mask = bit_mask(bit_size);
             let sample_count = if bit_size > 16 { 4 } else { 6 };
             let values: Vec<u32> = (0..sample_count)
                 .map(|i| {
-                    let seed = 0x9E37u32.wrapping_mul(i as u32 + 1) ^ (bit_size as u32 * 0x45);
+                    let seed = 0x9E37_u32.wrapping_mul(i as u32 + 1) ^ (bit_size as u32 * 0x45);
                     seed & mask
                 })
                 .collect();
 
             let total_bits = bit_size as usize * values.len();
-            let mut buf = vec![0u8; total_bits.div_ceil(8)];
+            let mut buf = vec![0_u8; total_bits.div_ceil(8)];
             let mut writer = BitWriter::new(&mut buf, bit_size).unwrap();
 
             for value in &values {
@@ -564,14 +568,14 @@ mod tests {
 
     #[test]
     fn bit_writer_round_trip_12_and_25_bits() {
-        for &bit_size in &[12u8, 25u8] {
+        for &bit_size in &[12_u8, 25_u8] {
             let mask = bit_mask(bit_size);
             let values: Vec<u32> = (0..5)
-                .map(|i| ((0xABCDEu32.wrapping_mul(i + 1)) ^ (bit_size as u32)) & mask)
+                .map(|i| ((0xABCDE_u32.wrapping_mul(i + 1)) ^ (bit_size as u32)) & mask)
                 .collect();
 
             let total_bits = bit_size as usize * values.len();
-            let mut buf = vec![0u8; total_bits.div_ceil(8)];
+            let mut buf = vec![0_u8; total_bits.div_ceil(8)];
             let mut writer = BitWriter::new(&mut buf, bit_size).unwrap();
 
             for value in &values {
