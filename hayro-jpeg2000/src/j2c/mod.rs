@@ -8,7 +8,6 @@ mod mct;
 mod progression;
 mod rect;
 mod segment;
-pub(crate) mod simd;
 mod tag_tree;
 mod tile;
 
@@ -19,6 +18,7 @@ use crate::j2c::codestream::markers;
 use crate::reader::BitReader;
 use crate::{DecodeSettings, Image, resolve_alpha_and_color_space};
 
+use crate::simd::{SIMD_WIDTH, SimdBuffer};
 pub(crate) use codestream::Header;
 pub(crate) use decode::decode;
 
@@ -34,7 +34,7 @@ pub(crate) struct DecodedCodestream {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ComponentData {
-    pub(crate) container: Vec<f32>,
+    pub(crate) container: SimdBuffer<{ SIMD_WIDTH }>,
     pub(crate) bit_depth: u8,
 }
 
