@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 
 use crate::arithmetic_decoder::{ArithmeticDecoder, Context};
 use crate::bitmap::DecodedRegion;
-use crate::error::{RegionError, Result, bail};
+use crate::error::Result;
 use crate::region::generic::{
     AdaptiveTemplatePixel, GbTemplate, decode_bitmap_mmr, gather_context_with_at,
 };
@@ -131,10 +131,6 @@ fn decode_bitplanes<F>(bits_per_pixel: u32, size: usize, mut decode_next: F) -> 
 where
     F: FnMut(u32) -> Result<Vec<bool>>,
 {
-    if bits_per_pixel == 0 {
-        bail!(RegionError::InvalidDimension);
-    }
-
     // `GSVALS` - The decoded gray-scale image array.
     let mut values = vec![0_u32; size];
 
