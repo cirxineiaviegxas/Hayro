@@ -62,6 +62,11 @@ via a crate-level attribute.
 #![forbid(unsafe_code)]
 #![forbid(missing_docs)]
 
+extern crate alloc;
+
+use alloc::vec;
+use alloc::vec::Vec;
+
 use crate::error::{bail, err};
 use crate::j2c::{ComponentData, DecodedCodestream, Header};
 use crate::jp2::cdef::{ChannelAssociation, ChannelType};
