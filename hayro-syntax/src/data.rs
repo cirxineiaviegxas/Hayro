@@ -1,11 +1,54 @@
-use crate::PdfData;
 use crate::object::ObjectIdentifier;
 use crate::object::Stream;
 use crate::reader::ReaderContext;
+use crate::sync::HashMap;
+use crate::sync::{Arc, Mutex, MutexExt};
 use crate::util::SegmentList;
-use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
-use std::sync::Mutex;
+use alloc::vec::Vec;
+use core::fmt::{Debug, Formatter};
+
+/// A container for the bytes of a PDF file.
+#[derive(Clone)]
+pub struct PdfData {
+    #[cfg(feature = "std")]
+    inner: Arc<dyn AsRef<[u8]> + Send + Sync>,
+    #[cfg(not(feature = "std"))]
+    inner: Arc<dyn AsRef<[u8]>>,
+}
+
+impl Debug for PdfData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "PdfData {{ ... }}")
+    }
+}
+
+impl AsRef<[u8]> for PdfData {
+    fn as_ref(&self) -> &[u8] {
+        (*self.inner).as_ref()
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: AsRef<[u8]> + Send + Sync + 'static> From<Arc<T>> for PdfData {
+    fn from(data: Arc<T>) -> Self {
+        Self { inner: data }
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl<T: AsRef<[u8]> + 'static> From<Arc<T>> for PdfData {
+    fn from(data: Arc<T>) -> Self {
+        Self { inner: data }
+    }
+}
+
+impl From<Vec<u8>> for PdfData {
+    fn from(data: Vec<u8>) -> Self {
+        Self {
+            inner: Arc::new(data),
+        }
+    }
+}
 
 /// A structure for storing the data of the PDF.
 // To explain further: This crate uses a zero-parse approach, meaning that objects like
@@ -26,7 +69,7 @@ pub(crate) struct Data {
 }
 
 impl Debug for Data {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "Data {{ ... }}")
     }
 }
@@ -48,12 +91,12 @@ impl Data {
 
     /// Get access to the data of a decoded object stream.
     pub(crate) fn get_with(&self, id: ObjectIdentifier, ctx: &ReaderContext<'_>) -> Option<&[u8]> {
-        if let Some(&idx) = self.map.lock().unwrap().get(&id) {
+        if let Some(&idx) = self.map.get().get(&id) {
             self.decoded.get(idx)?.as_deref()
         } else {
             // Block scope to keep the lock short-lived.
             let idx = {
-                let mut locked = self.map.lock().unwrap();
+                let mut locked = self.map.get();
                 let idx = locked.len();
                 locked.insert(id, idx);
                 idx

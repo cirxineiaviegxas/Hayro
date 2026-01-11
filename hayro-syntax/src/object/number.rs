@@ -1,12 +1,13 @@
 //! Numbers.
 
+use crate::math::{fract_f64, trunc_f64};
 use crate::object::macros::object;
 use crate::object::{Object, ObjectLike};
 use crate::reader::Reader;
 use crate::reader::{Readable, ReaderContext, ReaderExt, Skippable};
+use core::fmt::Debug;
+use core::str::FromStr;
 use log::debug;
-use std::fmt::Debug;
-use std::str::FromStr;
 
 /// A number.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -40,7 +41,7 @@ impl Number {
             InternalNumber::Real(r) => {
                 let res = r as i64;
 
-                if !(r.trunc() == r) {
+                if !(trunc_f64(r) == r) {
                     debug!("float {r} was truncated to {res}");
                 }
 
@@ -98,9 +99,9 @@ impl Readable<'_> for Number {
         }
         // We need to use f64 here, so that we can still parse a full `i32` without losing
         // precision.
-        let num = f64::from_str(std::str::from_utf8(data).ok()?).ok()?;
+        let num = f64::from_str(core::str::from_utf8(data).ok()?).ok()?;
 
-        if num.fract() == 0.0 {
+        if fract_f64(num) == 0.0 {
             Some(Self(InternalNumber::Integer(num as i64)))
         } else {
             Some(Self(InternalNumber::Real(num)))
@@ -143,7 +144,7 @@ macro_rules! int_num {
         impl TryFrom<Object<'_>> for $i {
             type Error = ();
 
-            fn try_from(value: Object<'_>) -> std::result::Result<Self, Self::Error> {
+            fn try_from(value: Object<'_>) -> core::result::Result<Self, Self::Error> {
                 match value {
                     Object::Number(n) => n.as_i64().try_into().ok().ok_or(()),
                     _ => Err(()),
