@@ -10,8 +10,8 @@ use alloc::vec::Vec;
 use crate::arithmetic_decoder::{ArithmeticDecoder, Context};
 use crate::bitmap::DecodedRegion;
 use crate::decode::CombinationOperator;
-use crate::decode::generic::{decode_bitmap_mmr, gather_context_with_at};
-use crate::decode::generic_refinement::decode_refinement_bitmap_with;
+use crate::decode::generic::{decode_bitmap_mmr, gather_context};
+use crate::decode::generic_refinement::decode_bitmap;
 use crate::decode::text::{
     ReferenceCorner, SymbolBitmap, TextRegionContexts, TextRegionParams, decode_text_region_with,
 };
@@ -910,8 +910,7 @@ fn decode_symbol_bitmap(
     // with TPGDON = 0 (no typical prediction)
     for y in 0..height {
         for x in 0..width {
-            let context =
-                gather_context_with_at(&region, x, y, template, &header.adaptive_template_pixels);
+            let context = gather_context(&region, x, y, template, &header.adaptive_template_pixels);
             let pixel = decoder.decode(&mut contexts[context as usize]);
             region.set_pixel(x, y, pixel != 0);
         }
@@ -1077,7 +1076,7 @@ fn decode_multi_refinement_symbol(
                 let grreferencedy = rdh_i.div_euclid(2) + rdy_i;
 
                 let mut refined = DecodedRegion::new(grw, grh);
-                decode_refinement_bitmap_with(
+                decode_bitmap(
                     decoder,
                     gr_contexts,
                     &mut refined,
@@ -1159,7 +1158,7 @@ fn decode_single_refinement_symbol(
 
     let mut region = DecodedRegion::new(symwidth, hcheight);
 
-    decode_refinement_bitmap_with(
+    decode_bitmap(
         decoder,
         gr_contexts,
         &mut region,
