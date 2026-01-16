@@ -1,7 +1,14 @@
-use crate::{ColorSpace, Image};
+//! Integration with the [image] crate
+
+use std::{
+    ffi::OsStr,
+    io::{BufRead, Seek},
+};
+
+use crate::{ColorSpace, DecodeSettings, Image};
 use ::image::error::{DecodingError, ImageFormatHint};
-use ::image::{ColorType, ImageDecoder, ImageError, ImageResult};
-use image::ExtendedColorType;
+use ::image::{ColorType, ExtendedColorType, ImageDecoder, ImageError, ImageResult};
+use image::hooks::{decoding_hook_registered, register_format_detection_hook};
 use moxcms::{ColorProfile, Layout, TransformOptions};
 
 const CMYK_PROFILE: &[u8] = include_bytes!("../assets/CGATS001Compat-v2-micro.icc");
@@ -79,6 +86,72 @@ impl ImageDecoder for Image<'_> {
             ImageFormatHint::Name("JPEG2000".to_string()),
             "failed to decode image",
         )))
+    }
+}
+
+#[doc(hidden)]
+/// JPEG2000 decoder compatible with `image` decoding hook APIs that pass an `impl Read + Seek`
+pub struct Jp2Decoder {
+    // Lots of fields from `crate::Image` are duplicated here;
+    // this is necessary because `crate::Image` borrows a slice and keeping it in the same struct
+    // as `input: Vec<u8>` would create a self-referential struct that Rust cannot easily express.
+    //
+    // This approach is modeled after the integration of early versions of zune-jpeg into image:
+    // https://docs.rs/image/0.25.6/src/image/codecs/jpeg/decoder.rs.html#27-58
+    //
+    // Buffering the entire input in memory is not an issue for lossy formats like JPEG.
+    // The compression ratio is so high that an image that expands to hundreds of MB when decoded
+    // only takes up a single-digit number of MB in a compressed form.
+    input: Vec<u8>,
+    width: u32,
+    height: u32,
+    color_type: ColorType,
+    orig_color_type: ExtendedColorType,
+}
+
+impl Jp2Decoder {
+    /// Create a new decoder that decodes from the stream ```r```
+    pub fn new<R: BufRead + Seek>(r: R) -> ImageResult<Self> {
+        let mut input = Vec::new();
+        let mut r = r;
+        r.read_to_end(&mut input)?;
+        let headers = Image::new(&input, &DecodeSettings::default())?;
+        Ok(Self {
+            width: headers.width(),
+            height: headers.height(),
+            color_type: headers.color_type(),
+            orig_color_type: headers.original_color_type(),
+            input,
+        })
+    }
+}
+
+impl ImageDecoder for Jp2Decoder {
+    fn dimensions(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+
+    fn color_type(&self) -> ColorType {
+        self.color_type
+    }
+
+    fn original_color_type(&self) -> ExtendedColorType {
+        self.orig_color_type
+    }
+
+    fn read_image(self, buf: &mut [u8]) -> ImageResult<()>
+    where
+        Self: Sized,
+    {
+        // we can safely .unwrap() because we've already done this on decoder creation and know this works
+        let decoder = Image::new(&self.input, &DecodeSettings::default()).unwrap();
+        decoder.read_image(buf)
+    }
+
+    fn read_image_boxed(self: Box<Self>, buf: &mut [u8]) -> ImageResult<()> {
+        // we can safely .unwrap() because we've already done this on decoder creation and know this works
+        let decoder = Image::new(&self.input, &DecodeSettings::default()).unwrap();
+        decoder.read_image(buf)
     }
 }
 
@@ -213,4 +286,45 @@ fn convert_inner(image: &Image<'_>, buf: &mut [u8]) -> Option<()> {
     }
 
     process(image, buf, width, height, has_alpha, color_space)
+}
+
+impl From<crate::DecodeError> for DecodingError {
+    fn from(value: crate::DecodeError) -> Self {
+        let format = ImageFormatHint::Name("JPEG2000".to_owned());
+        Self::new(format, value)
+    }
+}
+
+impl From<crate::DecodeError> for ImageError {
+    fn from(value: crate::DecodeError) -> Self {
+        Self::Decoding(value.into())
+    }
+}
+
+/// Registers the decoder with the `image` crate so that non-format-specific calls such as
+/// `ImageReader::open("image.jp2")?.decode()?;` work with JPEG2000 files.
+///
+/// Returns `true` on success, or `false` if the hook for JPEG2000 is already registered.
+pub fn register_decoding_hook() -> bool {
+    if decoding_hook_registered(OsStr::new("jp2")) {
+        return false;
+    }
+
+    for extension in ["jp2", "jpg2", "j2k", "jpf"] {
+        image::hooks::register_decoding_hook(
+            extension.into(),
+            Box::new(|r| Ok(Box::new(Jp2Decoder::new(r)?))),
+        );
+        register_format_detection_hook(extension.into(), crate::JP2_MAGIC, None);
+    }
+
+    for extension in ["j2c", "jpc"] {
+        image::hooks::register_decoding_hook(
+            extension.into(),
+            Box::new(|r| Ok(Box::new(Jp2Decoder::new(r)?))),
+        );
+        register_format_detection_hook(extension.into(), crate::CODESTREAM_MAGIC, None);
+    }
+
+    true
 }
