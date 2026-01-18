@@ -8,6 +8,25 @@ use skrifa::GlyphId;
 use skrifa::outline::OutlinePen;
 use std::rc::Rc;
 
+/// Font data and metadata for downstream use.
+#[derive(Clone)]
+pub struct OutlineFontData {
+    /// Raw font bytes (TrueType/OpenType/CFF data).
+    pub data: crate::font::FontData,
+    /// Cache key for font deduplication.
+    pub cache_key: u128,
+    /// PostScript name (e.g., "TimesNewRomanPS-BoldMT").
+    pub postscript_name: Option<String>,
+    /// Font weight (100-900, 400=normal, 700=bold).
+    pub weight: Option<u32>,
+    /// Whether the font is italic/oblique.
+    pub is_italic: bool,
+    /// Whether the font is serif (vs sans-serif).
+    pub is_serif: bool,
+    /// Whether the font is monospace.
+    pub is_monospace: bool,
+}
+
 pub(crate) struct OutlinePath(BezPath);
 
 impl OutlinePath {
@@ -116,6 +135,42 @@ impl OutlineFont {
             Self::Type1(t) => t.char_code_to_unicode(char_code),
             Self::TrueType(t) => t.char_code_to_unicode(char_code),
             Self::Type0(t) => t.char_code_to_unicode(char_code),
+        }
+    }
+
+    /// Get the advance width for a glyph by character code.
+    pub(crate) fn glyph_advance_width(&self, char_code: u32) -> Option<f32> {
+        match self {
+            Self::Type1(t) => t.glyph_width(char_code as u8),
+            Self::TrueType(t) => Some(t.glyph_width(char_code as u8)),
+            Self::Type0(t) => Some(t.code_advance(char_code).x as f32),
+        }
+    }
+
+    /// Get raw font bytes and metadata.
+    ///
+    /// Returns None for Type1 fonts.
+    pub(crate) fn font_data(&self) -> Option<OutlineFontData> {
+        match self {
+            Self::Type1(_) => None,
+            Self::TrueType(t) => Some(OutlineFontData {
+                data: t.font_data(),
+                cache_key: t.cache_key(),
+                postscript_name: t.postscript_name().map(|s| s.to_string()),
+                weight: t.weight(),
+                is_italic: t.is_italic(),
+                is_serif: t.is_serif(),
+                is_monospace: t.is_monospace(),
+            }),
+            Self::Type0(t) => Some(OutlineFontData {
+                data: t.font_data(),
+                cache_key: t.cache_key(),
+                postscript_name: t.postscript_name().map(|s| s.to_string()),
+                weight: t.weight(),
+                is_italic: t.is_italic(),
+                is_serif: t.is_serif(),
+                is_monospace: t.is_monospace(),
+            }),
         }
     }
 }

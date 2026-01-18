@@ -1,7 +1,7 @@
 use crate::CacheKey;
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::font::cmap::{CMap, parse_cmap};
-use crate::font::read_to_unicode;
+use crate::font::{FontFlags, read_to_unicode, strip_subset_prefix};
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
 use hayro_syntax::object::Stream;
@@ -9,8 +9,9 @@ use hayro_syntax::object::dict::keys::*;
 use hayro_syntax::object::{Array, Object};
 use kurbo::{BezPath, Vec2};
 use log::warn;
+use skrifa::attribute::Style;
 use skrifa::raw::TableProvider;
-use skrifa::{FontRef, GlyphId};
+use skrifa::{FontRef, GlyphId, MetadataProvider};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -27,6 +28,10 @@ pub(crate) struct Type0Font {
     to_unicode: Option<CMap>,
     widths2: HashMap<u32, [f32; 3]>,
     cid_to_gid_map: CidToGIdMap,
+    /// PostScript name from the PDF.
+    postscript_name: Option<String>,
+    /// Font flags from the font descriptor.
+    font_flags: Option<FontFlags>,
 }
 
 impl Type0Font {
@@ -61,6 +66,15 @@ impl Type0Font {
 
         let to_unicode = read_to_unicode(dict);
 
+        let postscript_name = dict
+            .get::<Name<'_>>(BASE_FONT)
+            .map(|n| strip_subset_prefix(n.as_str()).to_string());
+
+        // Extract font flags from descriptor
+        let font_flags = font_descriptor
+            .get::<u32>(FLAGS)
+            .and_then(FontFlags::from_bits);
+
         Some(Self {
             cache_key,
             horizontal,
@@ -72,6 +86,8 @@ impl Type0Font {
             widths,
             widths2,
             cid_to_gid_map,
+            postscript_name,
+            font_flags,
         })
     }
 
@@ -105,6 +121,71 @@ impl Type0Font {
         match &self.font_type {
             FontType::TrueType(t) => t.outline_glyph(glyph),
             FontType::Cff(c) => c.outline_glyph(glyph),
+        }
+    }
+
+    pub(crate) fn font_data(&self) -> crate::font::FontData {
+        match &self.font_type {
+            FontType::TrueType(t) => t.font_data(),
+            FontType::Cff(c) => c.font_data(),
+        }
+    }
+
+    /// Get the PostScript name.
+    pub(crate) fn postscript_name(&self) -> Option<&str> {
+        self.postscript_name.as_deref()
+    }
+
+    /// Get the font weight (100-900, 400=normal, 700=bold).
+    ///
+    /// Returns `None` if weight cannot be determined (CFF fonts or invalid weight).
+    pub(crate) fn weight(&self) -> Option<u32> {
+        match &self.font_type {
+            FontType::TrueType(t) => {
+                let weight = t.font_ref().attributes().weight.value().round() as u32;
+                if weight > 0 { Some(weight) } else { None }
+            }
+            FontType::Cff(_) => None,
+        }
+    }
+
+    /// Check if font is italic based on font flags or font attributes.
+    pub(crate) fn is_italic(&self) -> bool {
+        if let Some(flags) = &self.font_flags
+            && flags.contains(FontFlags::ITALIC)
+        {
+            return true;
+        }
+        match &self.font_type {
+            FontType::TrueType(t) => t.font_ref().attributes().style != Style::Normal,
+            FontType::Cff(_) => false,
+        }
+    }
+
+    /// Check if font is serif based on font flags.
+    pub(crate) fn is_serif(&self) -> bool {
+        self.font_flags
+            .as_ref()
+            .is_some_and(|f| f.contains(FontFlags::SERIF))
+    }
+
+    /// Check if font is monospace based on font flags or font metrics.
+    pub(crate) fn is_monospace(&self) -> bool {
+        if let Some(flags) = &self.font_flags
+            && flags.contains(FontFlags::FIXED_PITCH)
+        {
+            return true;
+        }
+        match &self.font_type {
+            FontType::TrueType(t) => {
+                t.font_ref()
+                    .metrics(
+                        skrifa::instance::Size::unscaled(),
+                        skrifa::instance::LocationRef::default(),
+                    )
+                    .is_monospace
+            }
+            FontType::Cff(_) => false,
         }
     }
 

@@ -2,7 +2,10 @@ use crate::CacheKey;
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::font::cmap::CMap;
 use crate::font::generated::{glyph_names, mac_os_roman, mac_roman};
-use crate::font::{Encoding, FontFlags, glyph_name_to_unicode, read_to_unicode, unicode_from_name};
+use crate::font::{
+    Encoding, FontFlags, glyph_name_to_unicode, read_to_unicode, strip_subset_prefix,
+    unicode_from_name,
+};
 use crate::util::OptionLog;
 use hayro_syntax::object::Array;
 use hayro_syntax::object::Dict;
@@ -12,9 +15,10 @@ use hayro_syntax::object::Stream;
 use hayro_syntax::object::dict::keys::*;
 use kurbo::BezPath;
 use log::warn;
+use skrifa::attribute::Style;
 use skrifa::raw::TableProvider;
 use skrifa::raw::tables::cmap::PlatformId;
-use skrifa::{GlyphId, GlyphId16};
+use skrifa::{GlyphId, GlyphId16, MetadataProvider};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -34,6 +38,8 @@ pub(crate) struct TrueTypeFont {
     differences: HashMap<u8, String>,
     cached_mappings: RefCell<HashMap<u8, GlyphId>>,
     to_unicode: Option<CMap>,
+    /// PostScript name from the PDF.
+    postscript_name: Option<String>,
 }
 
 impl TrueTypeFont {
@@ -70,6 +76,10 @@ impl TrueTypeFont {
 
         let to_unicode = read_to_unicode(dict);
 
+        let postscript_name = dict
+            .get::<Name<'_>>(BASE_FONT)
+            .map(|n| strip_subset_prefix(n.as_str()).to_string());
+
         Some(Self {
             base_font,
             cache_key,
@@ -81,11 +91,72 @@ impl TrueTypeFont {
             encoding,
             cached_mappings: RefCell::new(HashMap::new()),
             to_unicode,
+            postscript_name,
         })
     }
 
     pub(crate) fn outline_glyph(&self, glyph: GlyphId) -> BezPath {
         self.base_font.outline_glyph(glyph)
+    }
+
+    pub(crate) fn font_data(&self) -> crate::font::FontData {
+        self.base_font.font_data()
+    }
+
+    /// Get the PostScript name.
+    pub(crate) fn postscript_name(&self) -> Option<&str> {
+        self.postscript_name.as_deref()
+    }
+
+    /// Get the font weight (100-900, 400=normal, 700=bold).
+    ///
+    /// Returns `None` if weight cannot be determined (invalid weight).
+    pub(crate) fn weight(&self) -> Option<u32> {
+        let weight = self
+            .base_font
+            .font_ref()
+            .attributes()
+            .weight
+            .value()
+            .round() as u32;
+        if weight > 0 { Some(weight) } else { None }
+    }
+
+    /// Check if font is italic based on font flags or font attributes.
+    pub(crate) fn is_italic(&self) -> bool {
+        // Check PDF font flags first
+        if let Some(flags) = &self.font_flags
+            && flags.contains(FontFlags::ITALIC)
+        {
+            return true;
+        }
+        // Check skrifa font attributes
+        self.base_font.font_ref().attributes().style != Style::Normal
+    }
+
+    /// Check if font is serif based on font flags.
+    pub(crate) fn is_serif(&self) -> bool {
+        self.font_flags
+            .as_ref()
+            .is_some_and(|f| f.contains(FontFlags::SERIF))
+    }
+
+    /// Check if font is monospace based on font flags or font metrics.
+    pub(crate) fn is_monospace(&self) -> bool {
+        // Check PDF font flags first
+        if let Some(flags) = &self.font_flags
+            && flags.contains(FontFlags::FIXED_PITCH)
+        {
+            return true;
+        }
+        // Check skrifa font metrics
+        self.base_font
+            .font_ref()
+            .metrics(
+                skrifa::instance::Size::unscaled(),
+                skrifa::instance::LocationRef::default(),
+            )
+            .is_monospace
     }
 
     fn is_non_symbolic(&self) -> bool {

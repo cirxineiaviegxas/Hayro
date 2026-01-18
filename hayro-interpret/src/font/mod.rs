@@ -44,8 +44,21 @@ pub(crate) const UNITS_PER_EM: f32 = 1000.0;
 /// A container for the bytes of a PDF file.
 pub type FontData = Arc<dyn AsRef<[u8]> + Send + Sync>;
 
+/// Strip the 6-character subset prefix from a PostScript font name.
+///
+/// PDF subset fonts use names like "ABCDEF+TimesNewRoman". This function
+/// returns `TimesNewRoman` from such a name, or the original name if no
+/// valid prefix is found.
+pub(crate) fn strip_subset_prefix(name: &str) -> &str {
+    match name.split_once('+') {
+        Some((prefix, rest)) if prefix.len() == 6 => rest,
+        _ => name,
+    }
+}
+
 use crate::font::cmap::{CMap, parse_cmap};
 use crate::util::hash128;
+pub use outline::OutlineFontData;
 pub use standard_font::StandardFont;
 
 /// A glyph that can be drawn.
@@ -130,6 +143,34 @@ impl OutlineGlyph {
     /// See [`Glyph::as_unicode`] for details on the fallback chain used.
     pub fn as_unicode(&self) -> Option<char> {
         self.font.char_code_to_unicode(self.char_code)
+    }
+
+    /// Get raw font bytes and metadata for downstream use.
+    ///
+    /// Returns `None` for Type1 fonts.
+    pub fn font_data(&self) -> Option<OutlineFontData> {
+        self.font.font_data()
+    }
+
+    /// Get the glyph ID within the font.
+    pub fn glyph_id(&self) -> GlyphId {
+        self.id
+    }
+
+    /// Get the advance width for this glyph.
+    ///
+    /// The advance width is how far to move horizontally after drawing
+    /// this glyph before drawing the next one.
+    pub fn advance_width(&self) -> Option<f32> {
+        self.font.glyph_advance_width(self.char_code)
+    }
+
+    /// Get the cache key for this glyph's font.
+    ///
+    /// This identifies the font uniquely, even when `font_data()` returns `None`
+    /// (e.g., for Type1 fonts). Useful for grouping glyphs by font.
+    pub fn font_cache_key(&self) -> u128 {
+        self.font.cache_key()
     }
 }
 
@@ -463,24 +504,19 @@ pub struct FallbackFontQuery {
 
 impl FallbackFontQuery {
     pub(crate) fn new(dict: &Dict<'_>) -> Self {
-        let mut data = Self::default();
-
-        let remove_subset_prefix = |s: String| {
-            if s.contains("+") {
-                s.chars().skip(7).collect()
-            } else {
-                s
-            }
-        };
-
-        data.post_script_name = dict
+        let post_script_name = dict
             .get::<Name<'_>>(BASE_FONT)
-            .map(|n| remove_subset_prefix(n.as_str().to_string()));
+            .map(|n| strip_subset_prefix(n.as_str()).to_string());
+
+        let mut data = Self {
+            post_script_name,
+            ..Default::default()
+        };
 
         if let Some(descriptor) = dict.get::<Dict<'_>>(FONT_DESC) {
             data.font_name = dict
                 .get::<Name<'_>>(FONT_NAME)
-                .map(|n| remove_subset_prefix(n.as_str().to_string()));
+                .map(|n| strip_subset_prefix(n.as_str()).to_string());
             data.font_family = descriptor
                 .get::<Name<'_>>(FONT_FAMILY)
                 .map(|n| n.as_str().to_string());
