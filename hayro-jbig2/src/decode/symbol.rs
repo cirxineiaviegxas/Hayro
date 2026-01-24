@@ -171,8 +171,10 @@ fn decode_refinement_aggregation_bitmap(
 
     if aggregation_instance_count == 1 {
         decode_refinement_bitmap(ctx, symbol_width)
-    } else {
+    } else if aggregation_instance_count > 1 {
         decode_aggregation_bitmap(ctx, symbol_width, aggregation_instance_count as u32)
+    } else {
+        Err(DecodeError::Symbol(SymbolError::Invalid))
     }
 }
 
@@ -182,67 +184,67 @@ fn decode_refinement_bitmap(
     symbol_width: u32,
 ) -> Result<DecodedRegion> {
     let use_huffman = ctx.header.flags.use_huffman;
+    let mut symbol_code_length = 32 - (ctx.total_symbols() - 1).leading_zeros();
 
-    let mut sbsymcodelen = 32 - (ctx.total_symbols() - 1).leading_zeros();
-
-    let (id_i, rdx_i, rdy_i) = if use_huffman {
+    let (symbol_id, refinement_x_offset, refinement_y_offset) = if use_huffman {
         // See 6.5.8.2.3, the value should be at least 1 if we use huffman coding.
-        sbsymcodelen = sbsymcodelen.max(1);
+        symbol_code_length = symbol_code_length.max(1);
 
-        let id_i = ctx
+        let symbol_id = ctx
             .h_ctx
             .reader
-            .read_bits(sbsymcodelen as u8)
+            .read_bits(symbol_code_length as u8)
             .ok_or(ParseError::UnexpectedEof)? as usize;
 
-        let rdx_i = ctx
+        let refinement_x_offset = ctx
             .standard_tables
             .table_o()
             .decode(&mut ctx.h_ctx.reader)?
             .ok_or(HuffmanError::UnexpectedOob)?;
 
-        let rdy_i = ctx
+        let refinement_y_offset = ctx
             .standard_tables
             .table_o()
             .decode(&mut ctx.h_ctx.reader)?
             .ok_or(HuffmanError::UnexpectedOob)?;
 
-        (id_i, rdx_i, rdy_i)
+        (symbol_id, refinement_x_offset, refinement_y_offset)
     } else {
-        // Use TextRegionContexts for IAID, IARDX, IARDY so they're shared with
-        // REFAGGNINST > 1 cases (per spec, contexts should be reused).
+        // Note that the contexts should be reused across multiple
+        // bitmaps in the same symbol dictionary.
         let contexts = ctx
             .a_ctx
             .text_region_contexts
-            .get_or_insert_with(|| TextRegionContexts::new(sbsymcodelen));
+            .get_or_insert_with(|| TextRegionContexts::new(symbol_code_length));
 
-        let id_i = contexts.iaid.decode(&mut ctx.a_ctx.decoder) as usize;
+        let symbol_id = contexts.iaid.decode(&mut ctx.a_ctx.decoder) as usize;
 
-        let rdx_i = contexts
+        let refinement_x_offset = contexts
             .iardx
             .decode(&mut ctx.a_ctx.decoder)
             .ok_or(SymbolError::UnexpectedOob)?;
 
-        let rdy_i = contexts
+        let refinement_y_offset = contexts
             .iardy
             .decode(&mut ctx.a_ctx.decoder)
             .ok_or(SymbolError::UnexpectedOob)?;
 
-        (id_i, rdx_i, rdy_i)
+        (symbol_id, refinement_x_offset, refinement_y_offset)
     };
 
-    let reference_region = if id_i < ctx.num_input_symbols as usize {
-        ctx.input_symbols[id_i]
+    let reference_region = if symbol_id < ctx.num_input_symbols as usize {
+        ctx.input_symbols[symbol_id]
     } else {
-        let new_idx = id_i - ctx.num_input_symbols as usize;
+        let new_idx = symbol_id - ctx.num_input_symbols as usize;
         ctx.new_symbols
             .get(new_idx)
             .ok_or(SymbolError::OutOfRange)?
     };
+
     let mut region = DecodedRegion::new(symbol_width, ctx.height_class_height);
 
     if use_huffman {
-        let bmsize = ctx
+        let bitmap_size = ctx
             .standard_tables
             .table_a()
             .decode(&mut ctx.h_ctx.reader)?
@@ -252,24 +254,18 @@ fn decode_refinement_bitmap(
         let bitmap_data = ctx
             .h_ctx
             .reader
-            .read_bytes(bmsize)
+            .read_bytes(bitmap_size)
             .ok_or(ParseError::UnexpectedEof)?;
 
         let mut bitmap_decoder = ArithmeticDecoder::new(bitmap_data);
-        // Not sure if this is mentioned somewhere explicitly, but it seems like we
-        // need to create fresh contexts for each bitmap, unlike arithmetic decoding
-        // where we reuse them across multiple runs.
-        let gr_template = ctx.header.flags.refinement_template;
-        let num_gr_contexts = 1 << gr_template.context_bits();
-        let mut gr_contexts = vec![Context::default(); num_gr_contexts];
 
         generic_refinement::decode_bitmap(
             &mut bitmap_decoder,
-            &mut gr_contexts,
+            &mut ctx.a_ctx.refinement_region_contexts,
             &mut region,
             reference_region,
-            rdx_i,
-            rdy_i,
+            refinement_x_offset,
+            refinement_y_offset,
             ctx.header.flags.refinement_template,
             &ctx.header.refinement_at_pixels,
             false,
@@ -280,8 +276,8 @@ fn decode_refinement_bitmap(
             &mut ctx.a_ctx.refinement_region_contexts,
             &mut region,
             reference_region,
-            rdx_i,
-            rdy_i,
+            refinement_x_offset,
+            refinement_y_offset,
             ctx.header.flags.refinement_template,
             &ctx.header.refinement_at_pixels,
             false,
