@@ -214,7 +214,9 @@ pub(crate) fn parse_charset<'a>(
                 while total_left > 0 {
                     s.skip::<StringId>(); // first
                     let left = s.read::<u8>()?;
-                    total_left = total_left.checked_sub(u16::from(left) + 1)?;
+                    // Use saturating sub to be more lenient against invalid
+                    // files, see #892.
+                    total_left = total_left.saturating_sub(u16::from(left) + 1);
                     count += 1;
                 }
             }
@@ -230,7 +232,9 @@ pub(crate) fn parse_charset<'a>(
                 while total_left > 0 {
                     s.skip::<StringId>(); // first
                     let left = s.read::<u16>()?.checked_add(1)?;
-                    total_left = total_left.checked_sub(left)?;
+                    // Use saturating sub to be more lenient against invalid
+                    // files, see #892.
+                    total_left = total_left.saturating_sub(left);
                     count += 1;
                 }
             }
