@@ -216,6 +216,8 @@ pub(crate) fn decode_bitmap_arithmetic_coding(
     // "1) Set: LTP = 0" (6.2.5.7)
     let mut ltp = false;
 
+    let mut ctx_gatherer = ContextGatherer::new(width, height, template, adaptive_template_pixels);
+
     // "3) Decode each row as follows:" (6.2.5.7)
     for y in 0..height {
         // "b) If TPGDON is 1, then decode a bit using the arithmetic entropy
@@ -246,10 +248,14 @@ pub(crate) fn decode_bitmap_arithmetic_coding(
         } else {
             // "d) If LTP = 0 then, from left to right, decode each pixel of the
             // current row of GBREG." (6.2.5.7)
+            ctx_gatherer.start_row(bitmap, y);
+
             for x in 0..width {
-                let context_bits = gather_context(bitmap, x, y, template, adaptive_template_pixels);
+                let context_bits = ctx_gatherer.gather(bitmap, x);
                 let pixel = decoder.decode(&mut contexts[context_bits as usize]);
-                bitmap.set_pixel(x, y, pixel != 0);
+                let value = pixel != 0;
+                bitmap.set_pixel(x, y, value);
+                ctx_gatherer.update_current_row(x, value);
             }
         }
     }
@@ -257,161 +263,271 @@ pub(crate) fn decode_bitmap_arithmetic_coding(
     Ok(())
 }
 
-/// Gather context bits for a pixel at (x, y) (6.2.5.3, 6.2.5.4).
-pub(crate) fn gather_context(
-    bitmap: &Bitmap,
-    x: u32,
-    y: u32,
-    gb_template: Template,
-    adaptive_template_pixels: &[AdaptiveTemplatePixel],
-) -> u16 {
-    match gb_template {
-        // Context for Template 0 (Figure 3a, 16 pixels).
-        Template::Template0 => {
-            let x = x as i32;
-            let y = y as i32;
-
-            let at1 = (
-                adaptive_template_pixels[0].x as i32,
-                adaptive_template_pixels[0].y as i32,
-            );
-            let at2 = (
-                adaptive_template_pixels[1].x as i32,
-                adaptive_template_pixels[1].y as i32,
-            );
-            let at3 = (
-                adaptive_template_pixels[2].x as i32,
-                adaptive_template_pixels[2].y as i32,
-            );
-            let at4 = (
-                adaptive_template_pixels[3].x as i32,
-                adaptive_template_pixels[3].y as i32,
-            );
-
-            let mut context = 0_u16;
-
-            context = (context << 1) | get_pixel(bitmap, x + at4.0, y + at4.1);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x + at3.0, y + at3.1);
-
-            context = (context << 1) | get_pixel(bitmap, x + at2.0, y + at2.1);
-            context = (context << 1) | get_pixel(bitmap, x - 2, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + 2, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + at1.0, y + at1.1);
-
-            context = (context << 1) | get_pixel(bitmap, x - 4, y);
-            context = (context << 1) | get_pixel(bitmap, x - 3, y);
-            context = (context << 1) | get_pixel(bitmap, x - 2, y);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y);
-
-            context
-        }
-        // Context for Template 1 (Figure 4).
-        Template::Template1 => {
-            let x = x as i32;
-            let y = y as i32;
-
-            let at1 = (
-                adaptive_template_pixels[0].x as i32,
-                adaptive_template_pixels[0].y as i32,
-            );
-
-            let mut context = 0_u16;
-
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x + 2, y - 2);
-
-            context = (context << 1) | get_pixel(bitmap, x - 2, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + 2, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + at1.0, y + at1.1);
-
-            context = (context << 1) | get_pixel(bitmap, x - 3, y);
-            context = (context << 1) | get_pixel(bitmap, x - 2, y);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y);
-
-            context
-        }
-        // Context for Template 2 (Figure 5).
-        Template::Template2 => {
-            let x = x as i32;
-            let y = y as i32;
-
-            let at1 = (
-                adaptive_template_pixels[0].x as i32,
-                adaptive_template_pixels[0].y as i32,
-            );
-
-            let mut context = 0_u16;
-
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x, y - 2);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 2);
-
-            context = (context << 1) | get_pixel(bitmap, x - 2, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + at1.0, y + at1.1);
-
-            context = (context << 1) | get_pixel(bitmap, x - 2, y);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y);
-
-            context
-        }
-        // Context for Template 3 (Figure 6).
-        Template::Template3 => {
-            let x = x as i32;
-            let y = y as i32;
-
-            let at1 = (
-                adaptive_template_pixels[0].x as i32,
-                adaptive_template_pixels[0].y as i32,
-            );
-
-            let mut context = 0_u16;
-
-            context = (context << 1) | get_pixel(bitmap, x - 3, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x - 2, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + 1, y - 1);
-            context = (context << 1) | get_pixel(bitmap, x + at1.0, y + at1.1);
-
-            context = (context << 1) | get_pixel(bitmap, x - 4, y);
-            context = (context << 1) | get_pixel(bitmap, x - 3, y);
-            context = (context << 1) | get_pixel(bitmap, x - 2, y);
-            context = (context << 1) | get_pixel(bitmap, x - 1, y);
-
-            context
-        }
-    }
+pub(crate) struct ContextGatherer<'a> {
+    template: Template,
+    at_pixels: &'a [AdaptiveTemplatePixel],
+    width: u32,
+    height: u32,
+    /// Current position.
+    cur_y: u32,
+    cur_x: u32,
+    /// Pre-fetched pixel buffers for rows y-2, y-1, y.
+    buf_m2: u32,
+    buf_m1: u32,
+    buf_cur: u32,
+    /// The context bits for each row.
+    ctx_m2: u16,
+    ctx_m1: u16,
+    ctx_cur: u16,
 }
 
-// TODO: Rewrite everything below & make it more performant. Also don't
-// cast from u32 to i32.
+impl<'a> ContextGatherer<'a> {
+    pub(crate) fn new(
+        width: u32,
+        height: u32,
+        template: Template,
+        at_pixels: &'a [AdaptiveTemplatePixel],
+    ) -> Self {
+        Self {
+            template,
+            at_pixels,
+            width,
+            height,
+            cur_y: 0,
+            buf_m2: 0,
+            buf_m1: 0,
+            buf_cur: 0,
+            cur_x: 0,
+            ctx_m2: 0,
+            ctx_m1: 0,
+            ctx_cur: 0,
+        }
+    }
 
-/// Get a pixel value, returning 0 for out-of-bounds coordinates.
-#[inline]
-pub(crate) fn get_pixel(bitmap: &Bitmap, x: i32, y: i32) -> u16 {
-    // "Near the edges of the bitmap, these neighbour references might not lie in
-    // the actual bitmap. The rule to satisfy out-of-bounds references shall be:
-    // All pixels lying outside the bounds of the actual bitmap have the value 0."
-    // (6.2.5.2)
-    if x < 0 || y < 0 || x >= bitmap.width as i32 {
-        0
-    } else if bitmap.get_pixel(x as u32, y as u32) {
-        1
-    } else {
-        0
+    pub(crate) fn start_row(&mut self, bitmap: &Bitmap, y: u32) {
+        self.cur_y = y;
+        self.cur_x = 0;
+
+        self.buf_m2 = if y >= 2 {
+            Self::load_chunk(bitmap, y - 2, 0)
+        } else {
+            0
+        };
+        self.buf_m1 = if y >= 1 {
+            Self::load_chunk(bitmap, y - 1, 0)
+        } else {
+            0
+        };
+        self.buf_cur = 0;
+
+        // Start initializing the contexts. Note that this won't load all initial
+        // pixels yet, those will only be loaded after our first call to `gather`.
+        // See 6.2.5.3 for the pixel positions.
+        match self.template {
+            Template::Template0 => {
+                self.ctx_m2 = Self::get_buf_pixel(self.buf_m2, 0);
+                self.ctx_m1 = (Self::get_buf_pixel(self.buf_m1, 0) << 1)
+                    | Self::get_buf_pixel(self.buf_m1, 1);
+                self.ctx_cur = 0;
+            }
+            Template::Template1 => {
+                self.ctx_m2 = (Self::get_buf_pixel(self.buf_m2, 0) << 1)
+                    | Self::get_buf_pixel(self.buf_m2, 1);
+                self.ctx_m1 = (Self::get_buf_pixel(self.buf_m1, 0) << 1)
+                    | Self::get_buf_pixel(self.buf_m1, 1);
+                self.ctx_cur = 0;
+            }
+            Template::Template2 => {
+                self.ctx_m2 = Self::get_buf_pixel(self.buf_m2, 0);
+                self.ctx_m1 = Self::get_buf_pixel(self.buf_m1, 0);
+                self.ctx_cur = 0;
+            }
+            Template::Template3 => {
+                self.ctx_m2 = 0;
+                self.ctx_m1 = Self::get_buf_pixel(self.buf_m1, 0);
+                self.ctx_cur = 0;
+            }
+        }
+    }
+
+    #[inline]
+    fn load_chunk(bitmap: &Bitmap, row_y: u32, start_x: u32) -> u32 {
+        let mut buf = 0_u32;
+        let row_start = (row_y * bitmap.width) as usize;
+        let end_x = (start_x + 32).min(bitmap.width);
+        for x in start_x..end_x {
+            if bitmap.data[row_start + x as usize] {
+                buf |= 1 << (31 - (x - start_x));
+            }
+        }
+        buf
+    }
+
+    #[inline]
+    fn get_buf_pixel(buf: u32, pos: u32) -> u16 {
+        if pos < 32 {
+            ((buf >> (31 - pos)) & 1) as u16
+        } else {
+            0
+        }
+    }
+
+    #[inline]
+    fn get_bitmap_pixel(&self, bitmap: &Bitmap, px: i32, py: i32) -> u16 {
+        if px < 0 || py < 0 || px >= self.width as i32 || py >= self.height as i32 {
+            0
+        } else if bitmap.data[(py as u32 * self.width + px as u32) as usize] {
+            1
+        } else {
+            0
+        }
+    }
+
+    #[inline]
+    fn maybe_reload_buffers(&mut self, bitmap: &Bitmap, x: u32) {
+        let max_right = match self.template {
+            Template::Template0 | Template::Template1 => 2,
+            Template::Template2 | Template::Template3 => 1,
+        };
+
+        if x + max_right >= self.cur_x + 32 {
+            let new_start = x.saturating_sub(4);
+            self.cur_x = new_start;
+            self.buf_m2 = if self.cur_y >= 2 {
+                Self::load_chunk(bitmap, self.cur_y - 2, new_start)
+            } else {
+                0
+            };
+            self.buf_m1 = if self.cur_y >= 1 {
+                Self::load_chunk(bitmap, self.cur_y - 1, new_start)
+            } else {
+                0
+            };
+            self.buf_cur = Self::load_chunk(bitmap, self.cur_y, new_start);
+        }
+    }
+
+    #[inline]
+    pub(crate) fn gather(&mut self, bitmap: &Bitmap, x: u32) -> u16 {
+        self.maybe_reload_buffers(bitmap, x);
+
+        match self.template {
+            Template::Template0 => self.gather_template0(bitmap, x),
+            Template::Template1 => self.gather_template1(bitmap, x),
+            Template::Template2 => self.gather_template2(bitmap, x),
+            Template::Template3 => self.gather_template3(bitmap, x),
+        }
+    }
+
+    #[inline]
+    fn gather_template0(&mut self, bitmap: &Bitmap, x: u32) -> u16 {
+        let bx = x - self.cur_x;
+        let xi = x as i32;
+        let yi = self.cur_y as i32;
+
+        self.ctx_m2 = ((self.ctx_m2 << 1) & 0b111) | Self::get_buf_pixel(self.buf_m2, bx + 1);
+        self.ctx_m1 = ((self.ctx_m1 << 1) & 0b11111) | Self::get_buf_pixel(self.buf_m1, bx + 2);
+        self.ctx_cur =
+            ((self.ctx_cur << 1) & 0b1111) | Self::get_buf_pixel(self.buf_cur, bx.wrapping_sub(1));
+
+        let at1 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[0].x as i32,
+            yi + self.at_pixels[0].y as i32,
+        );
+        let at2 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[1].x as i32,
+            yi + self.at_pixels[1].y as i32,
+        );
+        let at3 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[2].x as i32,
+            yi + self.at_pixels[2].y as i32,
+        );
+        let at4 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[3].x as i32,
+            yi + self.at_pixels[3].y as i32,
+        );
+
+        (at4 << 15)
+            | (self.ctx_m2 << 12)
+            | (at3 << 11)
+            | (at2 << 10)
+            | (self.ctx_m1 << 5)
+            | (at1 << 4)
+            | self.ctx_cur
+    }
+
+    #[inline]
+    fn gather_template1(&mut self, bitmap: &Bitmap, x: u32) -> u16 {
+        let bx = x - self.cur_x;
+        let xi = x as i32;
+        let yi = self.cur_y as i32;
+
+        self.ctx_m2 = ((self.ctx_m2 << 1) & 0b1111) | Self::get_buf_pixel(self.buf_m2, bx + 2);
+        self.ctx_m1 = ((self.ctx_m1 << 1) & 0b11111) | Self::get_buf_pixel(self.buf_m1, bx + 2);
+        self.ctx_cur =
+            ((self.ctx_cur << 1) & 0b111) | Self::get_buf_pixel(self.buf_cur, bx.wrapping_sub(1));
+
+        let at1 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[0].x as i32,
+            yi + self.at_pixels[0].y as i32,
+        );
+
+        (self.ctx_m2 << 9) | (self.ctx_m1 << 4) | (at1 << 3) | self.ctx_cur
+    }
+
+    #[inline]
+    fn gather_template2(&mut self, bitmap: &Bitmap, x: u32) -> u16 {
+        let bx = x - self.cur_x;
+        let xi = x as i32;
+        let yi = self.cur_y as i32;
+
+        self.ctx_m2 = ((self.ctx_m2 << 1) & 0b111) | Self::get_buf_pixel(self.buf_m2, bx + 1);
+        self.ctx_m1 = ((self.ctx_m1 << 1) & 0b1111) | Self::get_buf_pixel(self.buf_m1, bx + 1);
+        self.ctx_cur =
+            ((self.ctx_cur << 1) & 0b11) | Self::get_buf_pixel(self.buf_cur, bx.wrapping_sub(1));
+
+        let at1 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[0].x as i32,
+            yi + self.at_pixels[0].y as i32,
+        );
+
+        (self.ctx_m2 << 7) | (self.ctx_m1 << 3) | (at1 << 2) | self.ctx_cur
+    }
+
+    #[inline]
+    fn gather_template3(&mut self, bitmap: &Bitmap, x: u32) -> u16 {
+        let bx = x - self.cur_x;
+        let xi = x as i32;
+        let yi = self.cur_y as i32;
+
+        self.ctx_m1 = ((self.ctx_m1 << 1) & 0b11111) | Self::get_buf_pixel(self.buf_m1, bx + 1);
+        self.ctx_cur =
+            ((self.ctx_cur << 1) & 0b1111) | Self::get_buf_pixel(self.buf_cur, bx.wrapping_sub(1));
+
+        let at1 = self.get_bitmap_pixel(
+            bitmap,
+            xi + self.at_pixels[0].x as i32,
+            yi + self.at_pixels[0].y as i32,
+        );
+
+        (self.ctx_m1 << 5) | (at1 << 4) | self.ctx_cur
+    }
+
+    #[inline]
+    pub(crate) fn update_current_row(&mut self, x: u32, value: bool) {
+        if x >= self.cur_x && x < self.cur_x + 32 {
+            let bit_pos = 31 - (x - self.cur_x);
+            if value {
+                self.buf_cur |= 1 << bit_pos;
+            } else {
+                self.buf_cur &= !(1 << bit_pos);
+            }
+        }
     }
 }
