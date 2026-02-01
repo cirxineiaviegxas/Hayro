@@ -1,83 +1,89 @@
-use alloc::vec;
+use crate::reader::Reader;
+use crate::trivia::is_white_space_character;
 use alloc::vec::Vec;
 
 pub(crate) fn decode(data: &[u8]) -> Option<Vec<u8>> {
-    let mut decoded = vec![];
+    const POW_85: [u32; 5] = [52200625, 614125, 7225, 85, 1];
 
-    let mut stream = data
-        .iter()
-        .cloned()
-        .filter(|&b| !matches!(b, b' ' | b'\n' | b'\r' | b'\t'));
+    let mut reader = Reader::new(data);
 
-    let mut symbols = stream.by_ref().take_while(|&b| b != b'~');
+    let mut read_byte = || -> Option<u8> {
+        loop {
+            let b = reader.read_byte()?;
 
-    let (tail_len, tail) = loop {
-        match symbols.next() {
-            Some(b'z') => decoded.extend_from_slice(&[0; 4]),
-            Some(a) => {
-                let (b, c, d, e) = match (
-                    symbols.next(),
-                    symbols.next(),
-                    symbols.next(),
-                    symbols.next(),
-                ) {
-                    (Some(b), Some(c), Some(d), Some(e)) => (b, c, d, e),
-                    (None, _, _, _) => break (1, [a, b'u', b'u', b'u', b'u']),
-                    (Some(b), None, _, _) => break (2, [a, b, b'u', b'u', b'u']),
-                    (Some(b), Some(c), None, _) => break (3, [a, b, c, b'u', b'u']),
-                    (Some(b), Some(c), Some(d), None) => break (4, [a, b, c, d, b'u']),
-                };
-                decoded.extend_from_slice(&word_85([a, b, c, d, e])?);
+            // White space characters should be ignored.
+            if !is_white_space_character(b) {
+                return Some(b);
             }
-            None => break (0, [b'u'; 5]),
         }
     };
 
-    if tail_len > 0 {
-        let last = word_85(tail)?;
-        decoded.extend_from_slice(&last[..tail_len - 1]);
-    }
+    let flush_group = |group: &mut Vec<u8>, decoded: &mut Vec<u8>| -> Option<()> {
+        let (digits, output_len): ([u32; 5], usize) = match group.len() {
+            0 => return Some(()),
+            1 => return None, // A single character is not valid.
+            2 => (
+                [group[0], group[1], b'u', b'u', b'u'].map(|b| (b - b'!') as u32),
+                1,
+            ),
+            3 => (
+                [group[0], group[1], group[2], b'u', b'u'].map(|b| (b - b'!') as u32),
+                2,
+            ),
+            4 => (
+                [group[0], group[1], group[2], group[3], b'u'].map(|b| (b - b'!') as u32),
+                3,
+            ),
+            5 => (
+                [group[0], group[1], group[2], group[3], group[4]].map(|b| (b - b'!') as u32),
+                4,
+            ),
+            _ => unreachable!(),
+        };
 
-    Some(decoded)
-}
+        let value = digits[0]
+            .checked_mul(POW_85[0])?
+            .checked_add(digits[1].checked_mul(POW_85[1])?)?
+            .checked_add(digits[2].checked_mul(POW_85[2])?)?
+            .checked_add(digits[3].checked_mul(POW_85[3])?)?
+            .checked_add(digits[4])?;
 
-fn sym_85(byte: u8) -> Option<u8> {
-    match byte {
-        b @ 0x21..=0x75 => Some(b - 0x21),
-        _ => None,
-    }
-}
+        decoded.extend_from_slice(&value.to_be_bytes()[..output_len]);
+        group.clear();
+        Some(())
+    };
 
-fn word_85([a, b, c, d, e]: [u8; 5]) -> Option<[u8; 4]> {
-    fn s(b: u8) -> Option<u64> {
-        sym_85(b).map(|n| n as u64)
-    }
-    let (a, b, c, d, e) = (s(a)?, s(b)?, s(c)?, s(d)?, s(e)?);
-    let q = (((a * 85 + b) * 85 + c) * 85 + d) * 85 + e;
-    // 85^5 > 256^4, the result might not fit in an u32.
-    let r = u32::try_from(q).ok()?;
-    Some(r.to_be_bytes())
-}
+    let mut decoded = Vec::with_capacity(data.len() * 4 / 5);
+    let mut group = Vec::with_capacity(5);
 
-#[cfg(test)]
-mod tests {
-    use crate::filter::ascii_85::decode;
+    loop {
+        let Some(b) = read_byte() else {
+            // Be lenient and accept what we have (see PDFBOX-5910).
+            flush_group(&mut group, &mut decoded)?;
 
-    #[test]
-    fn decode_simple() {
-        let input = b"87cURDZ~>";
-        assert_eq!(decode(input).unwrap(), b"Hello");
-    }
+            return Some(decoded);
+        };
 
-    #[test]
-    fn decode_spaces() {
-        let input = b"87  cURD  Z~>";
-        assert_eq!(decode(input).unwrap(), b"Hello");
-    }
+        match b {
+            b'!'..=b'u' => {
+                group.push(b);
 
-    #[test]
-    fn decode_zeroes() {
-        let input = b"z~>";
-        assert_eq!(decode(input).unwrap(), [0, 0, 0, 0]);
+                if group.len() == 5 {
+                    flush_group(&mut group, &mut decoded)?;
+                }
+            }
+            b'z' => {
+                flush_group(&mut group, &mut decoded)?;
+                decoded.extend_from_slice(&[0, 0, 0, 0]);
+            }
+            b'~' => {
+                // Technically requires a '>', but there is a PDF where it isn't
+                // appended and decodes fine in other viewers.
+                flush_group(&mut group, &mut decoded)?;
+
+                return Some(decoded);
+            }
+            _ => return None, // Invalid character.
+        }
     }
 }
