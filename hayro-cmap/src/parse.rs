@@ -3,6 +3,8 @@ use alloc::vec::Vec;
 
 use hayro_postscript::{Object, Scanner};
 
+#[cfg(feature = "embed-cmaps")]
+use crate::bcmap;
 use crate::{
     BfRange, CMap, CMapName, CharacterCollection, CidRange, CodespaceRange, MAX_NESTING_DEPTH,
     Metadata, Range, WritingMode,
@@ -13,14 +15,20 @@ struct Context<F> {
     get_cmap: F,
 }
 
-pub(crate) fn parse<'a>(
+pub(crate) fn parse_inner<'a>(
     data: &[u8],
     get_cmap: impl Fn(CMapName<'_>) -> Option<&'a [u8]> + Clone + 'a,
     depth: u32,
 ) -> Option<CMap> {
-    // Prevent stack overflow for malicious CMap files or circular references.
+    // Prevent stack overflow for malicious cmap files or circular references.
     if depth >= MAX_NESTING_DEPTH {
         return None;
+    }
+
+    // Check if it's in our custom embedded cmap format.
+    #[cfg(feature = "embed-cmaps")]
+    if data.starts_with(b"bcmap") {
+        return bcmap::parse(data, get_cmap, depth);
     }
 
     let mut scanner = Scanner::new(data);
@@ -96,7 +104,7 @@ pub(crate) fn parse<'a>(
                 Some("usecmap") => {
                     let nested_data = (ctx.get_cmap)(last_name.as_deref()?)?;
 
-                    base = Some(Box::new(parse(
+                    base = Some(Box::new(parse_inner(
                         nested_data,
                         ctx.get_cmap.clone(),
                         depth + 1,
@@ -334,18 +342,21 @@ fn decode_be(bytes: &[u8]) -> Option<Vec<u16>> {
     Some(out)
 }
 
+#[inline]
 fn read_u32_code(scanner: &mut Scanner<'_>, buf: &mut Vec<u8>) -> Option<u32> {
     let s = scanner.parse_string().ok()?;
     s.decode_into(buf).ok()?;
     bytes_to_u32(buf)
 }
 
+#[inline]
 fn extract_u32_code(obj: &Object<'_>, buf: &mut Vec<u8>) -> Option<u32> {
     let Object::String(s) = obj else { return None };
     s.decode_into(buf).ok()?;
     bytes_to_u32(buf)
 }
 
+#[inline]
 fn bytes_to_u32(bytes: &[u8]) -> Option<u32> {
     if bytes.is_empty() || bytes.len() > 4 {
         return None;
