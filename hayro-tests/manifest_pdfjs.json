@@ -1312,7 +1312,8 @@
   },
   {
     "id": "issue17671",
-    "ignore": true
+    "ignore": true,
+    "command": "broken glyf table, would need fixing in skrifa"
   },
   {
     "id": "issue11131_reduced",
@@ -1339,13 +1340,11 @@
   },
   {
     "id": "issue16432",
-    "last_page": 0,
-    "ignore": true
+    "last_page": 0
   },
   {
     "id": "issue16464",
-    "last_page": 0,
-    "ignore": true
+    "last_page": 0
   },
   {
     "id": "issue18801",
