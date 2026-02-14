@@ -99,7 +99,7 @@ pub(crate) fn parse<'a>(
                 });
             }
             SEGMENT_USECMAP => {
-                let base_data = get_cmap(payload)?;
+                let base_data = get_cmap(CMapName::from_bytes(payload))?;
 
                 base = Some(Box::new(parse::parse_inner(
                     base_data,

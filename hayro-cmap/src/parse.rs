@@ -102,7 +102,7 @@ pub(crate) fn parse_inner<'a>(
                     parse_bf_range(&mut scanner, &mut bf_entries, &mut ctx)?;
                 }
                 Some("usecmap") => {
-                    let nested_data = (ctx.get_cmap)(last_name.as_deref()?)?;
+                    let nested_data = (ctx.get_cmap)(CMapName::from_bytes(last_name.as_deref()?))?;
 
                     base = Some(Box::new(parse_inner(
                         nested_data,
