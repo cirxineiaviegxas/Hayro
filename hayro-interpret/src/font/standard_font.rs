@@ -1,6 +1,6 @@
-use crate::font::FontData;
 use crate::font::blob::{CffFontBlob, OpenTypeFontBlob};
 use crate::font::generated::{metrics, standard, symbol, zapf_dings};
+use crate::font::{FontData, normalized_glyph_name};
 use hayro_syntax::object::Dict;
 use hayro_syntax::object::Name;
 use hayro_syntax::object::dict::keys::BASE_FONT;
@@ -60,13 +60,7 @@ impl StandardFont {
             return Some(250.0);
         }
 
-        if name == "nbspace" {
-            name = "space";
-        }
-
-        if name == "sfthyphen" {
-            name = "hyphen";
-        }
+        name = normalized_glyph_name(name);
 
         match self {
             Self::Helvetica => metrics::HELVETICA.get(name).copied(),

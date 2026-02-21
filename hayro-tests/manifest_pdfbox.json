@@ -630,23 +630,11 @@
     "last_page": 0
   },
   "5054",
-  {
-    "id": "5074_1",
-    "ignore": true,
-    "comment": "second rect has wrong color"
-  },
-  {
-    "id": "5074_2",
-    "ignore": true,
-    "comment": "second rect has wrong color"
-  },
+  "5074_1",
+  "5074_2",
   "5079",
   "5097",
-  {
-    "id": "5115",
-    "ignore": true,
-    "comment": "hyphen missing"
-  },
+  "5115",
   "5134",
   "5140",
   "5250_1",
