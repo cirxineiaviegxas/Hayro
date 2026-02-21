@@ -35,8 +35,6 @@ pub(crate) struct Type0Font {
     font_flags: Option<FontFlags>,
     /// Whether this font is using a fallback (non-embedded) font.
     fallback: bool,
-    /// Whether this font fell back to a standard font (e.g. Helvetica).
-    is_standard_fallback: bool,
 }
 
 impl Type0Font {
@@ -53,9 +51,11 @@ impl Type0Font {
             .get::<Array<'_>>(DESCENDANT_FONTS)?
             .iter::<Dict<'_>>()
             .next()?;
-        let font_descriptor = descendant_font.get::<Dict<'_>>(FONT_DESC)?;
+        let font_descriptor = descendant_font
+            .get::<Dict<'_>>(FONT_DESC)
+            .unwrap_or_default();
 
-        let (font_type, fallback, is_standard_fallback) = match FontType::new(&font_descriptor) {
+        let (font_type, fallback, _is_standard_fallback) = match FontType::new(&font_descriptor) {
             Some(ft) => (ft, false, false),
             None => {
                 let (query, is_standard) = if let Some(standard) = select_standard_font(dict) {
@@ -100,23 +100,17 @@ impl Type0Font {
 
         let mut to_unicode = read_to_unicode(dict, cmap_resolver);
 
-        // If there is no ToUnicode map, use the UCS2 CMap.
-        if fallback && to_unicode.is_none() {
-            if let Some(cc) = cmap.metadata().character_collection.as_ref()
-                && cc.family != CidFamily::AdobeIdentity
-                && let Some(ucs2_name) = cc.family.ucs2_cmap()
-                && let Some(data) = (cmap_resolver)(ucs2_name)
-            {
-                let resolver = cmap_resolver.clone();
-                if let Some(ucs2_cmap) = CMap::parse(data, move |n| (resolver)(n)) {
-                    to_unicode = Some(ucs2_cmap);
-                }
-            }
-
-            // If we still have no `ToUnicode` and it's not a standard font, we have no way
-            // of mapping to glyph IDs, so abort.
-            if !is_standard_fallback {
-                to_unicode.as_ref()?;
+        // If there is no ToUnicode map, try to get the UCS2 CMap.
+        if fallback
+            && to_unicode.is_none()
+            && let Some(cc) = cmap.metadata().character_collection.as_ref()
+            && cc.family != CidFamily::AdobeIdentity
+            && let Some(ucs2_name) = cc.family.ucs2_cmap()
+            && let Some(data) = (cmap_resolver)(ucs2_name)
+        {
+            let resolver = cmap_resolver.clone();
+            if let Some(ucs2_cmap) = CMap::parse(data, move |n| (resolver)(n)) {
+                to_unicode = Some(ucs2_cmap);
             }
         }
 
@@ -143,7 +137,6 @@ impl Type0Font {
             postscript_name,
             font_flags,
             fallback,
-            is_standard_fallback,
         })
     }
 
@@ -152,19 +145,15 @@ impl Type0Font {
             return GlyphId::NOTDEF;
         };
 
-        if self.fallback {
-            // TODO: This is not the best thing to do. It assumes that the font
-            // the query returned has the same glyph order as the original
-            // standard font. If this is not the case, we get garbage glyphs.
-            // The correct way of handling this would be to store a Glyph -> Unicode
-            // map for the standard fonts, and then map via the actual font's
-            // CMAP, as is done for other fallback fonts.
-            if self.is_standard_fallback {
-                return GlyphId::new(code);
-            }
-
-            return self.map_code_fallback(cid).unwrap_or(GlyphId::NOTDEF);
+        if self.fallback
+            && let Some(glyph) = self.map_via_unicode(cid)
+        {
+            // Yay, Unicode worked!
+            return glyph;
         }
+
+        // At this point, not much we can do anymore. Just hope that the
+        // selected font has the right glyph order, and map via that.
 
         match &self.font_type {
             FontType::OpenType(_) => self.cid_to_gid_map.map(cid as u16),
@@ -192,7 +181,7 @@ impl Type0Font {
 
     /// Map a CID to a glyph ID by first getting its Unicode and then looking
     /// up the codepoint in the font's cmap.
-    fn map_code_fallback(&self, cid: u32) -> Option<GlyphId> {
+    fn map_via_unicode(&self, cid: u32) -> Option<GlyphId> {
         let to_unicode = self.to_unicode.as_ref()?;
 
         let character = to_unicode.lookup_bf_string(cid).and_then(|bf| match bf {
