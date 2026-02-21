@@ -227,7 +227,8 @@ impl<'a> Font<'a> {
             TYPE1 | MM_TYPE1 => {
                 FontType::Type1(Rc::new(Type1Font::new(dict, font_resolver, cmap_resolver)?))
             }
-            TRUE_TYPE => TrueTypeFont::new(dict, cmap_resolver)
+            // PDFBOX-5463: PDF viewers seem to accept OpenType as well.
+            TRUE_TYPE | OPEN_TYPE => TrueTypeFont::new(dict, cmap_resolver)
                 .map(Rc::new)
                 .map(FontType::TrueType)
                 .or_else(|| {
