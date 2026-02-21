@@ -1,5 +1,5 @@
 use crate::color::{Color, ColorSpace};
-use crate::context::Context;
+use crate::context::{Context, path_as_rect};
 use crate::device::Device;
 use crate::util::Float32Ext;
 use crate::{FillRule, Paint, PathDrawMode, StrokeProps};
@@ -69,7 +69,12 @@ pub(crate) fn fill_path_impl<'a>(
             (bbox.height() as f32).is_nearly_zero(),
         ) {
             (false, false) => {
-                device.draw_path(path, base_transform, &paint, &PathDrawMode::Fill(fill_rule));
+                let draw_mode = PathDrawMode::Fill(fill_rule);
+                if let Some(rect) = path_as_rect(path) {
+                    device.draw_rect(&rect, base_transform, &paint, &draw_mode);
+                } else {
+                    device.draw_path(path, base_transform, &paint, &draw_mode);
+                }
             }
             _ => {
                 let mut path = BezPath::new();
@@ -116,20 +121,14 @@ pub(crate) fn stroke_path_impl<'a>(
     device.set_blend_mode(context.get().graphics_state.blend_mode);
     let paint = get_paint(context, true);
 
-    match path {
-        None => device.draw_path(
-            context.path(),
-            base_transform,
-            &paint,
-            &PathDrawMode::Stroke(stroke_props),
-        ),
-        Some(path) => device.draw_path(
-            path,
-            base_transform,
-            &paint,
-            &PathDrawMode::Stroke(stroke_props),
-        ),
-    };
+    let path = path.unwrap_or(context.path());
+    let draw_mode = PathDrawMode::Stroke(stroke_props);
+
+    if let Some(rect) = path_as_rect(path) {
+        device.draw_rect(&rect, base_transform, &paint, &draw_mode);
+    } else {
+        device.draw_path(path, base_transform, &paint, &draw_mode);
+    }
 }
 
 pub(crate) fn get_paint<'a>(context: &Context<'a>, is_stroke: bool) -> Paint<'a> {

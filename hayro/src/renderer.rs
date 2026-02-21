@@ -750,6 +750,38 @@ impl<'a> Device<'a> for Renderer {
         }
     }
 
+    fn draw_rect(
+        &mut self,
+        rect: &Rect,
+        transform: Affine,
+        paint: &Paint<'_>,
+        draw_mode: &PathDrawMode,
+    ) {
+        let path = rect.to_path(0.1);
+        match draw_mode {
+            PathDrawMode::Fill(fill_rule) => {
+                self.ctx.set_fill_rule(convert_fill_rule(*fill_rule));
+                self.ctx.set_transform(transform);
+
+                let clip_path = self.set_paint(paint, &path, false);
+                if let Some(clip_path) = clip_path.as_ref() {
+                    self.push_clip_path_inner(clip_path, *fill_rule);
+                }
+
+                self.with_blend(|r| {
+                    r.ctx.fill_rect(rect);
+                });
+
+                if clip_path.is_some() {
+                    self.ctx.pop_clip_path();
+                }
+            }
+            PathDrawMode::Stroke(s) => {
+                Self::stroke_path(self, &path, transform, paint, s, false);
+            }
+        }
+    }
+
     fn draw_glyph(
         &mut self,
         glyph: &Glyph<'a>,
