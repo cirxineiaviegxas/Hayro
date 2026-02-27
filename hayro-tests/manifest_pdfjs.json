@@ -1188,24 +1188,22 @@
     "id": "bug921409"
   },
   {
-    "id": "issue5751",
-    "ignore": true
+    "id": "issue5751"
   },
   {
     "id": "issue5801",
-    "ignore": true
+    "ignore": true,
+    "comment": "Uses non-embedded ArialBlack font, some characters are wrong"
   },
   {
     "id": "issue5946"
   },
   {
     "id": "issue6127",
-    "last_page": 0,
-    "ignore": true
+    "last_page": 0
   },
   {
-    "id": "issue6286",
-    "ignore": true
+    "id": "issue6286"
   },
   {
     "id": "issue6410"
@@ -1220,8 +1218,7 @@
     "id": "issue6782"
   },
   {
-    "id": "issue7835",
-    "ignore": true
+    "id": "issue7835"
   },
   {
     "id": "issue8586"
@@ -1231,13 +1228,13 @@
     "last_page": 0
   },
   {
-    "id": "issue9084",
-    "ignore": true
+    "id": "issue9084"
   },
   {
     "id": "issue9195",
     "last_page": 0,
-    "ignore": true
+    "ignore": true,
+    "comment": "non-embedded Calibri font"
   },
   {
     "id": "issue9252"
@@ -1248,25 +1245,21 @@
     "ignore": true
   },
   {
-    "id": "issue9949",
-    "ignore": true
+    "id": "issue9949"
   },
   {
     "id": "issue11088",
-    "last_page": 0,
-    "ignore": true
+    "last_page": 0
   },
   {
-    "id": "issue11555",
-    "ignore": true
+    "id": "issue11555"
   },
   {
     "id": "issue11915",
     "ignore": true
   },
   {
-    "id": "issue13343",
-    "ignore": true
+    "id": "issue13343"
   },
   {
     "id": "issue13916",
@@ -1279,13 +1272,11 @@
   },
   {
     "id": "issue15044",
-    "last_page": 0,
-    "ignore": true
+    "last_page": 0
   },
   {
     "id": "issue15139",
-    "last_page": 0,
-    "ignore": true
+    "last_page": 0
   },
   {
     "id": "issue15292",
@@ -1334,10 +1325,7 @@
   {
     "id": "issue2391-1"
   },
-  {
-    "id": "issue3521",
-    "ignore": true
-  },
+  "issue3521",
   {
     "id": "issue16432",
     "last_page": 0
