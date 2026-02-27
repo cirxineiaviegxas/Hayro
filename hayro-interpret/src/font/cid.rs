@@ -12,6 +12,7 @@ use hayro_syntax::object::{Array, Object};
 use kurbo::{BezPath, Vec2};
 use log::warn;
 use skrifa::attribute::Style;
+use skrifa::raw::collections::int_set::Domain;
 use skrifa::{FontRef, GlyphId, MetadataProvider};
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -184,10 +185,23 @@ impl Type0Font {
     fn map_via_unicode(&self, cid: u32) -> Option<GlyphId> {
         let to_unicode = self.to_unicode.as_ref()?;
 
-        let character = to_unicode.lookup_bf_string(cid).and_then(|bf| match bf {
-            BfString::Char(c) => Some(c),
-            BfString::String(_) => None,
-        })?;
+        let character = to_unicode
+            .lookup_bf_string(cid)
+            .or_else(|| {
+                for len in 0..4 {
+                    if let Some(code) = to_unicode.lookup_cid_code(cid, len)
+                        && let Some(code) = char::from_u32(code.to_u32())
+                    {
+                        return Some(BfString::Char(code));
+                    }
+                }
+
+                None
+            })
+            .and_then(|bf| match bf {
+                BfString::Char(c) => Some(c),
+                BfString::String(_) => None,
+            })?;
 
         match &self.font_type {
             FontType::OpenType(t) => t.font_ref().charmap().map(character),
