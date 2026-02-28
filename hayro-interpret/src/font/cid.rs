@@ -64,7 +64,7 @@ impl Type0Font {
         let (font_type, fallback, _is_standard_fallback) = match FontType::new(&font_descriptor) {
             Some(ft) => (ft, false, false),
             None => {
-                let (query, is_standard) = if let Some(standard) = select_standard_font(dict) {
+                let (query, is_standard) = if let Some((standard, _)) = select_standard_font(dict) {
                     (FontQuery::Standard(standard), true)
                 } else {
                     let mut query = FallbackFontQuery::new(dict);
