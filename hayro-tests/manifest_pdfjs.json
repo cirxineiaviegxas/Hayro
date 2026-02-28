@@ -1278,11 +1278,13 @@
   },
   {
     "id": "issue15441",
-    "ignore": true
+    "ignore": true,
+    "comment": "non-embedded Arial font"
   },
   {
     "id": "issue15443",
-    "ignore": true
+    "ignore": true,
+    "comment": "non-embedded Calibri font"
   },
   {
     "id": "issue15559",
@@ -1309,10 +1311,12 @@
   },
   {
     "id": "issue19550",
-    "ignore": true
+    "ignore": true,
+    "comment": "non-embedded standard font Type0 with cyrillic"
   },
   {
     "id": "issue19695",
+    "comment": "non-embedded Calibri Type0 font",
     "ignore": true
   },
   {

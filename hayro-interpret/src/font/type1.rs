@@ -168,7 +168,13 @@ impl StandardKind {
         let descriptor = dict.get::<Dict<'_>>(FONT_DESC).unwrap_or_default();
         let widths = read_widths(dict, &descriptor)?;
 
-        let (encoding, encoding_map) = read_encoding(dict);
+        let (mut encoding, encoding_map) = read_encoding(dict);
+
+        // See PDFJS-16464: Ignore encodings for non-embedded Type1 symbol fonts.
+        if matches!(base_font, StandardFont::Symbol | StandardFont::ZapfDingBats) {
+            encoding = Encoding::BuiltIn;
+        }
+
         let (blob, index) = resolver(&FontQuery::Standard(base_font))?;
         let base_font_blob = StandardFontBlob::from_data(blob, index)?;
 
