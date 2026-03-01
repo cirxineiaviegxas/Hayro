@@ -1362,11 +1362,7 @@
     "ignore": true,
     "comment": "very large image"
   },
-  {
-    "id": "issue16038",
-    "ignore": true,
-    "comment": "tiling with negative step"
-  },
+  "issue16038",
   {
     "id": "issue16114",
     "ignore": true,
@@ -1437,9 +1433,7 @@
   "bug1250079",
   {
     "id": "issue15577",
-    "last_page": 0,
-    "ignore": true,
-    "comment": "root points to wrong object"
+    "last_page": 0
   },
   {
     "id": "issue9105_other",
@@ -1484,12 +1478,12 @@
   {
     "id": "issue15594",
     "ignore": true,
-    "comment": "missing text"
+    "comment": "non-embedded calibri font"
   },
   {
     "id": "issue15977",
     "ignore": true,
-    "comment": "missing text"
+    "comment": "another non-embedded font issue"
   },
   {
     "id": "issue11651-eq",
@@ -1544,11 +1538,7 @@
     "ignore": true,
     "comment": "noto color emoji, some page doesnt finish"
   },
-  {
-    "id": "issue14462",
-    "ignore": true,
-    "comment": "weird letter"
-  },
+  "issue14462",
   "issue12295",
   "issue11768",
   "issue9291",
