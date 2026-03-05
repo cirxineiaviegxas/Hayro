@@ -39,13 +39,23 @@ pub(crate) fn trunc_f64(x: f64) -> f64 {
 }
 
 #[inline(always)]
-pub(crate) fn fract_f64(x: f64) -> f64 {
+pub(crate) fn powi_f64(x: f64, n: u32) -> f64 {
     #[cfg(feature = "std")]
     {
-        x.fract()
+        x.powi(n as i32)
     }
     #[cfg(not(feature = "std"))]
     {
-        x - trunc_f64(x)
+        let mut result = 1.0;
+        let mut base = x;
+        let mut exp = n;
+        while exp > 0 {
+            if exp & 1 == 1 {
+                result *= base;
+            }
+            base *= base;
+            exp >>= 1;
+        }
+        result
     }
 }
