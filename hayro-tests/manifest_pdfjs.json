@@ -1339,15 +1339,8 @@
     "id": "ShowText-ShadingPattern",
     "comment": "look into it; renders incorrectly in pdf.js too"
   },
-  {
-    "id": "Type3WordSpacing",
-    "ignore": true,
-    "comment": "look into it"
-  },
-  {
-    "id": "ZapfDingbats",
-    "comment": "look into it"
-  },
+  "Type3WordSpacing",
+  "ZapfDingbats",
   {
     "id": "issue19800-eq",
     "ignore": true,
@@ -1402,9 +1395,7 @@
   {
     "id": "p020121130574743273239",
     "first_page": 0,
-    "last_page": 0,
-    "ignore": true,
-    "comment": "missing text (probably not-embedded font), page rotated wrongly"
+    "last_page": 0
   },
   {
     "id": "bug1782186",

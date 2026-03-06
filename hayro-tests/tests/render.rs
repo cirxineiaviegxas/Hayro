@@ -896,6 +896,7 @@ use crate::{run_render_test, run_render_test_with_password};
 #[test] fn pdfjs_issue16464() { run_render_test("pdfjs_issue16464", "downloads/pdfjs/issue16464.pdf", Some("..=0")); }
 #[test] fn pdfjs_issue18801() { run_render_test("pdfjs_issue18801", "downloads/pdfjs/issue18801.pdf", Some("..=0")); }
 #[test] fn pdfjs_ShowText_ShadingPattern() { run_render_test("pdfjs_ShowText_ShadingPattern", "downloads/pdfjs/ShowText-ShadingPattern.pdf", None); }
+#[test] fn pdfjs_Type3WordSpacing() { run_render_test("pdfjs_Type3WordSpacing", "downloads/pdfjs/Type3WordSpacing.pdf", None); }
 #[test] fn pdfjs_ZapfDingbats() { run_render_test("pdfjs_ZapfDingbats", "downloads/pdfjs/ZapfDingbats.pdf", None); }
 #[test] fn pdfjs_issue7891_bc1() { run_render_test("pdfjs_issue7891_bc1", "downloads/pdfjs/issue7891_bc1.pdf", None); }
 #[test] fn pdfjs_issue16038() { run_render_test("pdfjs_issue16038", "downloads/pdfjs/issue16038.pdf", None); }
@@ -907,6 +908,7 @@ use crate::{run_render_test, run_render_test_with_password};
 #[test] fn pdfjs_bug1659412() { run_render_test("pdfjs_bug1659412", "downloads/pdfjs/bug1659412.pdf", None); }
 #[test] fn pdfjs_bug1671312_ArialNarrow() { run_render_test("pdfjs_bug1671312_ArialNarrow", "downloads/pdfjs/bug1671312_ArialNarrow.pdf", None); }
 #[test] fn pdfjs_bug1671312_reduced() { run_render_test("pdfjs_bug1671312_reduced", "downloads/pdfjs/bug1671312_reduced.pdf", None); }
+#[test] fn pdfjs_p020121130574743273239() { run_render_test("pdfjs_p020121130574743273239", "downloads/pdfjs/p020121130574743273239.pdf", Some("0..=0")); }
 #[test] fn pdfjs_bug1782186() { run_render_test_with_password("pdfjs_bug1782186", "downloads/pdfjs/bug1782186.pdf", None, "Hello"); }
 #[test] fn pdfjs_issue15893_reduced() { run_render_test_with_password("pdfjs_issue15893_reduced", "downloads/pdfjs/issue15893_reduced.pdf", None, "test"); }
 #[test] fn pdfjs_issue3371() { run_render_test_with_password("pdfjs_issue3371", "downloads/pdfjs/issue3371.pdf", None, "ELXRTQWS"); }
