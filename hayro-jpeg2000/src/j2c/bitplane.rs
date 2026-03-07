@@ -28,7 +28,7 @@ pub(crate) fn decode(
     sub_band_type: SubBandType,
     total_bitplanes: u8,
     style: &CodeBlockStyle,
-    tile_ctx: &mut TileDecodeContext<'_>,
+    tile_ctx: &mut TileDecodeContext,
     storage: &DecompositionStorage<'_>,
     strict: bool,
 ) -> Result<()> {
