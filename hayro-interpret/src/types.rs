@@ -40,12 +40,8 @@ impl<'a, 'b> StencilImage<'a, 'b> {
         func: impl FnOnce(LumaData, &Paint<'a>),
         target_dimension: Option<(u32, u32)>,
     ) {
-        if let Some(luma) = self
-            .image_xobject
-            .decoded_object(target_dimension)
-            .and_then(|d| d.luma_data)
-        {
-            func(luma, &self.paint);
+        if let Some(decoded) = self.image_xobject.decoded_mask(target_dimension) {
+            func(decoded.luma, &self.paint);
         }
     }
 
@@ -84,12 +80,8 @@ impl RasterImage<'_> {
         func: impl FnOnce(ImageData, Option<LumaData>),
         target_dimension: Option<(u32, u32)>,
     ) {
-        let decoded = self.0.decoded_object(target_dimension);
-
-        if let Some(decoded) = decoded
-            && let Some(image) = decoded.image_data
-        {
-            func(image, decoded.luma_data);
+        if let Some(decoded) = self.0.decoded_raster(target_dimension) {
+            func(decoded.image, decoded.alpha);
         }
     }
 
