@@ -10,7 +10,6 @@ license = { workspace = true }
 
 [dependencies]
 hayro-syntax = { workspace = true }
-kurbo = { workspace = true }
 pdf-writer = { workspace = true }
 flate2 = { workspace = true }
 log = { workspace = true }
