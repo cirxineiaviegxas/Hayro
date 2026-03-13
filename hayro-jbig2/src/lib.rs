@@ -26,6 +26,7 @@ use crate::arithmetic_decoder::Context;
 pub struct DecoderContext {
     pub(crate) page_state: PageState,
     pub(crate) scratch_buffers: ScratchBuffers,
+    pub(crate) page_bitmap: Bitmap,
 }
 
 #[derive(Default)]
@@ -187,8 +188,8 @@ impl<'a> Image<'a> {
     /// This is useful in case you want to convert multiple JBIG2 images,
     /// as it allows `hayro-jbig2` to reuse allocations during decoding.
     pub fn decode_with<D: Decoder>(&self, decoder: &mut D, ctx: &mut DecoderContext) -> Result<()> {
-        let page_bitmap = decode_segments(&self.segments, self.height_from_stripes, ctx)?;
-        emit_bitmap(&page_bitmap, decoder);
+        decode_segments(&self.segments, self.height_from_stripes, ctx)?;
+        emit_bitmap(&ctx.page_bitmap, decoder);
 
         Ok(())
     }
@@ -255,9 +256,9 @@ fn decode_segments(
     segments: &[segment::Segment<'_>],
     height_from_stripes: Option<u32>,
     decoder_ctx: &mut DecoderContext,
-) -> Result<Bitmap> {
+) -> Result<()> {
     // Find and parse page information segment first.
-    let mut page_bitmap = if let Some(page_info) = segments
+    if let Some(page_info) = segments
         .iter()
         .find(|s| s.header.segment_type == SegmentType::PageInformation)
     {
@@ -266,11 +267,13 @@ fn decode_segments(
             &mut reader,
             height_from_stripes,
             &mut decoder_ctx.page_state,
-        )?
+            &mut decoder_ctx.page_bitmap,
+        )?;
     } else {
         bail!(FormatError::MissingPageInfo);
-    };
+    }
 
+    let page_bitmap = &mut decoder_ctx.page_bitmap;
     let page_state = &mut decoder_ctx.page_state;
     let scratch_buffers = &mut decoder_ctx.scratch_buffers;
 
@@ -286,8 +289,8 @@ fn decode_segments(
                 let had_unknown_length = seg.header.data_length.is_none();
                 let header = generic::parse(&mut reader, had_unknown_length)?;
 
-                if page_state.can_decode_directly(&page_bitmap, &header.region_info, false) {
-                    generic::decode_into(&header, &mut page_bitmap, scratch_buffers)?;
+                if page_state.can_decode_directly(page_bitmap, &header.region_info, false) {
+                    generic::decode_into(&header, page_bitmap, scratch_buffers)?;
                 } else {
                     let region = generic::decode(&header, scratch_buffers)?;
                     page_bitmap.combine(
@@ -373,7 +376,7 @@ fn decode_segments(
                 let header = text::parse(&mut reader, symbols.len() as u32)?;
 
                 if page_state.can_decode_directly(
-                    &page_bitmap,
+                    page_bitmap,
                     &header.region_info,
                     header.flags.default_pixel,
                 ) {
@@ -382,7 +385,7 @@ fn decode_segments(
                         &symbols,
                         &referred_tables,
                         &page_state.standard_tables,
-                        &mut page_bitmap,
+                        page_bitmap,
                         scratch_buffers,
                     )?;
                 } else {
@@ -442,16 +445,11 @@ fn decode_segments(
                 let header = halftone::parse(&mut reader)?;
 
                 if page_state.can_decode_directly(
-                    &page_bitmap,
+                    page_bitmap,
                     &header.region_info,
                     header.flags.initial_pixel_color,
                 ) {
-                    halftone::decode_into(
-                        &header,
-                        pattern_dict,
-                        &mut page_bitmap,
-                        scratch_buffers,
-                    )?;
+                    halftone::decode_into(&header, pattern_dict, page_bitmap, scratch_buffers)?;
                 } else {
                     let region = halftone::decode(&header, pattern_dict, scratch_buffers)?;
                     page_bitmap.combine(
@@ -482,7 +480,7 @@ fn decode_segments(
                     .referred_to_segments
                     .first()
                     .and_then(|&num| page_state.get_referred_segment(num))
-                    .unwrap_or(&page_bitmap);
+                    .unwrap_or(page_bitmap);
 
                 let header = generic_refinement::parse(&mut reader)?;
                 let region = generic_refinement::decode(&header, reference, scratch_buffers)?;
@@ -504,16 +502,16 @@ fn decode_segments(
                 let header = generic_refinement::parse(&mut reader)?;
 
                 if let Some(referred_segment) = referred_segment
-                    && page_state.can_decode_directly(&page_bitmap, &header.region_info, false)
+                    && page_state.can_decode_directly(page_bitmap, &header.region_info, false)
                 {
                     generic_refinement::decode_into(
                         &header,
                         referred_segment,
-                        &mut page_bitmap,
+                        page_bitmap,
                         scratch_buffers,
                     )?;
                 } else {
-                    let reference = referred_segment.unwrap_or(&page_bitmap);
+                    let reference = referred_segment.unwrap_or(page_bitmap);
                     let region = generic_refinement::decode(&header, reference, scratch_buffers)?;
                     page_bitmap.combine(
                         &region.bitmap,
@@ -539,7 +537,7 @@ fn decode_segments(
         }
     }
 
-    Ok(page_bitmap)
+    Ok(())
 }
 
 /// Page-level decoding state for a JBIG2 page.
@@ -660,12 +658,13 @@ impl PageState {
     }
 }
 
-/// Parse page information and create the initial page bitmap.
+/// Parse page information and initialize the page bitmap.
 fn init_page(
     reader: &mut Reader<'_>,
     height_from_stripes: Option<u32>,
     page: &mut PageState,
-) -> Result<Bitmap> {
+    bitmap: &mut Bitmap,
+) -> Result<()> {
     let page_info = parse_page_information(reader)?;
 
     // "A page's bitmap height may be declared in its page information segment
@@ -680,15 +679,9 @@ fn init_page(
     // "Bit 2: Page default pixel value. This bit contains the initial value
     // for every pixel in the page, before any region segments are decoded
     // or drawn." (7.4.8.5)
-    let page_bitmap = Bitmap::new_with(
-        page_info.width,
-        height,
-        0,
-        0,
-        page_info.flags.default_pixel != 0,
-    );
+    bitmap.reinitialize(page_info.width, height, page_info.flags.default_pixel != 0);
 
     page.reset(page_info);
 
-    Ok(page_bitmap)
+    Ok(())
 }
