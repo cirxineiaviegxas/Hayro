@@ -1,7 +1,6 @@
 //! A number of utility methods.
 
 use kurbo::{BezPath, PathEl, Rect};
-use log::warn;
 use siphasher::sip128::{Hasher128, SipHasher13};
 use std::hash::Hash;
 use std::ops::Sub;
@@ -12,9 +11,9 @@ pub(crate) trait OptionLog {
 
 impl<T> OptionLog for Option<T> {
     #[inline]
-    fn warn_none(self, f: &str) -> Self {
+    fn warn_none(self, _f: &str) -> Self {
         self.or_else(|| {
-            warn!("{f}");
+            warn!("{_f}");
 
             None
         })
