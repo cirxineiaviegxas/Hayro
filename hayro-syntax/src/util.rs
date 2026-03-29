@@ -2,6 +2,7 @@ use crate::sync::OnceLock;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::ops::Sub;
+use smallvec::{Array, SmallVec};
 
 pub(crate) trait OptionLog {
     fn error_none(self, f: &str) -> Self;
@@ -35,6 +36,34 @@ impl FloatExt for f32 {
         debug_assert!(tolerance >= 0.0, "tolerance must be non-negative");
 
         self.abs() <= tolerance
+    }
+}
+
+pub(crate) trait ByteBuf: Default {
+    fn with_capacity(capacity: usize) -> Self;
+    fn push(&mut self, byte: u8);
+}
+
+impl ByteBuf for Vec<u8> {
+    fn with_capacity(capacity: usize) -> Self {
+        Self::with_capacity(capacity)
+    }
+
+    fn push(&mut self, byte: u8) {
+        Self::push(self, byte);
+    }
+}
+
+impl<A> ByteBuf for SmallVec<A>
+where
+    A: Array<Item = u8>,
+{
+    fn with_capacity(capacity: usize) -> Self {
+        Self::with_capacity(capacity)
+    }
+
+    fn push(&mut self, byte: u8) {
+        Self::push(self, byte);
     }
 }
 
