@@ -1,11 +1,10 @@
 //! This example shows you how you can render a PDF file to PNG.
 
-use hayro::hayro_interpret::InterpreterCache;
 use hayro::hayro_interpret::InterpreterSettings;
 use hayro::hayro_interpret::font::{FontData, FontQuery, StandardFont};
 use hayro::hayro_interpret::hayro_cmap::CidFamily;
 use hayro::hayro_syntax::Pdf;
-use hayro::{RenderSettings, render};
+use hayro::{RenderCache, RenderSettings, render};
 use std::path::Path;
 use std::sync::Arc;
 use vello_cpu::color::palette::css::WHITE;
@@ -89,7 +88,7 @@ fn main() {
         bg_color: WHITE,
         ..Default::default()
     };
-    let cache = InterpreterCache::new();
+    let cache = RenderCache::new();
 
     for (idx, page) in pdf.pages().iter().enumerate() {
         let pixmap = render(page, &cache, &interpreter_settings, &render_settings);
