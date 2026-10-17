@@ -39,10 +39,10 @@ impl BitReader<'_> {
             };
 
             if transition == INVALID {
-                return Err(DecodeError::InvalidCode);
+                return Err(DecodeError::InvalidCode { offset: self.bit_offset() as u64 });
             } else if transition & TERMINAL != 0 {
                 let len = (transition & VALUE_MASK) as u32;
-                total = total.checked_add(len).ok_or(DecodeError::Overflow)?;
+                total = total.checked_add(len).ok_or(DecodeError::Overflow { offset: self.bit_offset() as u64 })?;
 
                 // For decoding black/white runs, less than 64 means we have
                 // a terminating code. For mode decoding, all values are less
@@ -100,7 +100,7 @@ impl BitReader<'_> {
             6 => Mode::Vertical(-1),
             7 => Mode::Vertical(-2),
             8 => Mode::Vertical(-3),
-            _ => return Err(DecodeError::InvalidCode),
+            _ => return Err(DecodeError::InvalidCode { offset: self.bit_offset() as u64 }),
         })
     }
 

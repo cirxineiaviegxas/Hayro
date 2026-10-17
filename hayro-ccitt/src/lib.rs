@@ -47,22 +47,38 @@ pub type Result<T> = core::result::Result<T, DecodeError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DecodeError {
     /// Unexpected end of input while reading bits.
-    UnexpectedEof,
+    UnexpectedEof {
+        /// Number of bits consumed before the input ran out.
+        offset: u64,
+    },
     /// Invalid Huffman code sequence was encountered during decoding.
-    InvalidCode,
+    InvalidCode {
+        /// Bit offset at which the invalid code begins.
+        offset: u64,
+    },
     /// A scanline didn't have the expected number of pixels.
-    LineLengthMismatch,
+    LineLengthMismatch {
+        /// Bit offset at the start of the offending scanline.
+        offset: u64,
+    },
     /// Arithmetic overflow in run length or position calculation.
-    Overflow,
+    Overflow {
+        /// Bit offset at which the overflow was detected.
+        offset: u64,
+    },
 }
 
 impl core::fmt::Display for DecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::UnexpectedEof => write!(f, "unexpected end of input"),
-            Self::InvalidCode => write!(f, "invalid CCITT code sequence"),
-            Self::LineLengthMismatch => write!(f, "scanline length mismatch"),
-            Self::Overflow => write!(f, "arithmetic overflow in position calculation"),
+            Self::UnexpectedEof { offset } => write!(f, "unexpected end of input at bit {offset}"),
+            Self::InvalidCode { offset } => write!(f, "invalid CCITT code sequence at bit {offset}"),
+            Self::LineLengthMismatch { offset } => {
+                write!(f, "scanline length mismatch at bit {offset}")
+            }
+            Self::Overflow { offset } => {
+                write!(f, "arithmetic overflow in position calculation at bit {offset}")
+            }
         }
     }
 }
@@ -312,14 +328,14 @@ fn decode_2d_line(
             Mode::Vertical(i) => {
                 let b1 = ctx.b1();
                 let a1 = if i >= 0 {
-                    b1.checked_add(i as u32).ok_or(DecodeError::Overflow)?
+                    b1.checked_add(i as u32).ok_or(DecodeError::Overflow { offset: reader.bit_offset() as u64 })?
                 } else {
-                    b1.checked_sub((-i) as u32).ok_or(DecodeError::Overflow)?
+                    b1.checked_sub((-i) as u32).ok_or(DecodeError::Overflow { offset: reader.bit_offset() as u64 })?
                 };
 
                 let a0 = ctx.a0().unwrap_or(0);
 
-                ctx.push_pixels(decoder, a1.checked_sub(a0).ok_or(DecodeError::Overflow)?);
+                ctx.push_pixels(decoder, a1.checked_sub(a0).ok_or(DecodeError::Overflow { offset: reader.bit_offset() as u64 })?);
                 ctx.color = ctx.color.opposite();
 
                 ctx.update_b();
@@ -506,7 +522,7 @@ impl DecoderContext {
     #[inline(always)]
     fn next_line(&mut self, reader: &mut BitReader<'_>, decoder: &mut impl Decoder) -> Result<()> {
         if self.pixels_decoded != self.settings.columns {
-            return Err(DecodeError::LineLengthMismatch);
+            return Err(DecodeError::LineLengthMismatch { offset: reader.bit_offset() as u64 });
         }
 
         core::mem::swap(&mut self.ref_changes, &mut self.coding_changes);

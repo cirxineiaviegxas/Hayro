@@ -21,7 +21,9 @@ impl<'a> BitReader<'a> {
     #[inline(always)]
     pub(crate) fn read_bit(&mut self) -> Result<u32> {
         let byte_pos = self.byte_pos();
-        let byte = *self.data.get(byte_pos).ok_or(DecodeError::UnexpectedEof)? as u32;
+        let byte = *self.data.get(byte_pos).ok_or(DecodeError::UnexpectedEof {
+            offset: self.bit_offset as u64,
+        })? as u32;
         let shift = 7 - self.bit_pos();
         self.bit_offset += 1;
         Ok((byte >> shift) & 1)
@@ -65,5 +67,11 @@ impl<'a> BitReader<'a> {
     #[inline(always)]
     fn bit_pos(&self) -> usize {
         self.bit_offset & 7
+    }
+
+    /// The number of bits consumed so far; decode errors report it verbatim.
+    #[inline(always)]
+    pub(crate) const fn bit_offset(&self) -> usize {
+        self.bit_offset
     }
 }
