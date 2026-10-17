@@ -10,6 +10,17 @@ use crate::{
     MAX_NESTING_DEPTH, Metadata, PartitionedRanges, Range, WritingMode,
 };
 
+/// Why a cmap failed to parse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ParseError {
+    /// The `usecmap` chain exceeded [`MAX_NESTING_DEPTH`]; typical for
+    /// self-referencing or maliciously circular cmaps.
+    DepthExceeded,
+    /// The input could not be parsed as a cmap (bad syntax or a `usecmap`
+    /// target that could not be resolved).
+    Malformed,
+}
+
 struct Context<F> {
     buf: Vec<u8>,
     get_cmap: F,
@@ -19,16 +30,16 @@ pub(crate) fn parse_inner<'a>(
     data: &[u8],
     get_cmap: impl Fn(CMapName<'_>) -> Option<&'a [u8]> + Clone + 'a,
     depth: u32,
-) -> Option<CMap> {
+) -> Result<CMap, ParseError> {
     // Prevent stack overflow for malicious cmap files or circular references.
     if depth >= MAX_NESTING_DEPTH {
-        return None;
+        return Err(ParseError::DepthExceeded);
     }
 
     // Check if it's in our custom embedded cmap format.
     #[cfg(feature = "embed-cmaps")]
     if data.starts_with(b"bcmap") {
-        return bcmap::parse(data, get_cmap, depth);
+        return bcmap::parse(data, get_cmap, depth).ok_or(ParseError::Malformed);
     }
 
     let mut scanner = Scanner::new(data);
@@ -50,7 +61,7 @@ pub(crate) fn parse_inner<'a>(
     let mut last_name: Option<Vec<u8>> = None;
 
     while !scanner.at_end() {
-        let obj = scanner.parse_object().ok()?;
+        let obj = scanner.parse_object().ok().ok_or(ParseError::Malformed)?;
 
         let Object::Name(name) = &obj else { continue };
 
@@ -81,28 +92,38 @@ pub(crate) fn parse_inner<'a>(
         } else {
             match name.as_str() {
                 Some("begincodespacerange") => {
-                    parse_codespace_range(&mut scanner, &mut _codespace_ranges, &mut ctx)?;
+                    parse_codespace_range(&mut scanner, &mut _codespace_ranges, &mut ctx)
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("begincidrange") => {
-                    parse_range(&mut scanner, &mut ranges, &mut ctx, "endcidrange")?;
+                    parse_range(&mut scanner, &mut ranges, &mut ctx, "endcidrange")
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("begincidchar") => {
-                    parse_char(&mut scanner, &mut ranges, &mut ctx, "endcidchar")?;
+                    parse_char(&mut scanner, &mut ranges, &mut ctx, "endcidchar")
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("beginnotdefrange") => {
-                    parse_range(&mut scanner, &mut notdef_ranges, &mut ctx, "endnotdefrange")?;
+                    parse_range(&mut scanner, &mut notdef_ranges, &mut ctx, "endnotdefrange")
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("beginnotdefchar") => {
-                    parse_char(&mut scanner, &mut notdef_ranges, &mut ctx, "endnotdefchar")?;
+                    parse_char(&mut scanner, &mut notdef_ranges, &mut ctx, "endnotdefchar")
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("beginbfchar") => {
-                    parse_bf_char(&mut scanner, &mut bf_entries, &mut ctx)?;
+                    parse_bf_char(&mut scanner, &mut bf_entries, &mut ctx)
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("beginbfrange") => {
-                    parse_bf_range(&mut scanner, &mut bf_entries, &mut ctx)?;
+                    parse_bf_range(&mut scanner, &mut bf_entries, &mut ctx)
+                        .ok_or(ParseError::Malformed)?;
                 }
                 Some("usecmap") => {
-                    let nested_data = (ctx.get_cmap)(CMapName::from_bytes(last_name.as_deref()?))?;
+                    let nested_data = (ctx.get_cmap)(CMapName::from_bytes(
+                        last_name.as_deref().ok_or(ParseError::Malformed)?,
+                    ))
+                    .ok_or(ParseError::Malformed)?;
 
                     base = Some(Box::new(parse_inner(
                         nested_data,
@@ -139,7 +160,7 @@ pub(crate) fn parse_inner<'a>(
         writing_mode,
     };
 
-    Some(CMap {
+    Ok(CMap {
         metadata,
         _codespace_ranges,
         cid_ranges: ranges,
@@ -379,4 +400,31 @@ fn bytes_to_u32(bytes: &[u8]) -> Option<u32> {
 
 fn name_matches(obj: &Object<'_>, expected: &str) -> bool {
     matches!(obj, Object::Name(name) if !name.is_literal() && name.as_str() == Some(expected))
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_inner, ParseError};
+    use crate::CMapName;
+
+    #[test]
+    fn self_referencing_cmap_hits_the_depth_limit() {
+        static DATA: &[u8] = b"/Self usecmap";
+        let get = |_name: CMapName<'_>| Some(DATA);
+        assert_eq!(
+            parse_inner(DATA, get, 0).unwrap_err(),
+            ParseError::DepthExceeded
+        );
+    }
+
+    #[test]
+    fn missing_usecmap_target_is_malformed_not_depth() {
+        static DATA: &[u8] = b"/Missing usecmap";
+        let get = |_name: CMapName<'_>| None;
+        assert_eq!(
+            parse_inner(DATA, get, 0).unwrap_err(),
+            ParseError::Malformed
+        );
+    }
 }

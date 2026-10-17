@@ -377,7 +377,7 @@ impl CMap {
         data: &[u8],
         get_cmap: impl Fn(CMapName<'_>) -> Option<&'a [u8]> + Clone + 'a,
     ) -> Option<Self> {
-        parse::parse_inner(data, get_cmap, 0)
+        parse::parse_inner(data, get_cmap, 0).ok()
     }
 
     /// Create an Identity-H cmap.
