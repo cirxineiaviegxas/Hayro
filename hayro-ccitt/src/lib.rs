@@ -39,6 +39,8 @@ use alloc::vec::Vec;
 mod bit_reader;
 mod decode;
 mod state_machine;
+#[cfg(test)]
+mod tests;
 
 /// A specialized Result type for CCITT decoding operations.
 pub type Result<T> = core::result::Result<T, DecodeError>;
@@ -185,6 +187,12 @@ struct ColorChange {
 /// However, even if that's the case, it is possible that a number
 /// of rows were decoded successfully and written into the decoder, so those
 /// can still be used, but the image might be truncated.
+///
+/// Input that ends exactly at a row boundary is treated as a normal end of
+/// stream, so the behaviour for pad-bit-less encoders is defined: a stream may
+/// stop after the final row without triggering an error. Truncation in the
+/// middle of a code is reported as [`DecodeError::UnexpectedEof`] carrying the
+/// bit offset where the input ran out.
 pub fn decode(data: &[u8], decoder: &mut impl Decoder, ctx: &mut DecoderContext) -> Result<usize> {
     ctx.reset();
     let mut reader = BitReader::new(data);
